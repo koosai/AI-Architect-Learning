@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # L9 · API 与 HTTP
 
@@ -27,6 +28,26 @@ L1 你写了 `create_signup` 函数，但它只能在你自己的程序里调用
 ## 一、浏览器是怎么和你的后端说话的？
 
 你点一下网页上的"报名"，背后发生的是：浏览器把一个 <GlossaryTerm term="HTTP Request" definition="HTTP 请求：客户端发给服务器的一条消息，包含方法（GET/POST…）、路径（/signups）、头（headers）和可选的正文（body）。">HTTP 请求</GlossaryTerm> 发到你的服务器，服务器处理后回一个 <GlossaryTerm term="HTTP Response" definition="HTTP 响应：服务器回给客户端的消息，包含状态码（200/404…）、头和正文。">HTTP 响应</GlossaryTerm>。这套"一问一答"就是 <GlossaryTerm term="Client-Server" definition="客户端-服务器模型：客户端发起请求，服务器提供响应。Web 的基本交互结构。">客户端-服务器</GlossaryTerm> 模型。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Client as 客户端 (Browser/App)
+  participant Network as 互联网络 (Internet)
+  participant Server as Web 服务端 (API Server)
+
+  Client->>Network: 1. 发送 HTTP 请求
+  Note over Client: Method: POST<br/>Path: /signups<br/>Body: {"email": "ada@x.com"}
+  Network->>Server: 2. 路由请求报文
+  
+  activate Server
+  Note over Server: 业务逻辑校验并入库
+  Server->>Network: 3. 发送 HTTP 响应
+  Note over Server: Status: 201 Created<br/>Body: {"id": 1, "email": "ada@x.com"}
+  deactivate Server
+  
+  Network-->>Client: 4. 渲染响应结果
+```
 
 一个 API 就是你的服务器对外公开的一组"可以这样问我"的约定。它要约定四件事：**用什么方法、访问什么路径、传什么 body、回什么状态码**。
 
@@ -52,6 +73,26 @@ L1 你写了 `create_signup` 函数，但它只能在你自己的程序里调用
 ### 进阶：REST——把一切看成"资源"
 
 <GlossaryTerm term="REST" definition="一种 API 设计风格：把系统建模成资源（名词，如 /signups），用 HTTP 方法（动词）操作它们，无状态、用状态码表达结果。">REST</GlossaryTerm> 的核心思想：**用名词表示资源（`/signups`、`/signups/42`），用 HTTP 方法表示动作**，而不是把动词塞进路径（别设计 `/createSignup`）。再配合 [L5 的无状态](./state-and-storage) 和 [L6 的方法幂等语义](./idempotency)，就得到一套清晰、可缓存、可扩展的接口。
+
+```mermaid
+flowchart TD
+  subgraph RESTParadigm["REST 架构 (资源建模 - 名词 + 动词)"]
+    direction TB
+    RESTPath1["资源路径: /signups"] -->|GET 方法| RESTAct1["获取所有报名者"]
+    RESTPath1 -->|POST 方法| RESTAct2["创建新报名"]
+    RESTPath2["资源路径: /signups/42"] -->|GET 方法| RESTAct3["获取 ID 为 42 的报名"]
+    RESTPath2 -->|DELETE 方法| RESTAct4["删除 ID 为 42 的报名"]
+  end
+
+  subgraph RPCOldStyle["RPC 架构 (方法建模 - 路径即动词)"]
+    direction TB
+    RPCPath1["/getAllSignups"] --> RPCAct1["执行读取"]
+    RPCPath2["/createSignup"] --> RPCAct2["执行创建"]
+    RPCPath3["/getSignupById?id=42"] --> RPCAct3["执行读取某一个"]
+    RPCPath4["/deleteSignup?id=42"] --> RPCAct4["执行删除"]
+  end
+```
+
 
 ### 深入（选学）：REST 不是唯一答案
 
@@ -164,6 +205,24 @@ python labs/month01/l9_api/test_api.py
 
 [ChatGPT 案例](../atlas/chatgpt.mdx) 和几乎所有大系统，请求第一站都是 API 网关：它在 HTTP 层做鉴权、限流、路由——把横切关注点从业务服务里抽出来（回扣 [L2 的关注点分离](./modules-and-contracts)）。你设计的每个 API，最终都活在这样一个网关后面。
 
+```mermaid
+flowchart TD
+  Client1["客户端 (Web/Mobile)"] -->|HTTP 请求| GW["API 网关 (API Gateway)"]
+  
+  subgraph Gateway["网关控制层 (Cross-Cutting Concerns)"]
+    GW --> Auth["安全认证 (Auth)"]
+    Auth --> RateLimit["请求限流 (Rate Limiting)"]
+    RateLimit --> Route["动态路由 (Routing)"]
+  end
+
+  subgraph Services["后端微服务层 (Microservices)"]
+    Route -->|/signups| ServiceA["报名服务 (Signup Service)"]
+    Route -->|/users| ServiceB["用户服务 (User Service)"]
+    Route -->|/payments| ServiceC["支付服务 (Payment Service)"]
+  end
+```
+
+
 <ResearchNote
   title="HTTP 语义是全行业的共享契约"
   source="RFC 9110: HTTP Semantics（IETF）"
@@ -178,10 +237,47 @@ python labs/month01/l9_api/test_api.py
 - 一个已上线的 API 要把字段 `name` 改名为 `full_name`，怎么做才不弄坏老客户端？
 - 移动端抱怨一次要调 5 个接口才能渲染一个页面，你会上 GraphQL、做聚合接口（BFF），还是别的？取舍是什么？
 
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在设计 RESTful API 时，如果某条路径定义为 POST /signups/123/delete，这主要违反了 REST 的哪一项核心约束？',
+      options: [
+        '违反了无状态（Stateless）约束，因为删除操作需要在数据库保存删除痕迹。',
+        '违反了统一接口（Uniform Interface）约束，即应当使用名词资源定位（/signups/123），并通过标准的 HTTP 动作动词（DELETE）表达意图，而非将动词写进路径。',
+        '违反了分层系统（Layered System）约束，因为路径里的 POST 请求不支持重定向。'
+      ],
+      answer: 1,
+      explain: 'REST 风格规定用 URL（名词）来标识网络资源，用 HTTP 方法动词（GET/POST/PUT/DELETE）来表示对其进行的操作。/delete 是 RPC 风格的残留，不仅不符合统一接口约定，也破坏了客户端对标准 HTTP 动词所预期的幂等/安全性行为。'
+    },
+    {
+      q: '根据 Hyrum 定律，在演进已上线的公网生产 API 时，为了不破坏依赖该服务的存量老版本 App/客户端，以下哪项演进策略是应当绝对避免的？',
+      options: [
+        '进行向后兼容设计：只增加非必填字段，不删除和修改已有字段的键名及类型。',
+        '在接口发现更好的命名命名规范后，直接将原有字段 name 重命名为 full_name 并立即发布上线。',
+        '引入 API 版本控制，例如在 URL 中以 /v1/ 和 /v2/ 隔离不同版本，或者通过 HTTP Header 进行协议升级隔离。'
+      ],
+      answer: 1,
+      explain: '直接对线上存量接口进行破坏性改动（Breaking Change，如重命名字段或改变其值结构）会导致仍在使用旧字段的老版本客户端瞬间崩盘。必须保证只做增量不改存量，或者显式升级版本前缀。'
+    },
+    {
+      q: '关于 gRPC、REST 与 GraphQL 三类主流 API 契约风格的选型，以下哪种方案是不妥当的？',
+      options: [
+        '在面向公网用户、需要高可用以及强缓存支持的通用 API 网关入口，选用 REST + JSON 接口。',
+        '在内网高性能微服务之间的高频高吞吐调用，由于对带宽与延迟极度敏感，应当优先使用二进制的 gRPC。',
+        '为了简化全栈开发，应当不论什么业务和网路环境，统统只使用 GraphQL，忽略其对服务器计算负载及难以进行 CDN 静态缓存的问题。'
+      ],
+      answer: 2,
+      explain: 'GraphQL 把复杂的查询权限下放给了前端，允许其按需提取字段，解决了 Over-fetching。但这也带来了服务端需要动态拼接与解析 AST 的性能开销，并且其一般使用 POST 请求导致难以在 CDN 边缘层做静态 HTTP 缓存，更易被恶意构建的深度嵌套查询打爆，因此不应盲目作为任何场景的万能方案。'
+    }
+  ]}
+/>
+
 ## 自检清单
 
 - [ ] 我能说出 2xx/4xx/5xx 分别代表谁的问题。
-- [ ] 我的 lab API 用对了方法、状态码和资源路径。
+- [ ] 我的 lab API 用对了方法、状态码 and 资源路径。
 - [ ] 我能解释 API 契约为什么不能随便改，怎么做兼容演进。
 - [ ] 我能说出 REST / gRPC / GraphQL 各自适合什么场景。
 
