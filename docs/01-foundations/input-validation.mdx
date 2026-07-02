@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # L3 · 输入校验与防御性编程
 
@@ -41,6 +42,29 @@ L1 里我们加了"名字不能为空"。但真实世界的坏输入远不止这
 
 <GlossaryTerm term="Trust Boundary" definition="系统中“不可信的外部数据”与“已校验的内部数据”之间的分界线。所有跨越这条线的数据都必须被校验。">Trust Boundary（信任边界）</GlossaryTerm> 就是你的代码里那条"安检线"。HTTP 请求体、URL 参数、上传的文件、第三方 API 的返回——全都在线外，必须先过安检。
 
+```mermaid
+flowchart LR
+  subgraph UntrustedZone["外部不可信区 (Untrusted Outer Zone)"]
+    RawReq["原始 HTTP 请求<br/>(Raw Payload Dict)"]
+    Params["URL 参数 & Body"]
+  end
+
+  subgraph Boundary["信任边界 (Trust Boundary)"]
+    Sanitizer["语法类型转换与净化<br/>(Sanitize & Cast)"]
+    Validator["格式与业务规则校验<br/>(Verify Rules)"]
+  end
+
+  subgraph TrustedZone["内部受信区 (Trusted Inner Zone)"]
+    CleanDTO["已校验干净对象 / 领域对象<br/>(Validated Clean DTO)"]
+    BizLogic["核心业务处理逻辑<br/>(Domain Core)"]
+  end
+
+  RawReq & Params -->|跨越边界线| Sanitizer
+  Sanitizer --> Validator
+  Validator -->|通过净化安检| CleanDTO
+  CleanDTO --> BizLogic
+```
+
 ### 进阶：三层校验 + Fail Fast
 
 把校验拆成由浅入深的三层，任何一层不过就立刻拒绝（<GlossaryTerm term="Fail Fast" definition="一旦发现输入不合法，立即停止并明确报错，而不是带着坏数据继续往下走。">Fail Fast（快速失败）</GlossaryTerm>）：
@@ -50,6 +74,23 @@ L1 里我们加了"名字不能为空"。但真实世界的坏输入远不止这
 | 1. 语法/类型 | 字段在不在、类型对不对 | name 是字符串吗？age 是整数吗？ |
 | 2. 格式/范围 | 值的形状和范围合不合理 | email 像不像邮箱？age 在 0–150 吗？name 长度 ≤ 100 吗？ |
 | 3. 业务规则 | 符不符合业务约束 | 这个活动还没截止吗？这个邮箱没被封禁吗？ |
+
+```mermaid
+flowchart TD
+  Req["收到外部 Payload 数据"] --> Layer1{"1. 语法与类型校验"}
+  
+  Layer1 -- 缺失字段 / 类型不匹配 --> Err1["❌ Fail Fast:<br/>抛出语法异常 (ValidationError)"]
+  
+  Layer1 -- 类型正确 --> Layer2{"2. 格式与范围校验"}
+  
+  Layer2 -- 长度越界 / 邮箱格式错 --> Err2["❌ Fail Fast:<br/>抛出格式异常 (ValidationError)"]
+  
+  Layer2 -- 格式合理 --> Layer3{"3. 业务规则校验"}
+  
+  Layer3 -- 超过截止日期 / 封禁用户 --> Err3["❌ Fail Fast:<br/>抛出业务异常 (ValidationError)"]
+  
+  Layer3 -- 符合规则 --> Success["✅ 通过校验:<br/>生成归一化 Clean DTO"]
+```
 
 还有一个安全原则：**优先用白名单（允许什么）而不是黑名单（禁止什么）**。黑名单永远有漏网之鱼。
 
@@ -66,6 +107,27 @@ L1 里我们加了"名字不能为空"。但真实世界的坏输入远不止这
 普通校验是"检查一下，然后放行原始数据"。更强的做法是<GlossaryTerm term="Parse, Don't Validate" definition="把校验和转换成更强的类型合并：校验通过后，返回一个保证合法的新类型，而不是放行原始数据。这样“已校验”这个事实被编码进了类型里。">Parse, Don't Validate</GlossaryTerm>：校验的同时，把数据**转换成一个"保证合法"的新对象**。
 
 比如：不要到处传 `email: str`（谁知道它校验过没有？），而是校验后返回一个 `Email` 对象。拿到 `Email` 类型，就等于拿到"已经合法"的证明——下游再也不用重复检查。
+
+我们将这两种思维范式进行对比：
+
+```mermaid
+flowchart TD
+  subgraph ValidateMode["天真校验模式 (Validate Mode)"]
+    direction TB
+    In1["原始 payload (dict)"] --> Check1{"只做布尔判断"}
+    Check1 -->|True| Out1["原样透传 payload (dict)"]
+    Out1 --> Downstream1["下游逻辑 (Downstream)"]
+    Downstream1 -->|🤔 不确信是否已校?| CheckAgain1["再次做冗余校验"]
+  end
+
+  subgraph ParseMode["解析强类型模式 (Parse Mode: Parse, Don't Validate)"]
+    direction TB
+    In2["原始 payload (dict)"] --> Check2{"进行深度解析并转型"}
+    Check2 -->|成功| Out2["生成强类型对象 (SignupDTO 类)"]
+    Out2 --> Downstream2["下游逻辑 (仅接收 SignupDTO)"]
+    Downstream2 -->|🔒 编译期保证安全| Process2["直接安全使用，免二次校验"]
+  end
+```
 
 <ResearchNote
   title="让已校验成为一种类型"
@@ -237,7 +299,44 @@ python labs/month01/l3_validation/test_validate.py
 - **"用黑名单过滤危险字符就行"**：黑名单总有漏网之鱼。优先白名单（只允许已知合法的）。
 - **"校验越多越安全"**：校验应集中在信任边界一次做完，而不是每个函数都重复校验——那是 L2 的耦合问题。
 
-## 六、复盘问题
+## 六、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '为什么“前端已做过输入校验，后端就完全不需要再校验”是极其致命的安全漏洞？',
+      options: [
+        '因为前端校验使用的 JavaScript 会严重拖慢客户端的渲染效率。',
+        '因为前端运行在不可控的客户端，攻击者可以使用 Postman、curl 等工具绕过前端页面，直接伪造任意恶意的 payload 发往后端。',
+        '因为后端校验使用的是多核服务器 CPU，其数据计算比浏览器更为精确。'
+      ],
+      answer: 1,
+      explain: '前端校验（如 HTML5 表单或 JS 校验）是为了提升用户交互体验、避免不必要的网络开销。但一切客户端代码都是不可信的，防御性编程要求后端作为最后的信任边界，必须执行强制性的输入白名单校验。'
+    },
+    {
+      q: '“Parse, don\'t validate（解析，而非仅仅校验）”这一思想的核心理念是什么？',
+      options: [
+        '在校验完输入数据后，原样透传原始的无约束 dict 字典，由下游业务函数自己承担安全性验证。',
+        '在系统边界进行检查，校验通过后将原始数据解析并转换为一个“带有合法性强保证”的新类型对象，从而在类型系统上杜绝非法状态传递。',
+        '把一切校验动作推迟到数据库层，直接依赖底层数据库的物理约束来报错。'
+      ],
+      answer: 1,
+      explain: '普通的 validate 仅在执行瞬间进行真假判断，透传给下游的依然是无状态的原始类型（如 `str`），下游容易遗忘或进行冗余校验。而 parse 将数据转型为专属类型（如 `Email` 类），下游只要接收到该类型就无需任何二次校验，消灭了非法表示。'
+    },
+    {
+      q: 'Postel 定律（鲁棒性原则）提倡“发送时严格，接收时宽容”。现代安全与微服务架构为何对“接收时宽容”持保留/批评态度？',
+      options: [
+        '因为试图去宽容和猜测畸形格式的意图，容易暴露出隐蔽的安全漏洞（如绕过校验），同时积累技术债，使得接口协议无法平滑演进。',
+        '因为接收端的宽容会占用数倍的 CPU 资源，拖慢整体服务器响应耗时。',
+        '因为接收时的宽容会导致网络传输中的数据包体积出现异常暴涨。'
+      ],
+      answer: 0,
+      explain: '历史实践表明，“宽容接收”让许多不合规、不标准的实现得以在网络上蔓延并固化下来，导致协议难以演进。同时，猜测畸形输入可能造成逻辑漏洞。因此现代零信任安全更提倡“严格校验、不符即拒”。'
+    }
+  ]}
+/>
+
+## 七、复盘问题
 
 - 你的系统里，外部数据有哪些入口？每个入口的信任边界画在哪？
 - "Parse, don't validate"如果用上，能消灭你代码里哪一类重复检查？
