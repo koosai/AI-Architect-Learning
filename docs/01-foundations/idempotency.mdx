@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # L6 · 幂等性深入
 
@@ -27,6 +28,37 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 ## 一、点一次按钮，扣两次钱
 
 用户点"支付"，请求发出去了，服务端其实**已经扣款成功**，但返回的响应在网络上丢了。客户端等超时，以为失败，**自动重试**——于是又扣了一次。用户被扣了两次钱。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Client as 客户端 (User Client)
+  participant Server as 支付服务端 (Server)
+  participant DB as 账务数据库 (Database)
+
+  Client->>Server: 1. 请求支付 $30 (No Idempotency Key)
+  activate Server
+  Server->>DB: 扣款 30 元 (Update balance)
+  activate DB
+  DB-->>Server: 成功
+  deactivate DB
+  Server-->>Client: 2. 返回 200 OK (但网络波动中途丢失)
+  deactivate Server
+  
+  Note over Client: 客户端超时等待 5s...
+  Note over Client: 以为请求失败，触发重试逻辑!
+
+  Client->>Server: 3. 再次发起请求支付 $30
+  activate Server
+  Server->>DB: 再次扣款 30 元 (Update balance)
+  activate DB
+  DB-->>Server: 成功
+  deactivate DB
+  Server-->>Client: 4. 返回 200 OK (网络恢复)
+  deactivate Server
+  
+  Note over DB: 🛑 余额共减少了 60 元 (重复扣款事故!)
+```
 
 这不是小概率边缘情况。L4 教过：重试是应对瞬时故障的标准手段。但**重试 + 非幂等操作 = 重复执行**。L1 用"邮箱判重"碰过幂等，这一课我们把它做成一个通用、可靠的机制。
 
@@ -57,12 +89,77 @@ HTTP 方法的语义就建立在这上面：GET/PUT/DELETE 被定义为幂等，
 
 这样无论客户端重试多少次（用同一个 key），操作只真正发生一次。注意：这需要 [L5 的共享状态](./state-and-storage)——那个"见过的 key"表必须所有实例可见。
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Client as 客户端 (User Client)
+  participant Server as 支付服务端 (Server)
+  participant Cache as 幂等去重表 (Idempotency Store)
+  participant DB as 关系数据库 (Database)
+
+  Note over Client: 生成 key = "req_999"
+  Client->>Server: 1. 请求扣款 $30 (Key = "req_999")
+  activate Server
+  Server->>Cache: 2. 查询 Key = "req_999"
+  activate Cache
+  Cache-->>Server: 未见过 (Miss)
+  deactivate Cache
+  Server->>DB: 3. 扣款 30 元并入账
+  activate DB
+  DB-->>Server: 扣款成功
+  deactivate DB
+  Server->>Cache: 4. 存入 Key = "req_999" -> 结果: $70 (Confirmed)
+  Server-->>Client: 5. 返回 200 OK (但网络波动丢失)
+  deactivate Server
+
+  Note over Client: 客户端超时，使用相同 Key 重试!
+  Client->>Server: 6. 重试请求扣款 $30 (Key = "req_999")
+  activate Server
+  Server->>Cache: 7. 查询 Key = "req_999"
+  activate Cache
+  Cache-->>Server: 已见过 (Hit, 结果: $70)
+  deactivate Cache
+  Note over Server: 🛑 拦截业务执行，不打扰 DB!
+  Server-->>Client: 8. 直接返回缓存结果 $70
+  deactivate Server
+  Note over DB: 💯 数据库只扣了 1 次款!
+```
+
 ### 深入（选学）：exactly-once 是一种幻觉
 
-很多人追求"消息恰好处理一次（exactly-once）"。残酷的事实是：在会丢包、会重发的网络上，**端到端的 exactly-once 投递在理论上做不到**。你能做到的是：
+很多人追求"消息恰好处理一次（<GlossaryTerm term="Exactly-once" definition="恰好一次投递：消息保证在端到端传输中只被传送且处理有且仅有一次，没有任何丢失或重复。在不可靠网络上纯粹依靠投递无法达成。">exactly-once</GlossaryTerm>）"。残酷的事实是：在会丢包、会重发的网络上，**端到端的 exactly-once 投递在理论上做不到**。你能做到的是：
 
 - <GlossaryTerm term="At-least-once" definition="至少一次：消息保证被投递/处理至少一次，但可能重复。配合幂等消费，就能达到“效果上只生效一次”。">at-least-once</GlossaryTerm>（至少一次，可能重复）+ **幂等消费** ≈ 效果上只生效一次（effectively-once）。
 - 这就是工业界的真实做法：**不追求"只投一次"，而是"允许重复投，但消费方幂等"。**
+
+我们甚至连最基础的 <GlossaryTerm term="At-most-once" definition="至多一次：消息保证最多只被投递/处理一次。允许消息丢失，但绝不重复。适用于数据采样等低安全容忍度场景。">at-most-once</GlossaryTerm>（至多一次，可能丢失，不重试）与这两者的转换关系也可以用图解体现：
+
+```mermaid
+flowchart TD
+  subgraph ExactlyOnceIdeal["理想的端到端 Exactly-Once 模式 (物理上恰好发送一次)"]
+    direction LR
+    Client1["发送端"] -->|理想无丢包网络| Server1["接收端 (物理上只收到1次)"]
+    Server1 -->|执行逻辑| DB1[("DB: 变更 1 次")]
+  end
+
+  subgraph EffectivelyOnceReal["现实的 Effectively-Once 模式 (物理上多次, 效果上一次)"]
+    direction TB
+    Client2["发送端"] -->|网络重发 (At-Least-Once)| Msg1["第1次投递 (Key=K)"]
+    Client2 -->|网络重发 (At-Least-Once)| Msg2["第2次重发 (Key=K)"]
+    
+    subgraph ServerSide["接收端幂等消费过滤"]
+      direction LR
+      Msg1 --> Check1{"未见过 key K?"}
+      Msg2 --> Check2{"已见过 key K?"}
+      
+      Check1 -->|Yes| Exec["真正执行逻辑并落盘DB"]
+      Check2 -->|Yes| Cache["直接阻断, 返回上次结果"]
+    end
+    
+    Exec --> DB2[("DB: 变更 1 次")]
+    Cache --> DB2
+  end
+```
 
 <ResearchNote
   title="把幂等当作分布式系统的一等设计原则"
@@ -201,6 +298,43 @@ L4 说"要会重试"，L6 说"重试的前提是幂等"。这两课合起来才�
 - 下单接口调用"扣库存 + 扣款 + 发货"三步，中间任一步失败后重试，怎么保证整体不重复执行？（提示：每步幂等 + 一个总的 request_id。）
 - idempotency key 的去重窗口设多久？太短会怎样，太长又会怎样？
 - 如果两个**带同一个 key** 的请求几乎同时到达（并发），你的去重还成立吗？（这把你引向 L8 的竞态条件。）
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在分布式支付系统中，用户点击“支付”按钮后网络超时，最安全且符合工程最佳实践的客户端重试策略是什么？',
+      options: [
+        '直接以相同参数发起重试，不需要任何额外字段。',
+        '生成并携带一个全局唯一的幂等键（Idempotency Key）发起安全重试；服务端利用去重存储对该键进行防重，已执行过则直接返回缓存结果。',
+        '停止任何重试，提示用户“网络已断，请到网点去查账确认”。'
+      ],
+      answer: 1,
+      explain: '幂等键（Idempotency Key）是保障写操作在网络超时重试中不产生“重复扣款”的黄金法则。服务端对处理过的 key 必须予以缓存拦截，保障资金安全。'
+    },
+    {
+      q: '关于物理投递层面绝对的“Exactly-Once（恰好一次投递）”与实际工程上的“Effectively-Once（效果上仅生效一次）”，以下哪项描述是客观正确的？',
+      options: [
+        '在存在丢包和网络延迟的现实分布式环境中，物理上的 Exactly-Once 投递从理论上是已经证伪不可行的；业界标准是通过 At-least-once（至少一次投递，会重发）加消费端幂等去重来模拟达成 Effectively-once。',
+        '我们可以直接依赖底层的 TCP 协议来无条件实现应用层端到端的 Exactly-Once。',
+        'At-least-once 投递已经天然杜绝了消息的重复接收，因此消费端无需做任何去重校验。'
+      ],
+      answer: 0,
+      explain: '由于物理丢包和超时必须进行重试，必然会产生重复消息（At-least-once）。因此必须由接收端实现幂等（去重表）来保障执行逻辑“Effectively-Once”（效果上仅一次），这是最务实的大规模分布式架构原则。'
+    },
+    {
+      q: '在高并发场景下，如果两笔携带“完全相同幂等键”的重试请求，几乎在同一毫秒内打到了服务器的两个无状态实例上，如何防止并发幂等击穿？',
+      options: [
+        '这不需要防范，因为去重数据库会自动合并重复的扣款命令。',
+        '必须引入分布式锁或在数据库层面对幂等键添加唯一索引约束，将第一个请求置为“处理中（Processing）”，使第二个并发请求直接等待或快速失败，防止两个实例同时进入扣款写逻辑。',
+        '直接拒绝这两个请求，要求客户端必须生成不同 key 再重试。'
+      ],
+      answer: 1,
+      explain: '并发重试是极易被忽视的 Bug 来源。在没有行级锁或分布式锁保护的情况下，并发请求可能同时检测到“去重表未记录该 key”，从而双双绕过防线。因此必须使用原子锁（或唯一性物理约束）占位防止并发击穿。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
