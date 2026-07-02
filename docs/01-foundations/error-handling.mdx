@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # L4 · 错误处理与异常设计
 
@@ -53,6 +54,28 @@ except Exception as e:
 | 用户错误（client error） | 调用方 | 名字空、邮箱格式错 | 明确告诉对方哪里错（4xx） |
 | 系统错误（server error） | 依赖/环境 | 数据库挂、超时 | 兜住、重试或降级（5xx），记日志 |
 | 程序 bug（programmer error） | 你 | 空指针、数组越界 | 不要兜！让它崩，暴露出来去修 |
+
+```mermaid
+flowchart TD
+  subgraph ClientSide["调用端责任 (Client Error - 4xx)"]
+    ValidationError["输入参数校验失败<br/>(ValidationError)"]
+    Unauthorized["未登录 / 权限不足<br/>(PermissionError / 401 / 403)"]
+  end
+
+  subgraph SystemSide["服务端与依赖责任 (Server Error - 5xx)"]
+    StorageUnavailable["数据库/网络超时挂掉<br/>(StorageError / 503)"]
+    ThirdPartyDown["第三方 API 挂掉<br/>(ExternalServiceError)"]
+  end
+
+  subgraph BugSide["代码逻辑缺陷 (Programmer Bug - Crash)"]
+    NullPointer["空指针 / 索引越界<br/>(KeyError / TypeError / 500)"]
+    MemoryLeak["内存泄漏 / 死锁<br/>(OOM)"]
+  end
+
+  ValidationError & Unauthorized -->|💡 处理策略| NotifyClient["安全返回结构化错误码<br/>(不记 Error 日志)"]
+  StorageUnavailable & ThirdPartyDown -->|💡 处理策略| CatchAndDegrade["就地捕获 + 重试指数退避 + 降级兜底<br/>(记 Error 日志报警)"]
+  NullPointer & MemoryLeak -->|💡 处理策略| LetItCrash["Erlang 哲理: Let It Crash!<br/>(干净崩溃暴露并由 Supervisor 重启)"]
+```
 
 <GlossaryTerm term="Recoverable Error" definition="可预期、可处理的错误，比如输入非法、依赖暂时不可用。应当被显式捕获并转化为合理响应。">可恢复错误</GlossaryTerm> 要兜；而<GlossaryTerm term="Programmer Error" definition="代码逻辑缺陷导致的错误（如 KeyError、TypeError）。不应该用 try/except 掩盖，而应让它暴露、被修复。">程序 bug</GlossaryTerm> 不该兜——把 bug 藏进 `except: pass` 里，等于把"该修的问题"变成"找不到的幽灵"。
 
@@ -172,6 +195,30 @@ python labs/month01/l4_errors/test_errors.py
 
 服务 A 调 B，B 变慢了。A 的请求都卡在等 B 上，A 的线程/连接被占满，于是调用 A 的 C 也开始卡……慢，像多米诺骨牌一样**逆着调用链往上传**，最终整站瘫痪。这就是<GlossaryTerm term="Cascading Failure" definition="一个组件的故障或变慢，通过资源耗尽逐级传播，最终拖垮整个系统的连锁反应。">级联失败（Cascading Failure）</GlossaryTerm>。
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant User as 客户端 (User)
+  participant ServiceA as 服务 A (Gateway)
+  participant ServiceB as 服务 B (User Service)
+  participant DB as 数据库 (Database)
+
+  Note over DB: 数据库变慢/死锁 (高负载)
+  ServiceB->>DB: 发送 SQL 查询请求
+  activate DB
+  Note over ServiceB: 工作线程卡在等待 DB 响应中
+  ServiceA->>ServiceB: 调用获取用户信息
+  activate ServiceB
+  Note over ServiceA: 网关工作线程卡在等待 ServiceB 响应中
+  User->>ServiceA: 发送新请求
+  activate ServiceA
+  Note over ServiceA: 连接池/线程池被占满 (吞吐降为 0)
+  ServiceA-->>User: ❌ 返回 504 Gateway Timeout (级联崩溃)
+  deactivate ServiceA
+  deactivate ServiceB
+  deactivate DB
+```
+
 <ResearchNote
   title="解决级联失败：超时、熔断、舱壁、降载"
   source="Google SRE Book, Addressing Cascading Failures"
@@ -185,6 +232,22 @@ python labs/month01/l4_errors/test_errors.py
 直觉上"失败就重试"很合理。但当一个服务正因为过载而变慢时，所有客户端同时重试，等于**给一个快淹死的人再泼几桶水**——重试让负载翻几倍，把本可恢复的服务彻底打死。这叫重试风暴 / 重试放大。
 
 正确的重试必须有三件套：**指数退避（exponential backoff）+ 抖动（jitter）+ 上限**，并且配合<GlossaryTerm term="Circuit Breaker" definition="断路器：当某依赖连续失败到阈值，就“跳闸”，一段时间内直接快速失败、不再调用它，给它喘息恢复的机会，之后再半开试探。">断路器</GlossaryTerm>，在依赖明显挂掉时干脆停止重试。
+
+```mermaid
+flowchart TD
+  subgraph RetryStorm["天真同步重试 (Fixed Interval - Retry Storm)"]
+    direction TB
+    C1["100个客户端挂了"] -->|同时等待 2s| R1["第 2s: 100个重试并发冲击 (并发峰值=100)"]
+    R1 -->|全部失败, 同时等待 2s| R2["第 4s: 100个重试并发冲击 (再次形成巨峰)"]
+  end
+
+  subgraph JitterRetry["指数退避 + 随机抖动 (Jitter Backoff)"]
+    direction TB
+    C2["100个客户端挂了"] -->|退避 2^1 + random_jitter| JR1["重试分散在 1.2s - 2.8s 之间 (峰值被平摊)"]
+    JR1 -->|失败, 退避 2^2 + random_jitter| JR2["重试分散在 3.1s - 5.5s 之间 (流量平滑分布)"]
+  end
+```
+
 
 <ResearchNote
   title="超时、重试与带抖动的退避"
@@ -252,7 +315,44 @@ python labs/month01/l4_errors/test_errors.py
 - **"所有错误都该被兜住，程序不能崩"**：程序 bug 该崩，崩了你才知道要修；该兜的是可预期的失败。
 - **"错误码随便起"**：错误码是给调用方写分支用的契约，改它等于改 API。
 
-## 六、复盘问题
+## 六、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '关于程序员引入的逻辑缺陷（Programmer Error，如 KeyError、TypeError），以下哪种处理方式最符合 Let It Crash 哲学？',
+      options: [
+        '写防御性的 try...except 兜住所有可能的逻辑异常，记录日志并返回空值继续运行。',
+        '不就地捕获，允许进程/协程在该行直接崩溃（Crash），由外部的上层监控与自愈机制将组件重置到已知的良好状态，并在日志中暴露完整堆栈。',
+        '修改运行时环境参数，使空指针和类型错误默认返回 0。'
+      ],
+      answer: 1,
+      explain: 'Joe Armstrong 的 Let It Crash 哲学认为，试图捂住逻辑 bug 不仅会让代码充斥无意义的防御分支，还极易带着脏状态运行引发更严重的隐性破坏。快速崩溃并交由外部监督重启，是更稳妥的自愈模式。'
+    },
+    {
+      q: '在微服务架构的级联失败（Cascading Failure）中，下游服务变慢会以何种方式逆着调用链往上传播拖垮整个系统？',
+      options: [
+        '因为下游服务的故障，导致上游的请求参数被自动修改。',
+        '因为下游变慢，导致上游请求积压等待超时，从而迅速耗尽连接池、工作线程池或内存等物理资源，进而无法响应其它正常请求。',
+        '因为底层网络交换机在检测到请求过载后会自动物理关机。'
+      ],
+      answer: 1,
+      explain: '级联失败的物理诱因是“资源耗尽”。当底层依赖变慢，上游调用方的工作线程会因为等待而处于挂起状态。在高并发下，上游的线程池或连接池会在极短时间内被吃满，导致上游也跟着瘫痪。'
+    },
+    {
+      q: '在分布式客户端的重试机制中，为什么“加入随机抖动（Jitter）的指数退避”是应对重试风暴的极佳手段？',
+      options: [
+        '因为如果不加入随机抖动，挂掉的客户端会在相同的退避周期结束后同步、齐步走般冲击服务端，造成周期性流量海啸；抖动可以将流量均匀摊平在时间轴上。',
+        '因为加入抖动可以大幅缩短网络数据包物理上的往返时延（RTT）。',
+        '因为抖动会修改重试的 payload 内容，规避防火墙的频控拦截。'
+      ],
+      answer: 0,
+      explain: '简单的指数退避（如 2, 4, 8 秒）在大量客户端挂掉时，会导致它们在相同的时刻（退避期结束）同步发起重试，在时间轴上形成高耸的尖峰（重试风暴）。随机抖动打破了这种“同步共振”，把重试平摊到了一定区间内。'
+    }
+  ]}
+/>
+
+## 七、复盘问题
 
 - 回看你写过的 try/except，有没有"吞掉"过错误？当时藏住了什么问题？
 - 你的系统里，哪些失败属于"让它崩 + 上层重启"更合适，而不是就地兜底？
