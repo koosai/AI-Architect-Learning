@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # L5 · 状态放在哪里
 
@@ -32,6 +33,29 @@ L1 里我们把报名记录存在一个内存 dict 里，单机跑得很好。�
 - 用户刷新，这次请求被发到了 **B 机器**，B 的内存里根本没有这条记录——于是显示"未报名"。
 - 更糟：A 机器一重启，内存清空，所有报名**凭空消失**。
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant User as 客户端 (User)
+  participant LB as 负载均衡 (Load Balancer)
+  participant ServerA as 应用服务器 A (Server-A)
+  participant ServerB as 应用服务器 B (Server-B)
+
+  User->>LB: 请求 1: 报名 ada@x.com
+  LB->>ServerA: 路由到 ServerA
+  ServerA->>ServerA: 状态存在 A 内存中 (Ada: Confirmed)
+  ServerA-->>User: 返回 200 报名成功
+  
+  Note over User, LB: 用户立即刷新页面
+  User->>LB: 请求 2: 查询 ada@x.com 状态
+  LB->>ServerB: 路由到 ServerB
+  ServerB->>ServerB: 检查本地内存
+  ServerB-->>User: 返回 "未报名" (数据丢失异常)
+
+  Note over ServerA: 故障重启 / 重新部署
+  Note over ServerA: 内存中的 Ada: Confirmed 瞬间清空
+```
+
 > 根因只有一句话：**你把"状态"放在了一个会消失、且别人看不到的地方（单个进程的内存里）。** 这一课就是学会：状态该放哪，才能让"加机器"真正有用。
 
 ## 二、三个核心概念（分层）
@@ -45,6 +69,32 @@ L1 里我们把报名记录存在一个内存 dict 里，单机跑得很好。�
 ### 进阶：把状态外移到共享后端
 
 解决办法不是"不要状态"（状态总得有人存），而是**把状态从应用进程里搬出去，放到一个所有实例都能访问的共享存储**：数据库、缓存（如 Redis）、对象存储。应用层变成无状态的"纯加工"，状态层单独管理。
+
+```mermaid
+flowchart TD
+  subgraph ClientSide["客户端 (Users)"]
+    U1["用户 Ada"]
+    U2["用户 Bob"]
+  end
+
+  LB["负载均衡器 (Load Balancer)"]
+
+  subgraph StatelessApp["无状态应用层 (Stateless App Layer - Share Nothing)"]
+    ServerA["Server A (无状态)"]
+    ServerB["Server B (无状态)"]
+    ServerC["Server C (无状态)"]
+  end
+
+  subgraph SharedState["共享状态存储层 (Shared State Backend)"]
+    RedisStore[("共享 Redis 缓存集群<br/>(Shared Session Store)")]
+    DB[("持久化关系数据库<br/>(Master-Slave DB)")]
+  end
+
+  U1 & U2 --> LB
+  LB -->|路由到任意健康实例| ServerA & ServerB & ServerC
+  ServerA & ServerB & ServerC -->|统一读写状态| RedisStore
+  RedisStore -->|数据最终落盘| DB
+```
 
 这正是 <GlossaryTerm term="Twelve-Factor App" definition="一套广泛采用的云原生应用方法论。其中一条核心原则：应用进程应当无状态，任何需要持久化的数据都交给『后端服务』（数据库、缓存等）。">Twelve-Factor</GlossaryTerm> 的核心原则之一。
 
@@ -67,7 +117,26 @@ L1 里我们把报名记录存在一个内存 dict 里，单机跑得很好。�
 | 共享缓存 (Redis) | 快(网络一跳) | 可配置 | ✓ |
 | 数据库 | 较慢 | ✓ | ✓ |
 
-而数据库/缓存这种有状态服务怎么扩？靠**复制（replication）**（多副本，读可分摊、单点故障可容忍）和**分片（sharding）**（按 key 把数据切到多台）。这会引出一致性难题——同步复制慢但一致，异步复制快但副本可能滞后（这是 Month 3 与 CAP 的核心）。
+```mermaid
+flowchart TD
+  subgraph SpeedDurability["存储介质金字塔: 速度与持久性的权衡"]
+    direction TB
+    L1_RAM["1. 进程内内存 (RAM)<br/>速度: ns 级 | 重启丢失 | 无法多实例共享"]
+    L2_Disk["2. 本地物理磁盘 (Disk)<br/>速度: ms 级 | 重启保留 | 无法多实例共享"]
+    L3_Cache["3. 共享分布式缓存 (Redis)<br/>速度: 网络 1 跳 (<1ms) | 部分保留 | 多实例全局共享"]
+    L4_DB["4. 持久化关系数据库 (SQL/NoSQL)<br/>速度: >10ms | 永久保留 | 多实例全局共享"]
+    
+    L1_RAM -->|速度变慢 | L2_Disk
+    L2_Disk -->|速度变慢 | L3_Cache
+    L3_Cache -->|速度变慢 | L4_DB
+    
+    L4_DB -->|持久度/可见性增强| L3_Cache
+    L3_Cache -->|持久度/可见性增强| L2_Disk
+    L2_Disk -->|持久度/可见性增强| L1_RAM
+  end
+```
+
+而数据库/缓存这种有状态服务怎么扩？靠<GlossaryTerm term="Replication" definition="复制：在多个不同的节点上保存相同数据的完整副本，借此提升系统的读取吞吐量和容错能力。">复制（Replication）</GlossaryTerm>（多副本，读可分摊、单点故障可容忍）和<GlossaryTerm term="Sharding" definition="分片：将数据集按某种 Key（如用户 ID）水平切分为多个独立子集，分别存储在不同节点上，用以扩展写入吞吐量和存储容量。">分片（Sharding）</GlossaryTerm>（按 key 把数据切到多台）。这会引出一致性难题——同步复制慢但一致，异步复制快但副本可能滞后（这是 Month 3 与 CAP 的核心）。
 
 ## 三、跟我做一遍：亲眼看状态丢失，再修好
 
@@ -220,6 +289,43 @@ python labs/month01/l5_state/test_state.py
 - 你的报名服务要做到"任意一台机器随时可被销毁重建而用户无感"，状态要怎么摆？画出应用层和状态层。
 - 如果用 Redis 存会话，Redis 本身挂了怎么办？（这会把你引向状态层自己的复制与容错。）
 - 为什么说"把状态外移"只是把难题从应用层转移到了状态层，而不是消灭了难题？
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在负载均衡器后面横向扩展多台应用服务器时，用户“登录成功后一刷新又提示未登录”的最底层架构原因是什么？',
+      options: [
+        '因为前端的 Cookie 会在页面刷新时被浏览器自动清空。',
+        '因为将会话状态（Session）保存在了单机应用进程的私有内存中，当下一次请求被负载均衡路由到其他无状态实例时，新实例无法读取原实例的私有状态。',
+        '因为负载均衡器（LB）发生了随机丢包，导致请求没有发出去。'
+      ],
+      answer: 1,
+      explain: '私有进程内存是状态共享的死角。在水平扩展的多实例环境中，除非采用粘性会话（Sticky Session，有很多缺点不推荐），否则每一次请求都可能路由到不同的实例。因此必须把状态外移到 Redis 或数据库等共享组件。'
+    },
+    {
+      q: 'Twelve-Factor 方法论主张“应用进程必须是无状态且无共享的”，以下关于它的理解哪一项是正确的？',
+      options: [
+        '无状态意味着系统运行过程中不能有任何数据状态产生或保存，整套业务必须是完全静态的。',
+        '无状态是指应用进程本身不保存任何需要跨请求持久化的数据，进程随时可以被无痛杀死、重建、伸缩，这是高可用的前提。',
+        '无状态是指数据只保存在本地磁盘的临时文件夹中，重启后丢了也没关系。'
+      ],
+      answer: 1,
+      explain: '无状态应用进程不持有任何需要持久化的数据，它只扮演“数据加工与转换器”角色。所有状态都委托给共享的外部 backing services。这为滚动部署、动态扩缩容和故障自愈打下了基石。'
+    },
+    {
+      q: '把应用层改造成“完全无状态”之后，原有的设计难题被转移到了哪里？',
+      options: [
+        '被转移到了如何设计更复杂的 CPU 密集型浮点计算上。',
+        '并没有消失，而是被转移到了专门的有状态“状态层”（如 Redis 或数据库），需要面对数据的横向扩展（分片）、高可用多副本（复制）和一致性一致协议等分布式底座难题。',
+        '被转移到了如何编写负载均衡的网络路由算法上。'
+      ],
+      answer: 1,
+      explain: '无状态应用由于实例对等，扩展极为简单。但是，容纳所有状态的底层存储（如缓存、数据库）成为了新的扩展瓶颈。为了扩展状态层，必须引入复制（Replication）与分片（Sharding），从而直面分布式一致性难题（Month 3 与 CAP 的核心）。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
