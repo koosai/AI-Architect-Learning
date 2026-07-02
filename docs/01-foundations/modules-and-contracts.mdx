@@ -9,6 +9,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # L2 · 模块、契约与信息隐藏
 
@@ -31,6 +32,35 @@ L1 结束时，你的 `create_signup` 已经能校验、幂等、记日志了。
 > 这不是代码"写错了"，而是代码**没有边界**。这一课，我们学的就是怎么把一团代码，切成几块各管一摊、互不打扰的模块。
 
 ## 二、三个核心概念（分层）
+
+在学习具体定义前，我们用图直观对比一下“意大利面条式乱麻依赖（高耦合/低内聚）”与“高内聚低耦合的清晰契约式设计”的区别：
+
+```mermaid
+flowchart TD
+  subgraph Spaghetti["天真纠缠版 (Spaghetti Code: 高耦合/低内聚)"]
+    direction TB
+    FuncA["一个超大全局函数"]
+    FuncA -->|混合| Logic1["Email格式校验逻辑"]
+    FuncA -->|混合| Logic2["拼写去空格处理"]
+    FuncA -->|混合| Logic3["读写内存Dict字典"]
+    FuncA -->|混合| Logic4["写入出错控制及堆栈打印"]
+  end
+
+  subgraph Modular["清晰模块版 (Modular Design: 低耦合/高内聚)"]
+    direction TB
+    BizBiz["业务编排模块<br/>(create_signup)"]
+    ValMod["校验模块<br/>(validate_signup)"]
+    StoreMod["存储契约接口<br/>(get / save)"]
+    
+    BizBiz -->|1. 仅调方法校验| ValMod
+    BizBiz -->|2. 仅依赖签名接口| StoreMod
+    
+    subgraph StorageImpls["存储实现细节 (信息隐藏)"]
+      StoreMod -.->|实现| MemImpl["内存实现<br/>(MemoryStore)"]
+      StoreMod -.->|实现| DbImpl["SQL实现<br/>(FakeSqlStore)"]
+    end
+  end
+```
 
 ### 基础：模块（Module）与契约（Contract）
 
@@ -146,6 +176,64 @@ print("works with any store")`}
 
 注意拆分版的关键：业务函数 `create_signup` **依赖的是 `store.get / store.save` 这个契约**，而不是某个具体的数据库。这就是信息隐藏——存储怎么实现，被藏起来了。换数据库时，业务代码一行都不用改。**试试**：再写一个 `LoggingStore`，在 save 时打印一行日志，然后喂给同一个业务函数。
 
+我们可以用图清晰勾勒这种契约编排的系统职责依赖关系：
+
+```mermaid
+flowchart TD
+  subgraph Orchestration["业务编排层 (Business Logic Layer)"]
+    Biz["create_signup(name, email, store)"]
+  end
+
+  subgraph Boundary["系统边界层 (Boundary Layer)"]
+    Val["validate_signup(name, email)"]
+  end
+
+  subgraph Contract["契约接口层 (Contract Layer)"]
+    StoreInt["store (存储契约接口)"]
+  end
+
+  subgraph Implementations["实现细节 (Hidden Implementation)"]
+    Mem["MemoryStore (内存存储)"]
+    Sql["FakeSqlStore (SQL数据库)"]
+  end
+
+  Biz -->|1. 调用契约验证入参| Val
+  Biz -->|2. 通过契约获取记录| StoreInt
+  Biz -->|3. 通过契约保存记录| StoreInt
+
+  StoreInt -.->|鸭子类型契约实现| Mem
+  StoreInt -.->|鸭子类型契约实现| Sql
+```
+
+无论是使用内存实现 `MemoryStore` 还是 SQL 关系库实现 `FakeSqlStore`，底层的替换完全由契约驱动，对上层业务流向没有半分影响：
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 调用客户端 (Client)
+  participant Biz as 业务编排 (create_signup)
+  participant Val as 边界校验 (validate_signup)
+  participant Store as 统一存储契约 (store)
+
+  Client->>Biz: 发起请求 (Ada, ada@x.com)
+  Biz->>Val: 验证格式 (Ada, ada@x.com)
+  Val-->>Biz: 验证通过
+  
+  Note over Biz, Store: 此时若注入的是 MemoryStore
+  Biz->>Store: get(ada@x.com)
+  Store-->>Biz: 返回空 (Not Found)
+  Biz->>Store: save(record)
+  Store-->>Biz: 确认写入内存成功
+  
+  Note over Biz, Store: 后期无缝切换为 FakeSqlStore
+  Biz->>Store: get(ada@x.com)
+  Store-->>Biz: 返回空 (Not Found)
+  Biz->>Store: save(record)
+  Store-->>Biz: 确认写入SQL成功
+  
+  Biz-->>Client: 最终成功返回记录
+```
+
 ## 四、轮到你：把 L1 的 signup 拆成模块
 
 <GuidedExercise
@@ -249,7 +337,44 @@ L1 的延迟表在这里第二次发威：两个模块如果在**同一个进程
 - **"接口/契约是大项目才需要的"**：哪怕两个函数之间，约定好"你给我什么、我还你什么"就是契约。它让协作和替换成为可能。
 - **"耦合低就是好"**：过度解耦（处处抽象）也是病。目标是让**变化**容易，不是抽象本身。
 
-## 六、复盘问题
+## 六、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '关于“高内聚、低耦合（High Cohesion, Low Coupling）”，以下哪种理解是最准确的？',
+      options: [
+        '高内聚意味着模块内应该包含尽可能多的不同业务逻辑，低耦合意味着使用指针调用以减少依赖。',
+        '高内聚指模块内部元素高度专注于单一职责，低耦合指模块之间依赖度低，使得单个模块的变化不容易外溢波及其他模块。',
+        '为了绝对解耦，系统内所有模块都不允许互相调用，完全通过全局变量共享状态。'
+      ],
+      answer: 1,
+      explain: '“高内聚”意味着“一个模块只做好一件事”，其代码集中且紧凑；“低耦合”意味着“不同模块之间的关联尽可能简单”，模块间只通过清晰契约通信。这极大地提升了系统的可读性、可测试性和局部修改安全性。'
+    },
+    {
+      q: 'Parnas 在 1972 年关于信息隐藏（Information Hiding）的经典论文中，指出系统设计划分模块的最佳切入点是什么？',
+      options: [
+        '按照程序的物理执行顺序或时间步骤来切分模块。',
+        '按照最容易发生变化的“设计决定”或“技术细节”（如存储介质、校验规则）来划分边界，将容易变的部分隐藏在稳定接口后面。',
+        '把所有的代码写在一个文件里，通过多层嵌套类来实现形式上的隐藏。'
+      ],
+      answer: 1,
+      explain: 'Parnas 的核心洞察是“沿着变化点切边界”。如果一个技术决定（例如是否使用持久化、使用哪种数据库）很可能会在未来被修改，就应该用一个稳定的契约接口屏蔽其内部实现，使改变被隔离在单个模块内部，而不影响调用方的业务层。'
+    },
+    {
+      q: '当两个模块被拆分到两个不同的微服务中运行，对比同一个进程内模块调用，会带来什么架构取舍？',
+      options: [
+        '拆分成微服务后，部署独立性大幅提高，但同时原本的函数内调用变成了网络跨进程通信，延迟将增加几个数量级，同时引入分布式一致性挑战。',
+        '拆分成微服务会降低运维复杂度，并同时成倍提升本地调用的性能。',
+        '拆分成微服务后，系统内部将自然杜绝一切网络超时故障。'
+      ],
+      answer: 0,
+      explain: '微服务（拆分进程）带来团队自治与独立部署的收益，但网络跨进程通信通常比同一进程内的本地函数调用慢 10 万倍以上。因此如果把紧密耦合（频繁交互）的模块强行拆为独立微服务，不仅严重损害吞吐，还会因不合理的分布式边界演变成难以维护的“分布式单体”。'
+    }
+  ]}
+/>
+
+## 七、复盘问题
 
 - 你过去写的代码里，有没有"改一处、坏三处"的经历？用耦合/内聚解释它。
 - 如果存储、校验、业务都各自是一个模块，哪个模块未来最常变？（这决定了你该把哪个藏在最稳定的接口后面。）
