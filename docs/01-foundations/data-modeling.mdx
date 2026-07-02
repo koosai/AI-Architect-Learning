@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # L7 · 数据建模入门
 
@@ -41,6 +42,21 @@ L1 里报名记录我们随手存成一个大列表。现在产品要两个功�
 
 数据建模先识别**实体**（用户、活动）和它们之间的**关系**。报名其实是用户和活动之间的<GlossaryTerm term="Many-to-many" definition="多对多关系：一个用户可报多个活动，一个活动可有多个用户。通常用一张“关联表/连接表”来表达。">多对多</GlossaryTerm>关系：一个用户报多个活动，一个活动有多个用户。
 
+```mermaid
+flowchart TD
+  subgraph Entities["实体与关系模型"]
+    U["用户实体 (Users)<br/>PK: user_id (str)"]
+    E["活动实体 (Events)<br/>PK: event_id (str)"]
+    
+    S["报名关联表 (Signups)<br/>PK: (user_id, event_id)<br/>FK1: user_id (References Users)<br/>FK2: event_id (References Events)"]
+  end
+
+  U -->|1 : N| S
+  E -->|1 : N| S
+  
+  Note over S: 唯一性约束 (Unique Constraint):<br/>同一对 (user_id, event_id) 不可重复插入!
+```
+
 两个关键约束：<GlossaryTerm term="Primary Key" definition="主键：唯一标识一条记录的字段（如 user_id）。是引用和查找一条记录的依据。">主键</GlossaryTerm>（唯一标识一条记录）和<GlossaryTerm term="Unique Constraint" definition="唯一约束：保证某字段（或字段组合）不重复，比如同一用户不能报名同一活动两次。是数据完整性的保障。">唯一约束</GlossaryTerm>（同一用户不能报同一活动两次——这把 L6 的幂等下沉到了数据层）。
 
 ### 进阶：规范化 vs 反规范化，以及索引
@@ -50,6 +66,24 @@ L1 里报名记录我们随手存成一个大列表。现在产品要两个功�
 <GlossaryTerm term="Denormalization" definition="反规范化：故意冗余存储（同一数据存多份/预计算），用空间和写入复杂度换取读取速度。">反规范化</GlossaryTerm>：故意冗余、预计算，用"写麻烦、占空间"换"读飞快"。
 
 而让查询变快的核心武器是<GlossaryTerm term="Index" definition="索引：一个额外的数据结构（如哈希表、B 树），把“按某字段查找”从全表扫描 O(n) 降到接近 O(1) 或 O(log n)。代价是额外空间和写入开销。">索引</GlossaryTerm>——本质就是"按查询模式预先组织一份查找结构"。
+
+```mermaid
+flowchart TD
+  subgraph NormalizedQuery["规范化单表查询模式 (Normalized Scan - No Index)"]
+    direction TB
+    Req1["查询 Event = e1 的所有用户"] --> Scan["全表扫描 (遍历 Signups 列表)"]
+    Scan -->|O(N) 复杂度| Res1["匹配结果: [ada, bob]"]
+  end
+
+  subgraph IndexedQuery["反规范化双向索引模式 (Indexed Lookup - O(1))"]
+    direction TB
+    Req2["查询 Event = e1 的所有用户"] --> Match1["直接命中哈希索引: by_event['e1']"]
+    Req3["查询 User = ada 的所有活动"] --> Match2["直接命中哈希索引: by_user['ada']"]
+    
+    Match1 -->|O(1) 复杂度| Res2["[ada, bob]"]
+    Match2 -->|O(1) 复杂度| Res3["[e1, e2]"]
+  end
+```
 
 ### 深入（选学）：按查询建模，而不是按"数据长什么样"建模
 
@@ -61,6 +95,25 @@ L1 里报名记录我们随手存成一个大列表。现在产品要两个功�
 | 文档 | 整块读写、灵活 schema | 用户资料、内容 |
 | 键值（KV） | 极快的按 key 读写 | 会话、缓存 |
 | 图 | 关系遍历 | 社交网络、推荐 |
+
+```mermaid
+flowchart TD
+  subgraph SQLModel["关系型数据库 (SQL)"]
+    direction LR
+    Table["二维表 (Rows & Columns)"] --> Join["JOIN 复杂关联查询"]
+  end
+
+  subgraph NoSQLModels["非关系型数据库 (NoSQL)"]
+    direction TB
+    Document["文档存储 (Document)<br/>BSON / JSON 格式<br/>(整块读写 / 嵌套表达)"]
+    KV["键值存储 (Key-Value)<br/>Key -> Value 映射<br/>(高速读写缓存)"]
+    Graph["图数据库 (Graph)<br/>Nodes + Edges<br/>(极速遍历复杂关系)"]
+  end
+
+  DBSelect["根据查询模式与数据关系选择模型"] --> SQLModel
+  DBSelect --> NoSQLModels
+```
+
 
 <ResearchNote
   title="关系模型：用数学把数据和查询分开"
@@ -202,6 +255,43 @@ python labs/month01/l7_modeling/test_index.py
 - 报名系统再加一个查询"最近 24 小时最热门的 10 个活动"，你的数据模型要怎么变？（规范化扫描？还是维护一个排行榜索引？）
 - 同一用户重复报名同一活动，你会在应用层挡（L6 幂等）还是数据层挡（唯一约束）？为什么两层都要？
 - 如果报名数据要分片到 10 台库，你会用什么做分片键？按 user 还是按 event？各自牺牲了哪类查询？
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在设计大规模高并发系统时，为什么要强调“先根据查询模式建模，再决定物理存储形式”？',
+      options: [
+        '因为存储硬件介质的性能提升可以自动消除查询瓶颈，所以提前考虑只是一种优雅的习惯。',
+        '因为单纯追求消除冗余的规范化会导致高频读取场景下发生昂贵的跨表多路 JOIN；按查询模式去反规范化或维护派生索引，能使核心读取路径的时间复杂度降为 O(1) 或 O(log n)。',
+        '因为不提前考虑查询模式，数据库引擎在启动时就会因为编译错误而报错。'
+      ],
+      answer: 1,
+      explain: '传统的范式设计关注数据写入一致性，但在大部分读多写少的分布式系统中，读延迟是最大瓶颈。优先保证高频查询可以通过建立专属索引或冗余预计算，用写的少许代价换取读的高效。'
+    },
+    {
+      q: '在分布式数据库的分片（Sharding）实践中，选择“分片键（Sharding Key）”时最核心的权衡是什么？',
+      options: [
+        '因为分片键决定了数据在物理节点上的路由，如果选择不当，容易造成特定分片高负载（数据热点）或使大范围关联查询退化为跨所有节点的昂贵广播扫描。',
+        '因为分片键会物理改变服务器网线的物理带宽，造成硬件故障。',
+        '因为分片键必须选用长度极长的 UUID，否则分片路由表将无法对齐。'
+      ],
+      answer: 0,
+      explain: '分片键是分片层路由的灵魂。如果按 user_id 分片，查某个用户的数据极快；但查某个活动的数据就必须跨所有分片做扇出广播，这会让系统的扩展性和查询效率大幅打折。所以选择分片键往往伴随着对核心查询模式的妥协。'
+    },
+    {
+      q: '关于 OLTP 与 OLAP 两种典型负载的建模，以下说法哪项是正确的？',
+      options: [
+        '为了维持强一致性并最大限度节省硬件开销，系统应当在同一套数据库实例上混合运行大规模统计汇总与用户在线报名业务。',
+        'OLTP 关注小事务和低时延，模型侧重规范化保障一致；OLAP 关注宽范围的统计分析，模型侧重反规范化和列式存储来加速大表扫描。由于对系统资源消耗截然相反，通常需要库仓分离。',
+        'OLAP 的首要设计目标是为了防止用户点击产生并发扣减重复。'
+      ],
+      answer: 1,
+      explain: 'OLTP 需要极速精确地修改单行；OLAP 需要扫描上亿行数据做聚合。如果在同一库上运行，OLAP 的大查询会占满 CPU 资源并触发大范围锁，导致 OLTP 在线服务瞬间不可用。因此两类建模与存储往往在物理上隔离。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
