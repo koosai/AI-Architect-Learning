@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # L8 · 并发与竞态条件
 
@@ -35,6 +36,45 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 结果：**一张票卖给了两个人（超卖）**。每一步代码都没错，错在"读—判断—写"这三步之间，被另一个请求**插了队**。
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant ClientA as 用户 A
+  participant ClientB as 用户 B
+  participant Server as 库存服务 (Server)
+  participant DB as 数据库 (seats=1)
+
+  ClientA->>Server: 1. 抢座请求 (A)
+  activate Server
+  ClientB->>Server: 2. 抢座请求 (B)
+  activate Server
+  
+  Server->>DB: 3. A 读剩余座位 (SELECT seats)
+  activate DB
+  DB-->>Server: seats=1 (有票)
+  deactivate DB
+  
+  Server->>DB: 4. B 读剩余座位 (SELECT seats)
+  activate DB
+  DB-->>Server: seats=1 (B 认为有票 - 竞态窗口!)
+  deactivate DB
+  
+  Server->>DB: 5. A 执行更新 (UPDATE seats=0)
+  activate DB
+  DB-->>Server: 成功
+  deactivate DB
+  Server-->>ClientA: 6. 返回抢占成功 (A 拿到票)
+  
+  Server->>DB: 7. B 基于旧快照执行更新 (UPDATE seats=0)
+  activate DB
+  DB-->>Server: 成功 (超卖!)
+  deactivate DB
+  Server-->>ClientB: 8. 返回抢占成功 (B 也拿到票)
+  
+  deactivate Server
+  deactivate Server
+```
+
 > 这就是<GlossaryTerm term="Race Condition" definition="竞态条件：程序的正确性依赖于多个操作的执行时序，当它们交错执行时产生错误结果。典型是“读-改-写”不是原子操作时被并发打断。">竞态条件（race condition）</GlossaryTerm>。这一课学的就是怎么让"读—改—写"安全。
 
 ## 二、三个核心概念（分层）
@@ -51,6 +91,47 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - <GlossaryTerm term="Optimistic Concurrency Control" definition="乐观并发控制：假设冲突很少，不加锁；提交时用版本号/CAS 检查数据有没有被别人改过，被改过就拒绝并重试。">乐观并发控制</GlossaryTerm>：不加锁，先干；提交时检查"我读它之后，有没有人改过它"（用版本号/CAS），改过就拒绝、让你重试。
 
 抢座这种"冲突其实不多但要绝对正确"的场景，乐观锁很合适：给库存配一个**版本号**，每次成功修改版本号加一；提交时如果版本号变了，说明别人先改了，本次作废。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant ClientA as 用户 A
+  participant ClientB as 用户 B
+  participant Server as 抢票服务 (OCC Handler)
+  participant DB as 数据库 (seats=1, version=0)
+
+  ClientA->>Server: 1. 抢票 (A)
+  activate Server
+  ClientB->>Server: 2. 抢票 (B)
+  activate Server
+
+  Server->>DB: 3. A 读取库存与版本号
+  activate DB
+  DB-->>Server: seats=1, version=0
+  deactivate DB
+
+  Server->>DB: 4. B 读取库存与版本号
+  activate DB
+  DB-->>Server: seats=1, version=0
+  deactivate DB
+
+  Note over Server: A 尝试提交 ( seen_version = 0 )
+  Server->>DB: 5. A 执行更新 (UPDATE seats=0, version=1 WHERE version=0)
+  activate DB
+  DB-->>Server: 成功 (影响行数=1)
+  deactivate DB
+  Server-->>ClientA: 6. 返回抢占成功 (A 拿到票)
+
+  Note over Server: B 尝试提交 ( seen_version = 0 )
+  Server->>DB: 7. B 执行更新 (UPDATE WHERE version=0)
+  activate DB
+  DB-->>Server: 失败 (影响行数=0, 因为当前数据库 version 已变为 1)
+  deactivate DB
+  Server-->>ClientB: 8. ❌ 发生冲突被拒绝 (B 抢票失败, 提示重试)
+
+  deactivate Server
+  deactivate Server
+```
 
 ### 深入（选学）：原子操作、隔离级别与"干脆不共享"
 
@@ -198,6 +279,24 @@ python labs/month01/l8_concurrency/test_seats.py
 
 加机器/加核就能线性变快吗？不能。<GlossaryTerm term="Amdahl's Law" definition="阿姆达尔定律：程序里串行（不能并行）的部分，决定了加再多处理器也突破不了的加速上限。若 5% 必须串行，加无限核最多也只快 20 倍。">Amdahl 定律</GlossaryTerm>说：只要有一部分必须串行，它就成了加速的天花板——比如 5% 串行，加无限多核也最多快 20 倍。而竞态的"锁"恰恰会制造串行段。所以架构上既要正确，又要尽量减少串行/锁竞争（回看 [L1 的尾延迟与扩展](./programming-systems-primer)）。
 
+```mermaid
+flowchart TD
+  subgraph AmdahlsLaw["阿姆达尔定律 (Amdahl's Law)"]
+    direction TB
+    P["并行计算区 (可分配给 100+ CPU 核心)<br/>时间占比: 95%"]
+    S["临界串行区 (必须加锁排队执行)<br/>时间占比: 5%"]
+    
+    TotalTime["总执行时间 (N=1)"] --> S
+    TotalTime --> P
+    
+    ParallelUpgrade["增加核心 (N -> 无穷大)"] --> S
+    ParallelUpgrade -->|时间缩短为 0| P
+    
+    Limit["极限加速比 (Speedup Limit) = 1 / 5% = 20 倍!"]
+  end
+```
+
+
 <ResearchNote
   title="并发控制的全景：锁、隔离级别与可串行化"
   source="Martin Kleppmann, DDIA 第 7 章（Transactions）"
@@ -211,6 +310,43 @@ python labs/month01/l8_concurrency/test_seats.py
 - 秒杀场景：100 万人抢 1000 件，你会用悲观锁、乐观锁、原子扣减还是排队串行？为什么？（提示：写热点 + 极高并发。）
 - 乐观锁在"冲突很多"时会发生什么？（大量重试，反而比悲观锁还慢——所以要看冲突率。）
 - 为什么说"用通信共享内存"（Actor/消息）比"用共享内存通信"（锁）在大规模下更不容易出竞态？
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在数据库高并发扣减库存（如秒杀）场景中，关于乐观锁（Version/CAS）与悲观锁（SELECT FOR UPDATE）的选择，以下说法哪项是正确的？',
+      options: [
+        '因为乐观锁不阻塞读写，因此在极端高冲突的秒杀热点（如 10 万人抢 1 件商品）下，其吞吐量和性能依然远远好于悲观锁。',
+        '乐观锁适用于低冲突、低竞争的并发修改场景；在极端写热点/高冲突场景下，乐观锁会导致海量请求并发冲突并疯狂重试，产生巨大的 CPU 空转浪费，此时反而适合用悲观锁或者原子排队/扣减。',
+        '悲观锁会导致系统发生死锁的概率降低为 0，因而应当作为所有业务的默认选择。'
+      ],
+      answer: 1,
+      explain: '乐观锁的核心假设是“冲突很少发生”。在极高冲突的写热点下，大量并发会导致除一个请求外其余全部失败并进入 Retry 循环，造成严重的性能反噬。此时悲观排队或原子操作能保障有序与资源节约。'
+    },
+    {
+      q: '根据阿姆达尔定律（Amdahl\'s Law），如果一个并行处理系统的业务逻辑中，有 10% 的时间段必须采用互斥锁进行串行化执行（如更新共享库存余额），那么该系统的最大极限加速比是多少？',
+      options: [
+        '可以通过无限增加服务器核心数来获得无限大的线性加速比。',
+        '最大加速比上限被死死锁在 10 倍（1/0.10），即使增加一万个 CPU 核心也无法突破该加速极限。',
+        '加速比上限取决于网络带宽和 CPU 主频，与串行占比没有绝对数学关系。'
+      ],
+      answer: 1,
+      explain: '阿姆达尔定律数学公式为 S(N) = 1 / (s + (1-s)/N)。当 N 趋向于无穷大时，最大加速比为 1/s（其中 s 为串行比例）。若 s=10%，最大加速比极限为 10 倍。这警示架构师必须竭力减少临界区（串行段）的范围。'
+    },
+    {
+      q: 'Erlang/OTP 或 Go 语言提倡的“不要通过共享内存来通信，而要通过通信来共享内存”的思想，在架构上是如何避免锁竞态的？',
+      options: [
+        '它通过在操作系统内核强制禁用多线程来实现真正的单线程运行。',
+        '它让每个特定实体状态由单一自治协程/进程（主宰者）持有，外部请求只能转化为消息发往其信箱（Mailbox），由该协程串行化、排队处理，从而消灭了对多线程共享可变状态的并发修改竞态。',
+        '它使用硬件级别的高速缓存一致性协议直接合并所有并发写动作。'
+      ],
+      answer: 1,
+      explain: '无共享状态模型将并发冲突问题转化为了“消息排队问题”。由于持有状态的进程是单线程串行消费信箱消息的，不存在多线程并发读改写的竞态窗口，因此从根源上消除了死锁和内存竞态的风险。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
