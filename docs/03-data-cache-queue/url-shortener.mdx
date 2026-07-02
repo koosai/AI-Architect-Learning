@@ -1,0 +1,186 @@
+---
+title: M3L8 - 项目：URL 短链系统
+description: 用本月所学造一个 bit.ly——发号 + base62 编码 + 缓存重定向，一个经典系统设计题的完整实现。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M3L8 · 项目：URL 短链系统
+
+<ChapterMeta
+  time="约 3–4 小时（小项目）"
+  prereqs={[{label: 'M2 系统设计方法', href: '../system-design-bridge/overview'}, {label: 'M3L5 缓存模式', href: './cache-patterns'}]}
+  outcome="一个能把长链生成短码、再把短码解析回长链的短链服务，理解发号、base62、读多写少的缓存设计。"
+  howToUse="先用 M2 五步法快速过一遍设计，再跑 base62 demo，最后做 lab 实现核心。"
+/>
+
+:::tip 把这个月的知识，造成一个真东西
+短链服务（bit.ly）是系统设计面试的经典开胃题，也正好综合本月所学：发号（ID 生成）、编码（base62）、读多写少（缓存 + CDN）。这一课你会亲手把它造出来。
+:::
+
+## 一、五步法快速设计
+
+用 [M2L1 方法](../system-design-bridge/design-methodology) 过一遍：
+
+1. **澄清**：长链→短码、短码→重定向。短码要短、唯一、（最好）不可枚举。
+2. **估算**（[M2L3](../system-design-bridge/capacity-estimation)）：读远多于写（每个短链生成一次、被点很多次）→ **读多写少，重缓存**。
+3. **HLD**：客户端 → 网关 → 短链服务 → 缓存（热门短码）→ 数据库（code↔url 映射）。
+4. **深潜**：① 短码怎么生成（发号 + base62）② 重定向怎么极快（缓存 + CDN）。
+5. **取舍**：发号方式（自增/随机/哈希）、强一致 vs 最终一致。
+
+## 二、三个核心概念（分层）
+
+### 基础：核心数据模型
+
+短链服务的本质极简：一张 `code → url` 的映射表，加两个操作——`shorten(url)` 和 `resolve(code)`。难点不在功能，在**怎么生成短码**和**怎么扛海量重定向读**。
+
+### 进阶：发号 + base62 编码
+
+最经典的发号法：用一个**自增 ID**（1, 2, 3...），再把它转成 <GlossaryTerm term="Base62" definition="用 0-9a-zA-Z 共 62 个字符表示数字。把自增 ID 转成 base62，能得到又短又唯一的短码（如 ID 125 → 21）。62^7 已超 3.5 万亿，7 位足够。">base62</GlossaryTerm>（0-9a-zA-Z）字符串。好处：**短**（62^7 > 3.5 万亿）、**唯一**（ID 唯一 → 码唯一，天然防 [L6 重复](../foundations/idempotency)）。
+
+### 深入（选学）：规模下的发号
+
+单机自增 ID 在分布式下会冲突。规模化发号有几条路：**号段（counter range）**——每台机器一次领一批 ID（如 1-1000）本地发，用完再领；或 <GlossaryTerm term="Snowflake" definition="Twitter 提出的分布式 ID 生成：用「时间戳 + 机器号 + 序列号」拼成一个全局唯一、大致有序的 64 位 ID，无需中心协调。">Snowflake</GlossaryTerm>（时间戳+机器号+序列）。**自增 ID 可枚举**（别人能猜下一个），要不可枚举就用随机/哈希，但要处理碰撞。
+
+<ResearchNote
+  title="短链是综合性的入门系统设计题"
+  source="System Design：URL Shortener / TinyURL 设计（业界通用题）"
+  href="https://github.com/donnemartin/system-design-primer#design-a-system-that-scales-to-millions-of-users-on-aws"
+  insight="短链服务被广泛用作系统设计入门题，因为它在极简的功能下，浓缩了发号唯一性、编码、读多写少的缓存、重定向延迟、可枚举性/安全等多个真实权衡。"
+  application="做这个项目的价值不在功能，而在练“把方法论落到实现”：从估算推出“重缓存”、从唯一性需求推出“发号 + base62”、从安全推出“要不要不可枚举”。这正是 Month 2→Month 3 的衔接。"
+/>
+
+## 三、跟我做一遍：base62 编码
+
+<PyRunner
+  expect="往返一致"
+  code={`BASE62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+def to_base62(n):
+    if n == 0:
+        return BASE62[0]
+    s = ""
+    while n > 0:
+        s = BASE62[n % 62] + s
+        n //= 62
+    return s
+
+# 自增 ID → 短码：又短又唯一
+for i in [1, 61, 62, 125, 1000000]:
+    print(f"id={i:>8} → 短码 {to_base62(i)}")
+
+# 重定向就是反查映射表
+mapping = {to_base62(125): "https://example.com/very/long/url"}
+code = to_base62(125)
+print("resolve", code, "→", mapping[code])
+print("往返一致")`}
+/>
+
+自增 ID 125 变成短码 `21`——短、唯一、按序生成。100 万也才 6 位。**试试**：算一下 7 位 base62 能表示多少短链（62^7），够用几十年。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month03/m3l8_url_shortener/`：
+
+```bash
+python labs/month03/m3l8_url_shortener/test_shortener.py
+```
+
+实现短链服务核心：base62 编码 + 发号 + shorten/resolve。
+
+<GuidedExercise
+  title="练习指引：造一个短链服务"
+  goal="把发号 + base62 + 映射存取串成一个能用的服务——你作品集里的第一个数据系统小项目。"
+  hints={[
+    'to_base62(n)：不断取 n % 62 作字符、n //= 62，直到 0；n==0 特判返回 "0"。',
+    'shorten：用自增 next_id 生成 code，存 code→url，再自增。',
+    'resolve：查映射表，不存在返回 None。',
+    '两个不同 url 会得到两个不同 code（因为 id 不同）。'
+  ]}
+  steps={[
+    '实现 to_base62(n)（含 n==0）。',
+    '实现 URLShortener：next_id 从 1 开始、code_to_url 映射。',
+    'shorten(url)：code = to_base62(next_id)，存映射，next_id += 1，返回 code。',
+    'resolve(code)：返回 url 或 None。',
+    '写测试：base62 边界（0/61/62）、shorten/resolve 往返、未知 code 返回 None、不同 url 不同 code。'
+  ]}
+  checks={[
+    '你的 base62 在 0、61、62 边界正确。',
+    'shorten/resolve 能正确往返。',
+    '你能解释为什么自增 ID + base62 天然唯一。',
+    '你能说出自增 ID 在分布式下的问题和对策（号段/Snowflake）。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 发号策略的取舍
+
+<TradeoffExplorer
+  title="短码（ID）怎么生成"
+  dimensions={['短/紧凑', '唯一性', '不可枚举', '分布式友好', '实现复杂度']}
+  options={[
+    {
+      name: '自增 ID + base62',
+      scores: [5, 5, 1, 2, 5],
+      note: '最短、天然唯一、简单。但可枚举（能猜下一个）、单点自增在分布式下要协调。',
+      whenToUse: '单机/中小规模、不在意可枚举时的默认选择。'
+    },
+    {
+      name: '号段（counter range）',
+      scores: [5, 5, 1, 5, 3],
+      note: '每台机器批量领一段 ID 本地发。分布式友好、仍紧凑。但仍可枚举。',
+      whenToUse: '需要分布式发号、又要短码时的常用方案。'
+    },
+    {
+      name: '随机 / 哈希',
+      scores: [4, 3, 5, 5, 3],
+      note: '不可枚举、无需中心协调。但要处理碰撞（生成后查重重试）。',
+      whenToUse: '短码不能被猜（安全/隐私）时。'
+    },
+    {
+      name: 'Snowflake',
+      scores: [2, 5, 3, 5, 3],
+      note: '时间戳+机器号+序列，全局唯一、大致有序、无中心。但 ID 较长（转 base62 后码也长）。',
+      whenToUse: '海量分布式发号、需大致有序时。'
+    }
+  ]}
+/>
+
+### 2. 重定向是极致读多写少
+
+一个短链生成一次、可能被点击百万次——**读写比极高**（回扣 [M2L3](../system-design-bridge/capacity-estimation)）。所以重定向路径要：缓存热门短码（cache-aside，[M3L5](./cache-patterns)）+ CDN 边缘（[L10](../foundations/request-path)）+ 防三大难题（[M3L7](./cache-problems)）。映射本身可最终一致（[M2L6](../system-design-bridge/cap-consistency)）——短链生成后晚几百毫秒可用，没人在意。
+
+### 3. 真实案例：极简功能，综合取舍
+
+短链把本月几乎所有知识点串了起来：发号（唯一性/L6）、编码、缓存（M3L5-7）、读多写少（M2L3）、最终一致（M2L6）。**这正是系统设计的精髓——简单需求背后是一串相互关联的取舍。** 把它写进作品集，面试时能讲很久。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的短链要求"不可被枚举"（防爬别人的链接），自增 ID 还能用吗？怎么改？
+- 自定义短链（用户指定别名）怎么和自增发号共存？冲突怎么办（回扣 L6 唯一约束）？
+- 热门短链被疯狂点击（热点 key），怎么防击穿（回扣 M3L7）？
+
+## 自检清单
+
+- [ ] 我能用五步法快速设计短链服务。
+- [ ] 我的 lab base62 + shorten/resolve 正确。
+- [ ] 我能解释自增 ID + base62 为什么唯一、为什么可枚举。
+- [ ] 我能说出重定向路径怎么用缓存 + CDN 扛读。
+
+## 常见误解
+
+- **"短链就是存个映射"**：难点在发号唯一性、读多写少的缓存、可枚举性。
+- **"用随机字符串最简单"**：要处理碰撞，且要够长才不易撞。
+- **"映射要强一致"**：短链生成后稍晚可用完全可接受（最终一致）。
+
+## 延伸阅读
+
+- [System Design Primer（含短链等题）](https://github.com/donnemartin/system-design-primer)
+- [Twitter Snowflake ID](https://en.wikipedia.org/wiki/Snowflake_ID)
+- [Month 3 总览](./overview)

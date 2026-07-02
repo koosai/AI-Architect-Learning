@@ -1,0 +1,197 @@
+---
+title: M4L1 - 变化驱动设计
+description: 每加一个新类型就要改一堆 if-else？设计的第一原则——找到会变的地方，把它封装起来。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M4L1 · 变化驱动设计
+
+<ChapterMeta
+  time="约 2 小时"
+  prereqs={[{label: 'L2 模块与契约', href: '../foundations/modules-and-contracts'}, {label: 'M2L9 LLD', href: '../system-design-bridge/lld-classes'}]}
+  outcome="能在代码里识别“会变化的部分”，用封装变化 + 开闭原则让加新类型时不必改旧代码。"
+  howToUse="先跑“加新类型就要改 if-else”的反例，再看怎么封装变化让它开闭，最后做 lab。"
+/>
+
+:::tip 整个设计模式的源头，就这一句话
+"找到你代码里会变化的部分，把它和不变的部分分开。" 几乎所有设计模式都是这句话的不同应用。学会识别变化点，你就抓住了设计的钥匙——而不是去背 23 个模式名。
+:::
+
+## 一、每加一种类型，就要改一处 if-else
+
+你的算面积函数里写满了 `if shape == "circle" ... elif shape == "rect" ...`。产品要加"三角形"，你又得回去改这个函数。加支付方式、加通知渠道、加文件格式——同样的痛：**每次需求变化，都要去修改已有的、已经测试过的代码**，改一处错一片。问题的根源：**你把"会变的部分"和"不变的骨架"混在了一起。**
+
+## 二、三个核心概念（分层）
+
+### 基础：封装变化 + 三条朴素原则
+
+设计的第一动作：**识别什么会变（变化点），把它隔离/封装起来**，让不变的骨架不受它影响。配三条朴素原则：
+
+- <GlossaryTerm term="DRY" definition="Don't Repeat Yourself：同一份知识只在一处表达，避免复制粘贴导致改一处漏一处。">DRY</GlossaryTerm>：别重复（同一逻辑别写多遍）。
+- <GlossaryTerm term="KISS" definition="Keep It Simple：优先用最简单能解决问题的方案，别过度复杂。">KISS</GlossaryTerm>：保持简单。
+- <GlossaryTerm term="YAGNI" definition="You Aren't Gonna Need It：不要为“将来也许需要”的功能提前设计，等真需要再加。防止过度设计。">YAGNI</GlossaryTerm>：别为臆想的需求提前造抽象。
+
+### 进阶：开闭原则
+
+封装变化的目标，是达成<GlossaryTerm term="Open-Closed Principle" definition="开闭原则（OCP）：软件实体应对扩展开放、对修改关闭。加新功能时通过“新增代码”实现，而不是“修改已有代码”。">开闭原则（OCP）</GlossaryTerm>：**对扩展开放、对修改关闭**。加"三角形"时，你应该能**新增**一段代码，而不必**修改**算面积的核心逻辑。怎么做到？把"每种形状怎么算"做成可插拔的（注册表/多态），核心只负责"分发"。
+
+### 深入（选学）：抽象是有成本的，别过度
+
+OCP 很美，但**抽象有成本**——每多一层间接，代码就更难直接读懂。这就是 YAGNI 的意义：**只为真实存在、确实会变的轴做抽象**。给一个永远只有一种实现的东西抽接口，是过度设计。判断标准：这个"变化"真的会发生吗？发生过几次？（"事不过三"——变第三次才抽象，是常见经验法则。）
+
+<ResearchNote
+  title="封装变化：设计模式的共同内核"
+  source="Gamma, Helm, Johnson & Vlissides (GoF), Design Patterns；Martin Fowler, Refactoring"
+  href="https://martinfowler.com/books/refactoring.html"
+  insight="GoF 把“找出变化的概念并封装它（encapsulate the concept that varies）”列为面向对象设计的核心主题之一。Fowler 的《重构》则给出从“坏味道”出发、逐步把变化隔离出来的实操方法。"
+  application="不要从“我要用哪个模式”出发，而要从“这里什么在变”出发。识别变化轴 → 把它封装到一个接口/对象后面 → 你往往会发现自己自然地“重新发明”了某个 GoF 模式。这才是真正掌握模式。"
+/>
+
+## 三、跟我做一遍：从 if-else 到开闭
+
+### 僵硬版：加类型要改核心函数
+
+<PyRunner
+  rows={12}
+  code={`def area(shape):
+    if shape["type"] == "circle":
+        return 3.14159 * shape["r"] ** 2
+    elif shape["type"] == "rect":
+        return shape["w"] * shape["h"]
+    # 加"三角形"？又得回来改这个函数（违反开闭）
+
+print(area({"type": "circle", "r": 2}))
+print(area({"type": "rect", "w": 3, "h": 4}))
+# 想加 triangle，只能改上面的 if-else —— 改一处、可能错一片`}
+/>
+
+### 开闭版：用注册表封装"会变的部分"
+
+<PyRunner
+  rows={18}
+  expect="不改核心也能加新形状"
+  code={`# 不变的骨架：只负责"分发"
+registry = {}
+def register(shape_type, fn):
+    registry[shape_type] = fn
+
+def area(shape):
+    fn = registry.get(shape["type"])
+    if fn is None:
+        raise ValueError("unknown shape")
+    return fn(shape)
+
+# 会变的部分：每种形状的算法，独立注册
+register("circle", lambda s: 3.14159 * s["r"] ** 2)
+register("rect", lambda s: s["w"] * s["h"])
+
+print(area({"type": "circle", "r": 2}))
+
+# 加三角形：只"新增"一行注册，不碰 area() —— 这就是开闭
+register("triangle", lambda s: 0.5 * s["base"] * s["height"])
+print(area({"type": "triangle", "base": 3, "height": 4}))
+print("不改核心也能加新形状")`}
+/>
+
+加三角形只需**新增一行注册**，`area()` 一个字都不用改——对扩展开放、对修改关闭。**试试**：再注册一个 "square"，体会"加功能=加代码，而不是改代码"。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month04/m4l1_ocp/`：
+
+```bash
+python labs/month04/m4l1_ocp/test_shapes.py
+```
+
+实现一个对扩展开放的面积计算器：能注册新形状而不修改核心函数。
+
+<GuidedExercise
+  title="练习指引：让计算器对扩展开放"
+  goal="把“封装变化 + 开闭原则”做成代码：加新类型 = 新增注册，而不是改核心逻辑。"
+  hints={[
+    '核心 area() 只做分发：按类型找到对应的算法函数。',
+    '每种形状的算法独立注册进 registry，互不影响。',
+    '加新形状 = 调用 register()，绝不修改 area()。',
+    '未知类型要明确报错（别静默返回 0）。'
+  ]}
+  steps={[
+    '实现 register(shape_type, fn) 往 registry 注册算法。',
+    '实现 area(shape)：查 registry 分发；未知类型 raise。',
+    '内置注册 circle 和 rect。',
+    '测试里再 register 一个新形状（如 triangle），验证 area() 无需改动就支持它。'
+  ]}
+  checks={[
+    '你能指出代码里"会变的部分"和"不变的骨架"。',
+    '你能不改 area() 就加一种新形状。',
+    '你能解释开闭原则。',
+    '你能说出什么时候不该抽象（YAGNI）。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 抽象的层次：从硬编码到插件
+
+<TradeoffExplorer
+  title="把“会变的部分”做到多灵活"
+  dimensions={['加功能成本', '代码可读性', '过度设计风险', '运行时灵活', '适用阶段']}
+  options={[
+    {
+      name: '硬编码 if-else',
+      scores: [1, 4, 5, 1, 3],
+      note: '最直接易读，但每加类型都要改核心、违反开闭。',
+      whenToUse: '类型极少且几乎不变（2-3 个、不会增）时，别过度设计。'
+    },
+    {
+      name: '注册表 / 多态（开闭）',
+      scores: [4, 4, 3, 4, 5],
+      note: '加类型=注册新实现，核心不变。可读性和扩展性平衡好。',
+      whenToUse: '类型会持续增加（支付方式、形状、渠道）时——大多数情况。'
+    },
+    {
+      name: '插件 / 配置驱动',
+      scores: [5, 2, 1, 5, 2],
+      note: '运行时动态加载、配置决定行为。极灵活，但复杂、难调试、易过度设计。',
+      whenToUse: '需要第三方扩展、热插拔时。绝大多数业务用不上。'
+    }
+  ]}
+/>
+
+### 2. YAGNI 与 OCP 的平衡是真功夫
+
+新手要么完全不抽象（处处 if-else），要么过度抽象（给一切加接口工厂）。**架构师的判断力在于：识别"真正会变的那一两个轴"，只为它们做开闭，其余保持简单。** 抽象错地方比不抽象更糟——它增加复杂度却没换来灵活。
+
+### 3. 真实案例：可扩展点是设计出来的
+
+[L2 信息隐藏](../foundations/modules-and-contracts)、[M2L9 面向接口](../system-design-bridge/lld-classes)、[M3 的存储/缓存可替换](../data-cache-queue/cache-patterns) 都是同一思想：把会变的（存储实现、缓存策略、限流算法）封装到接口后。**整本设计模式，都是"封装变化"的不同招式。** 这一课是后面所有模式的总纲。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 看你最近写的代码，找出一处"加新类型要改的 if-else"，用注册表/多态重构它。
+- 你给一个只有一种实现、且看不到第二种的东西抽了接口——这是 OCP 还是过度设计？怎么判断？
+- "事不过三才抽象"——你认同吗？什么情况下应该提前抽象（即使只有一种实现）？
+
+## 自检清单
+
+- [ ] 我能在代码里识别"会变的部分"。
+- [ ] 我的 lab 能不改核心就加新类型（开闭）。
+- [ ] 我能解释 DRY/KISS/YAGNI 和开闭原则。
+- [ ] 我知道抽象有成本，能判断何时不该抽象。
+
+## 常见误解
+
+- **"设计模式要多用才显水平"**：过度设计比不设计更糟；只为真实变化抽象。
+- **"开闭就是给一切加接口"**：只给会变的轴做开闭，其余保持简单。
+- **"if-else 一定是坏的"**：类型少且稳定时，直白的 if-else 反而最好读。
+
+## 延伸阅读
+
+- [Martin Fowler, Refactoring](https://martinfowler.com/books/refactoring.html)
+- [GoF Design Patterns](https://en.wikipedia.org/wiki/Design_Patterns)
+- [下一课：SOLID（上）SRP 与 OCP](./solid-srp-ocp)

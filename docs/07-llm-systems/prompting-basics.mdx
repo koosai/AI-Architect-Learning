@@ -1,0 +1,191 @@
+---
+title: M7L4 - 提示工程基础
+description: prompt 不是“跟 AI 聊天”，是给一个组件设计输入契约。结构化提示、system/角色、few-shot、清晰指令——可复用、可测试的工程实践。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M7L4 · 提示工程基础
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M7L2 上下文窗口', href: './tokenization-context'}, {label: 'L2 模块与契约', href: '../foundations/modules-and-contracts'}, {label: 'M7L3 采样', href: './sampling-decoding'}]}
+  outcome="能把 prompt 当成“组件的输入契约”来设计：用 system/角色定位、清晰指令、few-shot 示例、结构化模板，做出可复用、可测试、稳定的提示。"
+  howToUse="先破除“随便问问”的玩法，再学结构化提示的几个支柱，最后做提示模板 lab。"
+/>
+
+:::tip prompt 是“输入契约”，不是“聊天话术”
+新手把 prompt 当成"跟 AI 对话的技巧"，到处试玄学咒语。架构师把 prompt 当成**给一个组件设计的输入契约**（[呼应 L2 契约](../foundations/modules-and-contracts)）：明确角色、清晰指令、给示例、规定输出格式——可复用、可版本化、可测试。好的 prompt 工程不是碰运气，是把"我要什么"表达得让模型稳定地照做。
+:::
+
+## 一、"随便问问"为什么不可靠
+
+你直接问"帮我看看这段评论怎么样"——模型可能给一段闲聊、可能跑题、格式每次不同、没法接进系统。问题在于：**你没说清角色、任务、约束和输出格式。** 模型很强，但它不会读心；模糊的输入得到飘忽的输出。要把 LLM 当可靠组件，就得像设计 API 入参那样设计 prompt：输入明确、输出可预期。
+
+## 二、三个核心概念（分层）
+
+### 基础：结构化提示的支柱
+
+把一个可靠 prompt 拆成几块（像填一张表，而非写一段话）：
+- <GlossaryTerm term="System Prompt" definition="系统提示：设定模型的角色、行为准则、约束和总体目标的指令，通常在对话最前、优先级最高。用来稳定模型的“人设”和边界。">system prompt（系统提示）</GlossaryTerm>：定角色和规则（"你是严谨的客服，只根据给定资料回答，不知道就说不知道"）。
+- **清晰的任务指令**：具体说要做什么（"判断这条评论是正面/负面/中性"）。
+- **输入数据**：要处理的内容（评论文本、检索资料）。
+- **输出格式要求**：规定结构（"只输出 JSON：`{sentiment, reason}`"）——为[结构化输出 M7L6](./structured-output-tools) 铺路。
+
+### 进阶：few-shot 示例与指令清晰度
+
+- <GlossaryTerm term="Few-shot Prompting" definition="少样本提示：在 prompt 里给几个“输入→期望输出”的示例，让模型照着示例的格式和风格完成新输入。无需训练即可显著提升格式遵循和任务一致性。">few-shot（少样本）</GlossaryTerm>：给几个"输入→输出"的范例，模型会照着做。比起干讲要求，**示范**往往更有效，尤其是统一格式、口吻、边界判断。（对应没有示例的叫 zero-shot。）
+- **指令要具体可执行**：不说"写好一点"，而说"用不超过 50 字、第二人称、不含专业术语"。模糊形容词模型无从遵循，可度量的约束才行。
+
+### 深入（选学）：把 prompt 当工程产物
+
+- **prompt 模板化 + 版本化**：把固定结构做成模板，变量（用户输入、检索内容）填入——可复用、可 A/B、可回滚（[呼应 IaC/配置 M6L5](../cloud-enterprise-industrial/infrastructure-as-code)）。prompt 是代码的一部分，要进版本控制、要测试。
+- <GlossaryTerm term="Chain of Thought" definition="思维链：在 prompt 中引导模型“先逐步推理再给结论”。对多步推理/数学/逻辑任务能提升准确率，代价是更多输出 token（更慢更贵）。">思维链（CoT）</GlossaryTerm>：对需要推理的任务，让模型"先一步步想再给答案"能提升准确率——但代价是更多输出 token（[更慢更贵 M7L1](./transformer-autoregression)），且对简单任务无必要。
+- **提示注入风险**：用户输入会混进 prompt，恶意输入可能"劫持"指令（prompt injection）——把用户内容和指令清晰隔离、对输出做[校验（M7L9）](./hallucination-guardrails)，是安全基线。
+- **越狱与边界**：system prompt 设的规则不是绝对铁壁，关键约束要在系统层（代码校验、权限）再兜一层，别只靠 prompt。
+- **稳定性 > 巧妙**：可维护的朴素 prompt 胜过依赖玄学措辞的"聪明"prompt——后者脆弱、换个模型就失效。这和 [M4 KISS](../design-patterns-lld/change-driven-design) 一脉相承。
+
+<ResearchNote
+  title="提示工程：用结构和示例稳定地引导模型"
+  source="Brown et al. (2020), Language Models are Few-Shot Learners；Wei et al. (2022), Chain-of-Thought Prompting"
+  href="https://arxiv.org/abs/2201.11903"
+  insight="GPT-3 论文显示大模型有强大的少样本（few-shot）能力：给几个示例即可适应新任务，无需微调。思维链提示进一步表明，引导模型逐步推理能显著提升多步任务准确率。结构化、示范式的提示比模糊指令稳定得多。"
+  application="把 prompt 设计成结构化契约：system 定角色 + 清晰指令 + 输入 + 输出格式，必要时加 few-shot 示例和思维链。模板化、版本化、测试化对待 prompt。隔离用户输入防注入，关键约束在系统层再兜底，追求稳定可维护而非玄学措辞。"
+/>
+
+## 三、跟我做一遍：结构化提示模板
+
+<PyRunner
+  rows={34}
+  expect="生成结构化、可复用的 prompt"
+  code={`def build_prompt(task, data, examples=None, output_format=None, role=None):
+    parts = []
+    # 1) system / 角色
+    parts.append("# 角色\\n" + (role or "你是一个严谨的助手，只根据给定内容作答。"))
+    # 2) 任务指令
+    parts.append("# 任务\\n" + task)
+    # 3) few-shot 示例（可选）
+    if examples:
+        ex = "\\n".join("输入: %s\\n输出: %s" % (i, o) for i, o in examples)
+        parts.append("# 示例\\n" + ex)
+    # 4) 输出格式（可选）
+    if output_format:
+        parts.append("# 输出格式\\n" + output_format)
+    # 5) 实际输入数据（和指令清晰隔离，降低注入风险）
+    parts.append("# 待处理输入\\n<<<\\n" + data + "\\n>>>")
+    return "\\n\\n".join(parts)
+
+prompt = build_prompt(
+    task="判断这条用户评论的情感：正面 / 负面 / 中性。",
+    data="物流很快，但包装有点破损。",
+    examples=[("东西很好用，五星！", '{"sentiment":"正面"}'),
+              ("完全是浪费钱。", '{"sentiment":"负面"}')],
+    output_format='只输出 JSON：{"sentiment": "正面|负面|中性", "reason": "一句话理由"}',
+    role="你是电商评论情感分析器，只输出 JSON，不要多余文字。",
+)
+print(prompt)
+print("\\n--- 同一模板换输入即可复用 ---")
+print("生成结构化、可复用的 prompt")`}
+/>
+
+同一个模板，换 `task`/`data`/`examples` 就能复用——这就是把 prompt 当工程产物：结构固定、变量填充、可测试。注意用户输入被 `<<< >>>` 清晰隔离，降低指令被劫持的风险。**试试**：去掉 examples 看输出（zero-shot），再加上看 few-shot 的差别；改 output_format 要求加一个 confidence 字段。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month07/m7l4_prompt_template/`：
+
+```bash
+python labs/month07/m7l4_prompt_template/test_prompt.py
+```
+
+实现结构化 prompt 模板：组装 role/任务/few-shot/输出格式/输入，支持可选部分，用户输入隔离。
+
+<GuidedExercise
+  title="练习指引：实现 prompt 模板"
+  goal="把“结构化提示契约”做成可复用模板——可填变量、可加 few-shot、可规定输出格式。"
+  hints={[
+    '把 prompt 拆成几块：角色、任务、示例、输出格式、输入数据。',
+    'examples 是 [(输入, 期望输出)] 列表，格式化成 few-shot 段。',
+    '可选部分（examples/output_format）缺省时跳过。',
+    '用分隔符把用户输入和指令隔开（降低 prompt 注入）。'
+  ]}
+  steps={[
+    '实现 build_prompt(task, data, examples, output_format, role)。',
+    '按固定结构拼装各段，可选段缺省跳过。',
+    '把用户输入用明显分隔符包裹。',
+    '写测试：含/不含 few-shot、含/不含输出格式、输入被隔离、同模板换变量可复用。'
+  ]}
+  checks={[
+    '你能把 prompt 当输入契约而非聊天话术来设计。',
+    '你的模板结构化、可复用、用户输入隔离。',
+    '你能说出 few-shot 和思维链各自适合什么。',
+    '你理解 prompt 要版本化测试、关键约束系统层兜底。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 提升模型表现的手段：从轻到重
+
+<TradeoffExplorer
+  title="让模型把任务做好的手段"
+  dimensions={['见效速度', '成本', '灵活性', '能力上限', '维护复杂度']}
+  options={[
+    {
+      name: '提示工程',
+      scores: [5, 5, 5, 3, 4],
+      note: '改 prompt 即可、零训练、即时迭代。但受模型本身能力限制。',
+      whenToUse: '首选——绝大多数任务先把 prompt 做好。'
+    },
+    {
+      name: 'few-shot / 检索增强(RAG)',
+      scores: [4, 4, 5, 4, 3],
+      note: '给示例或注入相关知识，无需训练就扩展能力/时效。',
+      whenToUse: '需要特定格式、领域知识、最新信息时（Month 8）。'
+    },
+    {
+      name: '微调(fine-tuning)',
+      scores: [1, 1, 2, 4, 1],
+      note: '用数据训练改变模型行为。能固化风格/格式，但要数据、成本高、迭代慢、易过时。',
+      whenToUse: '提示+RAG 都不够、有大量高质量数据、需求稳定时——最后才考虑。'
+    }
+  ]}
+/>
+
+### 2. prompt 是 LLM 系统里"最便宜的杠杆"，先用足它
+
+面对"模型效果不够好"，新手常想到微调甚至换模型，但**最便宜、最快、最该先做的是把 prompt 工程做到位**：清晰角色、明确指令、好的示例、规定格式、合适的[采样参数（M7L3）](./sampling-decoding)。很多"模型不行"其实是"prompt 不行"。架构师的判断顺序通常是：**提示工程 → RAG（注入知识/时效）→ 工具调用（让它能做事）→ 微调（最后手段）**。越往后越贵越慢越难维护。把 prompt 当一等工程产物（版本化、测试、评测），是高性价比 AI 系统的基础。
+
+### 3. 真实案例：prompt 也是要测试和监控的代码
+
+成熟团队把 prompt 纳入工程化：存在版本控制里、改动走评审、有[评测集（M7L10）](./llm-evaluation)跑回归（改了 prompt 别让老用例退化）、线上监控输出质量。曾有团队改了一句 system prompt 措辞，导致某类输出格式崩坏、下游解析全挂——因为 prompt 没有测试门禁。把 prompt 当成"会影响生产的代码"对待（[呼应 M6L6 CI 门禁](../cloud-enterprise-industrial/cicd-pipelines)），而不是随手改的字符串，是 LLM 系统可靠性的关键一环。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 拿你现在一个"随便问"的 prompt，按结构化契约重写（角色/指令/示例/格式/输入），对比稳定性。
+- 你的 prompt 在版本控制里吗？改它有评测回归吗？改坏了怎么发现？
+- 你的功能里用户输入会拼进 prompt 吗？怎么防止恶意输入劫持指令（隔离 + 输出校验）？
+
+## 自检清单
+
+- [ ] 我能把 prompt 当输入契约来结构化设计。
+- [ ] 我的 lab 模板可复用、含 few-shot/格式、隔离用户输入。
+- [ ] 我能说出提示/RAG/微调的取舍顺序。
+- [ ] 我理解 prompt 要版本化、测试、关键约束系统层兜底。
+
+## 常见误解
+
+- **"提示工程就是找咒语"**：是设计结构化输入契约，追求稳定可维护而非玄学措辞。
+- **"效果不好就该微调"**：先把提示和 RAG 做足，微调是最贵最后的手段。
+- **"prompt 改改无所谓"**：它是影响生产的代码，要版本化 + 评测回归。
+
+## 延伸阅读
+
+- [Language Models are Few-Shot Learners (GPT-3, 2020)](https://arxiv.org/abs/2005.14165)
+- [Chain-of-Thought Prompting (2022)](https://arxiv.org/abs/2201.11903)
+- [下一课：LLM API、成本与延迟](./llm-api-cost-latency)

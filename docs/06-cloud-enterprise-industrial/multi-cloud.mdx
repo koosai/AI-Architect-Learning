@@ -1,0 +1,192 @@
+---
+title: M6L9 - 多云与混合云
+description: 把全部身家压在一家云上风险有多大？厂商锁定、可移植性、混合云、成本与数据引力——多云不是“都用”，是有取舍的策略。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M6L9 · 多云与混合云
+
+<ChapterMeta
+  time="约 2 小时"
+  prereqs={[{label: 'M4L3 依赖倒置', href: '../design-patterns-lld/solid-lsp-isp-dip'}, {label: 'M4L8 适配器', href: '../design-patterns-lld/adapter-decorator'}, {label: 'M6L5 IaC', href: './infrastructure-as-code'}]}
+  outcome="能权衡厂商锁定与可移植性的取舍、区分多云/混合云/单云策略，并用抽象层（适配器/DIP）在“可移植”和“用足托管服务”之间找平衡。"
+  howToUse="先看“全压一家云”和“强行多云”各自的痛，再理解锁定与可移植的取舍，最后做云抽象层 lab。"
+/>
+
+:::tip 多云不是“越多越好”，而是一个有明确代价的战略选择
+把全部身家压在一家云：享受它的托管服务很爽，但被**锁定**、议价权弱、它出区域性故障你跟着挂。但强行追求"哪家云都能跑"：你只能用最小公分母、放弃各家最好的托管服务、复杂度翻倍。这一课讲清这个取舍，以及怎么用[抽象层（M4L3/L8）](../design-patterns-lld/adapter-decorator) 务实地保留一定可移植性。
+:::
+
+## 一、两个极端的痛
+
+- **全压单云**：用了某云独有的托管服务（专有数据库、消息、AI 服务），深度绑定。好处是开发快、运维省；坏处是<GlossaryTerm term="Vendor Lock-in" definition="厂商锁定：因深度依赖某云厂商的专有服务/API，迁移到别家成本极高，导致议价能力弱、受制于该厂商的价格、可用性和路线图。" >厂商锁定</GlossaryTerm>——想换云？几乎要重写;它涨价/出区域故障/砍服务，你被动挨打。
+- **强行多云**：为了"不被锁定"，坚持只用各家都有的通用能力（裸虚拟机、标准 K8s），自己造数据库/消息/监控。结果：放弃了托管服务的省心、复杂度和成本反而暴涨、团队被基础设施拖住。
+
+真相：多云/可移植性是**有代价的保险**，要根据风险和收益理性购买，而不是教条地"必须多云"或"All in 一家"。
+
+## 二、三个核心概念（分层）
+
+### 基础：单云 / 多云 / 混合云
+
+- **单云**：全用一家。最简单、能用足托管服务，但有锁定风险。
+- <GlossaryTerm term="Multi-cloud" definition="多云：同时使用多家公有云。可能为了避免锁定、利用各家优势服务、满足合规或就近，也可能只是历史/并购造成。代价是复杂度和运维成本上升。" >多云（multi-cloud）</GlossaryTerm>：同时用多家公有云（避免锁定、各取所长、合规、就近）。
+- <GlossaryTerm term="Hybrid Cloud" definition="混合云：公有云与自有数据中心（私有云/本地）结合使用。常见于有合规、数据主权、已有重资产或低延迟本地需求的企业。" >混合云（hybrid cloud）</GlossaryTerm>：公有云 + 自有机房结合（合规、数据主权、已有重资产、低延迟本地需求）。
+
+### 进阶：可移植性靠抽象层
+
+要保留"将来能换"的能力，靠的是 [DIP（M4L3）](../design-patterns-lld/solid-lsp-isp-dip)——**业务代码依赖抽象接口，而不是某云的具体 SDK**：
+- 定义自己的 `BlobStore`/`Queue`/`Notifier` 接口，给每个云写一个[适配器（M4L8）](../design-patterns-lld/adapter-decorator)。换云 = 换适配器，业务不动。
+- 用**云中立的工具**降低锁定：K8s（容器编排到哪都一样）、[IaC（M6L5）](./infrastructure-as-code)（Terraform 跨云）、开源中间件（PostgreSQL 而非专有库）。
+
+### 深入（选学）：可移植性的真实成本与数据引力
+
+抽象不是免费的，要清醒：
+- **最小公分母陷阱**：为了可移植只用通用能力，等于放弃各家最强的托管服务（如某云的 serverless、向量库、AI 平台）——可能得不偿失。
+- **抽象漏洞**：云服务的语义差异（一致性、限流、错误模型）很难被接口完全抹平，"看起来可移植"实则暗藏陷阱。
+- <GlossaryTerm term="Data Gravity" definition="数据引力：数据越大越“重”，吸引应用和服务向它靠拢，且迁移成本（时间、出口流量费）随数据量急剧上升。是云迁移最大的实际障碍之一。" >数据引力（data gravity）</GlossaryTerm>：真正难迁的是**数据**——TB/PB 级数据迁移又慢又贵（出口流量费惊人），应用反而好搬。所以"多云"常常卡在数据上。
+- **务实策略**：核心可移植性投资在"计算 + 编排 + IaC"（用 K8s + Terraform），数据和最吃价值的托管服务可以接受一定锁定——这是大多数成熟团队的选择，而非纯粹主义的"全可移植"。
+
+<ResearchNote
+  title="多云是风险对冲，不是默认最优"
+  source="CNCF / 行业云架构实践；Martin Fowler 团队关于可移植性的讨论；各云 Well-Architected 框架"
+  href="https://learn.microsoft.com/en-us/azure/architecture/guide/multicloud/"
+  insight="多云/可移植性的价值（抗锁定、抗区域故障、合规、议价）是真实的，但代价（复杂度、放弃托管服务、抽象漏洞、数据引力）同样真实。多数成熟团队采取折中：用 K8s + IaC + 开源中间件保留计算层可移植性，对高价值托管服务和数据接受一定程度的锁定。"
+  application="不要教条地“必须多云”或“All in 单云”。按风险定策略：可移植性投资集中在计算/编排/IaC；用 DIP + 适配器隔离云专有服务；评估数据引力——迁数据才是真瓶颈。混合云用于合规/数据主权/已有资产。"
+/>
+
+## 三、跟我做一遍：云中立抽象层
+
+<PyRunner
+  rows={32}
+  expect="换云只换适配器"
+  code={`# 业务依赖抽象接口（DIP），不依赖任何具体云 SDK
+class App:
+    def __init__(self, blob_store):     # 注入存储抽象
+        self.store = blob_store
+    def save_report(self, name, data):
+        return self.store.put(name, data)
+
+# 每个云一个适配器（M4L8），把各自 SDK 翻译成统一 put 接口
+class AwsS3Adapter:
+    def __init__(self): self.bucket = {}
+    def put(self, key, data):           # 内部其实调 s3.put_object(...)
+        self.bucket[key] = data
+        return "s3://%s" % key
+
+class GcsAdapter:
+    def __init__(self): self.bucket = {}
+    def put(self, key, data):           # 内部其实调 gcs blob.upload(...)
+        self.bucket[key] = data
+        return "gs://%s" % key
+
+# 同一个 App，注入不同云的适配器 —— 业务代码一行不改
+app_aws = App(AwsS3Adapter())
+print("AWS:", app_aws.save_report("q3", "data"))
+
+app_gcp = App(GcsAdapter())             # 换云 = 换适配器
+print("GCP:", app_gcp.save_report("q3", "data"))
+print("换云只换适配器")`}
+/>
+
+业务代码只认 `put` 这个抽象接口，换云只需换注入的适配器——这是 [DIP + 适配器](../design-patterns-lld/adapter-decorator) 在多云的直接应用。**试试**：再加一个 `AzureBlobAdapter`；然后想想——如果各云的"一致性保证"不同，这个统一接口能完全抹平差异吗？（抽象漏洞）
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month06/m6l9_cloud_abstraction/`：
+
+```bash
+python labs/month06/m6l9_cloud_abstraction/test_abstraction.py
+```
+
+用 DIP + 适配器实现云中立的存储抽象：业务依赖接口、每个云一个适配器、换云不改业务。
+
+<GuidedExercise
+  title="练习指引：实现云抽象层"
+  goal="用 DIP + 适配器把业务和具体云解耦——保留可移植性的同时，理解它的边界。"
+  hints={[
+    '定义统一接口（如 put(key, data) / get(key)）。',
+    '每个云一个适配器，内部模拟各自 SDK 行为，对外暴露统一接口。',
+    '业务类注入抽象，不依赖任何具体云类（DIP，回扣 M4L3）。',
+    '想想：各云的 URL 格式/语义不同，接口能抹平到什么程度？'
+  ]}
+  steps={[
+    '实现 App(store)，依赖注入的存储抽象。',
+    '实现 2 个云适配器（统一 put/get 接口）。',
+    '验证同一 App 注入不同适配器都能工作。',
+    '写测试：换适配器业务不变、各适配器行为正确、业务不依赖具体云类。'
+  ]}
+  checks={[
+    '你能权衡厂商锁定与可移植性的取舍。',
+    '你的抽象层让换云只需换适配器。',
+    '你能解释最小公分母陷阱和抽象漏洞。',
+    '你理解数据引力为什么是迁云真正的瓶颈。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 云战略怎么选
+
+<TradeoffExplorer
+  title="云部署战略"
+  dimensions={['开发/运维省心', '抗锁定/议价', '抗区域故障', '复杂度成本', '能用足托管服务']}
+  options={[
+    {
+      name: '单云 All-in',
+      scores: [5, 1, 2, 5, 5],
+      note: '最省心、能用足托管服务。但锁定深、议价弱、随它故障。',
+      whenToUse: '多数中小团队的务实起点——先把业务做出来。'
+    },
+    {
+      name: '单云 + 可移植设计',
+      scores: [4, 3, 2, 4, 4],
+      note: '主用一家，但用 K8s/IaC/抽象层保留“能换”的能力。折中。',
+      whenToUse: '在意未来灵活性、但不想现在承担多云成本时——常见选择。'
+    },
+    {
+      name: '真多云',
+      scores: [2, 5, 5, 1, 3],
+      note: '抗锁定、抗区域故障、可合规就近。但复杂度/成本最高、放弃部分托管服务。',
+      whenToUse: '大企业、强合规、或已被并购历史造成时。'
+    }
+  ]}
+/>
+
+### 2. 锁定不是非黑即白，要按"层"决策
+
+成熟的判断不是"锁定 = 坏"，而是分层权衡：**越底层越该可移植（计算/容器/编排用 K8s、基础设施用 IaC——这些跨云成本低、收益大），越上层/越高价值的托管服务可以接受锁定**（用某云最强的 AI/数据服务能大幅提速，强行可移植反而吃亏）。这正是 [M4 的设计判断力](../design-patterns-lld/change-driven-design) 在云战略层的体现：只为"真正可能变、且换得起"的部分做抽象（DIP），其余务实地接受锁定。把抽象用错地方（给所有云服务都套接口）就是过度设计。
+
+### 3. 真实案例：多云常是"结果"而非"设计"
+
+业界一个反直觉的事实：很多公司的多云不是规划出来的，而是**并购、团队各自选型、合规要求**等历史原因造成的"既成事实"。真正从第一天就设计成"任意云可移植"的系统很少——因为代价太高。更常见且明智的是：主用一家云把业务跑起来，用 K8s + IaC + 关键抽象层保留"未来能迁"的选项，等真有强需求（成本、合规、抗灾）再迁特定部分。**架构师要避免为想象中的"将来要多云"而过度设计**（[YAGNI](../design-patterns-lld/change-driven-design)）。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的系统现在锁定在哪些云专有服务上？换云的话最难搬的是什么（大概率是数据）？
+- 哪些层值得投入做可移植（计算/编排/IaC）、哪些托管服务接受锁定换效率更划算？
+- 如果主力云出现区域性大故障，你的业务受影响多大？这个风险值得用多云成本去对冲吗？
+
+## 自检清单
+
+- [ ] 我能权衡厂商锁定与可移植性的取舍。
+- [ ] 我的 lab 用 DIP + 适配器实现云中立抽象。
+- [ ] 我能区分单云/多云/混合云及适用场景。
+- [ ] 我理解数据引力和最小公分母陷阱。
+
+## 常见误解
+
+- **"多云一定更好/更安全"**：它有真实代价（复杂度、放弃托管服务、抽象漏洞），是权衡不是默认。
+- **"用了 K8s 就完全不锁定了"**：计算层可移植，但数据和专有服务仍可能锁定。
+- **"迁云主要是迁应用"**：应用好搬，数据引力（量大、慢、贵）才是真瓶颈。
+
+## 延伸阅读
+
+- [Azure: Multicloud Architecture](https://learn.microsoft.com/en-us/azure/architecture/guide/multicloud/)
+- [Data Gravity (Dave McCrory)](https://datagravitas.com/)
+- [下一课：企业应用与 ERP 集成](./enterprise-erp-integration)

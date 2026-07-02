@@ -1,0 +1,104 @@
+.card {
+  background: var(--comp-bg);
+  border: 1px solid var(--comp-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0 2rem 0;
+  box-shadow: var(--comp-shadow);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--comp-border);
+  padding-bottom: 0.75rem;
+}
+
+.title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--comp-text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toggleContainer {
+  display: flex;
+  background: var(--comp-hover);
+  border: 1px solid var(--comp-border);
+  padding: 0.25rem;
+  border-radius: 8px;
+}
+
+.toggleBtn {
+  border: none;
+  background: none;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--comp-text-muted);
+}
+
+.toggleBtnActive {
+  background: var(--ifm-color-primary);
+  color: white;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.2);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.row {
+  border-bottom: 1px solid var(--comp-border);
+  transition: background 0.15s ease;
+}
+
+.row:hover {
+  background: var(--comp-hover);
+}
+
+.cell {
+  padding: 0.75rem;
+  font-size: 0.88rem;
+  color: var(--comp-text);
+}
+
+.cellName {
+  font-weight: 700;
+  width: 35%;
+}
+
+.cellScale {
+  font-family: var(--ifm-font-family-monospace), monospace;
+  font-weight: 600;
+  color: var(--ifm-color-primary);
+  width: 25%;
+}
+
+.cellBar {
+  width: 40%;
+}
+
+.barTrack {
+  height: 8px;
+  background: var(--comp-border);
+  border-radius: 4px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  background: var(--comp-gradient);
+  border-radius: 4px;
+  transition: width 0.4s ease-out;
+}

@@ -1,0 +1,195 @@
+---
+title: M7L10 - LLM 评测
+description: 输出不确定，怎么知道改 prompt/换模型是变好还是变坏？评测集、LLM-as-judge、回归——给 AI 系统装上“测试”。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M7L10 · LLM 评测
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'L13 测试与 TDD', href: '../foundations/testing-and-tdd'}, {label: 'M7L3 非确定性', href: './sampling-decoding'}, {label: 'M6L6 CI 门禁', href: '../cloud-enterprise-industrial/cicd-pipelines'}]}
+  outcome="能为 LLM 功能建评测集、用规则/LLM-as-judge 打分、跑回归防止改 prompt/换模型导致退化，并把评测接进 CI 门禁。"
+  howToUse="先看“凭感觉调 prompt”的危险，再学评测方法，最后做评测打分 lab。"
+/>
+
+:::tip 没有评测，你对 LLM 系统的每次改动都是在赌博
+传统代码靠[测试（L13）](../foundations/testing-and-tdd) 保证改动不退化。但 LLM 输出[不确定（M7L3）](./sampling-decoding)、没有唯一正确答案，没法用 `assert 输出 == 期望`。于是很多团队靠“我试了几条感觉变好了”来调 prompt、换模型——**这是赌博**。LLM 评测就是给 AI 系统装上“测试”：用评测集 + 打分 + 回归，让“变好还是变坏”变成可度量、可对比的事实。
+:::
+
+## 一、“感觉变好了”靠不住
+
+你改了 prompt，试了三条 case 觉得不错就上线——结果另一类输入悄悄退化了，线上才发现。或者换了个更便宜的模型，“看起来差不多”，实际某些场景质量明显下降。**靠手试几条、凭感觉判断，既不全面也不可复现。** 你需要的是：一组有代表性的测试用例 + 一套打分标准 + 每次改动都跑一遍对比——就像代码的[回归测试（L13）](../foundations/testing-and-tdd)。
+
+## 二、三个核心概念（分层）
+
+### 基础：评测集与评分方式
+
+<GlossaryTerm term="Eval Set" definition="评测集：一组有代表性的测试用例（输入 + 期望/评分标准），覆盖典型场景、边界、易错情况。是衡量 LLM 系统质量、对比不同 prompt/模型的基准。">评测集（eval set）</GlossaryTerm>：精心挑选的一组用例（输入 + 期望或评分标准），覆盖典型、边界、易错场景。评分方式分几类：
+- **精确/规则匹配**：答案是否等于/包含标准答案、是否符合格式、数值是否正确——适合有明确答案的任务（分类、抽取）。
+- **语义/相似度**：答案和参考答案语义是否接近——适合开放问答。
+- **人工评分**：人按标准打分——最准但慢、贵、不可复现。
+
+### 进阶：LLM-as-judge
+
+对开放性输出（没有唯一答案），一个强力方法是<GlossaryTerm term="LLM-as-Judge" definition="用 LLM 当评判：让一个（通常更强的）模型按给定评分标准（rubric）给被测输出打分或两两比较。可规模化、比纯规则更懂语义，但本身也可能有偏差，需校准和抽样人工核对。">LLM-as-judge（用模型当评委）</GlossaryTerm>：让一个（通常更强的）模型按**评分标准（rubric）**给输出打分或两两对比。它能规模化、比规则更懂语义。但要警惕：评委模型本身也有偏差（如偏好长答案、偏好特定风格），需要校准、抽样人工核对、用清晰 rubric 约束。
+
+### 深入（选学）：回归、CI 门禁与评测驱动开发
+
+把评测变成工程纪律：
+- <GlossaryTerm term="Regression Eval" definition="回归评测：每次改动（prompt、模型、参数、检索）后，在固定评测集上重跑打分，和基线对比，确保没让已通过的用例退化。是 LLM 系统的回归测试。">回归评测</GlossaryTerm>：每次改 prompt/换模型/调参，都在评测集上重跑、和基线对比——**通过率掉了就别上线**（[呼应 M6L6 质量门禁](../cloud-enterprise-industrial/cicd-pipelines)）。这把“感觉”变成“数字对比”。
+- **接进 CI**：评测作为流水线的一个门禁阶段，prompt/模型变更要过评测才能合并/发布（[M6L6](../cloud-enterprise-industrial/cicd-pipelines)）——prompt 是代码，要测试（[M7L4](./prompting-basics)）。
+- **评测集会演进**：线上发现的 bad case 要加进评测集（防止再犯）——和[特征测试（M4L11）](../design-patterns-lld/code-smells-refactoring) 一个思路。
+- **多维度评测**：不只看“对不对”，还要看[幻觉率、引用准确率（M7L9）](./hallucination-guardrails)、[成本、延迟（M7L5）](./llm-api-cost-latency)、安全合规——综合权衡，不能只优化一个维度。
+- **线上评测**：除了离线评测集，还要在线监控真实流量的质量（用户反馈、抽样 LLM-judge、关键指标），因为评测集覆盖不了所有真实输入。
+
+<ResearchNote
+  title="评测：让 AI 系统的质量变化可度量、可回归"
+  source="Liang et al. (2022), HELM；Zheng et al. (2023), MT-Bench / LLM-as-a-Judge；OpenAI/Anthropic 评测实践"
+  href="https://arxiv.org/abs/2306.05685"
+  insight="LLM 输出不确定且常无唯一答案，需用评测集 + 多种评分（规则/语义/LLM-judge/人工）来衡量质量。研究表明强模型当评委与人类判断有较高一致性，但存在位置/长度/风格偏差，需校准。把评测做成回归 + CI 门禁，是 LLM 系统可靠演进的基础。"
+  application="为每个 LLM 功能建评测集（覆盖典型/边界/线上 bad case）；按任务选评分方式（规则/语义/LLM-judge/人工）；每次改动跑回归对比基线、接进 CI 门禁；多维度（质量/幻觉/成本/延迟/安全）综合评估；离线评测 + 线上质量监控并行。"
+/>
+
+## 三、跟我做一遍：评测集打分 + 回归对比
+
+<PyRunner
+  rows={36}
+  expect="算出通过率、检测回归"
+  code={`# 评测集：每条 = 输入 + 评分函数（这里用规则评分；开放任务可换 LLM-judge）
+def exact(expected):
+    return lambda out: 1.0 if out.strip() == expected else 0.0
+
+def contains(keyword):
+    return lambda out: 1.0 if keyword in out else 0.0
+
+EVAL_SET = [
+    {"input": "1+1=?", "score": exact("2")},
+    {"input": "法国首都?", "score": contains("巴黎")},
+    {"input": "把 SO-1 状态格式化", "score": contains("shipped")},
+]
+
+def run_eval(system_fn):
+    total, detail = 0.0, []
+    for case in EVAL_SET:
+        out = system_fn(case["input"])
+        s = case["score"](out)
+        total += s
+        detail.append((case["input"], s))
+    return total / len(EVAL_SET), detail
+
+def system_v1(inp):
+    return {"1+1=?": "2", "法国首都?": "巴黎", "把 SO-1 状态格式化": "shipped"}.get(inp, "")
+def system_v2(inp):  # 改了 prompt 后第 3 题退化
+    return {"1+1=?": "2", "法国首都?": "巴黎", "把 SO-1 状态格式化": "已发货"}.get(inp, "")
+
+base, _ = run_eval(system_v1)
+new, detail = run_eval(system_v2)
+print("基线通过率:", round(base, 2))
+print("新版通过率:", round(new, 2), detail)
+print("回归检测:", "退化，别上线!" if new < base else "OK")
+print("算出通过率、检测回归")`}
+/>
+
+评测集把"质量"变成一个通过率数字；改动后重跑、和基线对比，立刻看出第 3 题退化了——这就是回归评测拦住坏改动的方式。**试试**：给 `system_v2` 修好第 3 题，看回归检测变 OK；再往评测集加一条线上发现的 bad case，体会评测集如何演进。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month07/m7l10_eval/`：
+
+```bash
+python labs/month07/m7l10_eval/test_eval.py
+```
+
+实现评测框架：评测集打分（精确/包含/数值）、算通过率、回归对比（新版低于基线则判退化）。
+
+<GuidedExercise
+  title="练习指引：实现评测 + 回归"
+  goal="把“评测集 + 打分 + 回归对比”做成代码——给 LLM 系统装上回归测试。"
+  hints={[
+    '评分函数返回 0~1 的分数（精确、包含、数值范围等）。',
+    'run_eval：对每个用例打分、返回平均分（通过率）。',
+    '回归：新版通过率 < 基线则判定退化。',
+    '支持往评测集追加用例（线上 bad case）。'
+  ]}
+  steps={[
+    '实现几种评分器（exact / contains / numeric_close）。',
+    '实现 run_eval(system_fn, eval_set) 返回通过率 + 明细。',
+    '实现 is_regression(base, new)。',
+    '写测试：全对得 1.0、部分对得分数、检测退化、加用例后重跑。'
+  ]}
+  checks={[
+    '你能为一个 LLM 功能设计评测集和评分方式。',
+    '你的 lab 能算通过率并检测回归。',
+    '你能说出 LLM-as-judge 的用途和偏差风险。',
+    '你能把评测接进 CI 门禁、用线上 bad case 扩充评测集。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 评分方式怎么选
+
+<TradeoffExplorer
+  title="LLM 输出评分方式"
+  dimensions={['客观可复现', '适合开放输出', '规模化', '成本', '准确度']}
+  options={[
+    {
+      name: '规则/精确匹配',
+      scores: [5, 1, 5, 5, 3],
+      note: '快、便宜、可复现。但只适合有明确答案的任务，开放输出无能为力。',
+      whenToUse: '分类、抽取、格式、数值等有标准答案的任务。'
+    },
+    {
+      name: 'LLM-as-judge',
+      scores: [3, 5, 4, 3, 4],
+      note: '懂语义、可评开放输出、可规模化。但有偏差、要校准、本身有成本。',
+      whenToUse: '开放问答、文案、对话等无唯一答案的任务。'
+    },
+    {
+      name: '人工评分',
+      scores: [2, 5, 1, 1, 5],
+      note: '最准、是金标准。但慢、贵、不可复现、规模不了。',
+      whenToUse: '校准自动评分、抽样核对、高风险最终把关。'
+    }
+  ]}
+/>
+
+### 2. 评测是 AI 系统的"测试金字塔"
+
+[L13](../foundations/testing-and-tdd) 的测试金字塔在 AI 系统里有了新形态：底层是**确定性单元测试**（校验逻辑、工具、解析——这些仍是普通代码，照常测）；中层是**离线评测集**（用规则 + LLM-judge 衡量模型输出质量，跑回归）；顶层是**线上评测**（真实流量的质量监控、用户反馈、A/B）。三层互补：单测保证管道不崩、评测集保证质量不退、线上监控发现评测集没覆盖的真实问题。一个成熟的 AI 团队，评测体系的投入往往和模型/prompt 本身一样多——因为**没有评测，就没有可靠的迭代**。
+
+### 3. 真实案例：评测体系是 AI 团队的护城河
+
+强 AI 团队和弱团队的关键差距之一，是评测体系。弱团队改 prompt 靠拍脑袋、换模型靠"感觉"、出了问题靠用户投诉发现；强团队每个功能有评测集、每次改动跑回归、线上 bad case 自动进评测集、模型升级前先在评测集上对比。这让他们能**快速且安全地迭代**——敢频繁改 prompt、敢试新模型，因为有评测兜底（[呼应 M6 DORA 高频低风险](../cloud-enterprise-industrial/cicd-pipelines)）。评测能力直接决定一个 AI 产品的迭代速度和质量稳定性，是真正的护城河。这也是 [Month 11 AI 平台治理](../production-ai-platform/overview) 的核心。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的 LLM 功能有评测集吗？改 prompt/换模型时，你怎么知道是变好还是变坏？
+- 你的任务该用规则、LLM-judge 还是人工评分？怎么校准 LLM-judge 的偏差？
+- 线上出现的 bad case，有没有机制自动进评测集防止再犯？评测有没有进 CI 门禁？
+
+## 自检清单
+
+- [ ] 我能为 LLM 功能建评测集并选对评分方式。
+- [ ] 我的 lab 能算通过率、检测回归。
+- [ ] 我理解 LLM-as-judge 的用途和偏差风险。
+- [ ] 我能把评测做成回归 + CI 门禁 + 线上监控。
+
+## 常见误解
+
+- **"LLM 输出没法测"**：能——用评测集 + 规则/LLM-judge/人工打分 + 回归对比。
+- **"试几条感觉对就行"**：不全面不可复现；要有代表性评测集和数字对比。
+- **"LLM-as-judge 完全可信"**：它有偏差，要校准、用清晰 rubric、抽样人工核对。
+
+## 延伸阅读
+
+- [LLM-as-a-Judge / MT-Bench (2023)](https://arxiv.org/abs/2306.05685)
+- [HELM: Holistic Evaluation of Language Models (2022)](https://arxiv.org/abs/2211.09110)
+- [下一课：缓存、限流与降级](./llm-caching-resilience)

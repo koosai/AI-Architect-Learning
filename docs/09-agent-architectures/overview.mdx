@@ -1,0 +1,67 @@
+---
+title: Month 9 总览 - Agent 架构与工具边界
+description: 让 LLM 不只回答、而是在循环里自主推进任务——agent loop、工具调用、规划、记忆、反思、护栏、评测，把一个会决策的循环做得可靠、可控、可评测。
+slug: /agent-architectures/overview
+---
+
+import ChapterMeta from '@site/src/components/ChapterMeta';
+
+# Month 9 · Agent 架构与工具边界（模块总览）
+
+<ChapterMeta
+  time="整月约 28–34 小时（12 节课）"
+  prereqs={[{label: '完成 Month 7 LLM 组件', href: '/llm-systems/overview'}, {label: 'M7L6 工具调用', href: '/llm-systems/structured-output-tools'}, {label: 'M8 RAG', href: '/rag/overview'}]}
+  outcome="能设计一个可靠的 Agent：用受控的 loop 让 LLM 观察-决策-调用工具-反思地推进任务，并加上停止条件、预算、记忆、护栏、评测——而不是“让模型自由发挥”。"
+  howToUse="按周学。第一周搭可控的 agent loop 和工具边界，第二周加规划/记忆/反思/检索能力，第三周做护栏、评测、判断何时不该用 Agent。"
+/>
+
+:::tip Agent 不是“让模型自由发挥”，是“给一个会决策的循环装上工程约束”
+[M7L6](../llm-systems/structured-output-tools) 你让模型能调工具，[M8](../rag/overview) 让它能检索知识。把这些放进一个**循环**——让模型观察现状、决定下一步、调用工具、看结果、再决定——它就成了能自主推进任务的 **Agent**。但"自主"是双刃剑：会无限循环、会乱调危险工具、会跑偏、会烧钱。这个月教你给这个循环装上**停止条件、预算、权限、记忆、护栏、评测**，把它从"炫酷 demo"变成"可靠系统"。
+:::
+
+## 为什么 Agent 既强大又危险
+
+Agent 把 LLM 从"回答一个问题"升级到"完成一个任务"——它能拆解目标、多步推进、调用工具、根据结果调整。这解锁了很多纯问答做不到的事（[M7L12 管道](../llm-systems/capstone-llm-app) 是单次调用，Agent 是多步循环）。但自主性带来新风险：
+
+- **会失控**：陷入无限循环、反复试同一个失败动作、越跑越偏。
+- **会闯祸**：自主调用工具——如果工具能删数据/花钱/对外发消息，错一步就是事故。
+- **难评测**：不只看最终答案对不对，还要看"走的每一步合不合理"。
+- **又慢又贵**：每步一次 LLM 调用，多步任务成本和延迟叠加。
+
+所以 Agent 工程的核心不是"让它更聪明"，而是**用工程把这个自主循环约束在可靠、可控、可评测的范围内**——这正是前八个月工程思维的延续。
+
+## 本月课程地图
+
+### Week 1 · Agent 基础与控制
+| # | 课 | 你会学到 |
+|---|---|---|
+| M9L1 | [Agent Loop 基础](./agent-loop-basics) | 观察-决策-行动循环、Agent vs workflow |
+| M9L2 | [工具使用与边界](./tools-and-boundaries) | schema/权限/预算/超时/审计 |
+| M9L3 | [ReAct：推理与行动](./react-pattern) | 推理与行动交织、观察反馈 |
+| M9L4 | [停止条件与预算控制](./stopping-budget) | 最大步数、循环检测、成本预算 |
+
+### Week 2 · Agent 能力
+| # | 课 | 你会学到 |
+|---|---|---|
+| M9L5 | [规划与任务分解](./planning-decomposition) | 计划-执行、子目标、计划修正 |
+| M9L6 | [Agent 记忆](./agent-memory) | scratchpad、跨步状态、长期记忆 |
+| M9L7 | [反思与自我纠错](./reflection-correction) | 检查结果、重试、错误恢复 |
+| M9L8 | [Agentic 检索](./agentic-retrieval) | Agent 自主决定何时检索什么 |
+
+### Week 3 · 生产 Agent
+| # | 课 | 你会学到 |
+|---|---|---|
+| M9L9 | [Agent 护栏与安全](./agent-guardrails) | 权限、人在回路、沙箱、危险动作 |
+| M9L10 | [Agent 评测与可观测](./agent-evaluation) | 轨迹评测、步级指标、tracing |
+| M9L11 | [何时不该用 Agent](./when-not-agent) | workflow vs agent、确定性取舍 |
+| M9L12 | [Capstone：构建可靠 Agent](./capstone-agent) | 组装 loop+工具+预算+护栏+评测 |
+
+## 月末产出
+
+一套"Agent 工程"的可跑实现（受控 agent loop、带 schema/权限/预算/审计的工具注册、ReAct 轨迹、停止条件与循环检测、任务分解、scratchpad 记忆、反思重试、agentic 检索决策、危险动作护栏、轨迹评测），以及"给定一个任务，能判断该不该用 Agent、并设计出一个可靠可控的 Agent"的能力。
+
+## 学习建议
+
+- 牢记一条主线：**Agent 的可靠性 = 给自主循环装约束**。每学一个能力（工具/规划/记忆/反思），都同时想它的失控风险和约束手段。
+- 把前八个月的工程全用上：工具调用要 [校验/权限/审计（M7L6/L3）](../llm-systems/structured-output-tools)、循环要 [预算/熔断（M5/M7L5）](../core-components/circuit-breaker)、要 [评测（M7L10）](../llm-systems/llm-evaluation)、危险动作要 [人在回路（M7L9/M6L11）](../llm-systems/hallucination-guardrails)。
+- 始终问"这真的需要 Agent 吗"：很多任务用确定的 [workflow（M9L11）](./when-not-agent) 更可靠、更便宜——Agent 不是越多越好。

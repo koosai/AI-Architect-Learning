@@ -1,0 +1,177 @@
+---
+title: M3L11 - 数据一致性模式
+description: 写数据库加发消息怎么保证都成功？事务发件箱（outbox）、Saga、CDC——跨系统最终一致的三大模式。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M3L11 · 数据一致性模式
+
+<ChapterMeta
+  time="约 2 小时"
+  prereqs={[{label: 'M2L10 事件驱动', href: '../system-design-bridge/communication-decoupling'}, {label: 'M3L9 消息队列', href: './message-queues'}]}
+  outcome="能识别“双写”不一致问题，并用事务发件箱（outbox）、Saga、CDC 在跨系统间实现可靠的最终一致。"
+  howToUse="先看“写库 + 发消息”为什么会不一致，再做 lab 实现 outbox 模式。"
+/>
+
+:::tip 跨系统的"要么都成、要么都不成"，几乎做不到
+一个事务能保证"扣库存 + 记订单"在**一个数据库内**原子完成（[M3L3](./transactions-isolation)）。但"写订单（数据库）+ 发事件（消息队列）"跨了两个系统——没有跨系统的原子事务。怎么保证它们最终一致？这一课给你三个标准模式。
+:::
+
+## 一、写完库、发消息前崩了
+
+[M2L10](../system-design-bridge/communication-decoupling) 你用事件驱动解耦：下单后发个 `order_created` 事件。但有个隐患：你**先写订单到数据库，再发事件到队列**——如果写完库、发事件前进程崩了呢？订单有了，事件没发，下游（积分、推荐）永远不知道。这就是<GlossaryTerm term="Dual-Write Problem" definition="双写问题：需要同时更新两个系统（如数据库 + 消息队列），但没有跨系统原子事务，中间崩溃就会导致两者不一致。">双写问题</GlossaryTerm>。
+
+## 二、三个核心概念（分层）
+
+### 基础：为什么不能"先写库再发消息"
+
+因为这是两次独立操作，中间任何一步崩溃都不一致。反过来"先发消息再写库"也一样（消息发了但库没写）。**只要是跨系统的两次写，就没有原子性。** 需要专门的模式来兜。
+
+### 进阶：事务发件箱（Transactional Outbox）
+
+最常用的解法：<GlossaryTerm term="Transactional Outbox" definition="事务发件箱：把“要发的事件”作为一条记录，和业务数据写在同一个数据库事务里（原子）。再由一个中继进程读发件箱、发布事件、标记已发。把“双写”变成“一次本地事务 + 可靠中继”。">事务发件箱</GlossaryTerm>。诀窍：把"要发的事件"当成一条记录，**和业务数据写进同一个数据库事务**（原子！）。然后一个独立的**中继（relay）**进程不断读发件箱、发布事件、标记已发。这样"双写"变成了"一次本地原子事务 + 一个可靠中继"——中继重发也没关系，消费方[幂等](../foundations/idempotency)即可。
+
+### 深入（选学）：Saga 与 CDC
+
+- <GlossaryTerm term="Saga" definition="Saga：把一个长事务拆成多个本地事务，每步都有对应的“补偿操作”。某步失败就执行已完成步骤的补偿来回滚，达成最终一致（而非跨服务原子）。">Saga</GlossaryTerm>：跨多个服务的长流程（下单→扣款→发货），拆成一串本地事务，每步配一个**补偿操作**；中途失败就执行补偿回滚已完成的步骤。用"补偿"代替"分布式事务"。
+- <GlossaryTerm term="CDC" definition="变更数据捕获（Change Data Capture）：直接从数据库的提交日志里捕获数据变更，转成事件流。无需改业务代码就能可靠地把“库的变化”同步给其它系统。">CDC</GlossaryTerm>：直接从数据库的提交日志捕获变更、转成事件——连发件箱都不用写，库一变就自动产生事件（回扣 [M2L10 "日志是统一抽象"](../system-design-bridge/communication-decoupling)）。
+
+<ResearchNote
+  title="放弃分布式事务，用补偿换最终一致"
+  source="Garcia-Molina & Salem (1987), Sagas；Chris Richardson, Transactional Outbox / Saga（microservices.io）"
+  href="https://www.cs.cornell.edu/andru/cs711/2002fa/reading/sagas.pdf"
+  insight="Sagas 论文提出：长事务可拆成一串带补偿操作的小事务，避免长时间持锁。结合事务发件箱（把事件和数据原子写入）与 CDC，构成了微服务时代跨系统一致性的标准工具箱。"
+  application="在分布式/微服务里，跨服务的强一致（2PC）代价极高且脆弱。务实的做法是：本地事务 + 发件箱/CDC 可靠发事件 + 消费方幂等 + Saga 补偿——用最终一致换可用性和解耦（回扣 [M2L6 CAP](../system-design-bridge/cap-consistency)）。"
+/>
+
+## 三、跟我做一遍：事务发件箱
+
+<PyRunner
+  expect="事件可靠发布"
+  code={`orders = {}
+outbox = []        # 和订单"同一事务"写入的待发事件
+published = []     # 已发布到消息队列的事件
+
+def create_order(order_id, data):
+    # 关键：订单 + 事件写进"同一个本地事务"（这里用同一函数模拟原子）
+    orders[order_id] = data
+    outbox.append({"event": ("order_created", order_id), "sent": False})
+
+def relay():
+    # 独立中继：发布所有未发送事件，标记已发（可安全重跑）
+    for ev in outbox:
+        if not ev["sent"]:
+            published.append(ev["event"])
+            ev["sent"] = True
+
+create_order("o1", {"item": "book"})
+print("下单后 outbox:", outbox)        # 订单和事件已原子写入
+relay()                               # 中继发布
+print("发布的事件:", published)
+relay()                               # 再跑一次（中继重启）
+print("重跑后发布数:", len(published)) # 仍是 1：标记 sent 防重复
+print("事件可靠发布")`}
+/>
+
+订单和事件**原子地**一起写进发件箱（绝不会"有订单没事件"）；中继再可靠地发布、标记已发，重跑也不会重复发。**试试**：在 `create_order` 后、`relay` 前模拟崩溃——事件还在 outbox 里，中继重启后照样能发出去，绝不丢。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month03/m3l11_outbox/`：
+
+```bash
+python labs/month03/m3l11_outbox/test_outbox.py
+```
+
+实现事务发件箱：业务数据 + 事件原子写入，中继可靠发布且可重跑。
+
+<GuidedExercise
+  title="练习指引：实现事务发件箱"
+  goal="把“本地事务原子写入事件 + 可靠中继”做成代码——这是跨系统最终一致最常用的模式。"
+  hints={[
+    'create_order 要同时写 orders 和 outbox（模拟同一本地事务的原子性）。',
+    'outbox 每条事件带 sent 标记，初始 False。',
+    'relay 只发布 sent=False 的，发布后置 True。',
+    'relay 可重复调用而不重复发布（幂等中继）——这是它能容错的关键。'
+  ]}
+  steps={[
+    '实现 OrderService：orders、outbox、published。',
+    'create_order(order_id, data)：写 orders + 追加 outbox 事件(sent=False)。',
+    'relay()：遍历 outbox，发布未发送的事件到 published，标记 sent。',
+    '写测试：下单同时产生事件、relay 发布一次、重复 relay 不重复发、只发未发送的。'
+  ]}
+  checks={[
+    '你能解释双写问题为什么导致不一致。',
+    '你的发件箱保证"有订单必有事件"（原子写入）。',
+    '你的中继可重跑而不重复发布。',
+    '你能说出 Saga 和 CDC 各解决什么。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 跨系统一致性怎么选
+
+<TradeoffExplorer
+  title="跨系统/跨服务一致性模式"
+  dimensions={['一致性强度', '可用性', '实现复杂度', '解耦程度', '适用场景']}
+  options={[
+    {
+      name: '分布式事务（2PC）',
+      scores: [5, 1, 2, 1, 2],
+      note: '强一致、原子。但要锁定多方、协调者单点、慢且脆，可用性差。',
+      whenToUse: '极少数必须强一致且范围可控的场景；大多数情况避免。'
+    },
+    {
+      name: '事务发件箱 + 事件',
+      scores: [3, 5, 3, 5, 5],
+      note: '本地事务原子写事件 + 可靠中继发布。最终一致、高可用、解耦好。',
+      whenToUse: '微服务里"改数据 + 通知别人"的标准做法。'
+    },
+    {
+      name: 'Saga（补偿）',
+      scores: [3, 5, 4, 4, 4],
+      note: '长流程拆成本地事务 + 补偿。无需分布式锁，但要为每步设计补偿、处理中间态。',
+      whenToUse: '跨多服务的长业务流程（下单→支付→发货）。'
+    }
+  ]}
+/>
+
+### 2. 默认最终一致，而不是分布式事务
+
+[M2L6](../system-design-bridge/cap-consistency) 的结论在这里落地：跨系统强一致（2PC）代价极高，现实中**绝大多数选最终一致**——发件箱/CDC 可靠发事件 + 消费方幂等 + Saga 补偿。架构师要习惯"用最终一致 + 补偿"思考跨服务流程，而不是奢望"分布式 ACID"。
+
+### 3. 真实案例：事件驱动系统的可靠基座
+
+凡是用事件驱动（[M2L10](../system-design-bridge/communication-decoupling)）的系统，要可靠就离不开发件箱/CDC——否则"双写不一致"会让事件零星丢失、数据慢慢漂移。这是把 M2L10 的"优雅解耦"变成"生产可靠"的关键一环。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的下单要"写订单 + 发 order_created 事件"，怎么用发件箱保证不丢事件？中继挂了怎么办？
+- 下单流程跨订单、库存、支付三个服务，用 Saga 怎么设计每步的补偿？支付成功但发货失败怎么回滚？
+- 用 CDC 代替手写发件箱，有什么好处和代价？（提示：不侵入业务代码，但要接 binlog/WAL。）
+
+## 自检清单
+
+- [ ] 我能解释双写问题及其后果。
+- [ ] 我的 lab 发件箱原子写入、中继可重跑不重发。
+- [ ] 我能说出 outbox / Saga / CDC 各自的用途。
+- [ ] 我理解跨系统默认用最终一致而非分布式事务。
+
+## 常见误解
+
+- **"写库再发消息就行"**：中间崩溃就不一致（双写问题）。
+- **"跨服务也能用数据库事务"**：跨系统没有原子事务，要用 outbox/Saga。
+- **"最终一致不可靠"**：配合幂等和补偿，它是分布式系统的务实正解。
+
+## 延伸阅读
+
+- [Sagas（Garcia-Molina & Salem, 1987）](https://www.cs.cornell.edu/andru/cs711/2002fa/reading/sagas.pdf)
+- [microservices.io: Transactional Outbox](https://microservices.io/patterns/data/transactional-outbox.html)
+- [下一课：Capstone mini feed 系统](./capstone-feed)

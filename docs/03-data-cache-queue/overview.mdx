@@ -1,0 +1,62 @@
+---
+title: Month 3 总览 - 数据、缓存、队列
+description: 深入数据层——存储引擎与索引、事务与一致性、缓存模式与难题、消息队列与 feed，落到 URL 短链和 feed 两个实战。
+slug: /data-cache-queue/overview
+---
+
+import ChapterMeta from '@site/src/components/ChapterMeta';
+
+# Month 3 · 数据、缓存、队列（模块总览）
+
+<ChapterMeta
+  time="整月约 26–32 小时（12 节课）"
+  prereqs={[{label: '完成 Month 1', href: '../foundations/overview'}, {label: '完成 Month 2', href: '../system-design-bridge/overview'}]}
+  outcome="能解释一次读写在数据库/缓存/队列里的完整路径，看懂索引和事务，处理缓存三大难题，并设计出 URL 短链和 feed 两个真实系统。"
+  howToUse="按周学。Month 2 教你“选什么存储”，Month 3 教你“这些存储内部怎么工作、怎么用对”。"
+/>
+
+:::tip 这个月，你走进数据层的引擎舱
+Month 2 你学会了"读多写少该上缓存、写爆了要分片"。但缓存为什么会击穿？索引为什么有时反而更慢？队列怎么保证不丢消息？这个月带你打开数据系统的引擎舱，看清里面的齿轮。
+:::
+
+## 为什么数据层值得一整月
+
+绝大多数线上事故和性能瓶颈，最后都落在数据层：慢查询、缓存不一致、消息丢失、热点 key、事务死锁。**能驾驭数据层，是初级和资深工程师最明显的分水岭。** 这个月就专攻它。
+
+## 本月课程地图
+
+每节课沿用统一结构（故事 → 三层概念 → 可跑/可玩 → lab → 架构师深潜 → 论文锚），并交叉链接 [架构案例库](../atlas)。
+
+### Week 1 · 数据库内核与索引
+| # | 课 | 你会学到 |
+|---|---|---|
+| M3L1 | [数据库读写路径与存储引擎](./storage-engines) | B-tree vs LSM-tree、读写放大 |
+| M3L2 | [索引深入](./indexing) | 复合索引、覆盖索引、索引何时帮倒忙 |
+| M3L3 | [事务与隔离级别](./transactions-isolation) | ACID、脏读/幻读、快照隔离 |
+| M3L4 | [SQL vs NoSQL 建模实战](./sql-vs-nosql) | 规范化 join vs 反规范化文档 |
+
+### Week 2 · 缓存
+| # | 课 | 你会学到 |
+|---|---|---|
+| M3L5 | [缓存模式](./cache-patterns) | cache-aside / read-through / write-back |
+| M3L6 | [缓存失效与一致性](./cache-invalidation) | TTL、写时失效、并发竞态 |
+| M3L7 | [缓存三大难题](./cache-problems) | 穿透 / 击穿 / 雪崩 |
+| M3L8 | [项目：URL 短链系统](./url-shortener) | base62、发号、缓存重定向 |
+
+### Week 3 · 队列、流与 feed
+| # | 课 | 你会学到 |
+|---|---|---|
+| M3L9 | [消息队列深入](./message-queues) | 至少一次、ack、消费者组、死信队列 |
+| M3L10 | [feed 与扇出](./feed-fanout) | 写扩散 vs 读扩散、大V问题、混合 |
+| M3L11 | [数据一致性模式](./consistency-patterns) | 事务发件箱、Saga、CDC |
+| M3L12 | [Capstone：mini feed 系统](./capstone-feed) | 端到端设计 + 实现 + ADR |
+
+## 月末产出
+
+两个能放进作品集的系统：一个 **URL 短链服务**（发号 + base62 + 缓存重定向）和一个 **mini feed 系统**（扇出 + 时间线），都带设计文档和可跑代码。
+
+## 学习建议
+
+- 每个数据难题都先在 lab 里"亲手制造它、再解决它"（如亲手造一次缓存击穿）。
+- 持续回 [Month 2 的取舍](../system-design-bridge/overview)：本月是把那些取舍落到实现。
+- 多对照 [架构案例库](../atlas)：真实系统的数据层就是这些技术的组合。

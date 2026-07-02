@@ -1,0 +1,197 @@
+---
+title: L9 - API 与 HTTP
+description: 把一个函数变成全世界都能从网络调用的服务——请求-响应模型、HTTP 方法与状态码、REST 契约。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# L9 · API 与 HTTP
+
+<ChapterMeta
+  time="约 1.5–2 小时"
+  prereqs={[{label: 'L1 编程如何变成系统', href: './programming-systems-primer'}, {label: 'L4 错误处理', href: './error-handling'}, {label: 'L6 幂等', href: './idempotency'}]}
+  outcome="一个小型 REST API：用正确的 HTTP 方法和状态码对外提供报名服务，并能解释 API 契约为什么不能随便改。"
+  howToUse="先跑那个最小 HTTP 路由器，理解“方法 + 路径 → 处理函数 → 状态码 + 响应体”，再做 lab。"
+/>
+
+:::tip 这一课把"函数"变成"服务"
+L1 你写了 `create_signup` 函数，但它只能在你自己的程序里调用。这一课，我们让全世界的浏览器和 App 都能通过网络调用它——靠的就是 HTTP 这套全人类都同意的"对话协议"。
+:::
+
+## 一、浏览器是怎么和你的后端说话的？
+
+你点一下网页上的"报名"，背后发生的是：浏览器把一个 <GlossaryTerm term="HTTP Request" definition="HTTP 请求：客户端发给服务器的一条消息，包含方法（GET/POST…）、路径（/signups）、头（headers）和可选的正文（body）。">HTTP 请求</GlossaryTerm> 发到你的服务器，服务器处理后回一个 <GlossaryTerm term="HTTP Response" definition="HTTP 响应：服务器回给客户端的消息，包含状态码（200/404…）、头和正文。">HTTP 响应</GlossaryTerm>。这套"一问一答"就是 <GlossaryTerm term="Client-Server" definition="客户端-服务器模型：客户端发起请求，服务器提供响应。Web 的基本交互结构。">客户端-服务器</GlossaryTerm> 模型。
+
+一个 API 就是你的服务器对外公开的一组"可以这样问我"的约定。它要约定四件事：**用什么方法、访问什么路径、传什么 body、回什么状态码**。
+
+## 二、三个核心概念（分层）
+
+### 基础：HTTP 方法与状态码
+
+<GlossaryTerm term="HTTP Method" definition="表示操作意图的动词：GET 读取、POST 创建、PUT 替换、PATCH 局部更新、DELETE 删除。">HTTP 方法</GlossaryTerm> 表达"你想干什么"：
+
+| 方法 | 意图 | 幂等吗（回扣 L6） |
+|---|---|---|
+| GET | 读取 | ✅ |
+| POST | 创建 | ❌ |
+| PUT | 整体替换 | ✅ |
+| DELETE | 删除 | ✅ |
+
+<GlossaryTerm term="HTTP Status Code" definition="三位数字表示结果类别：2xx 成功，3xx 重定向，4xx 客户端错误（你传错了），5xx 服务端错误（我出错了）。">状态码</GlossaryTerm> 表达"结果如何"——这正是 [L4 错误分类](./error-handling) 的落地：
+
+- **2xx**：成功（200 OK、201 Created）。
+- **4xx**：客户端的锅（400 参数错、401 未认证、404 找不到、409 冲突）。
+- **5xx**：服务端的锅（500 内部错、503 不可用）。
+
+### 进阶：REST——把一切看成"资源"
+
+<GlossaryTerm term="REST" definition="一种 API 设计风格：把系统建模成资源（名词，如 /signups），用 HTTP 方法（动词）操作它们，无状态、用状态码表达结果。">REST</GlossaryTerm> 的核心思想：**用名词表示资源（`/signups`、`/signups/42`），用 HTTP 方法表示动作**，而不是把动词塞进路径（别设计 `/createSignup`）。再配合 [L5 的无状态](./state-and-storage) 和 [L6 的方法幂等语义](./idempotency)，就得到一套清晰、可缓存、可扩展的接口。
+
+### 深入（选学）：REST 不是唯一答案
+
+REST 之外还有 <GlossaryTerm term="gRPC" definition="基于 HTTP/2 和 Protobuf 的高性能 RPC 框架，强类型、二进制、支持流式，常用于服务间内部通信。">gRPC</GlossaryTerm>（服务间高性能调用）和 <GlossaryTerm term="GraphQL" definition="一种查询语言，客户端用单个请求精确指定要哪些字段，避免一次返回过多或过少（over/under-fetching）。">GraphQL</GlossaryTerm>（客户端自定义要哪些字段）。它们解决 REST 的不同痛点，下面深潜会对比。
+
+<ResearchNote
+  title="REST：Web 为什么能扩展到全球"
+  source="Roy Fielding (2000), Architectural Styles and the Design of Network-based Software Architectures（博士论文，提出 REST）"
+  href="https://ics.uci.edu/~fielding/pubs/dissertation/top.htm"
+  insight="Fielding 在博士论文里提炼出 REST 架构风格：无状态、统一接口、资源寻址、可缓存。正是这些约束让 Web 能够松耦合地扩展到全球规模。"
+  application="REST 的每条约束都对应一个可扩展性收益：无状态→可水平扩展（L5）、可缓存→降延迟（L10）、统一接口→松耦合（L2）。理解约束背后的“为什么”，比记 API 规范更重要。"
+/>
+
+## 三、跟我做一遍：一个最小 HTTP 路由器
+
+<PyRunner
+  expect="201"
+  code={`# 一个极简的 HTTP 服务：用 (方法, 路径) 找到处理函数，返回 (状态码, 响应体)
+app = {"signups": {}, "next_id": 1}
+
+def handle(method, path, body=None):
+    if path == "/signups" and method == "POST":
+        if not body or "email" not in body:
+            return 400, {"error": "email_required"}       # 客户端错误
+        sid = app["next_id"]; app["next_id"] += 1
+        app["signups"][sid] = {"id": sid, "email": body["email"]}
+        return 201, app["signups"][sid]                    # 创建成功
+    if path == "/signups" and method == "GET":
+        return 200, list(app["signups"].values())          # 读取列表
+    return 404, {"error": "not_found"}                      # 找不到
+
+print(handle("POST", "/signups", {"email": "ada@x.com"}))  # 201 Created
+print(handle("POST", "/signups", {}))                       # 400 缺 email
+print(handle("GET", "/signups"))                            # 200 列表
+print(handle("GET", "/unknown"))                            # 404`}
+/>
+
+注意每个返回都带了**正确的状态码**——这就是你的 API 契约的一部分。**试试**：加一个 `GET /signups/<id>` 路由，命中返回 200、找不到返回 404。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month01/l9_api/`：
+
+```bash
+python labs/month01/l9_api/test_api.py
+```
+
+实现一个 signups 的 REST 接口，覆盖 POST 创建、GET 列表、GET 单个、以及正确的 400/404/405。
+
+<GuidedExercise
+  title="练习指引：写一个小 REST API"
+  goal="把 HTTP 方法语义、状态码、资源建模变成肌肉记忆——这是所有后端服务的门面。"
+  hints={[
+    '先按路径分支：/signups 和 /signups/<id> 是两类资源。',
+    '同一路径下不同方法做不同事；不支持的方法返回 405。',
+    'POST 缺字段 400，GET 找不到 404，创建成功 201（不是 200）。',
+    '路径里的 id 是字符串，要转成 int，转不动就是 400。'
+  ]}
+  steps={[
+    'create_app() 返回 {"signups": {}, "next_id": 1}。',
+    'handle(app, method, path, body) 解析 path（按 / 切分）。',
+    '/signups + POST：校验 email，创建，返回 (201, 记录)。',
+    '/signups + GET：返回 (200, 列表)。',
+    '/signups/<id> + GET：命中 (200, 记录)，否则 (404, ...)。',
+    '不支持的方法返回 405，未知路径返回 404。',
+    '写测试覆盖每个状态码，跑到全过。'
+  ]}
+  checks={[
+    '你能说出每个状态码分别对应什么情况。',
+    '你能解释为什么创建用 201 而不是 200。',
+    '你能说出哪些方法是幂等的（回扣 L6）。',
+    '你能解释为什么 REST 用名词资源而不是动词路径。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. API 是契约，改它要极其小心
+
+一旦有客户端依赖你的 API，它的每个可见行为（字段名、状态码、甚至错误格式）都会被某人依赖——这正是 [L2 的 Hyrum 定律](./modules-and-contracts)。所以要做**向后兼容**的演进：加字段（安全）、不删不改已有字段（危险）、用版本号（`/v2/`）做破坏性变更。
+
+### 2. REST vs gRPC vs GraphQL：选门面
+
+<TradeoffExplorer
+  title="API 风格怎么选"
+  dimensions={['浏览器友好', '性能/带宽', '强类型契约', '查询灵活性', '生态成熟度']}
+  options={[
+    {
+      name: 'REST + JSON',
+      scores: [5, 3, 2, 2, 5],
+      note: '人人都懂、浏览器原生、可缓存。但可能 over/under-fetch，无强类型契约。',
+      whenToUse: '对外公开 API、Web 前后端、需要可缓存和最大兼容性时的默认选择。'
+    },
+    {
+      name: 'gRPC（HTTP/2 + Protobuf）',
+      scores: [1, 5, 5, 2, 4],
+      note: '二进制、强类型、支持流式、性能高。但浏览器不原生、调试不直观。',
+      whenToUse: '内部服务间高频调用、对延迟/带宽敏感、需要强类型契约时。'
+    },
+    {
+      name: 'GraphQL',
+      scores: [4, 3, 4, 5, 3],
+      note: '客户端精确取所需字段，解决 over/under-fetch。但服务端复杂、缓存难、易被恶意复杂查询打爆。',
+      whenToUse: '前端字段需求多变、聚合多个后端、移动端要省带宽时。'
+    }
+  ]}
+/>
+
+### 3. 真实案例：API 网关是系统的前门
+
+[ChatGPT 案例](../atlas/chatgpt.mdx) 和几乎所有大系统，请求第一站都是 API 网关：它在 HTTP 层做鉴权、限流、路由——把横切关注点从业务服务里抽出来（回扣 [L2 的关注点分离](./modules-and-contracts)）。你设计的每个 API，最终都活在这样一个网关后面。
+
+<ResearchNote
+  title="HTTP 语义是全行业的共享契约"
+  source="RFC 9110: HTTP Semantics（IETF）"
+  href="https://www.rfc-editor.org/rfc/rfc9110"
+  insight="HTTP 方法的安全性（safe）、幂等性（idempotent）和状态码语义都由 RFC 标准化。遵守它，全世界的缓存、代理、客户端才能正确地与你协作。"
+  application="按标准语义设计 API（GET 不改数据、PUT/DELETE 幂等、用对状态码），你就能免费获得浏览器缓存、CDN、重试等一整套基础设施的正确行为。违背语义则处处是坑。"
+/>
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的报名 API 要支持"重复提交安全"，你会怎么结合 [L6 的 idempotency key](./idempotency) 和 HTTP 方法语义来设计？
+- 一个已上线的 API 要把字段 `name` 改名为 `full_name`，怎么做才不弄坏老客户端？
+- 移动端抱怨一次要调 5 个接口才能渲染一个页面，你会上 GraphQL、做聚合接口（BFF），还是别的？取舍是什么？
+
+## 自检清单
+
+- [ ] 我能说出 2xx/4xx/5xx 分别代表谁的问题。
+- [ ] 我的 lab API 用对了方法、状态码和资源路径。
+- [ ] 我能解释 API 契约为什么不能随便改，怎么做兼容演进。
+- [ ] 我能说出 REST / gRPC / GraphQL 各自适合什么场景。
+
+## 常见误解
+
+- **"接口随便返回个 200 就行"**：状态码是契约，客户端和中间件靠它判断。
+- **"路径里写动词更直观"**：REST 用名词资源 + 方法动词，更一致、可缓存。
+- **"API 上线后想改就改"**：有人依赖就不能随便改，要兼容或版本化。
+
+## 延伸阅读
+
+- [Roy Fielding, REST 博士论文](https://ics.uci.edu/~fielding/pubs/dissertation/top.htm)
+- [RFC 9110: HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110)
+- [Google API Design Guide](https://cloud.google.com/apis/design)

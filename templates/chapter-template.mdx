@@ -1,0 +1,101 @@
+---
+title: 章节模板
+description: 后续扩展教材时使用的统一章节结构。
+---
+
+# 章节模板
+
+复制这个结构创建新章节，确保每篇内容都不是单纯的资料摘录。
+
+````mdx
+---
+title: Month X - 章节标题
+description: 一句话说明本章解决什么问题。
+---
+
+# Month X - 章节标题
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+
+## 学习目标
+
+- 能...
+- 能...
+
+## 零基础解释
+
+用普通语言建立直觉。
+
+## 关键术语
+
+| Term | 中文解释 | 架构影响 |
+|---|---|---|
+| ... | ... | ... |
+
+正文里首次出现关键英文词汇时，使用：
+
+```mdx
+<GlossaryTerm term="Latency" definition="请求从发出到收到响应的时间。架构设计里通常关注 p50、p95、p99，而不是只看平均值。">Latency</GlossaryTerm>
+```
+
+## 论文或官方依据
+
+```mdx
+<ResearchNote
+  title="论文或资料标题"
+  source="来源名"
+  href="https://example.com"
+  insight="这份资料提供的核心洞察。"
+  application="这个洞察如何影响现代系统设计或 AI 架构。"
+/>
+```
+
+## 图解
+
+```mermaid
+flowchart LR
+  A["输入"] --> B["处理"] --> C["输出"]
+```
+
+## 代码或交互
+
+提供最小可运行代码，或嵌入 React 交互组件。
+
+## 常见误解
+
+- ...
+
+## 练习
+
+1. ...
+2. ...
+
+## Architect Speaking Drill
+
+30-45 分钟讲解要求。
+
+```mdx
+<GuidedExercise
+  title="练习指引标题"
+  goal="这个练习真正训练什么能力。"
+  hints={['线索一', '线索二']}
+  steps={['步骤一', '步骤二']}
+  checks={['自检标准一', '自检标准二']}
+/>
+```
+
+## 延伸阅读
+
+- [source](https://example.com)
+````
+
+## 内容质量检查
+
+- 是否讲清楚了“为什么”而不是只列概念？
+- 是否至少有一张图？
+- 是否有代码、实验或交互组件？
+- 是否说明了失败路径？
+- 是否有练习和复盘问题？
+- 是否标注了参考来源？

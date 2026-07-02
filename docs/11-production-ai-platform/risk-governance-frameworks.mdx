@@ -1,0 +1,208 @@
+---
+title: M11L7 - 风险治理框架
+description: 护栏防的是技术攻击，治理管的是组织责任——谁为 AI 的决策负责？出了事怎么追溯？合规怎么满足？用 NIST AI RMF、模型卡、审计日志，把“负责任的 AI”变成可执行的制度。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M11L7 · 风险治理框架
+
+<ChapterMeta
+  time="约 2 小时"
+  prereqs={[{label: 'M11L5 威胁建模', href: './llm-threat-modeling'}, {label: 'M11L6 平台护栏', href: './platform-guardrails'}, {label: 'M11L1 集中治理', href: './why-ai-platform'}]}
+  outcome="能用 NIST AI RMF 的语言组织 AI 风险治理，会用模型卡、审计日志、责任分配把‘负责任的 AI’落成可执行制度，并理解合规（GDPR/EU AI Act）的基本要求。"
+  howToUse="先看“技术防住了但组织没准备好”，再学治理框架与制度工具，最后做治理清单 lab。"
+/>
+
+:::tip 护栏管技术，治理管责任
+[护栏](./platform-guardrails) 挡住了注入、脱敏了 PII——技术层面防住了。但还有一整套**组织层面**的问题没解决：这个 AI 系统谁批准上线的？它做的决策谁负责？出了事故怎么追溯到"哪个模型、哪个版本、什么依据"？监管来问"你们的 AI 怎么保证公平、怎么保护隐私"你答得上来吗？这些不是写代码能解决的，需要**风险治理框架**——用 [NIST AI RMF](https://www.nist.gov/itl/ai-risk-management-framework) 这样的行业框架，把"负责任的 AI"从口号变成可执行的制度：谁负责、怎么记录、怎么审计、怎么合规。
+:::
+
+## 一、技术防住了，组织却没准备好
+
+一个技术上很安全的 AI 系统，仍可能让公司陷入大麻烦：
+- **责任真空**：AI 拒了一笔贷款、给了错误医疗建议——谁负责？如果没人明确负责，出了事就是公司整体背锅、内部互相推诿。
+- **无法追溯**：监管或客户质疑某个 AI 决策，你能还原"当时用的哪个模型、哪个版本、基于什么数据、什么逻辑"吗？没有[审计记录（承接 M11L4 可观测）](./ai-observability) 就答不了。
+- **合规缺口**：[GDPR](https://gdpr.eu/) 要求可解释和被遗忘权、[EU AI Act](https://artificialintelligenceact.eu/) 对高风险 AI 有强制要求——不满足会有法律和罚款风险。
+- **不一致**：每个团队对"负责任"理解不同，公司层面给不出统一答复。
+
+这些都要靠**治理制度**解决——它是 AI 上生产的"组织层护栏"。
+
+## 二、三个核心概念（分层）
+
+### 基础：NIST AI RMF 的四个功能
+
+<GlossaryTerm term="NIST AI RMF" definition="美国 NIST 发布的 AI 风险管理框架，用四个核心功能组织 AI 治理：Govern（治理文化与问责）、Map（识别情境与风险）、Measure（评估分析风险）、Manage（处置与监控风险）。是把‘负责任 AI’落地的通用参照框架。">NIST AI RMF</GlossaryTerm> 用四个功能组织治理，正好对应你这个月学的东西：
+- **Govern（治理）**：建立问责文化——谁负责、什么政策、如何监督（本课重点）。
+- **Map（识别）**：识别场景和风险——就是 [M11L5 威胁建模](./llm-threat-modeling)。
+- **Measure（度量）**：评估分析风险——就是 [M11L2 评估 + M11L4 可观测](./evaluation-systems)。
+- **Manage（管理）**：处置和监控风险——就是 [M11L6 护栏 + M11L3 在线监控](./platform-guardrails)。
+
+**治理不是全新工作，而是把已有的评估/护栏/监控组织成有问责、可审计的制度**。RMF 给你一套统一语言和框架来做这件事。
+
+### 进阶：模型卡、审计日志与责任分配
+
+治理落地的三个具体工具：
+- <GlossaryTerm term="Model Card" definition="模型卡：一份记录 AI 模型/系统关键信息的文档——用途、训练数据、性能、已知局限、风险、适用与不适用场景。让使用者和审计者了解‘这个 AI 能做什么、不能做什么、有什么风险’。">模型卡（model card）</GlossaryTerm>：记录每个 AI 系统的用途、能力、**已知局限和风险**、适用/不适用场景——让使用者和审计者清楚"这个 AI 能做什么、不该用在哪"。
+- <GlossaryTerm term="Audit Log" definition="审计日志：不可篡改地记录 AI 系统的关键决策与操作——谁在何时、用哪个模型版本、基于什么输入、做出了什么决策/操作。用于事后追溯、追责和合规证明。">审计日志</GlossaryTerm>：不可篡改地记录关键决策——谁、何时、哪个模型版本、什么输入、什么决策。这是[可观测（M11L4）](./ai-observability) 面向**合规追责**的延伸，是出事后能追溯的前提。
+- **明确责任人**：每个 AI 系统要有明确的负责人（accountable owner）——[AI 的决策最终要有人负责](./human-oversight-fallback)，不能是"算法决定的"这种责任真空。
+
+### 深入（选学）：合规、公平与治理的组织落地
+
+- **合规基础概念**：[GDPR](https://gdpr.eu/)——用户数据用于 AI 要有法律依据、要能解释自动化决策、要支持删除（被遗忘权，牵涉[评估集/日志里的用户数据](./online-eval-feedback)）；[EU AI Act](https://artificialintelligenceact.eu/) 按风险分级监管，对"高风险 AI"（医疗、招聘、信贷等）有强制的透明、人工监督、记录要求。架构师不必是律师，但要知道**这些约束存在、会影响设计**（比如必须留审计日志、必须支持人工申诉）。
+- **公平与偏见**：AI 会放大训练数据里的偏见——治理要评估[不同群体上的表现差异](./evaluation-systems)（把公平作为评估维度），高风险决策尤其要防歧视。这是 [HELM 多维评估](https://arxiv.org/abs/2211.09110) 的公平维度落到治理。
+- **治理 vs 敏捷的张力**：太重的治理流程会拖慢创新、逼团队绕过；太轻又管不住风险。解法和[护栏分级](./platform-guardrails) 一样——**按 AI 系统的风险等级施加匹配的治理**：低风险内部工具轻流程、高风险对外决策重治理（模型卡+审计+人工监督+合规审查）。别用同一套重流程卡死所有 AI。
+- **治理必须平台化才可持续**：模型卡模板、审计日志基础设施、上线前风险评审清单、合规检查——这些做成 [AI 平台（M11L1）](./why-ai-platform) 的标准治理动作，才能让"负责任"在整个组织一致执行，而非依赖个别团队自觉。**平台是集中治理的载体**。
+- **治理是信任的基础**：能清楚说明"我们的 AI 谁负责、怎么评估、如何追溯、怎么合规"，是赢得用户、监管、企业客户信任的前提。治理不是负担，是**让 AI 敢被用在重要场景**的通行证。
+
+<ResearchNote
+  title="AI 风险治理：NIST RMF 组织问责 + 模型卡/审计/责任人 + 风险分级合规"
+  source="NIST AI Risk Management Framework；Model Cards (Mitchell et al., 2019)；GDPR / EU AI Act"
+  href="https://www.nist.gov/itl/ai-risk-management-framework"
+  insight="护栏管技术、治理管组织责任:责任归属、可追溯、合规。NIST AI RMF 四功能(Govern/Map/Measure/Manage)把已有的威胁建模/评估/护栏/监控组织成有问责可审计的制度。落地工具:模型卡(用途/局限/风险)、不可篡改审计日志(追溯追责)、明确责任人(避免责任真空)。合规(GDPR可解释/被遗忘、EU AI Act 高风险强制要求)与公平(评估群体差异)要纳入。按风险等级施加匹配治理,避免一刀切重流程。治理须平台化才可持续,是信任与合规的基础。"
+  application="用 NIST RMF 语言组织 AI 治理:给每个系统配模型卡、留审计日志、指定责任人。高风险系统加合规审查(可解释/人工监督/记录)、公平评估。治理按风险分级、别一刀切。把模型卡模板/审计基础设施/上线风险评审做成平台标准动作。把治理当信任通行证而非负担。"
+/>
+
+## 三、跟我做一遍：治理清单与审计追溯
+
+<PyRunner
+  rows={48}
+  expect="按风险分级治理、可审计追溯、责任明确"
+  code={`# AI 系统治理登记:模型卡 + 责任人 + 按风险分级的治理要求
+def governance_requirements(risk_level):
+    # 按风险等级施加匹配治理(别一刀切)
+    base = {"model_card": True, "owner": True, "audit_log": True}
+    if risk_level == "high":                      # 高风险:对外决策(信贷/医疗/招聘)
+        base.update({"human_oversight": True, "compliance_review": True,
+                     "fairness_eval": True})
+    elif risk_level == "medium":
+        base.update({"human_oversight": True, "compliance_review": False,
+                     "fairness_eval": True})
+    else:                                         # 低风险:内部工具
+        base.update({"human_oversight": False, "compliance_review": False,
+                     "fairness_eval": False})
+    return base
+
+def check_readiness(system):
+    reqs = governance_requirements(system["risk"])
+    missing = [k for k, need in reqs.items() if need and not system.get(k)]
+    return {"ready": not missing, "missing": missing}
+
+# 不可篡改审计日志:追溯"谁/何时/哪个模型版本/什么决策"
+audit = []
+def log_decision(user, model_version, decision, basis):
+    audit.append({"user": user, "model": model_version,
+                  "decision": decision, "basis": basis})
+
+# 一个高风险系统(信贷审批)缺了人工监督 -> 未就绪
+credit = {"name": "信贷审批AI", "risk": "high", "model_card": True,
+          "owner": True, "audit_log": True, "human_oversight": False,
+          "compliance_review": True, "fairness_eval": True}
+print("信贷AI就绪检查:", check_readiness(credit))    # missing: human_oversight
+
+log_decision("u123", "opus-4.8-v3", "拒绝", "收入不足阈值")  # 可追溯
+print("审计记录(可追溯):", audit[-1])
+print("按风险分级治理、可审计追溯、责任明确")`}
+/>
+
+治理要求按风险等级分级（高风险信贷系统必须有人工监督+合规审查+公平评估，低风险内部工具从简），上线前检查是否就绪、缺项挡住；审计日志让每个决策可追溯到"哪个模型版本、什么依据"。这就是把"负责任"变成可检查的制度。**试试**：把 credit 的 human_oversight 补上，看就绪检查通过；想想为什么审计日志要记录"model version"（模型升级后要能追溯当时用的是哪版）。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month11/m11l7_governance/`：
+
+```bash
+python labs/month11/m11l7_governance/test_governance.py
+```
+
+实现风险治理：按风险等级生成治理要求、上线就绪检查、审计日志追溯。
+
+<GuidedExercise
+  title="练习指引：搭 AI 治理清单"
+  goal="把‘按风险分级的治理要求 + 就绪检查 + 审计追溯’做成可执行制度。"
+  hints={[
+    'governance_requirements(risk): 高/中/低风险要求不同(高的最全)。',
+    'check_readiness: 缺任何 required 项 -> not ready + missing 列表。',
+    'log_decision: 记录 user/model_version/decision/basis(可追溯)。',
+    '模型卡/责任人/审计日志是基础,人工监督/合规/公平按风险加。'
+  ]}
+  steps={[
+    '实现 governance_requirements(按风险分级)。',
+    '实现 check_readiness(上线前挡住缺项)。',
+    '实现审计日志 log_decision。',
+    '写测试:高风险要求更严、缺项被挡、低风险从简、审计可追溯。'
+  ]}
+  checks={[
+    '我能用 NIST RMF 语言把评估/护栏/监控组织成有问责的治理。',
+    '我的 lab 按风险分级治理、就绪检查、审计追溯。',
+    '我知道模型卡/审计日志/责任人各解决什么。',
+    '我理解治理要平台化、按风险分级、是信任的基础。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 治理强度分级
+
+<TradeoffExplorer
+  title="按风险等级施加的 AI 治理强度"
+  dimensions={['问责清晰', '可追溯', '合规覆盖', '不拖慢创新', '适配场景']}
+  options={[
+    {
+      name: '轻治理(低风险)',
+      scores: [3, 3, 2, 5, 3],
+      note: '模型卡+责任人+审计日志即可。快、不拖创新。合规覆盖弱。',
+      whenToUse: '内部工具、可逆、影响小。'
+    },
+    {
+      name: '中治理(中风险)',
+      scores: [4, 4, 3, 3, 4],
+      note: '加人工监督+公平评估。平衡问责与速度。',
+      whenToUse: '对外但非高危(内容生成、辅助)。'
+    },
+    {
+      name: '重治理(高风险)',
+      scores: [5, 5, 5, 1, 5],
+      note: '再加合规审查+强制人工监督+完整审计。最负责。但流程重、慢。',
+      whenToUse: '信贷/医疗/招聘等高风险对外决策。'
+    }
+  ]}
+/>
+
+### 2. 治理是"把已有能力组织成可问责的制度"，不是额外负担
+
+工程师常把治理当成"拖慢工作的官僚流程"而抗拒——这是误解。看看 [NIST RMF 的四功能](https://www.nist.gov/itl/ai-risk-management-framework)：Map（识别风险）就是你已经在做的[威胁建模](./llm-threat-modeling)、Measure（度量）就是你的[评估和可观测](./evaluation-systems)、Manage（处置）就是你的[护栏和监控](./platform-guardrails)——**治理没有要你做全新的技术工作，它要的是把这些散落的能力组织成有问责、有记录、可审计的制度**。差别在于：一个没有治理的团队，评估和护栏是"某些工程师凭责任心做的"，出了事没人能证明做过、也没人明确负责；一个有治理的团队，这些是"制度要求做的、有记录、有责任人、可向监管和客户证明的"。这个差别在低风险场景无所谓，但在**AI 要被用于重要决策**（钱、健康、法律、机会）时是决定性的——没有治理，这些高价值场景根本不敢、也不被允许用 AI。所以治理的真正价值是**解锁高价值场景**：正是因为你能证明"这个信贷 AI 有模型卡说明局限、有公平评估防歧视、有审计日志可追溯、有明确责任人、有人工申诉通道"，它才敢上线、才通过合规、才赢得信任。架构师要扭转团队对治理的认知：**治理不是给能力踩刹车，而是给能力上牌照——让它能合法地开上高速公路**。
+
+### 3. 真实案例：一个 AI 决策被质疑时，有无治理的天壤之别
+
+设想一个用 AI 辅助招聘筛选的系统，某位被拒的候选人投诉"你们的 AI 歧视我"，甚至可能诉诸监管。**没有治理的公司**：拿不出这个 AI 怎么做决策的记录、不知道当时用的哪个模型版本、没做过公平性评估、说不清谁为这个系统负责——在监管和舆论面前完全被动，可能面临罚款、诉讼、声誉重创，最后往往被迫下线整个 AI 招聘系统。**有治理的公司**：调出这个系统的模型卡（写明它只做初筛、明确标注"不得作为唯一决策依据"、列出已知局限）、审计日志（还原该候选人被筛的完整依据和当时的模型版本）、公平性评估报告（证明在各群体上的表现差异在可接受范围、且持续监控）、人工复核记录（证明高风险决策有人参与、有申诉通道）——能有理有据地回应质疑，证明自己尽到了[负责任的义务](./human-oversight-fallback)。同样的技术、同样的争议，结局天差地别，差别全在**上线前有没有把治理做扎实**。这个案例揭示治理的本质：**它是你在"出事那一天"的保险，而保险必须在出事之前买好**。它也再次呼应本月主线——[评估（M11L2）](./evaluation-systems) 证明质量、[可观测（M11L4）](./ai-observability) 提供追溯、[护栏（M11L6）](./platform-guardrails) 防住攻击、治理（本课）把这一切组织成能向世界证明"我们的 AI 是负责任的"的制度。缺了治理这一层，前面所有技术投入在"出事那天"都无法转化为你的辩护。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的每个 AI 系统有明确的责任人吗？出了事故谁负责，还是会陷入"算法决定的"责任真空？
+- 一个 AI 决策被质疑时，你能还原"哪个模型版本、什么输入、什么依据"吗？审计日志够吗？
+- 你的高风险 AI（涉及钱/健康/机会）做了公平评估、合规审查、人工监督了吗？治理是你解锁这些场景的牌照还是缺失的短板？
+
+## 自检清单
+
+- [ ] 我能用 NIST RMF 四功能把威胁建模/评估/护栏/监控组织成可问责制度。
+- [ ] 我给 AI 系统配了模型卡、审计日志、明确责任人。
+- [ ] 我理解 GDPR/EU AI Act 等合规约束会影响设计，按风险分级施加治理。
+- [ ] 我把治理当作解锁高价值场景的牌照和信任基础，而非官僚负担。
+
+## 常见误解
+
+- **"治理是拖慢工作的官僚流程"**：它是把已有的评估/护栏/监控组织成可问责制度，是解锁高价值场景的牌照。
+- **"AI 出错是算法的问题，不用谁负责"**：责任真空是治理大忌；每个 AI 系统必须有明确责任人。
+- **"所有 AI 用同一套治理流程"**：按风险分级——低风险从简、高风险重治理，别一刀切。
+
+## 延伸阅读
+
+- [NIST AI Risk Management Framework](https://www.nist.gov/itl/ai-risk-management-framework)
+- [Model Cards (Mitchell et al., 2019)](https://arxiv.org/abs/1810.03993) · [EU AI Act](https://artificialintelligenceact.eu/)
+- [下一课：人类监督与失败处理](./human-oversight-fallback)

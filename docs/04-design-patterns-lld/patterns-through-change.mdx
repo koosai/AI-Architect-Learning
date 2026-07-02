@@ -1,0 +1,115 @@
+---
+title: Month 4 - 从变化理解设计模式
+description: 不背模式名字，用变化点理解 SOLID、Factory、Strategy、Observer 和 Adapter。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+
+# Month 4 - 从变化理解设计模式
+
+设计模式不是一组需要背诵的名称，而是一组处理变化的经验。初学者更应该问：“这里未来最可能变化的是什么？”而不是“这里能不能套一个模式？”
+
+<ResearchNote
+  title="模式语言的真正价值"
+  source="Design Patterns: Elements of Reusable Object-Oriented Software"
+  href="https://www.pearson.com/en-us/subject-catalog/p/design-patterns-elements-of-reusable-object-oriented-software/P200000009103"
+  insight="经典设计模式的价值不在于固定代码模板，而在于给常见设计问题命名，让工程师能讨论对象创建、组合、状态变化和行为变化。"
+  application="在 AI 系统里，模型 provider、向量库、工具协议和评测策略都会变化；模式帮助你把变化隔离在清楚的边界里。"
+/>
+
+## 学习目标
+
+- 能用变化点解释设计模式。
+- 能把 Factory、Strategy、Observer、Adapter 写成简单代码。
+- 能判断什么时候不需要设计模式。
+
+## 变化点视角
+
+| 变化点 | 常见模式 | 例子 |
+|---|---|---|
+| 创建哪种对象会变化 | Factory | 根据模型供应商创建不同 LLM client |
+| 算法策略会变化 | Strategy | 缓存淘汰策略、排序策略、检索策略 |
+| 状态变化要通知多个对象 | Observer | 订单状态通知、Agent event tracing |
+| 外部接口不一致 | Adapter | OpenAI、Anthropic、本地模型统一接口 |
+
+## Strategy 示例
+
+```python
+from typing import Protocol
+
+class RankingStrategy(Protocol):
+    def score(self, query: str, document: str) -> float:
+        ...
+
+class KeywordRanking:
+    def score(self, query: str, document: str) -> float:
+        query_terms = set(query.lower().split())
+        doc_terms = set(document.lower().split())
+        return len(query_terms & doc_terms) / max(len(query_terms), 1)
+
+class Retriever:
+    def __init__(self, ranking: RankingStrategy):
+        self.ranking = ranking
+
+    def search(self, query: str, documents: list[str]) -> list[str]:
+        return sorted(documents, key=lambda doc: self.ranking.score(query, doc), reverse=True)
+```
+
+这里的变化点是 ranking 方法。未来你可以把 `KeywordRanking` 换成 embedding ranking，而不重写 `Retriever`。
+
+## AI Architect 里的设计模式
+
+AI 系统里设计模式会重新出现：
+
+- Factory：创建不同模型 client。
+- Adapter：统一不同模型、向量库、工具协议。
+- Observer：记录 Agent 的每一步事件。
+- Strategy：切换检索、rerank、prompt、评测策略。
+- Circuit Breaker：模型服务或第三方工具不稳定时保护系统。
+
+这里的关键词是 <GlossaryTerm term="Abstraction Boundary" definition="把可替换实现藏在稳定接口后面的边界。边界设计得好，系统可以从本地模型切到云模型，而上层业务不需要重写。">Abstraction Boundary</GlossaryTerm>。没有边界时，你会在业务代码里到处写 `if provider == "openai"` 或 `if vector_db == "qdrant"`；项目小的时候能跑，项目大时就会变成难以替换的依赖网。
+
+## 常见误解
+
+- 使用模式越多越专业。错，模式会增加间接层，必须换来真实收益。
+- SOLID 只属于 Java/C#。错，它描述的是依赖、边界和变化，不绑定语言。
+- LLD 只是面试题。错，AI 工具调用、权限隔离、模型适配都需要 LLD。
+
+## 练习
+
+1. 用 Factory 写一个 `create_model_client(provider)`，支持 `local` 和 `cloud` 两种 provider。
+2. 用 Adapter 统一两个假模型接口：一个叫 `complete(prompt)`，另一个叫 `invoke(messages)`。
+3. 解释为什么这个例子需要或不需要设计模式。
+
+<GuidedExercise
+  title="练习指引：统一两个模型接口"
+  goal="通过 Adapter 练习把不一致的外部接口包成稳定的内部接口。"
+  hints={[
+    '先定义你希望业务代码看到的统一接口，例如 generate(prompt: str) -> str。',
+    '假设本地模型只有 complete(prompt)，云端模型只有 invoke(messages)。',
+    'Adapter 的职责是转换输入输出，不要把业务逻辑写进去。',
+    'Factory 只负责选择创建哪个 Adapter，不负责调用模型。'
+  ]}
+  steps={[
+    '定义一个 ModelClient Protocol，只有 generate(prompt) 方法。',
+    '写 LocalModelAdapter，内部调用 local.complete(prompt)。',
+    '写 CloudModelAdapter，把 prompt 转成 messages，再调用 cloud.invoke(messages)。',
+    '写 create_model_client(provider)，provider 为 local 时返回 LocalModelAdapter。',
+    '写一个 summarize(text, model_client) 函数，只调用 generate，不关心 provider。',
+    '最后解释：如果未来接入第三个 provider，需要改哪些文件，不需要改哪些文件。'
+  ]}
+  checks={[
+    '业务函数里没有 provider 判断。',
+    'Adapter 只做接口转换。',
+    'Factory 只做创建选择。',
+    '新增 provider 时不需要重写 summarize。'
+  ]}
+/>
+
+## 延伸阅读
+
+- [senghoo/golang-design-pattern](https://github.com/senghoo/golang-design-pattern)
+- [liu-jianhao/Cpp-Design-Patterns](https://github.com/liu-jianhao/Cpp-Design-Patterns)
+- [mohuishou/go-design-pattern](https://github.com/mohuishou/go-design-pattern)

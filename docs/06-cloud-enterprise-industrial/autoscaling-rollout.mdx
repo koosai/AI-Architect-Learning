@@ -1,0 +1,189 @@
+---
+title: M6L4 - 自动伸缩与滚动发布
+description: 流量涨了自动加机器、跌了自动减；上新版本不停服、出问题能秒回滚——HPA、滚动更新、蓝绿与金丝雀。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M6L4 · 自动伸缩与滚动发布
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M6L2 K8s 调和', href: './kubernetes-basics'}, {label: 'M6L3 探针', href: './config-secrets-probes'}, {label: 'M2L7 扩展策略', href: '../system-design-bridge/scaling-strategies'}]}
+  outcome="能用 HPA 按指标自动伸缩副本（含阈值与稳定窗口），并区分滚动更新/蓝绿/金丝雀发布的取舍与回滚方式。"
+  howToUse="先看“流量峰谷靠人手动加减机器”的痛，再理解 HPA 和几种发布策略，最后做 HPA 决策 lab。"
+/>
+
+:::tip 弹性和安全发布，是云原生最直接的两个回报
+[M2L7](../system-design-bridge/scaling-strategies) 讲过水平扩展的思想。云原生把它**自动化**了：流量涨自动加副本、跌了自动减（省钱）——这是自动伸缩。同时，发新版本不再是"停服更新"，而是**逐步替换、随时回滚**——这是滚动发布。两者都建立在 [K8s 调和循环（M6L2）](./kubernetes-basics) 和 [readiness 探针（M6L3）](./config-secrets-probes) 之上。
+:::
+
+## 一、人肉运维扛不住峰谷和发版
+
+两个日常痛点：
+1. **流量有峰谷**：白天高峰要 20 台、深夜 3 台够。固定按峰值配 = 深夜浪费 6 倍资源；按均值配 = 高峰被打挂。人手动盯着加减？半夜没人、反应也慢。
+2. **发版要停服**：老办法停掉服务、换新版本、再启动——中间一段时间用户访问失败。而且新版本有 bug 时，回滚又是一通手忙脚乱。
+
+自动伸缩解决第一个，滚动/金丝雀发布解决第二个——都靠声明式调和自动完成。
+
+## 二、三个核心概念（分层）
+
+### 基础：水平自动伸缩（HPA）
+
+<GlossaryTerm term="Horizontal Pod Autoscaler" definition="水平 Pod 自动伸缩器（HPA）：根据观测到的指标（如 CPU 利用率、QPS）自动调整副本数，使指标维持在目标值附近。属于 K8s 调和循环的一种应用。" >HPA</GlossaryTerm> 按指标自动算副本数：目标"CPU 维持 50%"，当前 10 个副本平均 CPU 80% → 需要 `ceil(10 × 80/50) = 16` 个 → 调和循环把副本扩到 16。公式核心：**期望副本 = 当前副本 × (当前指标 / 目标指标)**。这就是 [M6L2 调和](./kubernetes-basics) 在"副本数"维度的应用——你声明目标指标，HPA 维持它。
+
+### 进阶：抖动抑制与发布策略
+
+- HPA 必须防**抖动（flapping）**：指标上下波动一点就反复扩缩会很糟。用<GlossaryTerm term="Stabilization Window" definition="稳定窗口：自动伸缩在做缩容（或扩容）决策时，参考最近一段时间窗口内的指标，避免因瞬时波动而频繁伸缩（抖动）。常对缩容设较长窗口、扩容较短。" >稳定窗口</GlossaryTerm>（缩容慢、扩容快）+ 容忍带（指标在目标 ±10% 内不动）抑制。
+- 发布策略：
+  - <GlossaryTerm term="Rolling Update" definition="滚动更新：逐批用新版本 Pod 替换旧版本，每批先就绪再继续，期间服务始终有可用副本，实现零停机升级。出问题可暂停/回滚。" >滚动更新（rolling update）</GlossaryTerm>：一批批替换，新 Pod [readiness](./config-secrets-probes) 通过才继续，全程有可用副本 → 零停机。
+  - <GlossaryTerm term="Blue-Green Deployment" definition="蓝绿发布：同时部署旧（蓝）新（绿）两套完整环境，验证绿环境无误后把流量一次性切过去；出问题切回蓝。切换快、回滚快，但要双份资源。" >蓝绿（blue-green）</GlossaryTerm>：新旧两套并存，验证后流量一次切换，出错切回。
+  - <GlossaryTerm term="Canary Deployment" definition="金丝雀发布：先把一小部分流量（如 5%）导到新版本，观察指标正常再逐步放大比例，发现问题及时回滚。把发布风险降到最小。" >金丝雀（canary）</GlossaryTerm>：先放 5% 流量到新版本，观察指标 OK 再逐步放大——风险最小。
+
+### 深入（选学）：自动伸缩的边界与发布的本质
+
+- **HPA 不是万能**：它对 CPU/QPS 这类即时指标有效，但扩容有延迟（拉镜像、启动、预热），应对**突发尖峰**不够快——要配合预留缓冲、预热、或基于队列长度/自定义指标伸缩。还有 [VPA（纵向，调单 Pod 资源）](#) 和集群层面的**节点自动伸缩**（没机器放 Pod 时自动加节点）。
+- **冷启动与缩到 0**：Serverless 可缩到 0（省钱）但有冷启动延迟；常规服务通常留最小副本。
+- **发布的本质是"控制变更的爆炸半径"**：金丝雀 = 先让一小撮用户承担风险（[呼应 M5L8 爆炸半径](../core-components/bulkhead-isolation)）；配合自动化指标监控，指标一恶化就**自动回滚**——这是 [SLO/错误预算（M6L7）](./observability-advanced) 驱动的渐进式交付（progressive delivery）。
+- **数据库变更不能"滚回"**：代码能回滚，schema 改了的数据回不去——所以 schema 变更要向后兼容、分步发布（扩展-迁移-收缩），这是发布里最难的部分。
+
+<ResearchNote
+  title="自动伸缩与渐进式发布：用调和 + 指标控制弹性与风险"
+  source="Kubernetes HPA 文档；Google SRE — Canarying Releases；Martin Fowler — BlueGreenDeployment / CanaryRelease"
+  href="https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/"
+  insight="HPA 把“维持目标指标”变成调和问题：期望副本 = 当前副本 × 当前指标/目标指标，并用稳定窗口抑制抖动。滚动/蓝绿/金丝雀则在“升级时如何控制风险”上取舍——金丝雀 + 自动指标回滚是把发布风险降到最低的现代实践（渐进式交付）。"
+  application="为伸缩选对指标（CPU/QPS/队列长度）并设稳定窗口防抖动；为关键服务用金丝雀 + 自动回滚而非一把梭。注意扩容延迟和数据库变更不可回滚——schema 要向后兼容、分步发布。"
+/>
+
+## 三、跟我做一遍：HPA 副本决策（含容忍带与上下限）
+
+<PyRunner
+  rows={30}
+  expect="按指标伸缩且不抖动"
+  code={`import math
+
+def desired_replicas(current, metric, target, lo, hi, tolerance=0.1):
+    ratio = metric / target
+    # 容忍带：指标在目标 ±tolerance 内，不伸缩（防抖动）
+    if abs(ratio - 1.0) <= tolerance:
+        want = current
+    else:
+        want = math.ceil(current * ratio)
+    return max(lo, min(hi, want))    # 夹在 [min, max] 副本之间
+
+# 目标 CPU 50%，副本范围 [2, 20]
+print("CPU 80%:", desired_replicas(10, 80, 50, 2, 20))   # 过载 -> 扩到 16
+print("CPU 20%:", desired_replicas(10, 20, 50, 2, 20))   # 空闲 -> 缩到 4
+print("CPU 52%:", desired_replicas(10, 52, 50, 2, 20))   # 在容忍带内 -> 不动(10)
+print("CPU 99%:", desired_replicas(10, 99, 50, 2, 20))   # 想要 20，撞上限 -> 20
+print("CPU 1%:",  desired_replicas(10, 1,  50, 2, 20))   # 想要 1，撞下限 -> 2
+print("按指标伸缩且不抖动")`}
+/>
+
+副本数随指标自动调整，但容忍带让小波动不触发伸缩、上下限防止失控。**试试**：把目标指标从 CPU 换成"每副本队列长度"，体会用业务指标（而非 CPU）伸缩往往更贴合真实负载。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month06/m6l4_hpa/`：
+
+```bash
+python labs/month06/m6l4_hpa/test_hpa.py
+```
+
+实现 HPA 副本决策：按指标比例算副本、容忍带防抖动、夹在 min/max 之间。
+
+<GuidedExercise
+  title="练习指引：实现 HPA 决策"
+  goal="把“期望副本 = 当前 × 指标/目标 + 容忍带 + 上下限”做成代码——这是弹性伸缩的核心算法。"
+  hints={[
+    'ratio = metric / target；ceil(current * ratio) 是初步期望。',
+    '容忍带：|ratio - 1| <= tolerance 时不伸缩（防抖动）。',
+    '最后用 max(min_replicas, min(max_replicas, want)) 夹住。',
+    '想想为什么缩容通常比扩容更保守（稳定窗口）。'
+  ]}
+  steps={[
+    '实现 desired_replicas(current, metric, target, lo, hi, tolerance)。',
+    '正确处理过载扩容、空闲缩容、容忍带不动、撞上下限。',
+    '（选做）加入“缩容需连续 N 次低于阈值才执行”的稳定窗口。',
+    '写测试：扩容、缩容、容忍带、上限、下限、稳定窗口。'
+  ]}
+  checks={[
+    '你能写出 HPA 的副本计算公式。',
+    '你的 lab 有容忍带防抖动和上下限保护。',
+    '你能区分滚动/蓝绿/金丝雀发布及取舍。',
+    '你能说出为什么数据库 schema 变更不能简单回滚。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 发布策略怎么选
+
+<TradeoffExplorer
+  title="发布策略对比"
+  dimensions={['零停机', '回滚速度', '风险控制', '资源成本', '实现复杂度']}
+  options={[
+    {
+      name: '停机更新(recreate)',
+      scores: [1, 2, 1, 5, 5],
+      note: '停旧起新。简单省资源，但有停机窗口、回滚也要再停一次。',
+      whenToUse: '内部工具、可接受停机的非关键系统。'
+    },
+    {
+      name: '滚动更新',
+      scores: [5, 3, 3, 5, 4],
+      note: '逐批替换、零停机、省资源。但新旧版本会短暂共存，回滚需再滚一轮。',
+      whenToUse: '多数无状态服务的默认。'
+    },
+    {
+      name: '蓝绿',
+      scores: [5, 5, 4, 1, 3],
+      note: '一键切换、秒级回滚。但要双份资源、切换瞬间全量承压。',
+      whenToUse: '要快速回滚、能承担双份资源时。'
+    },
+    {
+      name: '金丝雀 + 自动回滚',
+      scores: [5, 5, 5, 3, 1],
+      note: '小流量先试、指标恶化自动回滚。风险最低，但要指标体系和自动化。',
+      whenToUse: '高风险/高价值变更——现代最佳实践。'
+    }
+  ]}
+/>
+
+### 2. 弹性 + 安全发布 = 云原生最直接的 ROI
+
+很多团队上云原生的第一波回报就来自这两课：自动伸缩省下大量闲置成本、按需扩容扛住大促；金丝雀 + 自动回滚把"发版如临大敌"变成"每天发好几次还很安心"（高 [DORA 指标](../foundations/testing-and-tdd)）。这两件事都依赖前几课的地基：[不可变镜像](./containers)（可秒级换版本/回滚）+ [调和循环](./kubernetes-basics)（自动维持副本/版本）+ [readiness 探针](./config-secrets-probes)（保证只给就绪的 Pod 流量）。它们环环相扣，缺一不可。
+
+### 3. 真实案例：从"季度发布"到"每天上百次发布"
+
+传统企业一个季度发一次版、停机维护、全员加班守夜。采用容器 + K8s + 金丝雀 + CI/CD（[M6L6](./cicd-pipelines)）后，头部互联网公司能做到一天发布上百次、每次只动一小撮流量、出问题分钟级自动回滚。这种"小步快跑、低风险高频"的能力，正是 [DORA 研究](../foundations/testing-and-tdd) 证明的高效能团队特征——而它的技术底座就是本周这几课。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的服务该按什么指标伸缩（CPU？QPS？队列长度？）？扩容延迟（拉镜像+启动+预热）多久？能扛住多快的尖峰？
+- 你现在怎么发版？有停机吗？回滚要多久、可靠吗？哪些高风险变更值得上金丝雀？
+- 你的发布里有数据库 schema 变更吗？怎么做到"代码能回滚而数据不乱"（扩展-迁移-收缩三步法）？
+
+## 自检清单
+
+- [ ] 我能写出 HPA 的副本计算公式并加容忍带/上下限。
+- [ ] 我的 lab 按指标伸缩且不抖动。
+- [ ] 我能区分滚动/蓝绿/金丝雀发布及取舍。
+- [ ] 我理解数据库变更不可简单回滚、要分步兼容。
+
+## 常见误解
+
+- **"自动伸缩能应对一切峰值"**：扩容有启动延迟，突发尖峰要预留缓冲/预热/按队列伸缩。
+- **"滚动更新就够安全了"**：高风险变更用金丝雀 + 自动回滚，把爆炸半径降到最小。
+- **"回滚就是把代码换回去"**：数据库 schema 变更回不去，必须向后兼容、分步发布。
+
+## 延伸阅读
+
+- [Kubernetes HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)
+- [Google SRE: Canarying Releases](https://sre.google/workbook/canarying-releases/)
+- [下一课：基础设施即代码](./infrastructure-as-code)

@@ -1,0 +1,189 @@
+---
+title: M6L2 - Kubernetes 基础
+description: 几百个容器、机器会挂，谁保证“始终有 3 个副本在跑”？K8s 的核心不是容器，是声明式 API + 调和循环。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M6L2 · Kubernetes 基础
+
+<ChapterMeta
+  time="约 3 小时"
+  prereqs={[{label: 'M6L1 容器化', href: './containers'}, {label: 'M5L3 服务发现', href: '../core-components/service-discovery'}, {label: 'M5L1 负载均衡', href: '../core-components/load-balancing'}]}
+  outcome="能解释 K8s 的声明式 API + 调和循环为什么是它的本质，区分 control plane/data plane，并说清 Pod/Deployment/Service 各管什么。"
+  howToUse="先看“手动管几百个容器”的痛，再理解声明式调和这个核心思想，最后做调和循环 lab。"
+/>
+
+:::tip Kubernetes 的核心不是容器，是“声明期望状态，让系统自动维持它”
+新手学 K8s 容易陷在背 Pod/Service/Deployment 一堆名词里。真正的钥匙只有一句话：**你声明"我想要什么"（3 个副本在跑），K8s 的控制器不断对比"实际是什么"，自动采取行动让现实逼近期望。** 机器挂了？它自动补一个。这叫调和循环（reconciliation loop），是云原生的灵魂。
+:::
+
+## 一、手动管几百个容器 = 不可能
+
+[容器（M6L1）](./containers) 解决了"单个应用怎么打包跑起来"。但生产里你有几百个容器、几十台机器，要面对：机器挂了上面的容器怎么办？怎么保证某服务始终有 N 个副本？怎么把流量分给这些会变动的容器（[M5L1/L3](../core-components/service-discovery)）？怎么滚动升级不停服？**人工盯着做这些 = 不可能。** 需要一个"集群操作系统"来自动编排——这就是 Kubernetes。
+
+## 二、三个核心概念（分层）
+
+### 基础：声明式 API 与调和循环
+
+K8s 的工作方式不是命令式（"启动这个、停那个"），而是<GlossaryTerm term="Declarative API" definition="声明式 API：你描述“期望的最终状态”（如 replicas=3），而不是“要执行的步骤”。系统负责算出从现状到期望该做什么并执行。" >声明式</GlossaryTerm>："我想要 3 个副本"。然后<GlossaryTerm term="Reconciliation Loop" definition="调和循环：控制器持续地“读取期望状态 + 观测实际状态 → 算出差异 → 采取行动消除差异”的循环。是 K8s 自愈和自动化的核心机制。" >调和循环</GlossaryTerm>持续运转：**读期望状态 → 看实际状态 → 算差异 → 行动**。期望 3 个、实际 2 个（挂了一个）→ 创建 1 个;期望 3 个、实际 4 个 → 删 1 个。这个"持续逼近期望"的循环就是 K8s 自愈的本质。
+
+### 进阶：control plane vs data plane，核心对象
+
+- <GlossaryTerm term="Control Plane" definition="控制面：K8s 中负责“决定集群该怎么运行”的部分——API Server、调度器、控制器、etcd（存期望状态）。它不处理业务流量。" >控制面（control plane）</GlossaryTerm>：决定集群怎么运行——API Server（接收声明）、etcd（[共识存储期望状态，M5L11](../core-components/consensus-coordination)）、调度器、控制器。
+- <GlossaryTerm term="Data Plane" definition="数据面：真正运行业务负载、处理流量的部分——各工作节点（Node）上的 kubelet 和容器。" >数据面（data plane）</GlossaryTerm>：真正跑业务的工作节点（Node）和上面的容器。
+- 核心对象：<GlossaryTerm term="Pod" definition="Pod：K8s 最小调度单元，包含一个或多个共享网络和存储的容器。通常一个 Pod 跑一个主容器。Pod 是临时的、可被随时替换。" >Pod</GlossaryTerm>（最小调度单元，一组容器）、<GlossaryTerm term="Deployment" definition="Deployment：声明“我要 N 个某镜像的 Pod 副本”，由控制器维持该数量、并负责滚动更新/回滚。是无状态服务的标准管理对象。" >Deployment</GlossaryTerm>（维持 N 个副本 + 滚动升级）、<GlossaryTerm term="Service" definition="Service：给一组 Pod 一个稳定的虚拟地址和负载均衡入口。Pod 会变动（重建换 IP），Service 提供不变的访问点（服务端发现，见 M5L3）。" >Service</GlossaryTerm>（给一组会变动的 Pod 一个稳定入口 + 负载均衡，正是 [M5L3 服务端发现](../core-components/service-discovery)）。
+
+### 深入（选学）：为什么调和模型如此强大
+
+调和循环（而非一次性脚本）带来几个深远好处：
+- **自愈**：任何偏离期望（Pod 崩、节点宕、被误删）都会被下一轮调和自动纠正——不需要人介入。
+- **幂等与收敛**：反复 apply 同一份声明是安全的（[L6 幂等](../foundations/idempotency)）；无论当前什么状态，系统都向同一个期望收敛。
+- **可扩展（自定义控制器/Operator）**：你可以定义自己的资源类型 + 写一个调和它的控制器，把"运维知识"编码成自动化（如"数据库 Operator"自动处理备份、故障转移）。
+- 这套"声明 + 调和"思想不止于 K8s：[IaC（M6L5）](./infrastructure-as-code)、GitOps、[服务网格](./service-mesh) 全是同一模型。**学透它，你就拿到了整个云原生的总钥匙。**
+
+<ResearchNote
+  title="Borg 到 Kubernetes：声明式调和的集群操作系统"
+  source="Burns et al. (2016), Borg, Omega, and Kubernetes；Kubernetes 官方 Concepts"
+  href="https://kubernetes.io/docs/concepts/"
+  insight="K8s 源自 Google 内部的 Borg 经验。其核心不是容器技术，而是“以声明式 API 描述期望状态、由控制器调和循环持续逼近”的模型，加上 control plane/data plane 分离、标签选择器、服务抽象。自愈、滚动发布、自动伸缩都是调和模型的自然结果。"
+  application="用 K8s 时，思维要从“我去启动/停止”转为“我声明期望、让控制器维持”。把 Deployment（副本+发布）、Service（稳定入口+发现）、ConfigMap/Secret（配置）组合起来。需要把运维逻辑自动化时，写自定义控制器/Operator。"
+/>
+
+## 三、跟我做一遍：调和循环
+
+<PyRunner
+  rows={32}
+  expect="调和到期望状态"
+  code={`# K8s 控制器的核心：读期望、看实际、算差异、行动 —— 循环往复
+def reconcile(desired, actual):
+    actions = []
+    # 实际少于期望 -> 创建
+    while len(actual) < desired:
+        new_pod = "pod-%d" % (len(actual) + 1)
+        actual.append(new_pod)
+        actions.append("CREATE " + new_pod)
+    # 实际多于期望 -> 删除
+    while len(actual) > desired:
+        removed = actual.pop()
+        actions.append("DELETE " + removed)
+    return actions
+
+# 期望 3 个副本
+actual = []
+print("初始调和:", reconcile(3, actual))   # 创建 3 个
+print("当前:", actual)
+
+# 一个 Pod 崩了（节点宕机）
+actual.remove("pod-2")
+print("崩了一个后:", actual)
+print("自愈调和:", reconcile(3, actual))   # 自动补 1 个
+print("当前:", actual)
+
+# 缩容到 1 个副本
+print("缩容调和:", reconcile(1, actual))   # 删 2 个
+print("最终:", actual)
+print("调和到期望状态")`}
+/>
+
+无论实际偏离期望多远（少了、多了），调和循环都会算出动作让它收敛到期望——这就是 K8s "声明即可、自动维持"的本质。**试试**：连续调用两次 `reconcile(3, actual)`，看第二次返回空动作（已收敛，幂等）；这正是声明式的威力。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month06/m6l2_reconcile/`：
+
+```bash
+python labs/month06/m6l2_reconcile/test_reconcile.py
+```
+
+实现一个调和控制器：根据期望副本数创建/删除，支持自愈，且重复调和幂等（已收敛则无动作）。
+
+<GuidedExercise
+  title="练习指引：实现调和循环"
+  goal="把“读期望→看实际→算差异→行动”做成代码——这是 K8s 自愈和声明式的核心。"
+  hints={[
+    '实际 < 期望 -> 创建补齐；实际 > 期望 -> 删除多余。',
+    '返回执行的动作列表，便于断言。',
+    '已收敛（实际==期望）时返回空动作（幂等）。',
+    '自愈：手动移除一个再调和，应自动补回。'
+  ]}
+  steps={[
+    '实现 reconcile(desired, actual)：创建/删除使 actual 达到 desired。',
+    '保证收敛后再调和无动作（幂等）。',
+    '模拟 Pod 崩溃（移除）后调和自愈。',
+    '写测试：从 0 创建到 N、自愈补齐、缩容删除、已收敛幂等。'
+  ]}
+  checks={[
+    '你能解释声明式 + 调和循环为什么是 K8s 的核心。',
+    '你的 lab 能自愈且幂等收敛。',
+    '你能区分 control plane 和 data plane。',
+    '你能说出 Pod/Deployment/Service 各管什么。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 编排方式怎么选
+
+<TradeoffExplorer
+  title="容器编排/运行方式"
+  dimensions={['自动化/自愈', '弹性伸缩', '生态/可移植', '学习运维成本', '适合规模']}
+  options={[
+    {
+      name: '手动 / docker compose',
+      scores: [1, 1, 3, 5, 1],
+      note: '单机起几个容器够用。无自愈、无跨机调度、无弹性。',
+      whenToUse: '本地开发、单机小应用。'
+    },
+    {
+      name: 'Kubernetes',
+      scores: [5, 5, 5, 1, 5],
+      note: '声明式、自愈、弹性、生态丰富、可移植。但复杂、运维成本高。',
+      whenToUse: '多服务、要弹性/自愈/标准化的生产系统——事实标准。'
+    },
+    {
+      name: '托管容器服务(Serverless 容器)',
+      scores: [4, 5, 2, 4, 4],
+      note: '云厂商代管，少运维。但可移植性差、定制弱、可能锁定。',
+      whenToUse: '想要 K8s 能力但不想自己运维控制面时。'
+    }
+  ]}
+/>
+
+### 2. "声明式 + 调和"是云原生的统一范式
+
+记住这条贯穿全月的主线：你**声明期望**，系统**持续调和**到那个状态。它出现在每一层——K8s（期望副本/配置）、[IaC（M6L5）](./infrastructure-as-code)（期望的云资源）、GitOps（Git 里的声明即期望状态，自动同步到集群）、[服务网格](./service-mesh)（声明流量规则）。一旦你用"期望状态 + 调和"而非"一步步操作"来思考运维，整个云原生世界就通了。这也和 [M4L1 封装变化](../design-patterns-lld/change-driven-design)、[M5 自愈](../core-components/service-discovery) 一脉相承。
+
+### 3. 真实案例：K8s 成为"云的通用底座"
+
+十年间 K8s 从 Google 开源项目变成事实标准:各大云都提供托管 K8s（EKS/GKE/AKS），无数平台（数据库、消息队列、AI 训练、CI）以 Operator 形式跑在 K8s 上。它之所以赢，正是因为"声明式调和 + 可扩展控制器"这套模型足够通用——你能把任何"运维知识"编码成控制器。理解它，你才能读懂现代基础设施，也能判断"什么该上 K8s、什么是过度工程"。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的小团队/小系统真的需要 K8s 吗？它的运维复杂度值不值（vs 托管 PaaS/Serverless）？什么规模是分水岭？
+- etcd 是 K8s 的"单一事实来源"且用[共识（M5L11）](../core-components/consensus-coordination)。它挂了会怎样？为什么它要高可用、要备份？
+- 把一个"运维操作"（如定期备份数据库、故障时切主）编码成 Operator/控制器，相比写个 cron 脚本，好在哪、复杂在哪？
+
+## 自检清单
+
+- [ ] 我能解释声明式 API + 调和循环为什么是 K8s 的核心。
+- [ ] 我的 lab 调和控制器能自愈、幂等收敛。
+- [ ] 我能区分 control plane 和 data plane。
+- [ ] 我能说出 Pod/Deployment/Service 各自职责。
+
+## 常见误解
+
+- **"K8s 就是管容器的"**：它的本质是声明式调和模型，容器只是被它调度的对象。
+- **"学 K8s 就是背对象类型"**：先懂调和循环，对象都是它的应用。
+- **"什么项目都该上 K8s"**：它运维复杂，小系统用托管 PaaS/Serverless 可能更合适。
+
+## 延伸阅读
+
+- [Kubernetes Concepts](https://kubernetes.io/docs/concepts/)
+- [Borg, Omega, and Kubernetes (2016)](https://research.google/pubs/borg-omega-and-kubernetes/)
+- [下一课：配置、密钥与探针](./config-secrets-probes)

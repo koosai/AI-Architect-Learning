@@ -1,0 +1,186 @@
+---
+title: M8L3 - 向量检索与向量库
+description: 几百万段文本，怎么毫秒级找出最相似的几段？暴力比对太慢——近似最近邻（ANN）和向量数据库就是来解决这个的。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M8L3 · 向量检索与向量库
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M8L2 embedding', href: './embeddings'}, {label: 'M3L2 索引', href: '../data-cache-queue/indexing'}, {label: 'M5L10 分片', href: '../core-components/partitioning-sharding'}]}
+  outcome="能解释暴力检索的瓶颈、近似最近邻（ANN）用召回率换速度的取舍，并说清向量数据库提供什么、怎么选。"
+  howToUse="先看“百万向量暴力比对太慢”，再理解 ANN 和向量库，最后做 top-k 检索 + 召回率 lab。"
+/>
+
+:::tip 算相似度容易，难的是“在几百万个里快速找出最像的几个”
+[M8L2](./embeddings) 你会算两个向量的相似度了。但知识库有几百万段文本（几百万个向量），用户一查，你不可能把查询和**每一个**都算一遍（太慢）。怎么毫秒级找出最相似的 top-k？答案是**近似最近邻（ANN）**——用一点点精度换巨大的速度，配上专门的**向量数据库**来管理。
+:::
+
+## 一、暴力比对：正确但太慢
+
+最直接的检索：把查询向量和库里**每一个**向量算余弦相似度，排序取 top-k。这叫<GlossaryTerm term="Brute-force / Exact Search" definition="暴力/精确检索：把查询向量与库中每个向量逐一比对、排序取 top-k。结果精确，但耗时随数据量线性增长，百万级以上无法满足低延迟。">暴力检索</GlossaryTerm>，结果**精确**，但耗时随向量数**线性增长**——几百万向量、每次查询都全量比对，延迟根本扛不住高并发（[呼应 M3L2 没索引的全表扫描](../data-cache-queue/indexing)）。需要一种"不用比对全部"的快速方法。
+
+## 二、三个核心概念（分层）
+
+### 基础：近似最近邻（ANN）
+
+<GlossaryTerm term="Approximate Nearest Neighbor" definition="近似最近邻（ANN）：用专门的索引结构快速找出“很可能是最相似的”top-k，不保证 100% 精确，用少量召回率损失换数量级的速度提升。是大规模向量检索的标准做法。">近似最近邻（ANN）</GlossaryTerm>：不保证找到**绝对**最相似的 top-k，但能**极快**找出"几乎肯定是最相似的"那些。它用专门的索引结构（见进阶）把搜索范围大幅缩小，**用一点点召回率损失，换数量级的速度提升**。这是大规模向量检索的标准做法——和 [M3L2 索引](../data-cache-queue/indexing) "用空间和构建成本换查询速度"是同一思想，只是从标量索引变成了向量索引。
+
+### 进阶：召回率与 ANN 索引
+
+- <GlossaryTerm term="Recall (检索)" definition="召回率：ANN 返回的 top-k 中，有多少属于“真正的”top-k（暴力精确结果）。衡量近似检索牺牲了多少精度。常用来和延迟做权衡。">召回率（recall）</GlossaryTerm>：衡量 ANN 的近似质量——它返回的 top-k 里，有多少是"真正的"top-k。99% 召回意味着偶尔漏掉一两个真正最相似的，换来快得多的速度。调索引参数可在召回率和速度间滑动。
+- **ANN 索引类型**（了解即可）：<GlossaryTerm term="HNSW" definition="HNSW：一种基于多层图的近似最近邻索引，查询时在图上贪心跳转快速逼近最近邻。召回率高、查询快，是主流向量索引之一（内存占用较大）。">HNSW（图索引）</GlossaryTerm>、IVF（倒排+聚类）、PQ（乘积量化压缩）等，各有速度/内存/召回的权衡。你通常不自己实现，而是用向量库选择和调参。
+
+### 深入（选学）：向量数据库提供什么
+
+<GlossaryTerm term="Vector Database" definition="向量数据库：专门存储和检索向量的数据库，提供 ANN 索引、元数据过滤、增删改、持久化、分片扩展等能力。如 pgvector、Qdrant、Milvus、Pinecone 等。">向量数据库</GlossaryTerm>不只是"存向量 + ANN"，它把检索工程化：
+- **ANN 索引 + 调参**：内建 HNSW/IVF 等，按召回/延迟需求配置。
+- <GlossaryTerm term="Metadata Filtering" definition="元数据过滤：在向量检索的同时按结构化字段（如部门、时间、权限、文档类型）过滤，只在符合条件的子集里找最相似的。是实现权限隔离和精准检索的关键。">元数据过滤</GlossaryTerm>：检索时按字段过滤（只搜某部门、某时间、用户有权限的文档）——这对[权限隔离（M8L11）](./knowledge-base-ops) 和精准检索至关重要。
+- **增删改 + 持久化**：知识会更新（[M8L11](./knowledge-base-ops)），要能增量加/删/改向量。
+- **扩展**：数据量大时[分片（M5L10）](../core-components/partitioning-sharding)、副本（[M5L9](../core-components/replication)）——向量库也是个分布式存储系统，前几个月的知识全用得上。
+- **选型**：从"数据库加个向量扩展"（如 pgvector，省事、和现有库一体）到"专用向量库"（Qdrant/Milvus/Pinecone 等，规模和功能更强）。小项目用前者、大规模用后者是常见判断。
+
+<ResearchNote
+  title="ANN：用召回率换速度，让大规模向量检索可行"
+  source="Malkov & Yashunin (2018), HNSW；Johnson et al. (2017), FAISS；向量数据库实践"
+  href="https://arxiv.org/abs/1603.09320"
+  insight="暴力检索精确但 O(N) 不可扩展。ANN（HNSW 图、IVF 聚类、PQ 量化等）用近似换速度，在高召回率下实现数量级加速。向量数据库在 ANN 之上提供元数据过滤、增删改、持久化、分片副本，把向量检索变成可运维的基础设施。"
+  application="大规模检索用 ANN（接受可控的召回率损失换低延迟），用召回率/延迟权衡调参。用向量数据库（pgvector→Qdrant/Milvus/Pinecone 等）获得元数据过滤、更新、扩展能力。元数据过滤是权限隔离和精准检索的关键。向量库本身也按 M5 的分片/复制来扩展。"
+/>
+
+## 三、跟我做一遍：top-k 检索 + 召回率评估
+
+<PyRunner
+  rows={34}
+  expect="ANN 用召回换速度"
+  code={`import math, random
+
+def cosine(a, b):
+    dot = sum(x*y for x, y in zip(a, b))
+    na = math.sqrt(sum(x*x for x in a)); nb = math.sqrt(sum(y*y for y in b))
+    return dot/(na*nb) if na and nb else 0.0
+
+# 造一批随机向量当“知识库”
+rng = random.Random(7)
+db = {i: [rng.random() for _ in range(8)] for i in range(200)}
+q = [rng.random() for _ in range(8)]
+
+def brute_topk(q, db, k):                      # 精确：比对全部
+    return [i for i, _ in sorted(db.items(), key=lambda kv: cosine(q, kv[1]), reverse=True)[:k]]
+
+def ann_topk(q, db, k, scan_ratio=0.3):        # 近似：只扫一部分（模拟 ANN 缩小范围）
+    sample = list(db.items())[:int(len(db)*scan_ratio)]
+    return [i for i, _ in sorted(sample, key=lambda kv: cosine(q, kv[1]), reverse=True)[:k]]
+
+truth = brute_topk(q, db, 10)                  # “真正的” top-10
+approx = ann_topk(q, db, 10, scan_ratio=0.3)   # ANN 只扫 30%
+recall = len(set(truth) & set(approx)) / len(truth)
+print("精确 top10:", truth)
+print("ANN  top10:", approx)
+print("召回率:", recall, "（只扫了 30% 的数据）")
+print("ANN 用召回换速度")`}
+/>
+
+ANN 只扫一部分数据就给出 top-k，速度快很多，代价是召回率不到 100%（偶尔漏掉真正最相似的）——这就是"用召回换速度"。**试试**：把 `scan_ratio` 调大（扫更多），看召回率升高但变慢；调到 1.0 就退化成精确暴力检索。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month08/m8l3_vector_search/`：
+
+```bash
+python labs/month08/m8l3_vector_search/test_search.py
+```
+
+实现暴力 top-k 检索 + 召回率评估 + 元数据过滤：精确检索、近似检索对比召回、按字段过滤后再检索。
+
+<GuidedExercise
+  title="练习指引：实现向量检索 + 召回评估"
+  goal="把“top-k 检索 + 召回率 + 元数据过滤”做成代码，理解 ANN 的取舍和向量库的关键能力。"
+  hints={[
+    'brute_topk：对全部算相似度、降序取 k。',
+    'recall = |近似结果 ∩ 精确结果| / k。',
+    '元数据过滤：先按字段筛子集，再在子集里检索。',
+    'scan 越少越快但召回越低——这是 ANN 的核心权衡。'
+  ]}
+  steps={[
+    '实现 cosine 和 brute_topk(q, db, k)。',
+    '实现 recall_at_k(approx, truth)。',
+    '实现 search_filtered(q, db, k, predicate)：先过滤再检索。',
+    '写测试：精确 top-k 正确、召回率计算、过滤后只返回符合条件的、k 边界。'
+  ]}
+  checks={[
+    '你能解释暴力检索为什么不可扩展。',
+    '你能说出 ANN 用召回率换速度的取舍。',
+    '你的 lab 能算召回率、能做元数据过滤。',
+    '你知道向量库提供 ANN/过滤/更新/扩展，怎么按规模选型。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 向量检索方案
+
+<TradeoffExplorer
+  title="向量检索/存储方案"
+  dimensions={['查询速度', '召回率', '扩展性', '运维简单', '功能丰富']}
+  options={[
+    {
+      name: '暴力检索(内存)',
+      scores: [1, 5, 1, 5, 1],
+      note: '精确、零依赖。但 O(N)，几万向量以上就慢。',
+      whenToUse: '原型、小数据集（几千~几万向量）。'
+    },
+    {
+      name: '数据库向量扩展(pgvector)',
+      scores: [3, 4, 3, 5, 3],
+      note: '复用现有关系库、和业务数据一体、运维省。规模和向量功能不如专用库。',
+      whenToUse: '中小规模、想少加一个系统时——常见起点。'
+    },
+    {
+      name: '专用向量数据库',
+      scores: [5, 4, 5, 2, 5],
+      note: 'ANN 调优、过滤、分片副本、规模大。但多一个系统要运维。',
+      whenToUse: '大规模、高并发、需要丰富向量功能时。'
+    }
+  ]}
+/>
+
+### 2. 向量检索是"老数据库知识 + 新数据类型"
+
+不要把向量库当成全新的神秘东西——它就是一个**专门为向量优化的数据库**，你前几个月的数据库功底全用得上：它需要[索引（M3L2，只是向量索引）](../data-cache-queue/indexing)、[分片扩展（M5L10）](../core-components/partitioning-sharding)、[复制高可用（M5L9）](../core-components/replication)、[缓存（M3L5）](../data-cache-queue/cache-patterns)。区别只在于"相似度查询"用 ANN 而非 B-tree，以及多了"召回率"这个新指标。这个视角让你不被"向量数据库"的新名词唬住，而能用成熟的系统设计思维去评估和运维它。
+
+### 3. 真实案例：从"加个向量列"到专用向量基础设施
+
+很多团队的 RAG 起步：在已有的 PostgreSQL 上装 pgvector，加一列存 embedding，够用且省事（不用多运维一个系统）。随着知识量涨到千万级、并发上来、需要复杂过滤和高召回，再迁移到专用向量库（Qdrant/Milvus/Pinecone 等）。这条演进路径印证了贯穿全课的判断力：**先用够简单的（pgvector），按真实规模压力再升级（专用库），别一上来就上最重的**（[YAGNI / M6L9 别过度](../cloud-enterprise-industrial/multi-cloud)）。架构师要知道分水岭在哪——数据量、QPS、过滤复杂度、召回要求。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的知识库有多少向量、查询 QPS 多少？pgvector 够用还是要专用向量库？分水岭怎么判断？
+- 你需要边检索边过滤吗（按权限/部门/时间）？元数据过滤怎么和向量检索结合（先过滤还是先检索）？
+- 你能接受多少召回率损失换多少速度？怎么用 M8L9 的指标在你的数据上调这个权衡？
+
+## 自检清单
+
+- [ ] 我能解释暴力检索为什么不可扩展、ANN 怎么解决。
+- [ ] 我能说出召回率、以及它和速度的权衡。
+- [ ] 我的 lab 能 top-k 检索、算召回率、做元数据过滤。
+- [ ] 我能按规模选向量存储方案（暴力/pgvector/专用库）。
+
+## 常见误解
+
+- **"检索就是算相似度"**：算相似度容易，难在"百万级里快速找 top-k"——靠 ANN + 向量库。
+- **"ANN 结果是精确的"**：它是近似的，用召回率换速度，可能漏掉个别真正最相似的。
+- **"向量库是全新技术"**：它是为向量优化的数据库，索引/分片/复制等老知识照样适用。
+
+## 延伸阅读
+
+- [HNSW (Malkov & Yashunin, 2018)](https://arxiv.org/abs/1603.09320)
+- [pgvector](https://github.com/pgvector/pgvector)
+- [下一课：文档分块](./chunking)

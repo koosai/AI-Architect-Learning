@@ -1,0 +1,212 @@
+---
+title: M7L12 - Capstone：构建一个 LLM 应用
+description: 把本月所学组装成一个可靠的 LLM 功能——上下文拼装 → 结构化调用（带缓存+降级）→ 校验防护 → 评测 → 成本追踪。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M7L12 · Capstone：构建一个 LLM 应用
+
+<ChapterMeta
+  time="约 3.5 小时"
+  prereqs={[{label: 'Month 7 全部', href: './overview'}]}
+  outcome="能把本月所有 LLM 工程组装成一个端到端可靠的 LLM 功能：上下文拼装 → 结构化调用（缓存+降级）→ 校验防护 → 评测 → 成本追踪，并讲清每一环。"
+  howToUse="把它当一道完整 LLM 功能设计题：拿一个真实需求，串起本月的全部组件，并用 lab 把核心管道跑通。"
+/>
+
+:::tip 月末综合题：把一个会幻觉、又贵又慢的模型，包成一个生产级可靠功能
+本月你逐个学了 token、采样、提示、成本、工具、上下文、幻觉防护、评测、缓存降级。现在把它们**组装**成一个端到端的 LLM 功能管道。这正是 AI Architect 的核心活：**不是让模型更强，而是用工程把不可靠的模型包成可靠的产品功能。**
+:::
+
+## 一、需求：一个“基于知识库的客服问答”功能
+
+做一个客服 AI：用户问问题，系统基于公司知识库给出**有据、准确、可控成本**的回答。要求：
+- 回答必须**基于知识库**（不能幻觉编造）、并引用来源。
+- 成本和延迟可控（高频调用）。
+- 模型/API 故障时不整体挂。
+- 改 prompt/换模型有评测兜底，不退化。
+
+这把本月所有内容都用上了。
+
+## 二、组装端到端管道
+
+### 基础：输入到输出的主管道
+
+一次问答的完整流程（每一步对应本月一课）：
+1. **上下文拼装（[M7L8/L2](./context-memory)）**：检索知识库相关片段（[grounding，为 Month 8 RAG 铺路](../rag/overview)）+ 历史 + 问题，在 [token 预算](./tokenization-context)内组装。
+2. **构造 prompt（[M7L4](./prompting-basics)）**：system 定角色（“只根据资料答，无据说不知道”）+ 要求[结构化输出（M7L6）](./structured-output-tools)（`{answer, citations}`）。
+3. **调用模型（[M7L5/L3](./llm-api-cost-latency)）**：选合适档位、低温（事实任务）、设超时。
+
+### 进阶：可靠性与成本层
+
+4. **缓存 + 降级（[M7L11](./llm-caching-resilience)）**：先查[语义缓存](./llm-caching-resilience)；未命中走[模型降级链](./llm-caching-resilience)（主→备→兜底）+ [超时/重试/熔断（M5）](../core-components/circuit-breaker)。
+5. **校验 + 防护（[M7L9/L6](./hallucination-guardrails)）**：[schema 校验](./structured-output-tools)输出格式、[grounding 校验](./hallucination-guardrails)每条声明有据、护栏过滤有害内容、无据则弃答/转人工。
+6. **成本追踪（[M7L5/L11](./llm-api-cost-latency)）**：记 token 和花费、守[成本上限](./llm-caching-resilience)。
+
+### 深入（选学）：评测、观测与持续演进
+
+7. **评测（[M7L10](./llm-evaluation)）**：建评测集，改 prompt/换模型前跑回归、接 [CI 门禁（M6L6）](../cloud-enterprise-industrial/cicd-pipelines)；线上 bad case 进评测集。
+8. **观测（[M6L7](../cloud-enterprise-industrial/observability-advanced)）**：监控质量、幻觉率、成本、延迟、缓存命中率、降级触发率。
+9. **整体是一个“可靠性管道”**：每一环都在把不确定收口——检索给证据、低温减随机、结构化限格式、校验拦错误、降级保可用、评测防退化。**没有任何单点假设模型完美**，这正是 [M7L9 “把不可靠组件用可靠”](./hallucination-guardrails) 的总实践，也和前六个月的系统工程思维完全一致。
+
+<ResearchNote
+  title="生产级 LLM 应用 = 模型 + 一整套工程管道"
+  source="LLM 应用工程综合实践；RAG（Lewis et al., 2020）；Google SRE / DORA（可靠性与交付）"
+  href="https://docs.anthropic.com/en/docs/build-with-claude/define-success"
+  insight="可靠的 LLM 功能不是“调一次模型”，而是一条管道：检索 grounding + 上下文拼装 + 结构化提示 + 合档调用 + 缓存降级 + 校验护栏 + 成本追踪 + 评测回归 + 观测。模型只是其中一环，可靠性来自包裹它的工程，与传统系统工程一脉相承。"
+  application="设计任何 LLM 功能：画出从输入到输出的完整管道，在每一环放对应组件（grounding/拼装/提示/调用/缓存/降级/校验/成本/评测/观测）。先定成功标准和评测，再迭代。把模型当一个会出错、要被工程包裹的组件。"
+/>
+
+## 三、跟我做一遍：可靠 LLM 问答管道
+
+<PyRunner
+  rows={40}
+  expect="管道跑通：有据回答或安全弃答"
+  code={`def retrieve(q_words, kb):                  # 1) grounding：检索知识库（Month 8 细讲）
+    return [d for d in kb if any(w in d for w in q_words)]
+
+def build_prompt(q_words, evidence):        # 2) 结构化提示
+    return "只根据资料答,无据说不知道。资料:%s 问题:%s" % (evidence, q_words)
+
+cache = {}
+def cached_call(prompt, model_chain):       # 3-4) 缓存 + 模型降级链
+    if prompt in cache:
+        return ("CACHE", cache[prompt])
+    for name, fn in model_chain:
+        try:
+            ans = fn(prompt); cache[prompt] = ans; return (name, ans)
+        except Exception:
+            continue
+    return ("FALLBACK", {"answer": "暂时无法回答,请转人工", "citations": []})
+
+def validate_and_guard(resp, evidence):     # 5) 校验 + grounding 护栏
+    if not isinstance(resp.get("answer"), str):
+        return (False, "格式错")
+    for c in resp.get("citations", []):
+        if c not in evidence:               # 引用必须真实存在于证据
+            return (False, "引用无据")
+    return (True, "ok")
+
+def answer(q_words, kb, model_chain, cost):  # 主管道
+    ev = retrieve(q_words, kb)
+    if not ev:                               # 无证据 -> 弃答(不幻觉)
+        return {"answer": "知识库无相关信息,请转人工", "grounded": False}
+    name, resp = cached_call(build_prompt(q_words, ev), model_chain)
+    cost["tokens"] += len(build_prompt(q_words, ev))   # 6) 成本追踪(简化)
+    ok, reason = validate_and_guard(resp, ev)
+    if not ok:
+        return {"answer": "无法给出可靠回答(%s),转人工" % reason, "grounded": False}
+    return {"answer": resp["answer"], "via": name, "grounded": True}
+
+kb = ["订单 SO-1 已发货,运费 12 元", "退货需 7 天内申请"]
+def good_model(p): return {"answer": "运费 12 元", "citations": ["订单 SO-1 已发货,运费 12 元"]}
+def bad_model(p): raise RuntimeError("限流")
+cost = {"tokens": 0}
+
+print(answer(["运费"], kb, [("opus", bad_model), ("sonnet", good_model)], cost))  # 主挂->备->有据
+print(answer(["天气"], kb, [("opus", good_model)], cost))    # 无证据 -> 安全弃答
+print("累计 token:", cost["tokens"])
+print("管道跑通：有据回答或安全弃答")`}
+/>
+
+主模型限流自动退备用；有证据才答、引用必须真实存在、无证据安全弃答（不幻觉）；全程追踪成本——一条把不确定层层收口的可靠管道。**试试**：让两个模型都挂，看走到 FALLBACK 兜底；构造一个模型返回"引用无据"的响应，看校验拦下它转人工。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month07/m7l12_llm_app/`：
+
+```bash
+python labs/month07/m7l12_llm_app/test_llm_app.py
+```
+
+把本月组件组装成可靠问答管道：检索 grounding → 缓存/降级调用 → schema+grounding 校验 → 无据弃答 → 成本追踪。
+
+<GuidedExercise
+  title="练习指引：组装可靠 LLM 应用管道"
+  goal="把本月全部组件串成一个端到端 LLM 功能，体会“可靠性来自包裹模型的工程”。"
+  hints={[
+    'retrieve 无结果 -> 直接弃答（不调模型、不幻觉）。',
+    'cached_call：命中缓存跳过；否则降级链；全失败兜底。',
+    'validate_and_guard：格式校验 + 引用必须在证据里。',
+    '每次调用累加 token/成本。'
+  ]}
+  steps={[
+    '实现 retrieve / build_prompt / cached_call / validate_and_guard / answer。',
+    '无证据弃答、主模型失败降级、引用无据拦截转人工。',
+    '追踪累计 token/成本。',
+    '写测试：有据回答、主挂降级、无证据弃答、引用无据被拦、缓存命中、成本累加。'
+  ]}
+  checks={[
+    '你能画出一个 LLM 功能从输入到输出的完整可靠性管道。',
+    '你的 lab 有据才答、故障降级、无据弃答、成本可追踪。',
+    '你能说出每一环收口了哪种不确定/风险。',
+    '你理解 AI 可靠性来自工程包裹，而非模型完美。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. LLM 应用的成熟度
+
+<TradeoffExplorer
+  title="LLM 应用工程成熟度"
+  dimensions={['可靠性', '成本可控', '可演进(评测)', '抗故障', '建设成本']}
+  options={[
+    {
+      name: '裸调模型',
+      scores: [1, 1, 1, 1, 5],
+      note: '直接调 API 把输出返给用户。能做 demo，但会幻觉、贵、脆、无法安全迭代。',
+      whenToUse: '原型验证想法。'
+    },
+    {
+      name: '加 grounding + 校验 + 缓存',
+      scores: [4, 4, 2, 3, 3],
+      note: '基于证据答、校验输出、缓存省钱。可靠性和成本大幅改善。',
+      whenToUse: '多数生产 LLM 功能的基线。'
+    },
+    {
+      name: '全管道(含降级+评测+观测)',
+      scores: [5, 5, 5, 5, 1],
+      note: '降级链保可用、评测防退化、观测兜底。生产级，能安全快速迭代。建设成本高。',
+      whenToUse: '关键/高频/高风险的生产 AI 功能。'
+    }
+  ]}
+/>
+
+### 2. 这条管道就是 AI 架构的"通用骨架"
+
+记住本月这条管道——它适用于几乎所有 LLM 功能，也是后面几个月的基础：**[RAG（Month 8）](../rag/overview)** 是把"检索 grounding"那一环做深；**[Agent（Month 9）](../agent-architectures/overview)** 是把"调用"那一环变成"循环 + 工具调用 + 记忆"；**[Multi-Agent（Month 10）](../multi-agent-protocols/overview)** 是多个这样的管道协作；**[AI 平台治理（Month 11）](../production-ai-platform/overview)** 是把"评测 + 观测 + 防护"做成平台级能力。所以这个 Capstone 不只是月末作业，是你整个 AI 架构阶段的"主干"——后面都是在这条管道上加深、扩展。
+
+### 3. 真实案例：从 demo 到生产的鸿沟
+
+无数 AI 项目"demo 惊艳、上线翻车"，鸿沟就在本月这条管道：demo 裸调模型看着不错，一上生产就暴露幻觉（没 grounding/校验）、成本爆炸（没缓存/路由/上限）、一限流就全挂（没降级）、改个 prompt 就退化（没评测）、出问题查不到（没观测）。能跨过这道鸿沟的团队，靠的不是更强的模型，而是这套**把模型工程化**的能力。这就是为什么本课说：AI Architect 的核心价值，是"把不可靠的模型包成可靠的产品"——这是模型能力之外、真正稀缺的工程功夫。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 给你负责的一个 LLM 功能，画出它从输入到输出的完整管道。哪一环现在是缺的（grounding？校验？降级？评测？观测？）？
+- 它的"成功标准"是什么？有评测集衡量吗？改动靠什么保证不退化？
+- 最坏情况：模型幻觉 + 限流 + 成本激增同时发生，你的功能会怎样？每一种你都有兜底吗？
+
+## 自检清单
+
+- [ ] 我能画出一个 LLM 功能从输入到输出的完整可靠性管道。
+- [ ] 我的 lab 有据才答、故障降级、无据弃答、成本可追踪。
+- [ ] 我能说出每一环收口了哪种不确定/风险。
+- [ ] 我理解这条管道是 RAG/Agent/平台的共同骨架。
+
+## 常见误解
+
+- **"LLM 应用 = 调模型 + 返回"**：那是 demo；生产要 grounding/校验/缓存/降级/评测/观测整条管道。
+- **"模型够强就能上生产"**：demo 到生产的鸿沟是工程管道，不是模型能力。
+- **"这只是月末作业"**：这条管道是 RAG/Agent/Multi-Agent/平台的通用骨架。
+
+## 延伸阅读
+
+- [Anthropic: Define your success criteria](https://docs.anthropic.com/en/docs/build-with-claude/define-success)
+- [Month 7 总览](./overview)
+- [进入 Month 8：RAG 与知识系统](../rag/overview)

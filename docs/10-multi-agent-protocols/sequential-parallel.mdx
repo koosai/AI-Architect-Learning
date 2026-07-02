@@ -1,0 +1,186 @@
+---
+title: M10L5 - 顺序与并行编排
+description: 专精 Agent 是排成流水线一个接一个，还是并行同时干再汇总？顺序适合有依赖的步骤，并行适合独立子任务——扇出聚合提速。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M10L5 · 顺序与并行编排
+
+<ChapterMeta
+  time="约 2 小时"
+  prereqs={[{label: 'M10L3 Supervisor', href: './supervisor-orchestration'}, {label: 'M5L1 负载均衡/扇出', href: '../core-components/load-balancing'}, {label: 'L11 异步', href: '../foundations/sync-async-timeout'}]}
+  outcome="能根据子任务之间有无依赖，选择顺序（流水线）还是并行（扇出聚合）编排多 Agent，理解并行提速的收益和聚合的难点。"
+  howToUse="先看“有依赖的硬并行/无依赖的瞎串行”的问题，再学两种编排，最后做并行扇出聚合 lab。"
+/>
+
+:::tip 多个 Agent 该排队还是同时干？看子任务之间有没有依赖
+[Supervisor（M10L3）](./supervisor-orchestration) 决定派活给谁，但还有一个编排维度：这些专精 Agent 是**一个接一个顺序**做，还是**同时并行**做？关键看子任务之间**有没有依赖**：架构师要先看研究员的证据才能出方案（有依赖→顺序）；同时调研三家竞品互不相干（无依赖→并行）。选对了，能在保证正确的同时大幅提速；选错了，要么并行出错、要么串行白等。
+:::
+
+## 一、有依赖硬并行会错，无依赖瞎串行会慢
+
+两种编排错配都有问题：
+- **有依赖却并行**：架构师在研究员还没给出证据时就开始出方案——基于不存在的输入，结果是错的或空的。
+- **无依赖却串行**：三家竞品的调研互不相干，却一个查完再查下一个——白白串行等待，慢了三倍（[呼应 L11 该并行就并行](../foundations/sync-async-timeout)）。
+
+所以编排前要先理清子任务的**依赖关系**：有依赖的必须顺序、无依赖的应该并行。这和 [M9L5 任务分解时识别依赖](../agent-architectures/planning-decomposition) 一脉相承。
+
+## 二、三个核心概念（分层）
+
+### 基础：顺序编排（流水线）
+
+<GlossaryTerm term="Sequential Orchestration" definition="顺序编排：多个 Agent 排成流水线，前一个的输出作为后一个的输入，依次执行。适合子任务有依赖关系（B 需要 A 的结果）的场景。">顺序编排（流水线）</GlossaryTerm>：Agent 一个接一个，前者的输出是后者的输入（研究员→架构师→审查员）。适合**有依赖**的步骤——每一步需要上一步的产物。这就是一条 Agent 流水线（[呼应 M6L6 CI 流水线、M8 RAG 管道](../cloud-enterprise-industrial/cicd-pipelines)），清晰、可控，但总耗时是各步之和（慢）。
+
+### 进阶：并行编排（扇出-聚合）
+
+<GlossaryTerm term="Parallel Orchestration" definition="并行编排：把无依赖的子任务同时分给多个 Agent 并行执行（扇出 fan-out），再把各自结果汇总（聚合 aggregate）。能大幅缩短总耗时，但要处理聚合和部分失败。">并行编排（扇出-聚合）</GlossaryTerm>：把**无依赖**的子任务同时分给多个 Agent 并行做（<GlossaryTerm term="Fan-out / Aggregate" definition="扇出-聚合：扇出（fan-out）把任务分发给多个并行 worker，聚合（aggregate）把它们的结果合并。是并行加速的经典模式，需处理部分失败和结果合并。">扇出 fan-out</GlossaryTerm>），全部完成后汇总结果（聚合 aggregate）。比如同时调研三家竞品、同时让三个 Agent 从不同角度分析。收益：总耗时约等于最慢的那个（而非求和），大幅提速（[呼应 M5L1 扇出、M3L10 feed 扇出](../core-components/load-balancing)）。难点见深入。
+
+### 深入（选学）：编排的工程要点
+
+- **并行的难点是聚合和部分失败**：扇出容易，**聚合难**——多个 Agent 的结果怎么合并成一致的产出（[冲突 M10L8](./conflict-consensus)）？如果某个 Agent 失败/超时怎么办（[呼应 M5 尾延迟、部分失败](../foundations/performance-and-latency)）？要设计：等所有/等多数/超时降级，以及结果合并逻辑。
+- **混合编排**：真实任务常是**顺序 + 并行混合**——先并行调研（无依赖），再顺序“汇总→出方案→审查”（有依赖）。像一个有并行段和串行段的工作流（[呼应 M9L5 规划里的依赖图](../agent-architectures/planning-decomposition)）。
+- **并行放大成本**：N 个 Agent 同时跑 = N 份 token 成本同时产生（[M10L10](./multi-agent-ops)）——并行省的是时间，不是钱。要权衡“提速”vs“成本”。
+- **依赖关系决定一切**：编排的本质是按子任务的**依赖图（DAG）**安排执行——无依赖的并行、有依赖的串行。这和 [构建系统、数据管道、CI 的依赖编排](../cloud-enterprise-industrial/cicd-pipelines) 是同一个问题。识别依赖（[M9L5](../agent-architectures/planning-decomposition)）是编排的前提。
+- 这些都由 [Supervisor（M10L3）](./supervisor-orchestration) 编排：它决定哪些并行扇出、哪些顺序串联、怎么聚合——Supervisor 就是这个工作流引擎。
+
+<ResearchNote
+  title="编排：按依赖图决定顺序还是并行"
+  source="工作流/DAG 编排（M6 CI、数据管道）；M5 扇出聚合；多 Agent 编排实践"
+  href="https://www.anthropic.com/research/building-effective-agents"
+  insight="多 Agent 编排按子任务依赖安排执行：有依赖用顺序流水线（前者输出喂后者），无依赖用并行扇出-聚合（同时跑、再合并）。并行大幅提速（耗时≈最慢者）但放大成本、且聚合和部分失败是难点。真实任务常是顺序+并行混合，本质是按依赖图（DAG）编排，由 Supervisor 控制。"
+  application="编排前先理清子任务依赖：无依赖并行扇出（设等待策略和聚合逻辑、处理部分失败/超时）、有依赖顺序流水线。复杂任务用混合编排。注意并行放大成本（省时不省钱）。把它当 DAG 工作流编排，由 Supervisor 驱动。"
+/>
+
+## 三、跟我做一遍：顺序流水线 + 并行扇出聚合
+
+<PyRunner
+  rows={40}
+  expect="并行提速、顺序保依赖"
+  code={`def pipeline(stages, initial):                # 顺序流水线:前者输出喂后者(有依赖)
+    data = initial
+    for stage in stages:
+        data = stage(data)
+    return data
+
+def research(x): return x + "+证据"
+def design(x): return x + "+方案"
+def review(x): return x + "+已审"
+print("顺序:", pipeline([research, design, review], "任务"))
+
+def fan_out_aggregate(subtasks, worker, aggregate):  # 并行扇出-聚合(无依赖)
+    results = [worker(t) for t in subtasks]   # 真实并发执行;此处模拟同时扇出
+    return aggregate(results)
+
+def analyze(c): return "%s分析" % c
+def merge(rs): return "综合: " + ", ".join(rs)
+print("并行:", fan_out_aggregate(["竞品A", "竞品B", "竞品C"], analyze, merge))
+
+def hybrid(companies):                         # 混合:先并行调研,再顺序汇总->审查
+    researched = fan_out_aggregate(companies, analyze, merge)   # 并行段
+    return pipeline([lambda x: x + "+方案", review], researched)  # 顺序段
+print("混合:", hybrid(["A", "B"]))
+print("并行提速、顺序保依赖")`}
+/>
+
+有依赖的步骤排成顺序流水线（方案基于证据），无依赖的子任务并行扇出再聚合（同时分析三家竞品），复杂任务用混合编排（先并行后顺序）。**试试**：给某个并行 worker 加"失败/超时"，想想聚合时怎么处理部分失败（等多数/降级）；数一数并行省了多少时间、多花了多少 token。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month10/m10l5_orchestration/`：
+
+```bash
+python labs/month10/m10l5_orchestration/test_orchestration.py
+```
+
+实现顺序流水线 + 并行扇出聚合 + 部分失败处理：有依赖串联、无依赖并行合并、某 worker 失败时聚合能容错。
+
+<GuidedExercise
+  title="练习指引：实现顺序+并行编排"
+  goal="把“流水线 + 扇出聚合 + 容错”做成代码——按依赖编排多 Agent。"
+  hints={[
+    'pipeline：依次把上一步输出喂下一步。',
+    'fan_out_aggregate：对每个子任务调 worker，再 aggregate 合并。',
+    '容错聚合：worker 抛异常时跳过/记为失败，不让一个拖垮全部。',
+    '混合 = 先并行段再顺序段。'
+  ]}
+  steps={[
+    '实现 pipeline(stages, initial)。',
+    '实现 fan_out_aggregate(subtasks, worker, aggregate)。',
+    '让聚合能容忍部分 worker 失败（收集成功的、记失败的）。',
+    '写测试：流水线按序传递、并行各结果都进聚合、部分失败容错、混合编排正确。'
+  ]}
+  checks={[
+    '你能按子任务依赖选顺序还是并行。',
+    '你的 lab 能流水线串联、扇出聚合、容部分失败。',
+    '你能说出并行的收益(提速)和难点(聚合/部分失败/放大成本)。',
+    '你理解编排本质是按依赖图(DAG)安排执行。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 编排方式
+
+<TradeoffExplorer
+  title="多 Agent 编排"
+  dimensions={['处理依赖', '速度', '成本低', '聚合简单', '容错简单']}
+  options={[
+    {
+      name: '顺序流水线',
+      scores: [5, 1, 4, 5, 4],
+      note: '前者喂后者。处理依赖最自然、可控、无聚合难题。但慢(耗时求和)。',
+      whenToUse: '子任务有依赖时。'
+    },
+    {
+      name: '并行扇出-聚合',
+      scores: [1, 5, 1, 2, 2],
+      note: '无依赖子任务同时跑。最快(耗时≈最慢者)。但聚合难、放大成本、要处理部分失败。',
+      whenToUse: '子任务互相独立时——提速明显。'
+    },
+    {
+      name: '混合(并行段+顺序段)',
+      scores: [5, 4, 2, 3, 3],
+      note: '按依赖图编排，并行能并的、串行该串的。最贴合真实任务，但最复杂。',
+      whenToUse: '复杂任务——多数现实场景。'
+    }
+  ]}
+/>
+
+### 2. 多 Agent 编排 = 分布式工作流编排，老知识全适用
+
+又一次印证：多 Agent 的编排，本质就是你前面学过的**工作流/DAG 编排**——[M6L6 CI 流水线](../cloud-enterprise-industrial/cicd-pipelines)、[M8 RAG 管道](../rag/overview)、数据管道、[M9L5 任务规划](../agent-architectures/planning-decomposition) 都是同一个问题：**按依赖关系把一组任务安排成顺序/并行的执行图，处理聚合和部分失败。** 区别只在执行单元是 Agent。所以"并行扇出聚合提速但放大成本""部分失败怎么聚合""依赖决定顺序"这些，都直接复用 [M5 扇出/尾延迟](../core-components/load-balancing)、[L11 异步并行](../foundations/sync-async-timeout) 的成熟智慧。架构师设计多 Agent 编排，不是学新东西，而是把分布式工作流的功底用到 Agent 上——再次说明 **AI 系统的工程，根基是传统系统工程**。
+
+### 3. 真实案例：并行提速 vs 成本的权衡
+
+一个常见的真实决策：一个多 Agent 任务（如"从五个角度分析一份合同"）可以并行扇出五个 Agent 同时分析，几秒出结果；也可以顺序一个个分析，慢但便宜。并行把延迟从"五份之和"降到"最慢一份"，体验好得多——但**成本一样是五份 token**（甚至因为要聚合/协调更多）。所以并行的取舍是"用钱换时间"：延迟敏感的交互场景值得并行，成本敏感的批处理场景可能宁可串行。这和 [M5/L15 的延迟vs成本权衡](../foundations/performance-and-latency) 是同一类判断。架构师要清楚：**多 Agent 并行省的是墙钟时间，不是账单**——别以为并行"更高效"就一定更好，要看你优化的是延迟还是成本。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的多 Agent 子任务有依赖吗？哪些必须顺序（有依赖）、哪些能并行（独立）？画出依赖图了吗？
+- 并行扇出时，某个 Agent 失败/超时怎么办？聚合是等所有、等多数、还是超时降级？
+- 你并行是为了省时间还是省钱？并行省时但不省钱（甚至更贵），这个权衡对你的场景对吗？
+
+## 自检清单
+
+- [ ] 我能按子任务依赖选顺序还是并行编排。
+- [ ] 我的 lab 能流水线串联、扇出聚合、容部分失败。
+- [ ] 我理解并行的收益(提速)和难点(聚合/部分失败/放大成本)。
+- [ ] 我能把多 Agent 编排当分布式 DAG 工作流来设计。
+
+## 常见误解
+
+- **"多 Agent 就该并行都跑"**：有依赖的必须顺序；无依赖才并行。
+- **"并行更高效所以更省"**：并行省时间不省钱(token 一样甚至更多)。
+- **"扇出就行了"**：难的是聚合和部分失败处理，不是扇出。
+
+## 延伸阅读
+
+- [Anthropic: Building effective agents](https://www.anthropic.com/research/building-effective-agents)
+- [M5L1 负载均衡（扇出）](../core-components/load-balancing)
+- [下一课：辩论与评审](./debate-review)

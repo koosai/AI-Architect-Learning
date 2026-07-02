@@ -1,0 +1,179 @@
+---
+title: M3L2 - 索引深入
+description: 索引让查询飞快，但加错了反而拖慢写、还可能没命中——复合索引最左前缀、覆盖索引、索引的代价。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M3L2 · 索引深入
+
+<ChapterMeta
+  time="约 1.5–2 小时"
+  prereqs={[{label: 'L7 索引初识', href: '../foundations/data-modeling'}, {label: 'M3L1 存储引擎', href: './storage-engines'}]}
+  outcome="能设计复合索引并理解最左前缀规则、用覆盖索引避免回表，并判断什么时候加索引反而有害。"
+  howToUse="先理解索引的代价，再跑复合索引“最左前缀”的 demo，最后做 lab。"
+/>
+
+:::tip 索引不是"加了就快"的魔法
+索引能把全表扫描（[L7](../foundations/data-modeling)）变成秒查，但它有代价：拖慢写、占空间，而且**加错了顺序，查询根本用不上它**。这一课教你设计对的索引，而不是盲目加。
+:::
+
+## 一、加了索引，为什么还是慢？
+
+你给 `(country, city)` 建了复合索引。`WHERE country='US' AND city='NYC'` 飞快；但 `WHERE city='NYC'`（不带 country）却走了全表扫描——**索引没命中**。同时你发现写入变慢了。索引不是越多越好，关键是**建对**。
+
+## 二、三个核心概念（分层）
+
+### 基础：索引是什么、有什么代价
+
+<GlossaryTerm term="Index" definition="索引：一个额外的、有序的查找结构（多为 B-tree），让按某列查找从 O(n) 全表扫描降到 O(log n)。代价是每次写都要同步更新它、额外占空间。">索引</GlossaryTerm> 是一份"额外维护的有序查找表"。好处是查得快；代价是：**每次写都要同步更新索引（写放大，回扣 [M3L1](./storage-engines)）、额外占空间**。所以索引要为高频查询而加，不是越多越好。
+
+### 进阶：复合索引的最左前缀规则
+
+<GlossaryTerm term="Composite Index" definition="复合索引：在多个列上按顺序建立的索引（如 (country, city)）。查询只能利用它的最左前缀——必须从第一列开始连续匹配。">复合索引</GlossaryTerm> `(country, city)` 像电话簿先按国家、再按城市排序。你能高效地查"某国"或"某国某市"，但**不能**只按"某市"高效查（因为没先定位国家）——这就是<GlossaryTerm term="Leftmost Prefix Rule" definition="最左前缀规则：复合索引只能被从最左列开始连续的查询条件利用。(a,b,c) 索引可服务 a、a+b、a+b+c，但不能服务 b 或 c 单独的查询。">最左前缀规则</GlossaryTerm>。索引列的顺序，直接决定哪些查询能加速。
+
+### 深入（选学）：覆盖索引避免回表
+
+普通索引命中后，还要拿主键**回表**去取其它列。如果索引本身就包含了查询要的所有列，就能<GlossaryTerm term="Covering Index" definition="覆盖索引：索引本身包含了查询所需的全部列，于是查到索引就能直接返回结果，无需回表读主数据。是高频查询的强力优化。">覆盖（covering）</GlossaryTerm>——直接从索引返回，不回表，快得多。代价是索引更大。
+
+<ResearchNote
+  title="B-tree：让磁盘上的有序查找高效"
+  source="Bayer & McCreight (1972), Organization and Maintenance of Large Ordered Indices"
+  href="https://dl.acm.org/doi/10.1145/1734663.1734671"
+  insight="B-tree（及其变体 B+tree）用浅而宽的有序树，让一次查找只需少数几次磁盘访问，并保持有序以支持范围查询。它是几乎所有关系数据库索引的基础结构，五十年屹立不倒。"
+  application="理解索引是“有序的 B-tree”，就能推出它的全部行为：为什么前缀匹配快、为什么范围查询能用索引、为什么写要付出维护代价。设计索引时，脑子里要有这棵有序的树。"
+/>
+
+## 三、跟我做一遍：复合索引的最左前缀
+
+<PyRunner
+  expect="city 单独查用不上索引"
+  code={`rows = [
+    {"country": "US", "city": "NYC", "name": "Ada"},
+    {"country": "US", "city": "LA",  "name": "Bob"},
+    {"country": "CN", "city": "BJ",  "name": "Cao"},
+]
+
+# 复合索引 (country, city)：按这个顺序排序
+index = sorted(rows, key=lambda r: (r["country"], r["city"]))
+
+def query(conds):
+    # 最左前缀：必须从 country 开始连续匹配
+    cols = ["country", "city"]
+    prefix = []
+    for c in cols:
+        if c in conds:
+            prefix.append(conds[c])
+        else:
+            break
+    if not prefix:                       # 第一列没给 → 索引用不上
+        return None
+    return [r for r in index if tuple(r[c] for c in cols[:len(prefix)]) == tuple(prefix)]
+
+print("country=US:", query({"country": "US"}))            # 用上索引
+print("country=US,city=NYC:", query({"city": "NYC", "country": "US"}))  # 用上
+print("只 city=NYC:", query({"city": "NYC"}))              # None：用不上
+print("city 单独查用不上索引")`}
+/>
+
+看最后一行：只给 `city` 不给 `country`，复合索引 `(country, city)` **用不上**——只能全表扫描。**试试**：如果你的高频查询就是"按 city"，索引该怎么建？（提示：把 city 放最左，或单独给 city 建索引。）
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month03/m3l2_index/`：
+
+```bash
+python labs/month03/m3l2_index/test_index.py
+```
+
+实现复合索引的最左前缀查询，以及"是否覆盖"的判断。
+
+<GuidedExercise
+  title="练习指引：复合索引与最左前缀"
+  goal="把“索引列顺序决定能加速哪些查询”变成代码直觉——这是 SQL 调优最常见的考点。"
+  hints={[
+    '索引按列顺序排序；查询只能用"从第一列开始连续提供"的条件。',
+    '第一列没给 → 返回 None（表示索引用不上，得全表扫描）。',
+    '覆盖判断：查询要的列是否都在索引列里（含被索引列）。',
+    '想想：(a,b) 和 (b,a) 两个索引能服务的查询完全不同。'
+  ]}
+  steps={[
+    '实现 CompositeIndex(columns)，build(rows) 按 columns 顺序排序存储。',
+    'query(conds)：求最左前缀；前缀为空返回 None；否则返回匹配前缀的行。',
+    'is_covering(needed_cols)：needed_cols 是否都包含在 columns 里。',
+    '写测试：前缀命中、跳列用不上（None）、覆盖判断正确。'
+  ]}
+  checks={[
+    '你能解释最左前缀规则。',
+    '你的 query 在缺最左列时正确返回 None。',
+    '你能说出覆盖索引为什么避免回表、更快。',
+    '你能说出索引的代价（写放大、空间）。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 索引设计是"为查询服务"
+
+回扣 [L7：先看查询，再建模](../foundations/data-modeling)。索引同理：**列出你的高频查询，再据此设计索引（列顺序、是否覆盖）**，而不是给每列都加索引。每个多余索引都在拖慢写、占空间。
+
+### 2. 加不加索引、加什么索引
+
+<TradeoffExplorer
+  title="索引决策"
+  dimensions={['读加速', '写代价', '空间代价', '维护复杂度', '适用场景']}
+  options={[
+    {
+      name: '不加索引（全表扫描）',
+      scores: [1, 5, 5, 5, 2],
+      note: '写最快、不占额外空间。但读是 O(n)，数据一多就崩。',
+      whenToUse: '小表、或写极多读极少的表。'
+    },
+    {
+      name: '单列/复合索引',
+      scores: [4, 3, 3, 3, 4],
+      note: '为高频查询加速。复合索引要按查询设计列顺序（最左前缀）。',
+      whenToUse: '高频按某些列过滤/排序的查询。'
+    },
+    {
+      name: '覆盖索引',
+      scores: [5, 2, 2, 3, 4],
+      note: '索引含查询所需全部列，免回表，最快。但索引更大、写更慢。',
+      whenToUse: '极高频、且返回列固定的关键查询。'
+    }
+  ]}
+/>
+
+### 3. 真实案例：慢查询的头号原因
+
+线上"某接口突然变慢"的最常见根因之一，就是**查询没命中索引**（最左前缀用错、或对索引列用了函数/类型转换）。架构师要会看执行计划（EXPLAIN）判断是否走了索引——这是数据层排障的基本功（回扣 [L12 可观察性](../foundations/observability)）。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的查询有 `WHERE user_id=? AND created_at>?` 和 `WHERE created_at>?` 两种，索引该怎么建？
+- 给一个有 10 个查询的表，你怎么用最少的索引覆盖最多的高频查询？
+- 为什么"给每一列都加索引"是错的？（从写放大和空间算账。）
+
+## 自检清单
+
+- [ ] 我能解释索引的好处和代价。
+- [ ] 我的 lab 正确实现了最左前缀和覆盖判断。
+- [ ] 我能为给定的高频查询设计复合索引的列顺序。
+- [ ] 我知道为什么索引不是越多越好。
+
+## 常见误解
+
+- **"加了索引就一定快"**：列顺序不对就用不上（最左前缀）。
+- **"索引越多越好"**：每个索引都拖慢写、占空间。
+- **"索引只看查的那一列"**：复合索引的顺序和覆盖性同样关键。
+
+## 延伸阅读
+
+- [Use The Index, Luke!（SQL 索引实战）](https://use-the-index-luke.com/)
+- [Bayer & McCreight, B-tree（1972）](https://dl.acm.org/doi/10.1145/1734663.1734671)
+- [下一课：事务与隔离级别](./transactions-isolation)

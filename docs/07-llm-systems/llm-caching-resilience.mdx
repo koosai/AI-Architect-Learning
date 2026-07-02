@@ -1,0 +1,203 @@
+---
+title: M7L11 - 缓存、限流与降级
+description: LLM 调用又贵又慢又会失败。把 M5 的弹性模式用到 LLM：语义缓存省钱、限流防超支、模型降级链保可用。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M7L11 · 缓存、限流与降级
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M5 弹性模式', href: '../core-components/circuit-breaker'}, {label: 'M3L5 缓存', href: '../data-cache-queue/cache-patterns'}, {label: 'M7L5 成本延迟', href: './llm-api-cost-latency'}]}
+  outcome="能把 M5 的弹性模式用到 LLM：用（语义）缓存省钱降延迟、用限流防成本失控、用模型降级链在故障/限流时保可用。"
+  howToUse="先看“LLM 是个又贵又慢又会限流的依赖”，再把前面学的缓存/限流/降级套上来，最后做语义缓存 + 降级链 lab。"
+/>
+
+:::tip 好消息：LLM 是个远程依赖，你前面学的弹性模式全用得上
+[Month 5](../core-components/circuit-breaker) 你学了缓存、限流、熔断、重试、降级。LLM 调用恰恰是一个**又贵、又慢、会失败、会被限流**的远程依赖——所以这些模式正好全派上用场，而且因为 LLM 特别贵特别慢，它们的价值比普通依赖更大。这一课把前面的弹性工程，专门“调味”到 LLM 场景。
+:::
+
+## 一、LLM 依赖的四个老问题，更严重的版本
+
+LLM 调用把普通远程依赖的问题放大了：
+- **贵**：每次调用真金白银（[M7L5](./llm-api-cost-latency)），重复调用纯烧钱。
+- **慢**：秒级延迟，高频场景体验差。
+- **会失败/限流**：API 会超时、报错、触发[速率限额](../core-components/rate-limiting)。
+- **会成本失控**：一个 bug 或流量激增可能让账单瞬间爆炸。
+
+对应的解药你都学过——**缓存**（省钱降延迟）、**限流**（防超支）、**重试/熔断/降级**（保可用）——只是用法要针对 LLM 调整。
+
+## 二、三个核心概念（分层）
+
+### 基础：LLM 缓存（精确 + 语义）
+
+- **精确缓存**：相同输入（同 prompt + 同参数）直接返回缓存结果——前提是[低温/确定性输出（M7L3）](./sampling-decoding) 才有意义。命中就**完全跳过调用**（成本和延迟归零）。
+- <GlossaryTerm term="Semantic Cache" definition="语义缓存：用向量相似度判断新请求是否和缓存过的某个请求语义相近，相近就复用缓存答案。比精确匹配命中率高得多（运费多少 和 运费几块 能命中同一条），但要设相似度阈值、防误命中。">语义缓存</GlossaryTerm>：很多问法不同但意思相同（“运费多少” vs “运费几块钱”）。语义缓存用[向量相似度（Month 8）](../rag/overview) 判断“够不够像”，像就复用——命中率远高于精确匹配。代价：要设相似度阈值，太松会误命中（返回不对的答案）。
+
+### 进阶：限流、预算与成本护栏
+
+- **限流**（[M5L5](../core-components/rate-limiting)）：限制调用频率，防滥用、防触达 API 限额、防成本失控。
+- <GlossaryTerm term="Cost Budget / Spend Cap" definition="成本预算/支出上限：给 LLM 调用设每用户/每功能/每天的花费上限，逼近上限时降级或拒绝，防止 bug 或流量激增导致账单失控。">成本预算 / 支出上限</GlossaryTerm>：给每用户/每功能/每天设花费上限，逼近就降级或拒绝——这是 LLM 特有的、必须有的“成本护栏”（普通依赖很少需要，但 LLM 的钱是按调用烧的）。
+
+### 深入（选学）：模型降级链与完整弹性
+
+把 [M5 的弹性组合拳](../core-components/circuit-breaker) 套到 LLM：
+- <GlossaryTerm term="Model Fallback Chain" definition="模型降级链：主模型失败/超时/限流/超预算时，依次回退到备选（更便宜/更快/其它供应商的模型），最后回退到缓存/默认答/人工，保证服务不整体挂。">模型降级链</GlossaryTerm>：主模型（如 Opus 4.8 `claude-opus-4-8`）失败/限流/超时 → 退到备选（如 Sonnet 4.6 `claude-sonnet-4-6`，甚至换供应商）→ 再退到缓存的旧答案/模板答/转人工。结合[熔断（M5L6）](../core-components/circuit-breaker)（某模型持续失败就跳闸）、[重试+退避（M5L7）](../core-components/retry-backoff-timeout)（应对瞬时错误和限流）、[超时（M5L7）](../core-components/retry-backoff-timeout)（别让慢调用拖死）。
+- **降级也可以是“降质量换可用”**：高峰期把难任务也路由到[小模型（M7L5）](./llm-api-cost-latency)、缩短上下文、关掉非核心 AI 功能——有损服务好过无服务（[呼应 M5L5](../core-components/rate-limiting)）。
+- **缓存 + 流式 + 路由 + 降级**共同构成 LLM 的“成本与可用性”工程：缓存省重复、流式改体感、路由按难度选档、降级保底线。
+- **观测**（[M6L7](../cloud-enterprise-industrial/observability-advanced)）：监控 token 用量、成本、命中率、各模型成功率/延迟、降级触发率——LLM 系统的可观测重点和传统系统不同（多了 token 和成本维度）。
+
+<ResearchNote
+  title="把弹性工程套到 LLM：缓存 + 限流 + 降级 + 预算"
+  source="Month 5 弹性模式；GPTCache（语义缓存）；各家 LLM 网关/代理实践"
+  href="https://github.com/zilliztech/GPTCache"
+  insight="LLM 是又贵又慢又会限流失败的远程依赖，因此缓存（精确/语义）、限流、重试退避、熔断、模型降级链、成本预算等弹性模式价值被放大。语义缓存用向量相似度提升命中率；模型降级链在故障/限流/超预算时回退到更便宜模型或缓存/人工，保证可用。"
+  application="给 LLM 调用配齐：语义缓存（省钱降延迟）+ 限流和成本上限（防超支）+ 超时/重试退避/熔断（抗故障限流）+ 模型降级链（保可用）+ token/成本/命中率观测。把 M5 弹性模式针对 LLM 的贵和慢做加强。"
+/>
+
+## 三、跟我做一遍：语义缓存 + 模型降级链
+
+<PyRunner
+  rows={38}
+  expect="缓存命中省调用、故障降级保可用"
+  code={`# 简化“语义相似”：归一化后字符集合的 Jaccard 重叠（真实用向量相似度，Month 8）
+def similar(a, b):
+    sa = set(a.replace("?", "").replace("？", ""))
+    sb = set(b.replace("?", "").replace("？", ""))
+    if not sa or not sb:
+        return 0.0
+    return len(sa & sb) / len(sa | sb)
+
+class SemanticCache:
+    def __init__(self, threshold=0.6):
+        self.store = []; self.threshold = threshold
+    def get(self, q):
+        for cq, ans in self.store:
+            if similar(q, cq) >= self.threshold:
+                return ans                       # 语义命中，复用
+        return None
+    def put(self, q, ans):
+        self.store.append((q, ans))
+
+def call_chain(q, models, cache):
+    hit = cache.get(q)
+    if hit is not None:
+        return ("CACHE", hit)                    # 命中：跳过所有模型调用
+    for name, fn in models:                      # 模型降级链
+        try:
+            ans = fn(q); cache.put(q, ans); return (name, ans)
+        except Exception:
+            continue                             # 此模型失败 -> 退下一个
+    return ("FALLBACK", "暂时无法回答，请稍后或转人工")  # 全失败 -> 兜底
+
+cache = SemanticCache(threshold=0.6)
+def primary(q): raise RuntimeError("主模型限流")  # 模拟主模型挂
+def backup(q): return "运费是 12 元"
+
+print(call_chain("运费多少钱?", [("opus", primary), ("sonnet", backup)], cache))  # 主挂->备答
+print(call_chain("运费多少?", [("opus", primary), ("sonnet", backup)], cache))    # 与上句高度重叠->命中缓存
+print("缓存命中省调用、故障降级保可用")`}
+/>
+
+主模型限流时自动退到备用模型；语义相近的问法命中缓存、完全跳过调用——省钱、降延迟、保可用一次拿到。**试试**：把 `threshold` 调到 0.9（更严），看"运费几块"是否还命中；让 backup 也抛异常，看是否走到 FALLBACK 兜底。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month07/m7l11_cache_resilience/`：
+
+```bash
+python labs/month07/m7l11_cache_resilience/test_resilience.py
+```
+
+实现语义缓存 + 模型降级链：相似命中复用、主模型失败退备用、全失败兜底，并支持成本上限拒绝。
+
+<GuidedExercise
+  title="练习指引：实现 LLM 缓存 + 降级链"
+  goal="把“语义缓存 + 模型降级链 + 成本上限”做成代码——LLM 成本与可用性工程的核心。"
+  hints={[
+    'SemanticCache：相似度 >= 阈值则命中复用。',
+    'call_chain：先查缓存命中；否则依次尝试模型，失败退下一个；全失败兜底。',
+    '成功的结果写回缓存。',
+    '（选做）加成本上限：累计花费超 cap 时直接降级/拒绝。'
+  ]}
+  steps={[
+    '实现 similar 和 SemanticCache（get/put）。',
+    '实现 call_chain(q, models, cache)：缓存 -> 降级链 -> 兜底。',
+    '（选做）加 spend_cap：超预算返回降级。',
+    '写测试：精确/相似命中、主失败退备用、全失败兜底、写回缓存、超预算降级。'
+  ]}
+  checks={[
+    '你能把缓存/限流/降级套到 LLM 调用上。',
+    '你的 lab 语义命中复用、故障降级保可用。',
+    '你能解释成本上限为什么是 LLM 特有的必备护栏。',
+    '你知道 LLM 观测要多看 token/成本/命中率维度。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. LLM 成本与可用性手段
+
+<TradeoffExplorer
+  title="LLM 成本/可用性工程手段"
+  dimensions={['省成本', '降延迟', '保可用', '实现复杂度', '风险']}
+  options={[
+    {
+      name: '语义缓存',
+      scores: [5, 5, 3, 3, 3],
+      note: '命中则零成本零延迟。命中率高，但阈值太松会返回不对的答案。',
+      whenToUse: '有重复/相似请求、输出较确定时。'
+    },
+    {
+      name: '模型降级链 + 熔断',
+      scores: [3, 3, 5, 3, 2],
+      note: '主模型故障/限流时退备用/缓存/人工，保可用。需管理多模型和一致性。',
+      whenToUse: '对可用性要求高的生产功能。'
+    },
+    {
+      name: '限流 + 成本上限',
+      scores: [4, 1, 3, 2, 1],
+      note: '防滥用和账单失控。会拒绝部分请求，但守住成本底线。',
+      whenToUse: '所有对外/高频 LLM 功能——必备护栏。'
+    }
+  ]}
+/>
+
+### 2. AI 工程 = AI 能力 + 你前六个月学的全部工程
+
+这一课最该带走的认知：**做可靠的 LLM 系统，靠的不是什么 AI 新魔法，而是把你前六个月的工程功底用到 LLM 这个新组件上。** 缓存（[M3/M5](../data-cache-queue/cache-patterns)）、限流熔断降级（[M5](../core-components/circuit-breaker)）、可观测（[M6L7](../cloud-enterprise-industrial/observability-advanced)）、评测门禁（[M6L6/M7L10](./llm-evaluation)）、校验防护（[L3/M7L9](./hallucination-guardrails)）——一个都不少。区别只在于 LLM 特别贵、特别慢、不确定、会幻觉，所以这些工程手段的价值被放大了。**这正是"AI Architect"而非"调 API 的人"的分野**：你能把一个不可靠、昂贵的概率组件，用扎实的系统工程包裹成生产级可靠功能。
+
+### 3. 真实案例：LLM 网关层的兴起
+
+随着 LLM 应用增多，业界涌现出"LLM 网关/代理"层（[呼应 M5L2 API 网关](../core-components/api-gateway)），把这些横切能力统一收口：语义缓存、限流、成本预算、多模型路由与降级、重试熔断、统一观测、密钥管理。这和 [M6L8 服务网格](../cloud-enterprise-industrial/service-mesh) 把弹性下沉到 sidecar 是同一思想——**把"调 LLM"这件事的横切关注点抽出来统一治理**，而不是每个功能各写一遍。架构师设计 LLM 系统时，要么用现成的 LLM 网关，要么自建这一层——总之这些能力必须有，不能让每次裸调 LLM。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的 LLM 功能有缓存吗？精确还是语义？命中率多少、能省多少成本？
+- 主模型挂了/限流了，你的功能会整体崩还是能降级（备用模型/缓存/人工）？降级路径设计了吗？
+- 你有成本上限护栏吗？一个 bug 导致疯狂调用，账单会失控到什么程度？怎么熔断？
+
+## 自检清单
+
+- [ ] 我能把缓存/限流/降级套到 LLM 调用上。
+- [ ] 我的 lab 语义命中复用、故障降级保可用。
+- [ ] 我理解成本上限是 LLM 特有的必备护栏。
+- [ ] 我能把前六个月的工程能力迁移到 LLM 组件上。
+
+## 常见误解
+
+- **"LLM 应用就是调 API"**：裸调不可靠；要配缓存、限流、降级、成本护栏、观测。
+- **"缓存对 LLM 没用"**：精确缓存（确定性输出）+ 语义缓存能大幅省钱降延迟。
+- **"AI 工程是全新领域"**：核心是把前六个月的系统工程用到 LLM 这个新组件上。
+
+## 延伸阅读
+
+- [GPTCache (语义缓存)](https://github.com/zilliztech/GPTCache)
+- [Month 5：弹性模式](../core-components/circuit-breaker)
+- [下一课：Capstone 构建一个 LLM 应用](./capstone-llm-app)

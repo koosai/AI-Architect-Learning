@@ -1,0 +1,174 @@
+---
+title: M3L4 - SQL vs NoSQL 建模实战
+description: 同一份数据，关系型用 join、文档型用嵌套——亲手建两种模型，看清各自的查询代价和一致性取舍。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M3L4 · SQL vs NoSQL 建模实战
+
+<ChapterMeta
+  time="约 1.5–2 小时"
+  prereqs={[{label: 'L7 数据建模', href: '../foundations/data-modeling'}, {label: 'M2L8 存储选型', href: '../system-design-bridge/storage-selection'}]}
+  outcome="能把同一份数据用关系型（规范化+join）和文档型（嵌套+反规范化）两种方式建模，并说清各自的查询代价与一致性取舍。"
+  howToUse="先看两种模型的查询差异，再做 lab 亲手把关系模型转成文档模型。"
+/>
+
+:::tip 不是"SQL vs NoSQL 谁更好"，而是"按怎么查来建模"
+同一份"用户和订单"数据，关系型把它拆成两张表用 join 连接、文档型把订单嵌进用户文档。哪个好？取决于你怎么查、能不能容忍冗余。这一课带你亲手建两种模型，体会取舍。
+:::
+
+## 一、用户和他的订单，怎么存？
+
+要展示"某用户的所有订单"。关系型：users 表 + orders 表，查时 <GlossaryTerm term="JOIN" definition="连接：关系数据库把多张表按关联键拼起来的操作（如 users.id = orders.user_id）。强大灵活，但跨表 join 在大数据量/分片下可能很慢。">join</GlossaryTerm> 两张表。文档型：把订单**嵌入**用户文档，一次读出。两条路各有代价——这一课讲清楚。
+
+## 二、三个核心概念（分层）
+
+### 基础：规范化 + join vs 嵌入
+
+- **关系型**：数据<GlossaryTerm term="Normalization" definition="规范化：每个事实只存一处、不冗余（如订单只存 user_id 引用用户）。改一处即全对，但查询常需 join。">规范化</GlossaryTerm>成多表，用 join 关联。无冗余、一致性好，但查询要拼表。
+- **文档型**：把相关数据<GlossaryTerm term="Embedding" definition="嵌入：把关联数据直接放进同一个文档（如用户文档里嵌一个 orders 数组）。一次读就拿全，但数据可能冗余、更新要改多处。">嵌入</GlossaryTerm>一个文档。一次读拿全（快），但冗余、更新麻烦。
+
+### 进阶：按访问模式选嵌入还是引用
+
+经验法则（回扣 [L7 按查询建模](../foundations/data-modeling)）：
+
+- **总是一起读、从属关系、数量有界** → 嵌入（如订单的收货地址）。
+- **独立查询、多对多、数量无界** → 引用（如订单引用商品，商品被很多订单引用）。
+
+嵌入优化读，引用优化一致性和灵活查询。
+
+### 深入（选学）：很多 NoSQL 没有 join
+
+关键差异：**许多 NoSQL（文档/KV/宽列）不支持高效跨表 join**。所以在 NoSQL 里，你往往被迫<GlossaryTerm term="Denormalization" definition="反规范化：故意冗余存储（同一数据存多份/预计算/嵌入），用写复杂度和空间换读性能。NoSQL 因缺乏 join 常依赖它。">反规范化</GlossaryTerm>——把数据冗余、嵌入，用"写时多写几份 + 容忍短暂不一致"换"读时一次拿全"（回扣 [M2L6 最终一致](../system-design-bridge/cap-consistency)）。这不是 NoSQL 更"先进"，而是它用不同的取舍换扩展性。
+
+<ResearchNote
+  title="数据模型决定了什么查询便宜、什么查询贵"
+  source="Martin Kleppmann, DDIA 第 2 章（Data Models and Query Languages）"
+  href="https://dataintensive.net/"
+  insight="DDIA 对比关系、文档、图三种模型：文档模型擅长“一棵树一次读取”的从属数据，但处理多对多和 join 很弱；关系模型用 join 优雅处理多对多。模型选择本质是匹配你的数据关系和查询模式。"
+  application="选 SQL 还是 NoSQL，先看你的数据关系（一对多？多对多？）和高频查询（要不要 join？要不要一次拿整棵树？）。模型选错，要么处处 join 很慢、要么冗余一致性噩梦。"
+/>
+
+## 三、跟我做一遍：两种模型查同一份数据
+
+<PyRunner
+  expect="两种模型结果一致"
+  code={`# 关系型：两张"表" + 引用
+users = [{"id": 1, "name": "Ada"}]
+orders = [{"id": 11, "user_id": 1, "item": "book"},
+          {"id": 12, "user_id": 1, "item": "pen"}]
+
+def relational_get(uid):
+    user = next(u for u in users if u["id"] == uid)        # 查 users
+    user_orders = [o for o in orders if o["user_id"] == uid]  # join orders
+    return {"name": user["name"], "orders": [o["item"] for o in user_orders]}
+
+# 文档型：订单嵌入用户文档，一次读拿全
+docs = [{"id": 1, "name": "Ada", "orders": ["book", "pen"]}]
+
+def document_get(uid):
+    return next(d for d in docs if d["id"] == uid)         # 一次查
+
+r = relational_get(1)
+d = document_get(1)
+print("关系型:", r)
+print("文档型:", {"name": d["name"], "orders": d["orders"]})
+print("两种模型结果一致" if r["orders"] == d["orders"] else "?")`}
+/>
+
+同样的结果，关系型查了"两次 + join"、文档型"一次拿全"。文档型读更快，但如果一个订单要同时出现在"用户视图"和"商家视图"里，嵌入就会**冗余两份**——这就是它的代价。**试试**：给文档模型加一个"按商品反查所有买家"的需求，看嵌入模型为什么这时很别扭（要扫所有文档）。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month03/m3l4_modeling/`：
+
+```bash
+python labs/month03/m3l4_modeling/test_modeling.py
+```
+
+把关系模型（users + orders）转成文档模型（嵌入），并实现两种查询。
+
+<GuidedExercise
+  title="练习指引：两种模型互转与查询"
+  goal="亲手体会规范化 join 与反规范化嵌入的等价与取舍——这是 NoSQL 建模的核心功。"
+  hints={[
+    '关系查询：先取 user，再过滤出它的 orders（模拟 join）。',
+    '反规范化：把每个用户和它的订单合成一个嵌入文档。',
+    '文档查询：一次取出嵌入了 orders 的文档。',
+    '两种模型查同一用户，结果应一致——它们只是同一数据的不同组织。'
+  ]}
+  steps={[
+    '实现 join_user_orders(users, orders, uid)：返回 {"name":..., "orders":[item,...]}。',
+    '实现 to_documents(users, orders)：返回每个用户嵌入其订单的文档列表。',
+    '实现 doc_get(docs, uid)：从文档列表取出该用户文档。',
+    '写测试：两种查询结果一致；反规范化正确嵌入。'
+  ]}
+  checks={[
+    '你能说出嵌入 vs 引用各自适合什么。',
+    '你的两种模型查同一用户结果一致。',
+    '你能解释为什么没有 join 的 NoSQL 依赖反规范化。',
+    '你能举一个"嵌入很别扭"的查询（多对多/反查）。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 关系 vs 文档，按数据关系选
+
+<TradeoffExplorer
+  title="一对多/多对多怎么建模"
+  dimensions={['读性能', '写一致性', '多对多支持', '灵活查询', '扩展性']}
+  options={[
+    {
+      name: '关系型（规范化 + join）',
+      scores: [3, 5, 5, 5, 3],
+      note: '无冗余、多对多和灵活查询都强。但跨表 join 在海量/分片下可能慢。',
+      whenToUse: '关系复杂、查询多变、要强一致（订单、账务、社交关系）。'
+    },
+    {
+      name: '文档型（嵌入 + 反规范化）',
+      scores: [5, 2, 2, 2, 5],
+      note: '从属数据一次读拿全、易水平扩展。但冗余、多对多和反查别扭、更新多处。',
+      whenToUse: '一棵树一起读、关系简单、读多写少（用户资料、内容、配置）。'
+    }
+  ]}
+/>
+
+### 2. 反规范化是"用写换读"，要管好一致性
+
+NoSQL 里嵌入/冗余很常见，但**冗余的每一份都要在更新时同步**——否则数据不一致。常见做法是异步更新冗余副本（回扣 [M2L10 事件驱动](../system-design-bridge/communication-decoupling)）+ 接受最终一致。架构师要清楚：你不是消灭了 join 的成本，而是把它从"读时 join"挪到了"写时维护冗余"。
+
+### 3. 真实案例：feed 就是极致反规范化
+
+下一周的 [feed 系统（M3L10）](./overview) 会把这个推到极致：为了"刷一下秒出"，把内容预先写扩散到每个用户的收件箱（大量冗余）。**读的极致优化，往往是写时反规范化换来的**——这条线从 L7 一路贯穿到 feed。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- "设计一个微信"：用户、好友关系、消息、群——哪些嵌入、哪些引用？为什么群成员不该嵌入消息里？
+- 你用文档模型嵌入了订单，现在要"统计每个商品的销量"，怎么办？（暴露嵌入对反查的弱点。）
+- 反规范化后，一处数据改了要同步 3 个冗余副本，你怎么保证它们最终一致？
+
+## 自检清单
+
+- [ ] 我能用关系型和文档型两种方式建同一份数据。
+- [ ] 我的 lab 两种查询结果一致、反规范化正确。
+- [ ] 我能按"嵌入 vs 引用"规则做选择。
+- [ ] 我理解反规范化是"用写和一致性换读"。
+
+## 常见误解
+
+- **"NoSQL 没有 schema 所以随便存"**：恰恰要更用心按访问模式设计，否则查询会很痛。
+- **"NoSQL 比 SQL 快"**：它读快是因为反规范化/嵌入，代价是写和一致性。
+- **"嵌入总是更好"**：多对多、反查、无界增长的数据，引用才合适。
+
+## 延伸阅读
+
+- [Martin Kleppmann, DDIA 第 2 章](https://dataintensive.net/)
+- [MongoDB 数据建模指南](https://www.mongodb.com/docs/manual/data-modeling/)
+- [Month 3 总览](./overview)

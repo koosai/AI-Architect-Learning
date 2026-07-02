@@ -1,0 +1,49 @@
+---
+title: AI Architect Portfolio System
+description: 贯穿12个月的作品集项目。
+---
+
+# AI Architect Portfolio System
+
+这个项目是整套教材的作品集主线。它会从一个小服务开始，逐步加入系统设计、数据、缓存、RAG、Agent、评测和治理能力。
+
+## 版本路线
+
+| 版本 | 时间 | 能力 |
+|---|---|---|
+| v0 | Month 1 | CLI + JSON API + tests |
+| v1 | Month 3 | URL shortener / mini feed 数据路径 |
+| v2 | Month 5 | API gateway、rate limit、observability |
+| v3 | Month 8 | Local-first RAG |
+| v4 | Month 9 | Tool-calling Agent |
+| v5 | Month 11 | Evals、trace、risk review |
+| v6 | Month 12 | 完整演示与架构文档 |
+
+## 仓库约定
+
+```text
+labs/
+  system_design/
+  ai_agent/
+docs/
+  projects/
+content/
+  sources.yml
+  templates/
+```
+
+## 设计原则
+
+- **Local-first**：默认可在本机运行，云端 API 是可选增强。
+- **Replaceable**：模型、向量库、工具实现都可以替换。
+- **Observable**：关键调用要能被追踪。
+- **Evaluated**：每次能力增强都要有最小评测。
+- **Explainable**：每个架构选择都要有 trade-off。
+
+## 作品集叙事
+
+最终你要能这样讲：
+
+> 我先用传统系统设计方法定义需求、容量和数据流；再用 RAG 解决知识接入问题；然后用 Agent 编排工具调用；最后用评测、trace、权限和风险控制把它变成可评审的 AI 系统。
+
+这比“我做了一个 AI chatbot”更接近 AI Architect 的表达。

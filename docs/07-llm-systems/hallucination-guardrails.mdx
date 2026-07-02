@@ -1,0 +1,188 @@
+---
+title: M7L9 - 幻觉、可靠性与防护
+description: LLM 会一本正经地胡说。为什么会幻觉、怎么用 grounding、校验、护栏把不可靠的输出收口到可控范围。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M7L9 · 幻觉、可靠性与防护
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M7L1 概率生成', href: './transformer-autoregression'}, {label: 'M7L6 结构化校验', href: './structured-output-tools'}, {label: 'L3 输入校验', href: '../foundations/input-validation'}]}
+  outcome="能解释幻觉为什么是 LLM 的固有属性、用 grounding（基于证据回答）、输出校验、护栏（guardrails）把不可靠输出收口，并知道什么场景必须人工兜底。"
+  howToUse="先理解幻觉的根源，再学几种防护手段，最后做 grounding 校验 lab。"
+/>
+
+:::tip 幻觉不是 bug，是 LLM 工作机制的固有产物——你的任务是“控制”而非“消除”
+[M7L1](./transformer-autoregression) 说 LLM 是预测"最可能接什么"的概率机器——它优化的是"听起来对"，不是"事实对"。所以它会**流畅自信地编造**不存在的事实、引用、API。这叫幻觉（hallucination）。你**消除不了**它（这是机制决定的），但能用工程手段**控制**它：让模型基于证据回答、校验输出、设护栏、关键场景人工兜底。
+:::
+
+## 一、一本正经地胡说
+
+你问模型一个它不确定的问题，它不会说"我不知道"，而是**流畅、自信地编一个**——编造一个不存在的函数、一篇没写过的论文、一条错误的法规。更可怕的是它说得有模有样，让人难以分辨。这就是<GlossaryTerm term="Hallucination" definition="幻觉：LLM 生成看似合理、实则错误或虚构的内容（不存在的事实、引用、API 等）。根源是模型优化“最可能的下一个 token”（听起来对），而非“事实正确”。">幻觉</GlossaryTerm>。它不是模型"坏了"，而是机制使然：模型在做概率续写，"我不知道"往往不是概率最高的续写，于是它"自信地填空"。
+
+## 二、三个核心概念（分层）
+
+### 基础：幻觉的根源与 grounding
+
+幻觉的根源是 [M7L1 的概率生成](./transformer-autoregression)——模型续写"最可能"而非"最真实"，且它把训练知识压缩在参数里、会记错或过时。最有效的对策是<GlossaryTerm term="Grounding" definition="接地/事实锚定：让模型基于提供的可信证据（检索到的文档、数据库结果）来回答，而不是凭参数里的记忆，并要求引用来源。能大幅降低幻觉。">grounding（事实锚定）</GlossaryTerm>：**不让模型凭记忆答，而是给它可信证据、要求它只根据证据回答并引用来源**。这正是 [RAG（Month 8）](../rag/overview) 的核心价值，也呼应 [M7L4 system prompt](./prompting-basics)（"只根据给定资料回答，资料里没有就说不知道"）。
+
+### 进阶：输出校验与护栏
+
+把 LLM 输出当**不可信输入**（[L3](../foundations/input-validation)、[M7L6](./structured-output-tools)）来防：
+- **校验**：[结构化输出 + schema 校验（M7L6）](./structured-output-tools)、数值范围检查、引用是否真实存在、答案是否能在证据里找到依据。
+- <GlossaryTerm term="Guardrails" definition="护栏：在 LLM 输入/输出两端加的检查和约束，过滤有害/越权/不合规/不符事实的内容，拦截或要求重新生成。是把不可靠模型用在生产的安全层。">护栏（guardrails）</GlossaryTerm>：在输入端（过滤恶意/越权请求、[防 prompt 注入 M7L4](./prompting-basics)）和输出端（过滤有害/敏感/不合规内容、检查是否符合证据）加检查，不合格就拦截或重新生成。
+
+### 深入（选学）：分层防护与"知道何时不能全自动"
+
+可靠的 LLM 系统是**多层防护**叠加：
+- **grounding（给证据）** → **结构化输出（限定格式）** → **校验（查格式/范围/引用/依据）** → **护栏（过滤有害/越权）** → **置信与兜底**。
+- <GlossaryTerm term="Confidence and Abstention" definition="置信与弃答：让系统在证据不足或不确定时选择“拒答/转人工”而非强行作答。承认“不知道”比自信地胡说更安全。">置信与弃答</GlossaryTerm>：宁可让系统说"我不确定/转人工"，也别让它自信地编。设计要允许"弃答"这条路。
+- <GlossaryTerm term="Human in the Loop" definition="人在回路：高风险决策中，AI 给出建议但由人最终确认/批准，而非全自动执行。用于医疗、金融、法律、删数据、对外发布等不可逆或高后果场景。">人在回路（HITL）</GlossaryTerm>：高风险/不可逆场景（医疗、金融、法律、删数据、对外发布），AI 给建议、**人做最终决定**（[呼应 M6L11 工业 AI、M7L6 危险工具](../cloud-enterprise-industrial/industrial-edge-realtime)）。
+- **关键认知**：架构师的核心判断是**这个场景能容忍多少错误**。容错高（草稿、灵感）可以全自动；容错低（事实问答、合规、钱）必须 grounding + 校验 + 人工兜底。把"LLM 不可靠"当设计前提，而不是寄望模型变完美。
+
+<ResearchNote
+  title="幻觉是固有的，可靠性靠工程分层防护"
+  source="Ji et al. (2023), Survey of Hallucination；Lewis et al. (2020), RAG；NeMo Guardrails / 各家安全实践"
+  href="https://arxiv.org/abs/2202.03629"
+  insight="幻觉源自 LLM“预测最可能 token”的本质，无法靠模型本身根除。综述与实践指出可靠性来自外部工程：grounding（基于检索证据回答并引用）显著降低幻觉；结构化输出 + 校验过滤不合格结果；护栏拦截有害/越权；高风险场景用置信弃答 + 人在回路。"
+  application="把幻觉当固有属性来设计：能给证据就 grounding（RAG）、要求引用、输出结构化并校验（格式/范围/引用/依据）、加输入输出护栏、允许弃答、高风险场景人在回路。按“场景容错度”决定自动化程度——别指望模型变完美。"
+/>
+
+## 三、跟我做一遍：grounding 校验（答案必须有据）
+
+<PyRunner
+  rows={34}
+  expect="无依据的回答被拦下"
+  code={`# grounding 校验：模型的回答里的“事实声明”必须能在给定证据里找到依据
+def check_grounded(answer_claims, evidence):
+    results = []
+    for claim in answer_claims:
+        # 简化：声明里的关键词是否出现在证据中（真实系统用语义匹配/NLI）
+        supported = any(kw in evidence for kw in claim["keywords"])
+        results.append({"claim": claim["text"], "grounded": supported})
+    return results
+
+def guard(answer_claims, evidence):
+    checks = check_grounded(answer_claims, evidence)
+    ungrounded = [c for c in checks if not c["grounded"]]
+    if ungrounded:
+        return {"action": "REJECT", "reason": "存在无依据声明", "bad": [c["claim"] for c in ungrounded]}
+    return {"action": "ACCEPT"}
+
+evidence = "订单 SO-1001 已于今日打包，预计明天发出，运费 12 元。"
+
+# 有据的回答 -> 通过
+good = [{"text": "明天发货", "keywords": ["明天", "发出"]},
+        {"text": "运费12元", "keywords": ["运费", "12"]}]
+print("有据回答:", guard(good, evidence))
+
+# 编造的回答（证据里没有“免运费”“后天”）-> 拦下
+bad = [{"text": "免运费", "keywords": ["免运费"]},
+       {"text": "后天到货", "keywords": ["后天"]}]
+print("编造回答:", guard(bad, evidence))
+print("无依据的回答被拦下")`}
+/>
+
+模型答案里的每条事实声明都要能在证据中找到依据，找不到（编造的"免运费""后天"）就拦下——这就是 grounding 护栏的核心。**试试**：给证据加上"免运费"，看原来被拦的声明变成通过；想想真实系统怎么用语义匹配（而非关键词）来判断"有没有依据"。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month07/m7l9_guardrails/`：
+
+```bash
+python labs/month07/m7l9_guardrails/test_guardrails.py
+```
+
+实现 grounding 校验 + 输出护栏：检查每条声明是否有证据支撑、过滤违禁词、无依据则拒绝或弃答。
+
+<GuidedExercise
+  title="练习指引：实现 grounding 护栏"
+  goal="把“答案必须有证据支撑 + 输出过滤”做成代码——把不可靠输出收口的关键一层。"
+  hints={[
+    'check_grounded：每条声明的关键词是否出现在证据里（简化的依据判断）。',
+    'guard：有任何无依据声明 -> REJECT；否则 ACCEPT。',
+    '加一个违禁词过滤（输出护栏）。',
+    '证据不足时应能“弃答”而非编造。'
+  ]}
+  steps={[
+    '实现 check_grounded(claims, evidence)。',
+    '实现 guard(claims, evidence)：无依据则拒绝。',
+    '加 forbidden 词过滤（命中则拦截）。',
+    '写测试：有据通过、编造被拦、违禁词被拦、空证据时弃答。'
+  ]}
+  checks={[
+    '你能解释幻觉的根源、为什么消除不了。',
+    '你的 lab 能拦下无证据支撑的回答。',
+    '你能列出分层防护（grounding/校验/护栏/弃答/HITL）。',
+    '你能按场景容错度决定自动化程度。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 可靠性手段的覆盖与代价
+
+<TradeoffExplorer
+  title="降低幻觉/提升可靠性的手段"
+  dimensions={['降幻觉效果', '实现成本', '延迟/成本开销', '通用性', '需人工']}
+  options={[
+    {
+      name: 'grounding（RAG + 引用）',
+      scores: [5, 3, 3, 5, 1],
+      note: '给证据、要引用、只据证据答。最有效的通用手段。需建检索（Month 8）。',
+      whenToUse: '事实性问答——几乎必做。'
+    },
+    {
+      name: '结构化输出 + 校验',
+      scores: [3, 4, 2, 5, 1],
+      note: '限定格式 + 查格式/范围/引用。拦下明显错误，但拦不住“看似合理”的错。',
+      whenToUse: '所有要被系统消费的输出。'
+    },
+    {
+      name: '人在回路（HITL）',
+      scores: [5, 2, 1, 3, 5],
+      note: 'AI 建议 + 人确认。最可靠，但慢、要人力，不能全自动。',
+      whenToUse: '高风险/不可逆场景（医疗/金融/法律/对外）。'
+    }
+  ]}
+/>
+
+### 2. AI 可靠性 = "把不可靠组件用可靠"的系统工程
+
+这是整个 AI 架构最核心的思维：**模型本质不可靠，可靠性来自包裹它的工程**。这其实和前六个月一脉相承——你用 [复制让不可靠的机器变可靠（M5L9）](../core-components/replication)、用 [熔断/降级让不可靠的依赖不拖垮系统（M5L6）](../core-components/circuit-breaker)、用 [校验让不可信的输入变安全（L3）](../foundations/input-validation)。现在对 LLM 是同一套思路：grounding、校验、护栏、弃答、人在回路，把一个会幻觉的概率组件，包裹成一个在可接受错误率内工作的可靠功能。**不要追求"让模型不犯错"，要设计"模型犯错时系统也安全"。**
+
+### 3. 真实案例：幻觉造成的真实事故
+
+业界有大量幻觉事故：客服 AI 编造不存在的退款政策（企业被迫承担）、法律 AI 引用了根本不存在的判例（提交法庭被罚）、代码助手编造不存在的库函数。共同点是**在低容错场景全自动信任了模型输出**。事后改进都指向同一套：grounding（基于真实政策/判例库）、输出校验（引用必须真实存在）、高风险加人工审核。这印证架构师的核心判断不是"模型够不够强"，而是"**这个场景能不能容忍模型偶尔胡说，不能的话我怎么兜底**"。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的功能属于高容错（草稿/灵感）还是低容错（事实/合规/钱）？据此该用什么级别的防护？
+- 你的回答能 grounding 吗（有可信证据源）？怎么校验"答案确实基于证据、引用真实存在"？
+- 最坏情况：模型在你的功能里自信地胡说且没被拦下，后果多严重？怎么加弃答/人工兜底？
+
+## 自检清单
+
+- [ ] 我能解释幻觉的根源、为什么消除不了只能控制。
+- [ ] 我的 lab 能拦下无证据支撑的回答 + 过滤违禁内容。
+- [ ] 我能列出分层防护（grounding/校验/护栏/弃答/HITL）。
+- [ ] 我能按场景容错度决定自动化程度和兜底方式。
+
+## 常见误解
+
+- **"幻觉是 bug，会被修复"**：它是概率生成的固有属性，只能工程控制，不能根除。
+- **"模型够强就不幻觉了"**：再强也会，低容错场景必须 grounding + 校验 + 兜底。
+- **"AI 输出可以直接信任"**：它是不可信输入，要校验、护栏，高风险要人在回路。
+
+## 延伸阅读
+
+- [Survey of Hallucination in NLG (2023)](https://arxiv.org/abs/2202.03629)
+- [Anthropic: Reducing hallucinations](https://docs.anthropic.com/en/docs/test-and-evaluate/strengthen-guardrails/reduce-hallucinations)
+- [下一课：LLM 评测](./llm-evaluation)

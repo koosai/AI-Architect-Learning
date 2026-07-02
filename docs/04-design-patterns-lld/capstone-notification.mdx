@@ -1,0 +1,201 @@
+---
+title: M4L12 - Capstone：可扩展通知系统
+description: 把这个月的原则和模式全用上——设计一个能加渠道、加规则、加格式且不改核心的通知系统。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M4L12 · Capstone：可扩展通知系统
+
+<ChapterMeta
+  time="约 3 小时"
+  prereqs={[{label: 'Month 4 全部', href: './overview'}]}
+  outcome="能综合运用 SOLID + 策略/工厂/观察者/装饰器，设计一个“加渠道/加规则/加格式都不改核心”的通知系统，并讲清每个模式解决的变化。"
+  howToUse="把它当一道完整 LLD 题：先想清楚“什么会变”，再为每个变化轴选模式，最后做 lab 实现。"
+/>
+
+:::tip 月末综合题：让“变化”自己对号入座到模式
+通知系统是检验本月所学的绝佳载体，因为它的每一处都会变：渠道会加（邮件→短信→push→飞书）、格式会变、触发事件会增、还要能给某些通知叠加“限流/重试/脱敏”。这一课你要做的，是**为每一种变化，选对一个模式**。
+:::
+
+## 一、需求：一个到处都会变的系统
+
+“做一个通知系统：当系统里发生某些事件（下单、告警、营销）时，按规则把消息通过合适的渠道发给用户。” 先识别**变化轴**（[M4L1](./change-driven-design)）：
+
+- 渠道会变/会加：email、SMS、push、webhook……
+- 触发通知的事件会增：下单、发货、风控告警、促销……
+- 每条通知可能要叠加横切处理：限流、重试、脱敏、加签名……
+- 消息格式/模板会变。
+
+每一条“会变”，都对应这个月的一个模式。
+
+## 二、为每个变化轴选模式
+
+### 基础：渠道 → 策略 + 工厂；事件 → 观察者
+
+- **渠道（怎么发）** = 一族可替换算法 → <GlossaryTerm term="Strategy Pattern" definition="策略模式：把“通过哪种渠道发送”封装成可替换的策略对象，统一 send 接口，加渠道不改核心。">策略</GlossaryTerm>（每个渠道一个 sender，统一 `send(msg)`），再用[工厂](./factory-pattern)按名字创建/选渠道。
+- **事件 → 谁该被通知** = 一对多、订阅者会增减 → <GlossaryTerm term="Observer Pattern" definition="观察者模式：事件发生时，发布者通知所有订阅了该事件的通知规则/接收者，发布者不认识具体订阅者，可随时增减。">观察者</GlossaryTerm>（事件总线，规则订阅事件）。
+
+### 进阶：横切处理 → 装饰器；创建 → 工厂
+
+- **限流/重试/脱敏/日志**这些[横切关注点](./adapter-decorator) = 不改原 sender 地叠加 → <GlossaryTerm term="Decorator Pattern" definition="装饰器模式：用同 send 接口的包装层给某个渠道叠加限流/重试/脱敏等能力，可层层组合，原 sender 不改。">装饰器</GlossaryTerm>（`RateLimited(Retrying(EmailSender()))`）。
+- **对接第三方 SDK**（各家 push 服务接口不一） → [适配器](./adapter-decorator)统一成 `send` 接口。
+
+### 深入（选学）：用 SOLID 把它们粘好
+
+整套设计的骨架是 SOLID：每个 sender [单一职责](./solid-srp-ocp)、核心 [依赖 sender 抽象](./solid-lsp-isp-dip)（DIP，便于测试时注入假渠道）、加渠道/规则[对扩展开放](./change-driven-design)。**关键提醒**：别因为“能用模式”就处处用——稳定的部分（消息数据结构、用户偏好）保持朴素（[YAGNI](./change-driven-design)）。Capstone 考的就是这种**判断力**：哪里该灵活、哪里该简单。
+
+<ResearchNote
+  title="组合多个模式构建可演进系统"
+  source="GoF, Design Patterns（模式协作）；Fowler, Patterns of Enterprise Application Architecture"
+  href="https://martinfowler.com/eaaCatalog/"
+  insight="真实系统很少只用一个模式，而是多个模式协作：策略管算法变化、工厂管创建、观察者管事件解耦、装饰器管横切增强，SOLID 提供粘合的总原则。理解它们如何配合，比单独会每个更重要。"
+  application="设计任何“到处会变”的系统（通知、支付、导出、风控），都可以这样拆：列出变化轴 → 每轴选一个模式 → 用 DIP/SRP 把它们组合 → 稳定处保持简单。这是把设计模式从“知识”变成“能力”的最后一步。"
+/>
+
+## 三、跟我做一遍：策略渠道 + 装饰器增强 + 事件订阅
+
+<PyRunner
+  rows={34}
+  expect="通知系统跑通"
+  code={`# --- 渠道：策略（统一 send 接口）---
+class EmailSender:
+    def send(self, msg): return "EMAIL: " + msg
+class SMSSender:
+    def send(self, msg): return "SMS: " + msg
+
+# --- 装饰器：给任意渠道叠加横切能力（同 send 接口）---
+class WithRetry:
+    def __init__(self, inner, times=2):
+        self.inner = inner; self.times = times
+    def send(self, msg):
+        return "[retry x%d] " % self.times + self.inner.send(msg)
+class WithMask:                      # 脱敏：把"密码"打码
+    def __init__(self, inner): self.inner = inner
+    def send(self, msg): return self.inner.send(msg.replace("密码", "***"))
+
+# --- 事件总线：观察者（事件 -> 订阅的渠道）---
+class NotificationCenter:
+    def __init__(self): self._subs = {}      # event -> [sender,...]
+    def subscribe(self, event, sender):
+        self._subs.setdefault(event, []).append(sender)
+    def emit(self, event, msg):
+        results = []
+        for s in self._subs.get(event, []):  # 通知所有订阅者，core 不认识具体渠道
+            results.append(s.send(msg))
+        return results
+
+center = NotificationCenter()
+# 下单事件：邮件(带重试) + 短信(脱敏)
+center.subscribe("order", WithRetry(EmailSender()))
+center.subscribe("order", WithMask(SMSSender()))
+for line in center.emit("order", "您的订单已创建，密码勿泄露"):
+    print(line)
+
+# 加一个“告警走短信”——core 一行不改（开闭 + 观察者 + 策略）
+center.subscribe("alert", SMSSender())
+print(center.emit("alert", "磁盘告警"))
+print("通知系统跑通")`}
+/>
+
+四个模式协作：**策略**让渠道可换、**装饰器**让重试/脱敏可叠加、**观察者**让事件与渠道解耦、整体靠 **DIP** 让 core 只认 `send` 抽象。加渠道、加事件、加横切能力，`NotificationCenter` 都不用改。**试试**：写一个 `WithRateLimit` 装饰器并叠加到邮件渠道；再加一个 `PushSender` 订阅 `order` 事件。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month04/m4l12_notification/`：
+
+```bash
+python labs/month04/m4l12_notification/test_notification.py
+```
+
+实现可扩展通知系统：策略渠道 + 可叠加装饰器 + 事件订阅，做到加渠道/规则/增强都不改核心。
+
+<GuidedExercise
+  title="练习指引：组合多个模式"
+  goal="把策略/装饰器/观察者/DIP 组合成一个“处处可扩展、核心不改”的通知系统。"
+  hints={[
+    '所有渠道统一 send(msg) 接口（策略 + DIP）。',
+    '装饰器同 send 接口、持有 inner、可叠加（重试/脱敏/限流）。',
+    'NotificationCenter 用事件->订阅者列表（观察者）。',
+    '加渠道/事件/装饰器都不应改 NotificationCenter（开闭）。'
+  ]}
+  steps={[
+    '实现 2 个渠道（Email/SMS），统一 send。',
+    '实现 2 个装饰器（WithRetry/WithMask），同接口可叠加。',
+    '实现 NotificationCenter：subscribe(event, sender)、emit(event, msg)。',
+    '写测试：订阅者都收到、装饰器生效且可叠加、加新渠道/事件不改 center。'
+  ]}
+  checks={[
+    '你能为每个变化轴说出用了哪个模式、解决什么。',
+    '你的渠道、装饰器都面向统一 send 接口。',
+    '你能加渠道/事件/增强而不改核心。',
+    '你在稳定处保持了简单（没有过度设计）。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 从“进程内通知”到“通知平台”
+
+<TradeoffExplorer
+  title="通知系统的演进阶段"
+  dimensions={['解耦/可扩展', '可靠性', '异步/抗峰', '复杂度', '适用规模']}
+  options={[
+    {
+      name: '直接调用各渠道',
+      scores: [1, 2, 1, 5, 1],
+      note: '业务里直接 send。简单但强耦合、加渠道改一片、同步阻塞。',
+      whenToUse: '原型/极小系统。'
+    },
+    {
+      name: '进程内模式组合（本课）',
+      scores: [4, 3, 2, 4, 3],
+      note: '策略+装饰器+观察者，解耦可扩展。但仍多为同步、单进程。',
+      whenToUse: '中小系统、单服务内的通知。'
+    },
+    {
+      name: '独立通知平台（队列驱动）',
+      scores: [5, 5, 5, 2, 5],
+      note: '事件进队列、消费者按渠道发、带重试/DLQ/限流/模板中心。可靠、异步、可独立扩展。',
+      whenToUse: '大规模、多业务线共用、要可靠异步时。'
+    }
+  ]}
+/>
+
+### 2. 同一套模式，换了基础设施就成了平台
+
+本课的进程内设计，放大到分布式就是真实的通知平台：观察者 → [消息队列](../data-cache-queue/message-queues)（事件入队、异步消费）；装饰器的限流/重试 → 消费侧的[可靠投递（ack/DLQ）](../data-cache-queue/message-queues)；策略渠道 → 渠道服务集群。**你这个月学的模式，就是大型系统的微缩骨架**——理解了进程内版本，分布式版本只是换了通信媒介。
+
+### 3. 本月能力检验
+
+做完这个 Capstone，你应该能：看一段烂代码说出它违反哪条原则、该用什么模式重构；面对一个新需求先识别变化轴再选模式；并且知道**什么时候不该用模式**。这套“从变化推导设计”的能力，正是从“会写代码”到“能做设计”的分水岭，也是后续 Month 5+ 架构课的地基。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 把本课通知系统改成“事件入队、异步消费”，哪些模式保留、哪些被基础设施取代？
+- 用户有“免打扰时段/渠道偏好/去重”需求，你会在哪一层、用什么模式实现？
+- 怎么保证“同一通知不重复发”（[回扣 L6 幂等](../foundations/idempotency)）？装饰器能做去重吗，代价是什么？
+
+## 自检清单
+
+- [ ] 我能为每个变化轴选对模式并说清理由。
+- [ ] 我的 Capstone 渠道/装饰器面向统一接口、可组合。
+- [ ] 我能加渠道/事件/增强而不改核心。
+- [ ] 我能讲清这套设计放大到分布式后的样子。
+
+## 常见误解
+
+- **“模式用得越多越好”**：只为真实变化轴用；稳定处保持简单才是高水平。
+- **“通知系统很简单”**：它的每一处都会变，是综合考验设计判断力的好题。
+- **“学完模式就够了”**：能从变化推导出模式、并知道何时不用，才算真正掌握。
+
+## 延伸阅读
+
+- [Patterns of Enterprise Application Architecture (Fowler)](https://martinfowler.com/eaaCatalog/)
+- [Month 4 总览](./overview)
+- [进入 Month 5：核心架构能力](../core-components/overview)

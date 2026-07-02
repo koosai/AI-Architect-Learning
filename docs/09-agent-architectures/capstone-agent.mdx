@@ -1,0 +1,201 @@
+---
+title: M9L12 - Capstone：构建一个可靠 Agent
+description: 把本月所学组装成一个生产级 Agent——受控 loop + 工具边界 + 停止预算 + 记忆 + 反思 + 护栏 + 轨迹评测，让自主循环可靠可控可评测。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M9L12 · Capstone：构建一个可靠 Agent
+
+<ChapterMeta
+  time="约 3.5 小时"
+  prereqs={[{label: 'Month 9 全部', href: './overview'}, {label: 'M7L12 LLM 管道', href: '../llm-systems/capstone-llm-app'}]}
+  outcome="能把本月所有 Agent 工程组装成一个可靠 Agent：受控 loop + 工具边界 + 停止/预算 + 记忆 + 反思 + 护栏 + 轨迹评测，并讲清每一环约束了什么风险。"
+  howToUse="把它当一道完整 Agent 设计题：先判断该不该用 Agent，再把本月组件组装成可靠可控的循环，用 lab 跑通。"
+/>
+
+:::tip 月末综合题：把一个会自主行动、可能失控的循环，装成一个能上生产的可靠系统
+本月你逐个学了 agent loop、工具边界、ReAct、停止预算、规划、记忆、反思、agentic 检索、护栏、评测。现在把它们**组装**成一个可靠 Agent。核心始终是那句话：**Agent 的智能在模型，可靠性在工程**——用受控循环、硬边界、约束、评测，把一个不确定、会自主行动的组件，框成一个可信、可控、可评测的生产系统。
+:::
+
+## 一、需求：一个“运维排查助手”Agent
+
+做一个帮 SRE 排查线上问题的 Agent：给定一个告警，它自主地查日志、查指标、查依赖状态，定位可能的根因、给出处置建议。这是个**适合用 Agent**的任务（[M9L11](./when-not-agent)）——因为“下一步查什么”取决于上一步的发现，步骤不可预先确定。但它也**高风险**——会接触生产系统、可能建议危险操作。正好考验本月全部能力。
+
+## 二、组装一个可靠 Agent
+
+### 基础：受控循环 + 工具边界
+
+- **agent loop（[M9L1](./agent-loop-basics)）**：observe（告警 + 已查到的）→ decide（[ReAct M9L3](./react-pattern)：想下一步查什么）→ act（调工具）→ observe，循环推进。
+- **工具边界（[M9L2](./tools-and-boundaries)）**：查日志/指标/状态是只读工具（自主调）；重启服务/改配置是[危险工具（M9L9 需人审批）](./agent-guardrails)。每个工具有 schema/权限/预算/审计。
+
+### 进阶：约束与能力
+
+- **停止/预算（[M9L4](./stopping-budget)）**：最大步数 + 循环检测 + 成本上限——防止反复查同一个、烧穿。
+- **记忆（[M9L6](./agent-memory)）**：scratchpad 记住告警、已查的、发现的——不重复查、不忘目标。
+- **反思（[M9L7](./reflection-correction)）**：某次查询无果/异常时，反思调整查询策略，而非无脑重复。
+- **护栏（[M9L9](./agent-guardrails)）**：处置建议里的危险操作（重启/回滚/删除）必须人审批；防注入（日志里的恶意内容不能劫持 Agent）。
+
+### 深入（选学）：评测、可观测与“先判断该不该用”
+
+- **轨迹评测（[M9L10](./agent-evaluation)）**：评估排查轨迹——是否定位到根因、用了几步、有没有违规查/越权、有没有空转。建评测集（历史故障）跑回归。
+- **可观测**：全程 trace（每步查了什么、发现什么、建议什么），出问题能复盘（[呼应 M6L7](../cloud-enterprise-industrial/observability-advanced)）。
+- **它就是 M7 可靠管道 + 自主循环**：[M7L12 的单次可靠管道](../llm-systems/capstone-llm-app) 处理“一次调用”，Agent 是把它放进**受控循环**并加上工具/记忆/反思/护栏——每一环都在约束自主性的风险。整条 Agent = LLM 决策大脑 + 一圈工程约束。
+- **先判断该不该用（[M9L11](./when-not-agent)）**：设计任何 Agent 前，先确认这任务真需要自主决策（排查确实需要——边查边定）。如果步骤固定，就别做成 Agent。
+
+<ResearchNote
+  title="可靠 Agent = LLM 决策 + 一整套工程约束"
+  source="Anthropic, Building effective agents；本月各环节综合；M7L12 可靠管道"
+  href="https://www.anthropic.com/research/building-effective-agents"
+  insight="可靠的 Agent 不是让模型自由发挥，而是把 LLM 决策放进一个受控循环：工具边界（schema/权限/预算/审计）+ 停止条件（步数/循环/预算）+ 记忆（scratchpad）+ 反思（自我纠错）+ 护栏（危险动作人审批/防注入/沙箱）+ 轨迹评测 + 可观测。每一环约束自主性的一类风险。先判断任务是否真需要 Agent，再组装这些约束。"
+  application="设计 Agent：先确认需自主决策（否则用 workflow）；搭受控 loop + ReAct；工具按只读/副作用分级设边界；配停止/预算/循环检测；用 scratchpad 记忆、反思纠错；危险动作人审批 + 防注入 + 沙箱；全程 trace + 轨迹评测 + 线上观测。智能在模型，可靠性在这一圈工程。"
+/>
+
+## 三、跟我做一遍：可靠 Agent 骨架
+
+<PyRunner
+  rows={42}
+  expect="自主排查、危险动作需审批、有据停止"
+  code={`SAFE = {"query_logs", "query_metrics", "check_dependency"}         # 只读工具
+DANGER = {"restart_service", "rollback"}                           # 危险工具(需审批)
+
+def run_agent(alert, policy, tools, max_steps=8, budget=6):
+    pad = {"alert": alert, "done": [], "findings": []}             # 记忆 scratchpad
+    trace = []; spent = 0
+    for _ in range(max_steps):
+        if spent >= budget:                                        # 停止:预算
+            return ("STOP_BUDGET", trace, pad)
+        d = policy(pad)
+        if d["action"] == "conclude":
+            trace.append(("conclude", d["arg"]))
+            return ("DONE", trace, pad)
+        action = d["action"]
+        if action in DANGER and not d.get("approved"):             # 护栏:危险动作需审批
+            trace.append((action, "NEEDS_APPROVAL"))
+            return ("NEEDS_APPROVAL", trace, pad)
+        if action in pad["done"]:                                  # 记忆:不重复查
+            trace.append((action, "SKIP_DONE"))
+            continue
+        result = tools[action](alert)                              # 执行(只读)
+        pad["done"].append(action); pad["findings"].append((action, result))
+        trace.append((action, result)); spent += 1
+    return ("STOP_MAXSTEPS", trace, pad)
+
+tools = {"query_logs": lambda a: "大量超时", "query_metrics": lambda a: "DB CPU 95%",
+         "check_dependency": lambda a: "DB 健康度差",
+         "restart_service": lambda a: "已重启", "rollback": lambda a: "已回滚"}
+
+def policy(pad):
+    done = pad["done"]
+    if "query_logs" not in done: return {"action": "query_logs"}
+    if "query_metrics" not in done: return {"action": "query_metrics"}
+    if "check_dependency" not in done: return {"action": "check_dependency"}
+    return {"action": "restart_service"}                           # 危险 -> 触发审批
+
+status, trace, pad = run_agent("API 5xx 升高", policy, tools)
+for t in trace: print("  ", t)
+print("状态:", status, "(restart 危险动作被拦去审批)")
+print("自主排查、危险动作需审批、有据停止")`}
+/>
+
+Agent 自主查日志/指标/依赖（只读，自主执行）、记住已查的不重复、定位到 DB 问题，但当它想重启服务（危险）时被护栏拦下、转人工审批——自主但有硬边界，全程有 trace 和停止兜底。**试试**：给 restart 加 `approved=True`（模拟人批准后），看它能执行；让 policy 永远查同一个，看记忆防重复 + max_steps 兜底。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month09/m9l12_agent/`：
+
+```bash
+python labs/month09/m9l12_agent/test_agent.py
+```
+
+组装可靠 Agent：受控 loop + 只读自主/危险审批 + 停止预算 + 记忆防重复 + 轨迹记录，验证自主排查、危险动作拦审批、有据停止。
+
+<GuidedExercise
+  title="练习指引：组装可靠 Agent"
+  goal="把本月全部组件串成一个可靠 Agent：自主但受控、有边界、能停、可评测。"
+  hints={[
+    'loop：预算检查 → policy 决策 → conclude/危险审批/重复跳过/执行。',
+    '危险动作(DANGER 且未 approved) -> NEEDS_APPROVAL 暂停。',
+    '记忆 pad["done"] 防重复查；findings 记发现。',
+    '每步记 trace；max_steps + budget 兜底。'
+  ]}
+  steps={[
+    '实现 run_agent(alert, policy, tools, max_steps, budget)。',
+    '处理 conclude / 危险审批 / 重复跳过 / 执行只读 四类。',
+    '维护 scratchpad（done/findings）和 trace、预算计数。',
+    '写测试：自主完成只读排查、危险动作需审批、重复查被跳过、预算/步数兜底、trace 记录。'
+  ]}
+  checks={[
+    '你能把本月组件组装成一个受控 Agent。',
+    '你的 lab 自主但危险动作必经审批、能停、有 trace。',
+    '你能说出每一环约束了哪类风险。',
+    '你能先判断"该不该用 Agent"再设计。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. Agent 成熟度
+
+<TradeoffExplorer
+  title="Agent 工程成熟度"
+  dimensions={['任务能力', '可控/安全', '可评测/可观测', '成本可控', '建设成本']}
+  options={[
+    {
+      name: '裸 loop(让模型自由发挥)',
+      scores: [3, 1, 1, 1, 5],
+      note: '一个 loop + 工具。demo 惊艳，但会失控/闯祸/烧穿/难评测。',
+      whenToUse: '原型探索。'
+    },
+    {
+      name: '+ 边界/停止/护栏',
+      scores: [4, 4, 2, 3, 3],
+      note: '工具边界 + 停止预算 + 危险动作审批。可控安全大幅提升。',
+      whenToUse: '生产 Agent 的基线。'
+    },
+    {
+      name: '全套(+记忆/反思/评测/观测)',
+      scores: [5, 5, 5, 4, 1],
+      note: '再加记忆/反思/轨迹评测/可观测。可靠、可改进、可运维。建设成本高。',
+      whenToUse: '关键/高价值的生产 Agent。'
+    }
+  ]}
+/>
+
+### 2. 这个 Capstone 是整个 AI 架构能力的集大成
+
+回看你走过的路：[M7 把模型变成可靠组件](../llm-systems/capstone-llm-app) → [M8 给它接上知识（RAG）](../rag/capstone-rag) → M9 让它能自主行动（Agent）。可靠 Agent 把前三个月全用上了：[M7 的可靠管道](../llm-systems/capstone-llm-app)（grounding/校验/缓存/降级/评测）是 Agent 每步决策的基础、[M8 的 RAG](../rag/overview) 是 Agent 的知识工具（[agentic 检索 M9L8](./agentic-retrieval)）、M9 的循环约束让自主行动可控。而贯穿全部的，是从 Month 1 就开始的工程纪律：**校验不可信输入、隔离爆炸半径、容错恢复、可观测、可评测、按需选最简方案、对危险操作最小信任**——这些"传统"系统工程原则，在 AI 系统、尤其 Agent 上不仅没过时，反而更重要。**这正是 "AI Architect" 区别于 "会调 AI API 的人" 的根本**：你能把最强大也最危险的 AI 形态，用扎实的系统工程驯服成可靠的生产系统。
+
+### 3. 真实案例：能上生产的 Agent 长什么样
+
+对比"惊艳 demo Agent"和"生产 Agent"：demo 是一个裸 loop 让模型自由发挥，看着能自主完成复杂任务；生产 Agent 是这个 loop 外面包了一整圈工程——工具最小权限、危险动作人审批、停止条件和预算、记忆和反思、防注入和沙箱、全程 trace 和轨迹评测、线上监控和告警。后者"看起来"没前者酷（因为加了很多约束），但它**能被信任、能上线、能持续改进**。能造出后者的团队，靠的不是更强的模型，而是本月（和整个课程）的工程能力。这是 Agent 时代对架构师的终极考验：**不是让 Agent 更自主，而是让自主的 Agent 可靠**——给它自由，但给自由设好每一道边界。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 给你想做的 Agent，先判断：它真需要自主决策吗（还是该 workflow）？如果需要，画出它的完整约束圈。
+- 每一道约束（工具边界/停止/护栏/记忆/反思/评测）你都设计了吗？哪一环现在是缺的？
+- 最坏情况：模型决策错 + 被注入 + 陷入循环同时发生，你的 Agent 会造成多大损失？每一种你都框住了吗？
+
+## 自检清单
+
+- [ ] 我能把本月组件组装成一个受控、可靠的 Agent。
+- [ ] 我的 lab 自主但危险动作必经审批、能停、有完整 trace。
+- [ ] 我能说出每一道约束（边界/停止/护栏/记忆/反思/评测）防的是什么。
+- [ ] 我能先判断该不该用 Agent，再设计它的约束圈。
+
+## 常见误解
+
+- **"做 Agent 就是写个 loop 让模型跑"**：那是 demo；生产 Agent 是 loop + 一整圈工程约束。
+- **"Agent 越自主越强"**：自主性越高越危险；可靠性来自约束，不是放任。
+- **"Agent 是全新技术栈"**：它是前三个月 AI 工程 + 前六个月系统工程的集大成。
+
+## 延伸阅读
+
+- [Anthropic: Building effective agents](https://www.anthropic.com/research/building-effective-agents)
+- [Month 9 总览](./overview)
+- [进入 Month 10：Multi-Agent 与协议](../multi-agent-protocols/overview)

@@ -1,0 +1,191 @@
+---
+title: M10L11 - 多 Agent 评估与安全
+description: 怎么评一个多 Agent 系统好不好？出错了怪谁？多个自主 Agent 放大了哪些安全风险？评估要看整体结果+归因到步、安全要防级联与失控。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M10L11 · 多 Agent 评估与安全
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M9L10 Agent 评估', href: '../agent-architectures/agent-evaluation'}, {label: 'M9L9 Agent 护栏', href: '../agent-architectures/agent-guardrails'}, {label: 'M10L10 运维/追踪', href: './multi-agent-ops'}]}
+  outcome="能对多 Agent 系统做端到端评估 + 分步归因，理解多个自主 Agent 放大的安全风险（级联、权限扩散、失控、责任不清），并用护栏和人类监督把它们约束住。"
+  howToUse="先看“系统答错了但不知道怪谁”，再学评估与安全，最后做归因+安全闸 lab。"
+/>
+
+:::tip 多 Agent 系统最难回答的两个问题：它到底好不好？它安全吗？
+你搭了个多 Agent 系统，老板问两件事：(1) 它比单 Agent 好吗、好在哪、值不值这份成本？(2) 它安全吗——多个能自主行动的 Agent 会不会闯祸？这两个问题都比单 Agent 难：评估要既看**整体结果**又能**归因到是哪个 Agent 拖了后腿**；安全要防**多 Agent 特有的放大风险**——一个 Agent 的错误/越权会沿链路级联，多个自主体让失控面更大。评估说清价值、安全守住底线，多 Agent 才敢上生产。
+:::
+
+## 一、系统答错了，但不知道该改哪个 Agent
+
+多 Agent 的评估和安全，都比单 Agent 棘手：
+- **评估归因难**：端到端结果差，但问题出在哪个 Agent？是 researcher 检索差、analyst 分析错、还是 writer 表达糟？不归因就不知道改哪（[呼应 M8L9 RAG 先分清检索还是生成失败](../rag/rag-evaluation)）。
+- **值不值说不清**：多 Agent 比单 Agent 贵好几倍，到底换来了多少质量提升？不量化就是凭感觉烧钱（[呼应 M10L1 克制](./why-multi-agent)）。
+- **安全面放大**：多个能调工具、能自主决策的 Agent——一个被注入/越权/出错，会不会连锁污染、误操作、失控？责任又算谁的？
+
+评估要**端到端 + 分步归因**，安全要**认清并约束多 Agent 特有的放大风险**。
+
+## 二、三个核心概念（分层）
+
+### 基础：端到端评估 + 分步归因
+
+多 Agent 评估要两个层次：<GlossaryTerm term="End-to-End Evaluation" definition="端到端评估：把整个多 Agent 系统当黑盒，只看最终交付给用户的结果好不好（正确性、质量、成本、延迟）。衡量系统整体价值，是判断‘多 Agent 值不值’的依据。">端到端评估</GlossaryTerm>（整个系统的最终结果好不好、值不值这份成本）+ <GlossaryTerm term="Per-Agent Attribution" definition="分步归因：当端到端结果不好时，借助追踪把问题定位到具体是哪个 Agent、哪一步导致的，从而知道该改进谁。区别于只看整体黑盒。">分步归因</GlossaryTerm>（问题出在哪个 Agent、哪一步）。前者判断"多 Agent 整体值不值"，后者靠 [M10L10 的追踪](./multi-agent-ops) 定位"该改进谁"。这和 [M9L10 Agent 评估分步看](../agent-architectures/agent-evaluation)、[M8L9 RAG 先分清检索还是生成失败](../rag/rag-evaluation) 是同一方法论：**端到端看价值、分层看病灶**。缺了分步归因，端到端差你只能瞎改。
+
+### 进阶：多 Agent 特有的安全风险
+
+多个自主 Agent 放大了单 Agent 就有的风险：
+- **错误/攻击级联**：一个 Agent 被[提示注入（M9L9）](../agent-architectures/agent-guardrails) 或出错，其输出被下游当可信输入，污染/操纵沿链路放大（[呼应 M10L4 隔离、M10L10 传染](./communication-state)）。
+- **权限扩散**：多个 Agent 各有工具权限，合起来的攻击面/误操作面远大于单 Agent——一个越权 Agent 可能触发连锁误操作（[呼应 M10L2 最小权限](./roles-specialization)）。
+- <GlossaryTerm term="Loss of Control (Multi-Agent)" definition="多 Agent 失控：多个能自主决策、调工具、相互触发的 Agent 组成的系统，行为更难预测和约束，可能进入无人预期的状态或连锁行动，比单 Agent 更难保证‘不做坏事’。">失控风险</GlossaryTerm>：多个能自主行动、相互触发的 Agent，整体行为更难预测，可能进入没人预期的连锁状态。
+
+### 深入（选学）：约束多 Agent 的安全底线
+
+- **系统级护栏，不只 Agent 级**：单个 Agent 有[护栏（M9L9）](../agent-architectures/agent-guardrails) 不够，多 Agent 要**系统级**的闸：全局的危险操作审批、整个系统的行为边界、跨 Agent 的输出校验（[呼应 M10L10 错误隔离](./multi-agent-ops)）。
+- **人类监督是自主性的安全阀**：Agent 越自主、越多、能干的事越危险，越需要[人类监督（human-in-the-loop）](../agent-architectures/agent-guardrails)——高风险/不可逆操作（转账、删数据、对外发布、执行代码）必须有人确认，别让多 Agent 全自动闯祸。**自主性和监督是一对权衡**：越高风险越要把人留在环里。
+- **责任与可审计**：多 Agent 出了事故，要能追责——靠 [M10L10 的完整追踪](./multi-agent-ops) 还原"哪个 Agent 在什么依据下做了什么决策"。可审计不仅是运维需要，更是[合规和信任（M11 治理）](../production-ai-platform/overview) 的基础。责任不清的自主系统不能上生产。
+- **克制本身是安全策略**：多一个自主 Agent = 多一份失控/攻击/误操作风险。所以[能不用多 Agent 就不用、能少一个 Agent 就少一个（M10L1）](./why-multi-agent) 不只是省成本，**更是缩小攻击面、降低失控概率的安全决策**。最安全的 Agent 是没有被引入的那个——克制在安全语境下有了更重的分量。
+- **评估要含安全维度**：多 Agent 评估不能只评"答得好不好"，还要评"安不安全"——有没有被注入、有没有越权、有没有该拦没拦。安全是评估的一等维度，不是事后补丁（[呼应 M7L9 容错度、M11 风险治理](../production-ai-platform/overview)）。
+
+<ResearchNote
+  title="多 Agent 评估与安全：端到端+分步归因；自主性放大风险需系统级约束"
+  source="Agent 评估方法（M9L10）；AI 安全 / human-in-the-loop；M9L9 护栏、M11 风险治理"
+  href="https://www.anthropic.com/research/building-effective-agents"
+  insight="多 Agent 评估要端到端(看整体价值/值不值)+分步归因(靠追踪定位该改哪个 Agent)。安全上,多个自主 Agent 放大风险:错误/注入级联、权限扩散(合并攻击面)、失控(连锁自主行为)、责任不清。约束靠系统级护栏(不只 Agent 级)、人类监督(高风险/不可逆操作留人在环)、完整追踪保可审计追责。克制(能不用就不用多 Agent)本身是缩小攻击面的安全策略。评估须含安全维度。"
+  application="评多 Agent:端到端看值不值 + 分步归因看改谁 + 安全维度(注入/越权/该拦没拦)。安全:系统级闸+跨 Agent 输出校验、高风险不可逆操作 human-in-the-loop、完整追踪保追责与合规。把克制当安全决策——每多一个自主 Agent 多一份失控/攻击面。责任不清的自主系统别上生产。"
+/>
+
+## 三、跟我做一遍：分步归因 + 系统级安全闸
+
+<PyRunner
+  rows={44}
+  expect="归因到病灶 Agent、危险操作拦下"
+  code={`# 端到端评估 + 分步归因:定位是哪个 Agent 拖后腿
+def evaluate(run_steps, gold):
+    end_to_end_ok = run_steps[-1]["output"] == gold
+    culprits = [s["agent"] for s in run_steps if not s["step_ok"]]  # 归因
+    return {"end_to_end_ok": end_to_end_ok, "culprits": culprits}
+
+run = [
+    {"agent": "researcher", "output": "facts", "step_ok": True},
+    {"agent": "analyst",    "output": "wrong", "step_ok": False},  # 病灶在这
+    {"agent": "writer",     "output": "bad_report", "step_ok": True},
+]
+print(evaluate(run, gold="good_report"))  # 端到端失败,归因到 analyst
+
+# 系统级安全闸:高风险/不可逆操作必须人类审批(human-in-the-loop)
+DANGEROUS = {"transfer_money", "delete_data", "publish", "run_code"}
+
+def safety_gate(agent, action, human_approved=False):
+    if action in DANGEROUS and not human_approved:
+        return "BLOCKED: 高风险操作需人类审批"      # 自主性的安全阀
+    return "ALLOWED: " + agent + " -> " + action
+
+print(safety_gate("agentA", "read_docs"))                 # 低风险,放行
+print(safety_gate("agentB", "transfer_money"))            # 危险,拦下
+print(safety_gate("agentB", "transfer_money", human_approved=True))  # 人批了
+print("归因到病灶 Agent、危险操作拦下")`}
+/>
+
+评估既判端到端成败、又归因到具体是 analyst 这一步坏的（知道改谁）；系统级安全闸拦下所有高风险/不可逆操作、要求人类审批——这是自主性的安全阀。**试试**：把危险操作集合改一改，或加一个"金额超过阈值才需审批"的分级；想想为什么归因比只看端到端重要（否则你不知道该改哪个 Agent）。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month10/m10l11_eval_safety/`：
+
+```bash
+python labs/month10/m10l11_eval_safety/test_eval_safety.py
+```
+
+实现：端到端评估 + 分步归因、系统级安全闸（高风险操作 human-in-the-loop）、安全评估维度。
+
+<GuidedExercise
+  title="练习指引：实现归因评估 + 安全闸"
+  goal="把‘端到端+分步归因’和‘系统级安全闸+人类监督’做成代码——多 Agent 上生产的两道关。"
+  hints={[
+    'evaluate: end_to_end_ok(最终结果) + culprits(step_ok=False 的 Agent)。',
+    'safety_gate: 高风险/不可逆操作集合,未经人批 -> BLOCKED。',
+    '安全是评估维度:也统计‘该拦没拦’。',
+    '克制:少一个自主 Agent = 少一份攻击面。'
+  ]}
+  steps={[
+    '实现 evaluate(端到端 + 分步归因)。',
+    '实现 safety_gate(危险操作需 human_approved)。',
+    '(可选)加分级审批(如金额阈值)。',
+    '写测试:归因定位病灶、危险操作被拦、人批后放行、安全维度被评估。'
+  ]}
+  checks={[
+    '你能解释多 Agent 评估为什么要端到端+分步归因。',
+    '你的 lab 能归因病灶并拦下高风险操作。',
+    '你能说出多 Agent 放大的安全风险(级联/权限扩散/失控/责任)。',
+    '你理解克制和人类监督为什么是安全策略。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 自主性 vs 监督
+
+<TradeoffExplorer
+  title="多 Agent 的自主性与安全监督水平"
+  dimensions={['自动化程度', '安全可控', '闯祸风险低', '响应快', '适合高风险场景']}
+  options={[
+    {
+      name: '全自主(无监督)',
+      scores: [5, 1, 1, 5, 1],
+      note: 'Agent 全自动执行含高风险操作。最省人力最快。但失控/误操作/被攻击后果严重。',
+      whenToUse: '低风险、可逆、影响小的操作。'
+    },
+    {
+      name: '高风险留人在环',
+      scores: [4, 4, 4, 3, 4],
+      note: '低风险自动、高风险/不可逆操作需人批。平衡自动化与安全。多数生产选择。',
+      whenToUse: '含敏感操作的生产多 Agent。'
+    },
+    {
+      name: '全程人工审批',
+      scores: [1, 5, 5, 1, 5],
+      note: '每步都要人确认。最安全。但基本没自动化价值、慢。',
+      whenToUse: '极高风险、合规强约束场景。'
+    }
+  ]}
+/>
+
+### 2. 多 Agent 安全 = 传统安全原则 × 放大的攻击面
+
+多 Agent 的安全没有推翻任何传统安全原则，反而是把它们的重要性放大了：[最小权限（M10L2）](./roles-specialization) 因为多个 Agent 合并攻击面而更关键；[输入不可信、要校验（M9L9/M10L4）](../agent-architectures/agent-guardrails) 因为一个 Agent 的输出是另一个的输入而更关键；[故障隔离（M10L10）](./multi-agent-ops) 因为错误会级联而更关键；[纵深防御] 因为单点护栏挡不住多路径而更关键。换句话说，**你在传统系统安全里学的每一条，在多 Agent 里都因为"更多自主体、更长链路、更大攻击面"而权重更高**。同时多 Agent 引入了传统系统没有的新维度：Agent 会**自主决策和行动**——它不只是被动处理数据，还能主动调工具、触发操作、影响其他 Agent。这让"限制它能做什么"（而不只是"限制它能看什么"）成为安全设计的核心。架构师的安全思维要从"保护数据"扩展到"约束自主行为"：这个 Agent 能触发哪些真实世界的操作？最坏能造成什么后果？哪些必须留人在环？**给自主性画边界，是 AI 安全时代架构师的新必修课。**
+
+### 3. 真实案例：多 Agent 上生产前的评估与安全清单
+
+一个负责任的团队让多 Agent 系统上生产前，会过两张清单。**评估清单**：(1) 端到端质量比单 Agent 提升了多少、用可量化指标（[M9L10](../agent-architectures/agent-evaluation)）；(2) 成本/延迟增加了多少、提升值不值这个代价（[M10L1](./why-multi-agent)）；(3) 分步归因能定位问题吗、还是黑盒；(4) 评估集里含不含安全/对抗案例。**安全清单**：(1) 每个 Agent 是最小权限吗；(2) 高风险/不可逆操作有 human-in-the-loop 吗；(3) 跨 Agent 输出有校验、错误能隔离吗；(4) 全链路可追踪、可追责吗；(5) 有没有系统级的危险操作审批和行为边界；(6) 最根本的——**这些 Agent 真的都需要吗，能不能砍掉一个以缩小风险面**。这两张清单背后是同一个判断标准：**多 Agent 的强大能不能被稳定、安全、可负担、可追责地交付**。答不好这些问题的多 Agent，技术上再炫也不该上生产——因为它的风险是真实的、后果是要人承担的。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的多 Agent 评估能归因到具体 Agent 吗？还是只有一个端到端分数、坏了不知道改谁？
+- 你的高风险/不可逆操作有 human-in-the-loop 吗？多个 Agent 合起来的攻击面你评估过吗？
+- 你能砍掉一个 Agent 来缩小风险面吗？出了事故你能追责到"哪个 Agent 在什么依据下做了什么"吗？
+
+## 自检清单
+
+- [ ] 我能对多 Agent 做端到端评估 + 分步归因（知道值不值、该改谁）。
+- [ ] 我能说出多 Agent 放大的安全风险（级联/权限扩散/失控/责任不清）。
+- [ ] 我的 lab 能归因病灶、拦下高风险操作、把安全当评估维度。
+- [ ] 我理解克制和人类监督是安全策略，给自主性画边界是新必修课。
+
+## 常见误解
+
+- **"多 Agent 评估看个总分就行"**：要分步归因，否则坏了不知道改哪个 Agent。
+- **"每个 Agent 有护栏就安全了"**：要系统级闸 + 人类监督，多 Agent 风险会级联放大。
+- **"安全是上线后再加的"**：安全是评估的一等维度、克制是安全策略，必须前置。
+
+## 延伸阅读
+
+- [M9L9 Agent 护栏](../agent-architectures/agent-guardrails) · [M9L10 Agent 评估](../agent-architectures/agent-evaluation)
+- [M11 评估与风险治理](../production-ai-platform/overview)
+- [下一课：多 Agent 综合实战](./capstone-multi-agent)

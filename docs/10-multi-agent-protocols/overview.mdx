@@ -1,0 +1,73 @@
+---
+title: Month 10 总览 - Multi-Agent 与协议
+description: 多个 Agent 怎么协作完成一个 Agent 搞不定的任务——角色分工、Supervisor 编排、通信状态、辩论评审、路由、冲突、MCP/A2A 协议，以及“何时根本不该多 Agent”。
+slug: /multi-agent-protocols/overview
+---
+
+import ChapterMeta from '@site/src/components/ChapterMeta';
+
+# Month 10 · Multi-Agent 与协议（模块总览）
+
+<ChapterMeta
+  time="整月约 28–34 小时（12 节课）"
+  prereqs={[{label: '完成 Month 9 Agent', href: '/agent-architectures/overview'}, {label: 'M9L11 何时不该用 Agent', href: '/agent-architectures/when-not-agent'}, {label: 'M2L10 通信解耦', href: '/system-design-bridge/communication-decoupling'}]}
+  outcome="能判断一个任务该不该用多 Agent，并设计可靠的多 Agent 系统：角色分工、Supervisor 编排、结构化通信、辩论评审、路由、冲突处理、协议互操作——而不是“让一堆 Agent 随便聊天”。"
+  howToUse="按周学。第一周搭多 Agent 的基础结构（角色/编排/通信），第二周学协作模式（并行/辩论/路由/冲突），第三周协议、成本可观测与综合。"
+/>
+
+:::tip 多 Agent 不是“更多 Agent = 更强”，而是“多个专精角色协作 > 一个全能 Agent”——但成本和混乱也翻倍
+[Month 9](../agent-architectures/overview) 你会做一个可靠的单 Agent。这个月引入多个 Agent 协作：一个查资料、一个写方案、一个审风险、一个汇总。当任务**天然有多个角色、多个工具边界、多个知识域、或需要互相审查**时，多 Agent 能带来分工和专业化的价值。但它也让一切**翻倍复杂**——协调成本、通信混乱、成本爆炸、错误传播、难以追踪和停止。所以本月的第一课和最后的判断永远是：**这真的需要多 Agent 吗？**
+:::
+
+## 为什么多 Agent 既诱人又危险
+
+单 Agent（[Month 9](../agent-architectures/overview)）已经能处理很复杂的任务。多 Agent 在它之上引入"分工协作"：
+
+- **专业化**：每个 Agent 专注一个角色（研究/写作/审查），各有自己的[工具和权限（M9L2）](../agent-architectures/tools-and-boundaries)，比一个"什么都会一点"的 Agent 更专精。
+- **关注点分离**：复杂任务拆给不同角色（[呼应 M4 SRP](../design-patterns-lld/solid-srp-ocp)），每个角色的逻辑更清晰。
+- **互相审查**：一个 Agent 提方案、另一个挑毛病（辩论/评审），能提升质量、抓出错误。
+
+但代价是**复杂度翻倍甚至指数级**：
+- **协调成本**：谁分配任务、谁汇总、谁拍板、谁能停？
+- **通信混乱**：Agent 之间怎么传信息？共享状态怎么不被污染？
+- **成本爆炸**：N 个 Agent、每个多步、互相来回——token 成本可能是单 Agent 的几十倍。
+- **错误传播**：一个 Agent 出错，会不会污染整个协作链？
+- **更难追踪/评测/停止**：[单 Agent 已经难评测（M9L10）](../agent-architectures/agent-evaluation)，多 Agent 难上加难。
+
+所以本月的核心和 [M9L11](../agent-architectures/when-not-agent) 一脉相承：**多 Agent 是为少数真正需要协作的任务保留的高级选项，不是默认形态。** 学会设计它，更要学会判断"什么时候根本不该用它"。
+
+## 本月课程地图
+
+### Week 1 · 多 Agent 基础
+| # | 课 | 你会学到 |
+|---|---|---|
+| M10L1 | [何时用多 Agent](./why-multi-agent) | 单 vs 多 Agent、什么时候才值 |
+| M10L2 | [角色与专业分工](./roles-specialization) | 专精角色、工具/权限分离 |
+| M10L3 | [Supervisor 编排](./supervisor-orchestration) | 主控分配、收集、决策 |
+| M10L4 | [通信与共享状态](./communication-state) | 消息传递、黑板、防状态污染 |
+
+### Week 2 · 协作模式
+| # | 课 | 你会学到 |
+|---|---|---|
+| M10L5 | [顺序与并行编排](./sequential-parallel) | 流水线 vs 并行、扇出聚合 |
+| M10L6 | [辩论与评审](./debate-review) | 提议者/批评者、交叉审查 |
+| M10L7 | [交接与路由](./handoff-routing) | swarm 交接、路由 Agent |
+| M10L8 | [冲突与一致性](./conflict-consensus) | 冲突输出、投票、仲裁 |
+
+### Week 3 · 协议与生产
+| # | 课 | 你会学到 |
+|---|---|---|
+| M10L9 | [Agent 通信协议](./agent-protocols) | MCP、A2A、为什么要标准化 |
+| M10L10 | [多 Agent 的成本与可观测](./multi-agent-ops) | 成本爆炸、跨 Agent 追踪、错误传播 |
+| M10L11 | [多 Agent 评测与安全](./multi-agent-eval-safety) | 系统级评测、错误传播控制、安全 |
+| M10L12 | [Capstone：构建多 Agent 系统](./capstone-multi-agent) | 组装可靠的协作系统 |
+
+## 月末产出
+
+一套"多 Agent 工程"的可跑实现（单/多 Agent 决策、按角色分离权限、Supervisor 编排、结构化黑板通信、并行扇出聚合、提议-批评循环、路由 Agent、冲突投票仲裁、能力发现协议、跨 Agent 成本聚合与全局停止），以及"给定一个任务，能判断该不该用多 Agent、并设计出一个可靠可控可评测的协作系统"的能力。
+
+## 学习建议
+
+- 牢记主线：**多 Agent 的价值是"专精分工 + 互相审查"，代价是"协调 + 成本 + 混乱"翻倍**。每个协作模式都问：它带来的价值值不值它的复杂度？
+- 把前面的工程全用上：每个 Agent 仍要 [Month 9 的全套约束](../agent-architectures/capstone-agent)（工具边界/停止/护栏/评测）、通信要 [M2L10 解耦思想](../system-design-bridge/communication-decoupling)、协调要防[错误传播（M5 故障隔离）](../core-components/bulkhead-isolation)。
+- 始终保持 [M9L11 的克制](../agent-architectures/when-not-agent)：能用单 Agent + workflow 的，就别上多 Agent——多 Agent 是这个克制原则的终极考验。

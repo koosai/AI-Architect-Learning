@@ -1,0 +1,147 @@
+.explorerCard {
+  background: var(--comp-bg);
+  border: 1px solid var(--comp-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0 2rem 0;
+  box-shadow: var(--comp-shadow);
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+  color: var(--comp-text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .layout {
+    flex-direction: row;
+  }
+}
+
+.optionsPane {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.detailsPane {
+  flex: 3;
+  border: 1px solid var(--comp-border);
+  background: var(--comp-hover);
+  border-radius: 10px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.optionBtn {
+  background: var(--comp-bg);
+  border: 1.5px solid var(--comp-border);
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  text-align: left;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--comp-text);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.optionBtn:hover {
+  background: var(--comp-hover);
+  border-color: var(--ifm-color-primary-light);
+  transform: translateX(2px);
+}
+
+.optionBtnActive {
+  background: var(--ifm-color-primary);
+  border-color: var(--ifm-color-primary);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+}
+
+.optionBtnActive:hover {
+  background: var(--ifm-color-primary-dark);
+  border-color: var(--ifm-color-primary-dark);
+  color: #ffffff;
+  transform: none;
+}
+
+.noteText {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--comp-text);
+  margin: 0;
+}
+
+.whenToUseBox {
+  background: rgba(99, 102, 241, 0.1);
+  border-left: 3px solid var(--ifm-color-primary);
+  padding: 0.8rem;
+  border-radius: 4px;
+}
+
+.whenToUseTitle {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ifm-color-primary);
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
+}
+
+.whenToUseText {
+  font-size: 0.88rem;
+  color: var(--comp-text);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.scoresList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.scoreRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.scoreLabelRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--comp-text-muted);
+}
+
+.barTrack {
+  height: 8px;
+  background: var(--comp-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}

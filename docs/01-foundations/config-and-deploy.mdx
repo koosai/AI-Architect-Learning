@@ -1,0 +1,192 @@
+---
+title: L14 - 配置、环境与部署
+description: 配置与代码分离、环境隔离、蓝绿/金丝雀部署与回滚——终结“在我机器上是好的”。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# L14 · 配置、环境与部署
+
+<ChapterMeta
+  time="约 1.5–2 小时"
+  prereqs={[{label: 'L5 状态（无状态进程）', href: './state-and-storage'}, {label: 'L13 测试', href: './testing-and-tdd'}]}
+  outcome="一套“配置与代码分离”的加载逻辑（默认 < 环境 < 环境变量），密钥不进代码；并能说清蓝绿/金丝雀部署与回滚。"
+  howToUse="先跑“同一份代码、不同环境不同行为”的演示，再做 lab，最后看部署策略对比。"
+/>
+
+:::tip 这一课终结"在我机器上是好的"
+代码在你电脑跑得好，一上线就崩——十有八九是因为数据库地址、密钥、超时被写死在了代码里，换个环境就不对。把"会变的东西"从代码里拿出来，是工程化的第一步。
+:::
+
+## 一、为什么"在我机器上是好的"？
+
+你的代码里写死了 `db_host = "localhost"`、`timeout = 5000`、甚至把数据库密码硬编码进去。在你电脑上当然好——可一旦部署到测试环境、生产环境，这些值全都不对，于是崩。而且密码进了代码 = 进了 Git 仓库 = 全公司可见的安全事故。
+
+> 根因：**会随环境变化的东西（配置、密钥）不该和代码写在一起。** 这一课就讲怎么分开它们，以及怎么把新版本安全地发上线。
+
+## 二、三个核心概念（分层）
+
+### 基础：配置与代码分离
+
+<GlossaryTerm term="Configuration" definition="配置：随部署环境变化的值（数据库地址、超时、密钥、开关）。应与代码分离，通常通过环境变量注入。">配置</GlossaryTerm> 是"会随环境变的值"。原则：**同一份构建产物（代码），靠外部注入的配置，在不同环境表现不同**。最常见的注入方式是<GlossaryTerm term="Environment Variable" definition="环境变量：操作系统层面注入给进程的键值对（如 DB_HOST）。是把配置从代码里分离出来的标准方式。">环境变量</GlossaryTerm>。
+
+特别地，**密钥（secret）绝不能写进代码**，只能从环境/密钥管理服务注入。
+
+### 进阶：环境隔离与一次构建多处部署
+
+通常有多个<GlossaryTerm term="Environment" definition="环境：相互隔离的运行场景，典型是 dev（开发）、staging（预发）、prod（生产）。同一代码在不同环境用不同配置运行。">环境</GlossaryTerm>：dev / staging / prod，互相隔离。理想做法是<GlossaryTerm term="Build Once, Deploy Many" definition="一次构建、多处部署：构建出一个不可变的产物（如容器镜像），同一个产物部署到各环境，差异只来自注入的配置。避免“测试的和上线的不是同一个东西”。">一次构建、多处部署</GlossaryTerm>——构建一个不可变产物，到处部署，差异只来自配置。这样"测过的"和"上线的"是同一个东西。
+
+### 深入（选学）：部署策略与回滚
+
+把新版本送上线不是"覆盖一下"那么简单。常见策略：<GlossaryTerm term="Blue-Green Deployment" definition="蓝绿部署：准备两套环境（蓝=旧、绿=新），新版在绿上就绪后一次性切流量；出问题立刻切回蓝。">蓝绿</GlossaryTerm>、<GlossaryTerm term="Canary Deployment" definition="金丝雀部署：先把新版本放给一小部分流量（如 1%），观察指标正常再逐步放量；异常则回滚。">金丝雀</GlossaryTerm>、滚动。它们都依赖 [L5 的无状态](./state-and-storage)（实例可互换）。而第一原则是：**出问题时，回滚要比修复更快、更可靠。**
+
+<ResearchNote
+  title="配置即环境：Twelve-Factor 的第三条"
+  source="The Twelve-Factor App: Config"
+  href="https://12factor.net/config"
+  insight="Twelve-Factor 主张把配置（尤其随环境变化的部分和密钥）严格存在环境里，而不是代码里；判断标准是：能不能随时把代码库开源而不泄露任何密钥。"
+  application="配置与代码分离是 CI/CD、容器化、多环境部署的前提。它让同一镜像能安全地从 dev 一路晋升到 prod——这是现代交付流水线的地基。"
+/>
+
+## 三、跟我做一遍：同一代码，不同环境
+
+<PyRunner
+  expect="prod 超时更短"
+  code={`DEFAULTS = {"timeout_ms": 1000, "log_level": "info"}
+PER_ENV = {
+    "dev":  {"log_level": "debug"},
+    "prod": {"timeout_ms": 500},
+}
+
+def load_config(env, env_vars=None):
+    env_vars = env_vars or {}
+    cfg = {**DEFAULTS, **PER_ENV.get(env, {})}      # 默认 < 环境特定
+    if "TIMEOUT_MS" in env_vars:                     # 环境变量优先级最高
+        cfg["timeout_ms"] = int(env_vars["TIMEOUT_MS"])
+    return cfg
+
+print("dev :", load_config("dev"))
+print("prod:", load_config("prod"))
+# 临时用环境变量覆盖（不改代码）
+print("prod+override:", load_config("prod", {"TIMEOUT_MS": "200"}))
+print("prod 超时更短" if load_config("prod")["timeout_ms"] < load_config("dev")["timeout_ms"] else "?")`}
+/>
+
+注意优先级：**默认值 < 环境特定 < 环境变量**。同一份代码，配置一变，行为就变——而且不用改、不用重新构建。**试试**：给 `prod` 加一个 `log_level: "warn"`，看它如何覆盖默认的 `info`。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month01/l14_config/`：
+
+```bash
+python labs/month01/l14_config/test_config.py
+```
+
+实现带优先级合并的 `load_config`，并强制密钥只能来自环境变量（缺了就报错）。
+
+<GuidedExercise
+  title="练习指引：配置分层加载 + 密钥外置"
+  goal="把“配置与代码分离、密钥不进代码、环境变量优先”做成习惯——这是上线不翻车的基础。"
+  hints={[
+    '合并顺序就是优先级：默认 → 环境特定 → 环境变量，后者覆盖前者。',
+    '密钥（DB_PASSWORD）绝不能有代码里的默认值；缺了就抛 ConfigError。',
+    '环境变量是字符串，数值要转 int。',
+    '想想：为什么"能否安全开源代码库"是判断配置是否分离干净的好标准。'
+  ]}
+  steps={[
+    '定义 DEFAULTS 和 PER_ENV（dev/prod 各自的覆盖）。',
+    'load_config(env, env_vars)：先合并 DEFAULTS 和 PER_ENV[env]。',
+    '用 env_vars 覆盖（TIMEOUT_MS 转 int、LOG_LEVEL 直接用）。',
+    '若 env_vars 里没有 DB_PASSWORD，抛 ConfigError；否则放进 cfg。',
+    '写测试：dev/prod 差异、环境变量覆盖生效、缺密钥报错。'
+  ]}
+  checks={[
+    '你能说出配置的优先级顺序及理由。',
+    '你能解释密钥为什么绝不能写进代码。',
+    '你能说出"一次构建、多处部署"解决了什么问题。',
+    '你能区分蓝绿、金丝雀、滚动部署。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 回滚优先于修复
+
+线上出事时，最快恢复的方式通常不是"赶紧改代码修"，而是**立刻回滚到上一个已知好版本**。所以每次部署都要保证"可一键回滚"——这要求新旧版本兼容（尤其数据库 schema 变更要向后兼容，回扣 [L9 契约演进](./api-and-http)）。
+
+### 2. 怎么把新版本送上线？
+
+<TradeoffExplorer
+  title="部署策略"
+  dimensions={['故障影响面', '回滚速度', '资源成本', '可灰度观察', '实现复杂度']}
+  options={[
+    {
+      name: '大爆炸（全量替换）',
+      scores: [1, 2, 5, 1, 5],
+      note: '一次性全换。简单省资源，但有问题就是全员中招，回滚也得再发一次。',
+      whenToUse: '小项目、低风险、有维护窗口时。生产高可用系统不推荐。'
+    },
+    {
+      name: '滚动发布',
+      scores: [3, 3, 5, 3, 3],
+      note: '一批一批替换实例。影响面小、不需双倍资源，但新旧版本会短暂共存（要兼容）。',
+      whenToUse: 'Kubernetes 默认策略，多数无状态服务的常用做法。'
+    },
+    {
+      name: '蓝绿',
+      scores: [4, 5, 1, 2, 3],
+      note: '两套环境一次性切换，回滚瞬间完成。但要双倍资源。',
+      whenToUse: '要求秒级回滚、且能负担双环境成本时。'
+    },
+    {
+      name: '金丝雀',
+      scores: [5, 5, 3, 5, 2],
+      note: '先放 1% 流量观察指标再逐步放量，故障影响最小、可灰度。但需要好的监控（L12）。',
+      whenToUse: '高风险变更、大规模系统的首选——前提是可观察性到位。'
+    }
+  ]}
+/>
+
+### 3. 用 DORA 指标衡量交付能力
+
+<ResearchNote
+  title="高效能团队的四个交付指标"
+  source="Forsgren, Humble & Kim, Accelerate（DORA 指标）"
+  href="https://dora.dev/"
+  insight="DORA 研究发现，精英团队在四个指标上同时领先：部署频率、变更前置时间、变更失败率、恢复时间（MTTR）。高频小批量部署 + 快速回滚，反而比“少而大”的发布更稳。"
+  application="这颠覆了“少发布=更稳”的直觉：小步快跑 + 自动化测试（L13）+ 金丝雀 + 可观察性（L12），让你既快又稳。架构师要为这种交付方式设计系统（无状态、可回滚、可观察）。"
+/>
+
+### 4. 真实案例：热升级与灰度
+
+[WhatsApp 的 Erlang](../atlas/whatsapp.mdx) 支持热代码升级——不断连接就换代码。[ChatGPT](../atlas/chatgpt.mdx) 这类系统则靠金丝雀逐步放量新模型/新版本。**怎么安全地"换正在飞的飞机的引擎"，是大规模系统的日常。**
+
+### 5. 架构师深问（给自己 30 分钟）
+
+- 你要给报名服务上一个有风险的新功能，你会用金丝雀怎么放量？看哪些指标（回扣 L12）决定继续还是回滚？
+- 新版本要改数据库表结构，怎么做才能保证"能随时回滚到旧版本"？（提示：先兼容性迁移，分两步走。）
+- 密钥目前在环境变量里，规模大了有什么风险？你会怎么升级到专门的密钥管理？
+
+## 自检清单
+
+- [ ] 我能说出配置的优先级（默认 < 环境 < 环境变量）。
+- [ ] 我的 lab 把密钥强制外置，缺了就报错。
+- [ ] 我能解释"一次构建、多处部署"和不可变产物。
+- [ ] 我能对比蓝绿/金丝雀/滚动，并说出回滚为什么优先。
+
+## 常见误解
+
+- **"配置写代码里方便"**：换环境就崩、密钥泄露，是上线事故的常客。
+- **"部署就是把文件传上去覆盖"**：没有灰度和回滚，一出错就是全员事故。
+- **"少发布更稳"**：DORA 表明小步高频 + 可回滚反而更稳。
+
+## 延伸阅读
+
+- [The Twelve-Factor App: Config](https://12factor.net/config)
+- [DORA / Accelerate 指标](https://dora.dev/)
+- [Google SRE: Canary Releases](https://sre.google/workbook/canarying-releases/)

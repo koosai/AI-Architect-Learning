@@ -1,0 +1,67 @@
+---
+title: Month 8 总览 - RAG 与知识系统
+description: 让 LLM 基于你的知识、最新的知识、可引用的知识来回答——embedding、向量检索、分块、混合检索、重排、RAG 评测，端到端建一个知识问答系统。
+slug: /rag/overview
+---
+
+import ChapterMeta from '@site/src/components/ChapterMeta';
+
+# Month 8 · RAG 与知识系统（模块总览）
+
+<ChapterMeta
+  time="整月约 28–34 小时（12 节课）"
+  prereqs={[{label: '完成 Month 7 LLM 组件', href: '/llm-systems/overview'}, {label: 'M7L9 幻觉与 grounding', href: '/llm-systems/hallucination-guardrails'}, {label: 'M7L12 LLM 应用管道', href: '/llm-systems/capstone-llm-app'}]}
+  outcome="能设计并实现一个 RAG 知识系统：把文档切块、向量化、检索、重排、拼装上下文、grounding 生成、并用多维指标评测——让 LLM 基于你的、最新的、可引用的知识回答。"
+  howToUse="按周学。第一周搞懂检索的基础（embedding/向量库/分块），第二周提升检索质量（混合/重排/查询改写），第三周评测、进阶与端到端综合。"
+/>
+
+:::tip RAG 把 M7L12 的“检索 grounding”那一环做深、做对
+[M7L9](../llm-systems/hallucination-guardrails) 你学过：对抗幻觉最有效的手段是 grounding——**让模型基于可信证据回答，而不是凭记忆**。[M7L12](../llm-systems/capstone-llm-app) 的可靠管道里，"检索相关证据"是第一环。这个月就专门做这件事：**怎么把海量知识，在每次提问时，精准地取出最相关的那几段，喂给模型。** 这就是 RAG（检索增强生成）。
+:::
+
+## 为什么 RAG 是 AI 应用的基本盘
+
+LLM 有三个硬伤：(1) 知识停在训练截止时间、不知道你公司的私有知识；(2) [会幻觉编造（M7L9）](../llm-systems/hallucination-guardrails)；(3) [上下文窗口有限、塞不下全部知识（M7L2）](../llm-systems/tokenization-context)。RAG 一次性解决这三个：
+
+- **基于你的知识**：检索你的私有文档/数据库，而非模型记忆。
+- **基于最新的知识**：更新知识库即可，无需重训模型。
+- **可引用、降幻觉**：答案有据可查、能给出处。
+- **省 token**：只取最相关的几段进上下文，而非塞全部。
+
+所以几乎所有"基于特定知识回答"的 AI 应用（企业知识库、客服、文档助手、法规/医疗问答）都以 RAG 为骨架。
+
+## 本月课程地图
+
+### Week 1 · 检索基础
+| # | 课 | 你会学到 |
+|---|---|---|
+| M8L1 | [为什么需要 RAG](./why-rag) | RAG vs 微调 vs 长上下文、何时用 |
+| M8L2 | [Embedding 与向量表示](./embeddings) | 语义向量、余弦相似度 |
+| M8L3 | [向量检索与向量库](./vector-search) | 近似最近邻、向量库、top-k |
+| M8L4 | [文档分块](./chunking) | chunk 大小、重叠、语义分块 |
+
+### Week 2 · 检索质量
+| # | 课 | 你会学到 |
+|---|---|---|
+| M8L5 | [混合检索](./hybrid-search) | 关键词(BM25) + 向量、RRF 融合 |
+| M8L6 | [重排序](./reranking) | 两阶段检索、cross-encoder 重排 |
+| M8L7 | [查询改写与扩展](./query-transformation) | 查询改写、多查询、HyDE |
+| M8L8 | [RAG 生成与引用](./rag-generation) | 上下文拼装、引用、grounding |
+
+### Week 3 · 评测、进阶与综合
+| # | 课 | 你会学到 |
+|---|---|---|
+| M8L9 | [RAG 评测](./rag-evaluation) | 忠实度/相关性/精确率/召回率 |
+| M8L10 | [高级 RAG 架构](./advanced-rag) | 元数据过滤、多跳、GraphRAG、agentic RAG |
+| M8L11 | [知识库工程与更新](./knowledge-base-ops) | 摄取管道、增量更新、新鲜度、权限 |
+| M8L12 | [Capstone：构建一个 RAG 系统](./capstone-rag) | 端到端组装 |
+
+## 月末产出
+
+一套"RAG 工程"的可跑实现（余弦相似度检索、top-k 向量搜索、分块带重叠、BM25+向量混合 RRF 融合、两阶段重排、多查询扩展、带引用的 grounding 生成、RAGAS 式多维评测、元数据过滤与多跳、增量索引更新），以及"给定一个知识库需求，能设计一个高质量、可评测、可更新的 RAG 系统"的能力。
+
+## 学习建议
+
+- 牢记一条诊断主线：**RAG 出错先分清是"检索失败"（没找到对的证据）还是"生成失败"（找到了但模型没用好）**——两者的修法完全不同（[M8L9 会反复强调](./rag-evaluation)）。
+- 把 RAG 当成 [M7 可靠管道](../llm-systems/capstone-llm-app) 的一环来工程化：它同样需要[评测（M7L10）](../llm-systems/llm-evaluation)、[缓存/降级（M7L11）](../llm-systems/llm-caching-resilience)、[观测（M6L7）](../cloud-enterprise-industrial/observability-advanced)。
+- 抵制"上来就上最复杂的 RAG"：先把基础检索 + 评测做好，再按评测暴露的问题加混合/重排/查询改写（[YAGNI](../design-patterns-lld/change-driven-design)）。

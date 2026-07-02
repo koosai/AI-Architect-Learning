@@ -1,0 +1,185 @@
+---
+title: L15 - 性能与延迟
+description: 平均值在骗你——延迟 vs 吞吐、p50/p95/p99、瓶颈与扩展上限、先测量再优化。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import PercentileLab from '@site/src/components/PercentileLab';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# L15 · 性能与延迟
+
+<ChapterMeta
+  time="约 1.5–2 小时"
+  prereqs={[{label: 'L1 延迟数量级', href: './programming-systems-primer'}, {label: 'L11 异步与排队', href: './sync-async-timeout'}, {label: 'L12 SLO', href: './observability'}]}
+  outcome="会用百分位（而非平均）描述性能、识别瓶颈、用 Little's Law 估容量，并知道“先测量再优化”。"
+  howToUse="先玩尾延迟实验，理解平均为什么骗人，再做 lab 算百分位和找瓶颈。"
+/>
+
+:::tip 这一课纠正一个致命直觉
+"我们平均延迟只有 50ms"——听起来很棒，但如果 1% 的用户要等 3 秒，他们正在愤怒地投诉。**平均值掩盖了最痛苦的那部分用户。** 架构师看的是百分位，不是平均。
+:::
+
+## 一、平均很好，为什么还在被投诉？
+
+你的监控显示平均延迟 50ms，团队很满意。但客服收到一堆"卡死了"的投诉。怎么回事？因为有 1% 的请求要 3 秒——它们被 99% 的快请求"平均"掉了，在平均值里看不见，但那 1% 的用户是真实存在、真实痛苦的。这一课教你用**百分位**看见他们，并系统地分析性能。
+
+## 二、三个核心概念（分层）
+
+### 基础：延迟、吞吐、百分位
+
+两个常被混淆的指标：<GlossaryTerm term="Latency" definition="延迟：单个请求从发出到收到响应的耗时。关注个体体验。">延迟</GlossaryTerm>（一个请求多快）和<GlossaryTerm term="Throughput" definition="吞吐：单位时间能处理多少请求（如 QPS）。关注整体容量。">吞吐</GlossaryTerm>（每秒能处理多少）。它们不是一回事，有时还相互拉扯（批处理能提吞吐却增加单个延迟）。
+
+描述延迟要用<GlossaryTerm term="Percentile" definition="百分位：把样本排序后，p95=95% 的请求都不慢于这个值。p50 是中位数，p99 反映最慢的 1% 的体验。">百分位</GlossaryTerm>而非平均：p50（中位数）、p95、p99。**p99 = 100 个用户里最慢那个的体验。** 玩一下这个实验，亲眼看平均怎么骗你、尾巴怎么爆：
+
+<PercentileLab />
+
+### 进阶：瓶颈、Little's Law 与扩展
+
+性能由<GlossaryTerm term="Bottleneck" definition="瓶颈：整条链路里最慢/最受限的那个环节。系统的整体性能由瓶颈决定，优化非瓶颈环节几乎没用。">瓶颈</GlossaryTerm>决定——链路里最慢的那一环。优化非瓶颈环节几乎没有效果（回扣 [L10 关键路径](./request-path)）。容量则可用 [L11 的 Little's Law](./sync-async-timeout)（L = λ × W）估算：知道到达率和处理时间，就知道要多少并发。
+
+### 深入（选学）：扩展不是线性的
+
+加机器就能成比例变快吗？[L8 的 Amdahl 定律](./concurrency-basics) 说串行部分是天花板；更进一步，<GlossaryTerm term="Universal Scalability Law" definition="通用扩展律（USL）：在 Amdahl 的串行开销之上，再加入“节点间协调/一致性”的开销。节点多到一定程度，协调成本会让总吞吐不升反降。">通用扩展律（USL）</GlossaryTerm> 指出：节点间的协调/一致性开销，会让系统加到一定规模后**吞吐不升反降**。所以"加机器"有上限，甚至有反效果。
+
+<ResearchNote
+  title="过早优化是万恶之源"
+  source="Donald Knuth (1974), Structured Programming with go to Statements"
+  href="https://dl.acm.org/doi/10.1145/356635.356640"
+  insight="Knuth 的名言：『过早优化是万恶之源』。他主张先让程序正确、清晰，用测量找到真正占大头（约 3%）的热点，再针对性优化——而不是凭直觉到处微优化。"
+  application="架构师的铁律：先测量、再优化。没有 profiling 数据就动手优化，往往优化了不重要的地方、还把代码搞复杂。先用百分位和 profiler 找到瓶颈，再下手。"
+/>
+
+## 三、跟我做一遍：从样本算百分位
+
+<PyRunner
+  expect="平均掩盖了尾巴"
+  code={`# 99 个快请求 + 1 个超慢请求
+samples = [20] * 99 + [3000]
+
+def percentile(xs, p):
+    s = sorted(xs)
+    idx = min(len(s) - 1, int((p / 100) * len(s)))
+    return s[idx]
+
+avg = sum(samples) / len(samples)
+print("平均:", round(avg), "ms")
+print("p50:", percentile(samples, 50), "ms")
+print("p99:", percentile(samples, 99), "ms")
+print("平均掩盖了尾巴" if percentile(samples, 99) > avg * 5 else "?")`}
+/>
+
+平均约 50ms、p50 才 20ms——看起来很好；但 p99 是 3000ms，那 1% 的用户在崩溃。**试试**：把超慢请求从 1 个加到 5 个，看 p95 也开始爆。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month01/l15_performance/`：
+
+```bash
+python labs/month01/l15_performance/test_perf.py
+```
+
+实现通用的 `percentile(samples, p)` 和 `bottleneck(stages)`（找出最慢的环节）。
+
+<GuidedExercise
+  title="练习指引：百分位 + 找瓶颈"
+  goal="把“用百分位看性能、用瓶颈定位优化点”变成本能——这是性能讨论的通用语言。"
+  hints={[
+    '百分位：排序后取第 p% 位置的值；空输入返回 0，别崩。',
+    '瓶颈 = 各环节里延迟最大的那个；优化它才有效。',
+    '记住：优化非瓶颈环节，整体几乎不变（回扣关键路径）。',
+    '想想：为什么报告性能要带 p95/p99，而不是只给平均。'
+  ]}
+  steps={[
+    '实现 percentile(samples, p)：空列表返回 0；否则排序取 idx = min(len-1, int(p/100*len))。',
+    '实现 bottleneck(stages)：stages 是 {名称: 延迟}，返回延迟最大的名称。',
+    '写测试：p50/p95 取值正确；bottleneck 选出最慢环节。',
+    '跑到测试全过。'
+  ]}
+  checks={[
+    '你能解释为什么平均会掩盖尾延迟。',
+    '你能从样本算出 p50/p95/p99。',
+    '你能说出只优化瓶颈才有效、为什么。',
+    '你能说出扩展为什么不是线性的（Amdahl/USL）。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 百分位是和 SLO 绑定的语言
+
+[L12 的 SLO](./observability) 几乎都用百分位表达（"p99 < 300ms"）。因为业务关心的是"绝大多数用户够快"，而不是"平均够快"。架构师汇报、定目标、做容量规划，都说 p95/p99——这是专业共识。
+
+### 2. 先测量，再优化；优化瓶颈，别瞎优化
+
+<TradeoffExplorer
+  title="降低延迟的常用手段"
+  dimensions={['见效幅度', '适用范围', '一致性影响', '成本', '复杂度']}
+  options={[
+    {
+      name: '缓存（L10）',
+      scores: [5, 4, 3, 3, 3],
+      note: '把慢查询的结果缓存起来，对读多场景见效极大。代价是一致性/失效管理。',
+      whenToUse: '读多写少、热点明显、能容忍少量陈旧。性价比通常最高。'
+    },
+    {
+      name: '并行 / 异步（L11）',
+      scores: [4, 4, 3, 3, 3],
+      note: '把串行步骤并行、把慢任务异步化。降感知延迟，但会放大尾延迟、增加复杂度。',
+      whenToUse: '步骤间无强依赖、或用户不必等的慢任务。'
+    },
+    {
+      name: '算法/数据结构（L7）',
+      scores: [5, 3, 5, 2, 4],
+      note: '把 O(n) 降到 O(1)/O(log n)。治本、无一致性副作用，但要找对地方。',
+      whenToUse: '瓶颈是计算/查询本身时（如 N+1、全表扫描）。'
+    },
+    {
+      name: '加机器（水平扩展）',
+      scores: [3, 4, 4, 1, 2],
+      note: '靠 L5 无状态加实例提吞吐。但受 Amdahl/USL 限制，且只提吞吐、不一定降单请求延迟。',
+      whenToUse: '瓶颈是容量而非单请求耗时、且服务无状态时。'
+    }
+  ]}
+/>
+
+<ResearchNote
+  title="扩展的真实上限：通用扩展律"
+  source="Neil Gunther, Universal Scalability Law (USL)"
+  href="https://www.vldb.org/conf/1993/P432.PDF"
+  insight="USL 在 Amdahl 的串行开销之外，加入了节点间『一致性/协调』开销项。它预测：系统加节点到某个点后，协调成本超过收益，吞吐会见顶甚至下降——而不是无限线性增长。"
+  application="这解释了为什么“加机器”不是万能药：到一定规模，协调（锁、共识、数据同步）成本会反噬。架构师要预判这个拐点，用分片、无共享等手段推迟它（回扣 L5/L8）。"
+/>
+
+### 3. 真实案例：为 p99 而设计
+
+[ChatGPT](../atlas/chatgpt.mdx) 用连续批处理 + 分页显存压低尾延迟、[WhatsApp](../atlas/whatsapp.mdx) 把单机连接榨到极限提吞吐——它们的优化全是先测量、抓住真实瓶颈（GPU 显存 / 单机连接数）再下手，而不是凭感觉。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的报名服务 SLO 定"p99 < 200ms"。你怎么测量它？哪一跳最可能是瓶颈（回扣 L10）？
+- 老板说"加一倍机器让它快一倍"。你怎么用 Amdahl/USL 解释为什么不一定？
+- 你想优化性能，但没有 profiling 数据。第一步该做什么？（提示：别动手，先测量。）
+
+## 自检清单
+
+- [ ] 我能解释平均为什么掩盖尾延迟，并用 p50/p95/p99 描述性能。
+- [ ] 我的 lab 能算百分位、能找出瓶颈。
+- [ ] 我能说出延迟与吞吐的区别。
+- [ ] 我能用 Amdahl/USL 解释扩展的上限。
+
+## 常见误解
+
+- **"平均延迟低就没问题"**：尾延迟（p99）才反映最痛苦用户的体验。
+- **"哪里慢就优化哪里"**：只有优化瓶颈才有效，先测量定位。
+- **"加机器总能变快"**：受 Amdahl/USL 限制，且加机器主要提吞吐而非单请求延迟。
+
+## 延伸阅读
+
+- [Donald Knuth, 过早优化（Structured Programming with go to）](https://dl.acm.org/doi/10.1145/356635.356640)
+- [Brendan Gregg, USE 方法（性能分析）](https://www.brendangregg.com/usemethod.html)
+- [Neil Gunther, Universal Scalability Law](http://www.perfdynamics.com/Manifesto/USLscalability.html)

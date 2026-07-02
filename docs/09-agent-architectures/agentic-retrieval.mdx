@@ -1,0 +1,191 @@
+---
+title: M9L8 - Agentic 检索
+description: 把 M8 的 RAG 接进 Agent：让 Agent 自己决定要不要检索、检索什么、检索几次、够不够再答——检索从固定一步变成 Agent 的工具。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M9L8 · Agentic 检索
+
+<ChapterMeta
+  time="约 2 小时"
+  prereqs={[{label: 'M8 RAG', href: '../rag/overview'}, {label: 'M9L2 工具边界', href: './tools-and-boundaries'}, {label: 'M8L10 agentic RAG', href: '../rag/advanced-rag'}]}
+  outcome="能把检索作为工具接进 Agent，让 Agent 自主决定是否检索、检索什么、是否够答、要不要再检索，并理解它相比固定 RAG 的取舍。"
+  howToUse="先看“固定一次检索”的局限，再理解 agentic 检索，最后做自主检索决策 lab。"
+/>
+
+:::tip 把 M8 的 RAG，从“固定一步”变成 Agent 手里一个可反复使用的工具
+[Month 8 的 RAG](../rag/overview) 是固定流程：每次都“检索一次→生成”。但有些问题不用检索（闲聊、常识）、有些要检索多次（多跳、信息不够再查）、有些要选不同的源。把[检索做成一个工具（M9L2）](./tools-and-boundaries)、放进 [agent loop（M9L1）](./agent-loop-basics)，让 **Agent 自己决定何时检索、检索什么、够不够答、要不要再查**——这就是 agentic 检索（[M8L10 提过的 agentic RAG](../rag/advanced-rag)）。它把 M8 和 M9 接到了一起。
+:::
+
+## 一、固定一次检索的局限
+
+固定 RAG（[M8](../rag/overview)）“每次都检索一次再答”，但现实更复杂：
+- **有些问题不该检索**：“你好”、“1+1 等于几”——检索纯属浪费，还可能引入无关噪声。
+- **有些要检索多次**：[多跳问题（M8L10）](../rag/advanced-rag)（A 的经理的部门预算）、或第一次检索发现信息不够要再查。
+- **有些要选源**：技术问题查文档库、订单问题查数据库——该按问题选不同的检索源。
+- **检索够了没**：检索回来的够不够回答？不够该再查、还是该弃答？固定流程不会判断。
+
+这些判断，正适合交给 [Agent 的自主决策（M9L1）](./agent-loop-basics)——把检索变成它能按需调用的工具。
+
+## 二、三个核心概念（分层）
+
+### 基础：检索作为工具
+
+把 M8 的检索包装成 Agent 的一个[工具（M9L2）](./tools-and-boundaries)：`retrieve(query, source)`。然后在 [agent loop](./agent-loop-basics) 里，模型每步可以决定：调 retrieve（去查信息）、还是 finish（信息够了，给答案）。这样**“要不要检索”成了 Agent 的一个决策**，而非固定的第一步。<GlossaryTerm term="Agentic Retrieval" definition="智能体式检索：把检索作为 Agent 可调用的工具，由 Agent 自主决定是否检索、检索什么、用哪个源、检索几次、何时信息足够可以回答——而非固定检索一次再答的流程。">agentic 检索</GlossaryTerm> 的本质：检索从“流程里的固定一步”变成“Agent 工具箱里的一个工具”。
+
+### 进阶：自主决策——查不查、查什么、够没够
+
+Agent 在检索上能做几类自主决策：
+- **要不要检索**：判断问题是否需要外部知识（闲聊/常识不需要，省一次检索）。
+- **检索什么、用哪个源**：根据问题构造查询（[呼应 M8L7 查询改写](../rag/query-transformation)）、选合适的检索源（文档/数据库/网络）。
+- **够不够答 / 要不要再查**：检索回来后判断信息是否足够——够了就答，不够就[再检索一次（多跳）](../rag/advanced-rag) 或换查询，实在不够就[弃答（M7L9）](../llm-systems/hallucination-guardrails)。
+- 这就是把 [ReAct（M9L3）](./react-pattern) 用在检索上：Thought（我需要什么信息）→ Action（检索）→ Observation（看检索结果）→ Thought（够了吗）→ ...
+
+### 深入（选学）：agentic 检索的取舍
+
+- **更灵活但更慢更贵更难控**：固定 RAG 是一次检索（可预测、便宜），agentic 检索可能检索 0 到 N 次（灵活，但延迟/成本不确定、要[停止条件 M9L4](./stopping-budget) 防止反复检索）。这是 [M8L10 强调的取舍](../rag/advanced-rag)。
+- **何时值得**：问题类型多样（有的不用查、有的要多跳）、需要动态选源、需要“查不够再查”时，agentic 检索的灵活性才值得它的成本。**单一类型的简单问答，固定 RAG 更可靠便宜**——别为了“agentic 听起来高级”就上（[YAGNI](../design-patterns-lld/change-driven-design)）。
+- **继承 M8 的所有工程**：agentic 检索里每次检索仍要[混合/重排/权限过滤（M8）](../rag/hybrid-search)、生成仍要[grounding/引用/弃答（M8L8）](../rag/rag-generation)——agentic 只是在外面套了“自主决定检索”的循环，不替代 M8 的检索质量工程。
+- **检索工具也要有边界**：作为 [Agent 工具（M9L2）](./tools-and-boundaries)，检索要有权限过滤（[绝不检索越权内容 M8L10](../rag/advanced-rag)）、调用预算（防反复检索烧穿）、审计。
+
+<ResearchNote
+  title="Agentic 检索：让 Agent 自主决定检索策略"
+  source="Self-RAG（Asai et al., 2023）；ReAct + 检索；M8 RAG 工程"
+  href="https://arxiv.org/abs/2310.11511"
+  insight="固定 RAG 总是检索一次，但很多问题不需要检索、或需要多次/多源/迭代检索。Agentic 检索把检索作为 Agent 工具，由模型自主决定是否检索、查什么、用哪个源、是否够答、要不要再查（Self-RAG 让模型学会按需检索并自评）。更灵活，但成本/延迟不确定、需停止条件，且仍依赖 M8 的检索质量和生成工程。"
+  application="问题类型多样/需多跳/动态选源时，把检索做成 Agent 工具：每步判断查不查、查什么、够没够（ReAct 用在检索上），配权限/预算/停止条件。单一简单问答用固定 RAG 更稳更省。agentic 不替代 M8 的混合/重排/权限/grounding 工程。"
+/>
+
+## 三、跟我做一遍：自主决定检索的 Agent
+
+<PyRunner
+  rows={40}
+  expect="按需检索、够了才答、不够再查"
+  code={`KB = {"法国首都": "巴黎", "巴黎人口": "约210万"}
+def retrieve(q):
+    return KB.get(q, "未找到")                       # 检索工具(M8 包装成工具)
+
+def agentic_qa(question, policy, max_retrievals=4):
+    state = {"question": question, "retrieved": {}, "retrieval_count": 0}
+    for _ in range(max_retrievals + 1):
+        decision = policy(state)
+        if decision["action"] == "answer":           # Agent 判断信息够了
+            return ("ANSWER", decision["content"], state["retrieval_count"])
+        if decision["action"] == "no_retrieval":     # Agent 判断不用检索
+            return ("DIRECT", decision["content"], 0)
+        q = decision["query"]                         # 否则检索(自主决定查什么)
+        state["retrieved"][q] = retrieve(q)
+        state["retrieval_count"] += 1
+    return ("ABSTAIN", "信息不足", state["retrieval_count"])
+
+def policy(state):
+    q = state["question"]; r = state["retrieved"]
+    if q == "你好":
+        return {"action": "no_retrieval", "content": "你好！"}      # 不检索
+    if "法国首都" not in r:
+        return {"action": "retrieve", "query": "法国首都"}          # 先查首都
+    if "巴黎人口" not in r:
+        return {"action": "retrieve", "query": "巴黎人口"}          # 再查人口(多跳)
+    return {"action": "answer", "content": "巴黎，人口约210万"}      # 够了，答
+
+print("闲聊:", agentic_qa("你好", policy))                          # 0 次检索
+print("事实(需多跳):", agentic_qa("法国首都人口", policy))          # 2 次检索
+print("按需检索、够了才答、不够再查")`}
+/>
+
+闲聊问题 Agent 判断不用检索（0 次）；事实问题它先查首都、再查人口（自主多跳 2 次）、信息够了才答——检索成了 Agent 按需调用的工具，而非固定一步。**试试**：问一个 KB 里没有的问题，看检索到"未找到"后 Agent 应该弃答（ABSTAIN）；想想反复检索时 max_retrievals 怎么防烧穿。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month09/m9l8_agentic_retrieval/`：
+
+```bash
+python labs/month09/m9l8_agentic_retrieval/test_agentic_retrieval.py
+```
+
+实现 agentic 检索：Agent 自主决定不检索/检索什么/够了答/不够再查，配检索次数上限防烧穿。
+
+<GuidedExercise
+  title="练习指引：实现 agentic 检索"
+  goal="把“自主决定检索策略”做成代码——把 M8 的检索变成 Agent 的工具。"
+  hints={[
+    'policy 每步返回 action：no_retrieval / retrieve(query) / answer。',
+    'agentic_qa：no_retrieval 直接答、answer 返回、retrieve 则查并计数。',
+    '检索次数有 max_retrievals 上限（防反复检索烧穿）。',
+    '检索不到/信息不足应能 ABSTAIN。'
+  ]}
+  steps={[
+    '实现 agentic_qa(question, policy, max_retrievals)。',
+    '处理 no_retrieval / answer / retrieve 三种决策。',
+    '检索计数 + 上限兜底（超了 ABSTAIN）。',
+    '写测试：闲聊 0 检索、多跳 2 检索、信息够才答、上限内不够则弃答、检索结果进入状态。'
+  ]}
+  checks={[
+    '你能把检索作为工具接进 Agent。',
+    '你的 lab 能自主决定查不查/查什么/够没够。',
+    '你能说出 agentic 检索 vs 固定 RAG 的取舍。',
+    '你理解它仍依赖 M8 的检索质量和生成工程。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 固定 RAG vs agentic 检索
+
+<TradeoffExplorer
+  title="检索方式"
+  dimensions={['灵活(多跳/选源)', '可预测成本延迟', '可控/可靠', '实现简单', '适合简单问答']}
+  options={[
+    {
+      name: '固定 RAG(检索一次)',
+      scores: [2, 5, 5, 5, 5],
+      note: '每次检索一次再答。可预测、便宜、可靠。但不会多跳、不会按需不查。',
+      whenToUse: '单一类型的事实问答——多数 RAG 场景。'
+    },
+    {
+      name: 'Agentic 检索',
+      scores: [5, 2, 2, 2, 2],
+      note: '自主决定查不查/查什么/够没够。灵活、能多跳。但成本延迟不定、难控。',
+      whenToUse: '问题类型多样、需多跳/动态选源时。'
+    }
+  ]}
+/>
+
+### 2. agentic 检索是 M8 + M9 的交汇点
+
+这一课把前两个月接到了一起：[M8 的 RAG](../rag/overview) 提供"怎么检索得准"（混合、重排、权限、grounding），[M9 的 Agent](./agent-loop-basics) 提供"怎么自主决策"（loop、工具、停止条件、反思）——agentic 检索就是**用 Agent 的自主决策来编排 M8 的检索能力**。这体现了一个 AI 架构的通用模式：**底层能力（检索、工具、计算）做扎实，上层用 Agent 把它们灵活编排起来。** 但要清醒：agentic 编排不替代底层能力——agentic 检索如果底层 [M8 检索质量差](../rag/rag-evaluation)，再灵活的自主决策也检不到好结果。架构师要分清两层：**先把底层检索做好（M8），再考虑要不要上 agentic 编排（M9）**，而不是指望 agentic 自动让差的检索变好。
+
+### 3. 真实案例：从"总是检索"到"按需检索"
+
+一个常见的真实优化：早期 AI 助手对每个问题都检索（固定 RAG），结果闲聊、常识问题也去查知识库，既慢又引入无关噪声、有时反而答得更差。改成 agentic 检索后，Agent 学会"这个问题不用查"（直接答）、"这个要查两次"（多跳）、"查不到就说不知道"——更快、更准、更省。但也有团队走另一极端：本是简单单一的问答场景，强行上 agentic 检索，结果引入了不确定的检索次数、更高的成本和延迟、更难调试，得不偿失。**判断"固定 RAG 够不够、要不要 agentic"，和判断"用 workflow 还是 Agent"（[M9L11](./when-not-agent)）是同一种架构判断**：按问题的多样性和复杂度选最简单够用的方案。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的问答场景里，问题类型单一还是多样？有多少不用检索、有多少要多跳？固定 RAG 够用吗？
+- 如果上 agentic 检索，检索次数怎么封顶（防反复检索烧穿）？检索工具的权限/审计有吗？
+- 你的底层检索质量（M8）调好了吗？别指望 agentic 编排能弥补差的检索。
+
+## 自检清单
+
+- [ ] 我能把检索作为工具接进 Agent。
+- [ ] 我的 lab 能自主决定查不查/查什么/够没够、有上限。
+- [ ] 我能说出 agentic 检索 vs 固定 RAG 的取舍、何时用哪个。
+- [ ] 我理解 agentic 编排不替代 M8 的底层检索质量工程。
+
+## 常见误解
+
+- **"agentic 检索比固定 RAG 高级所以更好"**：它更灵活但更难控更贵；简单问答固定 RAG 更稳。
+- **"agentic 能弥补差的检索"**：底层 M8 检索差，再灵活的自主决策也检不到好结果。
+- **"agentic 检索是另一套技术"**：它是用 Agent 编排 M8 的检索能力，两层都要做好。
+
+## 延伸阅读
+
+- [Self-RAG (Asai et al., 2023)](https://arxiv.org/abs/2310.11511)
+- [M8L10 高级 RAG（agentic RAG）](../rag/advanced-rag)
+- [下一课：Agent 护栏与安全](./agent-guardrails)

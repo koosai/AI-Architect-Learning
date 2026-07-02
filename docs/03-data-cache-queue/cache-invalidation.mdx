@@ -1,0 +1,184 @@
+---
+title: M3L6 - 缓存失效与一致性
+description: 计算机科学只有两件难事，其一就是缓存失效——TTL、写时失效、缓存与库的并发竞态。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M3L6 · 缓存失效与一致性
+
+<ChapterMeta
+  time="约 1.5–2 小时"
+  prereqs={[{label: 'M3L5 缓存模式', href: './cache-patterns'}, {label: 'L8 并发竞态', href: '../foundations/concurrency-basics'}]}
+  outcome="能用 TTL 和写时失效让缓存与数据库保持一致，并看懂读写并发导致的缓存陈旧竞态。"
+  howToUse="先跑 TTL 过期 demo，再理解写时为什么“删”而不是“改”，最后做 lab。"
+/>
+
+:::tip 计算机科学最著名的玩笑
+"计算机科学只有两件难事：缓存失效和命名。" 缓存让读飞快，但**数据库一变，缓存就成了骗人的旧值**。怎么让缓存及时失效、又不在并发下出错——这是真正的难题。
+:::
+
+## 一、数据库改了，缓存还在骗人
+
+你更新了用户昵称，写进了数据库。但缓存里还是旧昵称，于是用户刷新看到的还是旧的，直到缓存过期。这就是<GlossaryTerm term="Cache Staleness" definition="缓存陈旧：缓存里的值与数据库不再一致（因为数据库被更新了但缓存没同步）。缓存的核心难题。">缓存陈旧</GlossaryTerm>。让缓存和库保持一致，有两条基本手段：**过期（TTL）** 和 **写时失效**。
+
+## 二、三个核心概念（分层）
+
+### 基础：TTL 过期
+
+给每个缓存项设一个<GlossaryTerm term="TTL" definition="存活时间（Time To Live）：缓存项的过期时间。到期自动失效、下次读重新从库加载。是最简单的最终一致手段：陈旧最多持续一个 TTL。">TTL</GlossaryTerm>，到期自动失效、下次读重新加载。它简单可靠，代价是：**在 TTL 内数据可能是旧的**（最终一致，回扣 [M2L6](../system-design-bridge/cap-consistency)）。TTL 越短越新鲜、但命中率越低；越长命中率越高、但越可能陈旧。
+
+### 进阶：写时失效，且要"删"不要"改"
+
+光靠 TTL 不够及时。更主动的做法是**写数据库时，让对应缓存失效**。关键细节：
+
+- **删除缓存，而不是更新缓存**：更新缓存容易在并发下写入旧值；删除则让下次读去库取最新，更安全。
+- **顺序：先写库，再删缓存**（cache-aside 的标准做法）。
+
+### 深入（选学）：一个挥之不去的竞态
+
+即使"先写库再删缓存"，仍有罕见竞态：读请求 miss、从库读到**旧值**，正要回填时，另一个写请求更新库并删了缓存；结果读请求把**旧值**填了回去——缓存又脏了。对策有延迟双删、版本号、或干脆靠 TTL 兜底。**这就是为什么缓存失效被称为难题：它本质是 [L8 的并发竞态](../foundations/concurrency-basics) 跨越了两个系统。**
+
+<ResearchNote
+  title="缓存失效，公认的两大难题之一"
+  source="Phil Karlton（广为流传）：There are only two hard things in Computer Science: cache invalidation and naming things"
+  href="https://martinfowler.com/bliki/TwoHardThings.html"
+  insight="这句业界名言点破了缓存的本质难点：让缓存在正确的时机、以正确的方式失效，在并发和分布式下出奇地难。简单的“加缓存”背后藏着一致性的深坑。"
+  application="架构师对缓存要心存敬畏：它几乎总能提升性能，但每加一处缓存，就引入一处潜在的不一致。要为每个缓存明确：失效策略是什么？能容忍多久陈旧？并发竞态怎么兜底？"
+/>
+
+## 三、跟我做一遍：TTL 缓存
+
+<PyRunner
+  expect="过期后重新加载"
+  code={`class TTLCache:
+    def __init__(self):
+        self.store = {}                     # key -> (value, expire_at)
+
+    def set(self, key, value, now, ttl):
+        self.store[key] = (value, now + ttl)
+
+    def get(self, key, now):
+        if key not in self.store:
+            return None
+        value, exp = self.store[key]
+        if now >= exp:                      # 过期
+            del self.store[key]
+            return None
+        return value
+
+    def invalidate(self, key):              # 写时主动失效
+        self.store.pop(key, None)
+
+c = TTLCache()
+c.set("name", "Ada", now=0, ttl=10)
+print("t=5:", c.get("name", 5))     # Ada（未过期）
+print("t=12:", c.get("name", 12))   # None（过期，要重新加载）
+c.set("name", "Bob", now=12, ttl=10)
+c.invalidate("name")
+print("失效后:", c.get("name", 13)) # None
+print("过期后重新加载")`}
+/>
+
+TTL 让陈旧最多持续 10 秒；`invalidate` 让你在写时立刻清掉。**试试**：把 ttl 改成 1，看缓存几乎每次都 miss（太新鲜=低命中）；改成 1000，看它长时间返回旧值（高命中=可能陈旧）——这就是 TTL 的取舍。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month03/m3l6_ttl/`：
+
+```bash
+python labs/month03/m3l6_ttl/test_ttl.py
+```
+
+实现一个带 TTL 过期和主动失效的缓存。
+
+<GuidedExercise
+  title="练习指引：实现 TTL 缓存"
+  goal="把“过期 + 写时失效”做成代码，体会缓存新鲜度与命中率的取舍。"
+  hints={[
+    '存 (value, expire_at)，expire_at = now + ttl。',
+    'get(key, now)：now >= expire_at 视为过期，删除并返回 None。',
+    'invalidate(key)：直接删除（写时主动失效）。',
+    '时间用参数 now 传入，保证测试确定性（别用真实时钟）。'
+  ]}
+  steps={[
+    '实现 TTLCache：store 存 (value, expire_at)。',
+    'set(key, value, now, ttl)：记录过期时间。',
+    'get(key, now)：未过期返回值，过期删除并返回 None，不存在返回 None。',
+    'invalidate(key)：删除该键。',
+    '写测试：未过期命中、过期 miss、失效后 miss。'
+  ]}
+  checks={[
+    '你能解释 TTL 在新鲜度和命中率之间的取舍。',
+    '你的缓存过期和主动失效都正确。',
+    '你能说出写时为什么"删"比"改"安全。',
+    '你能描述"读回填旧值"的竞态及一种对策。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 缓存一致性策略怎么选
+
+<TradeoffExplorer
+  title="缓存与数据库的一致性策略"
+  dimensions={['新鲜度', '命中率', '实现复杂度', '并发安全', '适用场景']}
+  options={[
+    {
+      name: '仅 TTL 过期',
+      scores: [2, 4, 5, 4, 4],
+      note: '最简单，陈旧最多一个 TTL。但更新后到过期前都是旧值。',
+      whenToUse: '能容忍一定陈旧的数据（商品详情、配置）。'
+    },
+    {
+      name: '写时失效 + TTL 兜底',
+      scores: [4, 4, 3, 3, 5],
+      note: '写库后删缓存（及时），TTL 作为兜底防遗漏。最常用组合。',
+      whenToUse: '大多数 cache-aside 场景的推荐做法。'
+    },
+    {
+      name: '写穿透（write-through）',
+      scores: [5, 4, 3, 4, 3],
+      note: '写时同步更新缓存，缓存总最新。但写变慢、仍有并发更新顺序问题。',
+      whenToUse: '要求缓存高度新鲜、写不太密集。'
+    }
+  ]}
+/>
+
+### 2. 给每个缓存回答三个问题
+
+加任何缓存前，架构师都该回答：**① 失效策略是什么（TTL？写时删？）② 能容忍多久陈旧 ③ 并发竞态怎么兜底**。答不上来，就是在埋一致性的雷。
+
+### 3. 真实案例：Facebook 专门治缓存竞态
+
+[Facebook 的 memcache 论文](https://www.usenix.org/system/files/conference/nsdi13/nsdi13-final170_update.pdf)（M3L5 引）花了大量篇幅处理缓存失效竞态和跨区域一致性——证明了"缓存失效在超大规模下确实是头号难题"。架构师要把缓存一致性当成一等设计问题，而不是事后补丁。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 用户改了头像，你希望"自己立刻看到、别人几秒内看到"——TTL 和写时失效怎么配？（回扣读己之写。）
+- "先删缓存再写库"和"先写库再删缓存"，哪个竞态更轻？为什么标准做法是后者？
+- 一个超热点 key 用很长 TTL 提命中率，但它一过期就被打爆（击穿）——下一课怎么救？
+
+## 自检清单
+
+- [ ] 我能用 TTL + 写时失效保持缓存与库一致。
+- [ ] 我的 lab TTL 缓存过期/失效正确。
+- [ ] 我能解释写时"删缓存"为什么比"改缓存"安全。
+- [ ] 我能描述一个缓存失效竞态及对策。
+
+## 常见误解
+
+- **"设了缓存就实时一致"**：缓存天然滞后，要主动失效 + 接受最终一致。
+- **"写时更新缓存最新最好"**：并发下易写入旧值；删除更安全。
+- **"TTL 越长越好"**：命中率高但越可能陈旧，要按容忍度权衡。
+
+## 延伸阅读
+
+- [Martin Fowler, Two Hard Things](https://martinfowler.com/bliki/TwoHardThings.html)
+- [Scaling Memcache at Facebook](https://www.usenix.org/system/files/conference/nsdi13/nsdi13-final170_update.pdf)
+- [下一课：缓存三大难题](./cache-problems)

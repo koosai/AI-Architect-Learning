@@ -1,0 +1,215 @@
+---
+title: M9L2 - 工具使用与边界
+description: Agent 能自主调工具，所以每个工具都要有 schema、权限、预算、超时、审计——工具的边界，就是 Agent 能闯多大祸的边界。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M9L2 · 工具使用与边界
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M9L1 agent loop', href: './agent-loop-basics'}, {label: 'M7L6 工具调用', href: '../llm-systems/structured-output-tools'}, {label: 'L3 输入校验', href: '../foundations/input-validation'}]}
+  outcome="能给 Agent 的工具定义完整边界：schema 校验、权限、预算、超时、审计，并理解“工具的边界 = Agent 能闯祸的上限”。"
+  howToUse="先看“Agent 自主调危险工具”的风险，再给工具加五道边界，最后做受约束工具注册 lab。"
+/>
+
+:::tip Agent 的能力上限和闯祸上限，都由它能调的工具决定
+[M7L6](../llm-systems/structured-output-tools) 你学过工具调用：模型决定调什么、你的代码执行。在单次调用里这还可控。但在 [agent loop（M9L1）](./agent-loop-basics) 里，模型**自主地、反复地**决定调工具——如果某个工具能删数据、转账、对外发消息，模型一步走错就是真实事故。所以 Agent 的每个工具都必须有严格边界：**schema、权限、预算、超时、审计**。工具的边界，就是 Agent 能闯多大祸的边界。
+:::
+
+## 一、自主调用，把工具风险放大了
+
+单次工具调用（[M7L6](../llm-systems/structured-output-tools)）里，模型调一次工具、你校验执行，风险有限。但在 agent loop 里：
+- 模型**自主、多次**调工具，没有人逐次把关。
+- 它可能**调错工具、传错参数、反复调**（[循环 M9L4](./stopping-budget)）。
+- 如果工具有副作用（写数据库、发邮件、花钱、执行命令），**错一步就不可逆**。
+- 它还可能被[恶意输入诱导（prompt injection）](./agent-guardrails) 去调危险工具。
+
+所以给 Agent 的工具，必须比单次调用时更严格地设边界。**工具能做什么，决定了 Agent 最坏能造成什么后果。**
+
+## 二、三个核心概念（分层）
+
+### 基础：工具的五道边界
+
+每个给 Agent 用的工具，都该定义（[扩展 M7L6 的工具描述](../llm-systems/structured-output-tools)）：
+- <GlossaryTerm term="Tool Schema" definition="工具 schema：工具的名字、用途、参数类型和约束。既是给模型的说明书（让它知道何时用、怎么传参），也是执行前校验参数的依据。">Schema</GlossaryTerm>：参数结构和约束，执行前[校验（L3）](../foundations/input-validation)。
+- <GlossaryTerm term="Tool Permission" definition="工具权限：限定工具能访问的数据/资源范围、是否只读、能否产生副作用。最小权限原则——给 Agent 的工具默认只读、范围最小。">权限（permission）</GlossaryTerm>：能访问什么、是否只读、能否有副作用。**最小权限**：默认只读、范围最小。
+- <GlossaryTerm term="Tool Budget" definition="工具预算：限制某工具的调用次数/花费上限，防止 Agent 在循环里反复调用某工具导致烧钱或副作用累积。">预算（budget）</GlossaryTerm>：最多调几次、最多花多少——防 [agent 循环烧穿（M9L4）](./stopping-budget)。
+- **超时（timeout）**：多久必须失败（[M5L7](../core-components/retry-backoff-timeout)），别让一个工具卡死整个 loop。
+- <GlossaryTerm term="Audit Log" definition="审计日志：记录每次工具调用的原因、参数、结果、错误和时间。让 Agent 的行为可追溯、可排错、可审计——尤其有副作用的工具必须留痕。">审计日志（audit）</GlossaryTerm>：每次调用记下原因/参数/结果/错误——可追溯、可排错。
+
+### 进阶：只读 vs 副作用工具，分级对待
+
+工具按“能造成多大后果”分级，约束程度不同：
+- **只读工具**（查数据、搜索、读文件）：风险低，可较宽松地让 Agent 自主调。
+- **有副作用工具**（写数据、发消息、花钱、执行命令）：风险高，要**更严的权限 + 预算 + 审计**，危险的还要 [人在回路确认（M9L9）](./agent-guardrails)。
+- **设计原则**：尽量把工具设计成**只读 + 提议**——Agent 只读取信息、生成“建议的操作”，真正执行有副作用的动作交给确定的代码或人确认（[呼应 M6L11 工业 AI 建议 vs 控制](../cloud-enterprise-industrial/industrial-edge-realtime)）。
+
+### 深入（选学）：工具边界的工程要点
+
+- **参数校验是安全第一关**：模型生成的参数是[不可信输入（L3/M7L6）](../foundations/input-validation)——可能类型错、越权、注入。执行前必须按 schema 严格校验，[尤其防注入](./agent-guardrails)（参数拼进 SQL/命令/路径）。
+- **工具描述就是 prompt 的一部分**：写清楚名字、用途、何时用、参数含义——模型靠它决策。描述不清，Agent 就会乱调（[呼应 M7L6](../llm-systems/structured-output-tools)）。
+- **错误要回传给模型**：工具失败（参数错/超时/无权限）不要崩溃，把错误结构化回传给 Agent，让它[反思调整（M9L7）](./reflection-correction) 或换策略。
+- **MCP 等标准化协议**：业界用 Model Context Protocol（MCP）等标准化“工具/上下文怎么暴露给模型”，让工具可复用、可治理——但 schema/权限/审计的工程要点不变。
+- **工具集要精简**：给 Agent 太多工具会让它选困难、易出错；只给完成任务必需的、边界清晰的工具。
+- 工具边界本质是 [M5L8 舱壁/M7L9 护栏](../core-components/bulkhead-isolation) 在 Agent 上的体现——**限制单个工具的爆炸半径，就限制了整个 Agent 的爆炸半径**。
+
+<ResearchNote
+  title="工具边界：Agent 安全的第一道防线"
+  source="ReAct / Toolformer；Anthropic Tool use / MCP；最小权限与审计原则"
+  href="https://modelcontextprotocol.io/"
+  insight="Agent 自主、反复地调用工具，使工具的副作用风险被放大。每个工具需定义 schema（校验参数）、权限（最小、默认只读）、预算（限次/限额）、超时、审计（留痕）。把工具设计成只读+提议、有副作用的交人确认，能从根上限制 Agent 的爆炸半径。MCP 等协议标准化了工具的暴露方式。"
+  application="给 Agent 的每个工具配齐五道边界（schema/权限/预算/超时/审计）；按只读 vs 副作用分级；危险动作走人在回路；严格校验模型生成的参数防注入；错误结构化回传让 Agent 自我纠正；工具集精简。工具边界 = Agent 闯祸上限。"
+/>
+
+## 三、跟我做一遍：带边界的工具注册
+
+<PyRunner
+  rows={40}
+  expect="越权/超预算/参数错都被挡"
+  code={`class Tool:
+    def __init__(self, name, fn, readonly, schema, budget):
+        self.name = name; self.fn = fn; self.readonly = readonly
+        self.schema = schema; self.budget = budget; self.calls = 0
+
+class ToolRegistry:
+    def __init__(self, allow_side_effects=False):
+        self.tools = {}; self.allow_side_effects = allow_side_effects; self.audit = []
+
+    def register(self, tool):
+        self.tools[tool.name] = tool
+
+    def call(self, name, args):
+        t = self.tools.get(name)
+        if t is None:
+            return {"error": "unknown tool"}                  # 只允许注册过的
+        if not t.readonly and not self.allow_side_effects:    # 权限：副作用工具默认禁止
+            self.audit.append((name, "BLOCKED_SIDE_EFFECT"))
+            return {"error": "side-effect tool needs approval"}
+        if t.calls >= t.budget:                               # 预算：限次
+            self.audit.append((name, "BUDGET_EXCEEDED"))
+            return {"error": "tool budget exceeded"}
+        for k, typ in t.schema.items():                       # schema 校验参数
+            if k not in args or not isinstance(args[k], typ):
+                self.audit.append((name, "BAD_ARGS"))
+                return {"error": "invalid args"}
+        t.calls += 1
+        result = t.fn(**args)
+        self.audit.append((name, "OK"))                       # 审计留痕
+        return {"result": result}
+
+reg = ToolRegistry(allow_side_effects=False)
+reg.register(Tool("search", lambda q: "结果:" + q, readonly=True, schema={"q": str}, budget=2))
+reg.register(Tool("delete_db", lambda table: "DROPPED", readonly=False, schema={"table": str}, budget=1))
+
+print(reg.call("search", {"q": "天气"}))            # OK
+print(reg.call("delete_db", {"table": "users"}))    # 被挡：副作用工具需批准
+print(reg.call("search", {"q": 123}))               # 被挡：参数类型错
+reg.call("search", {"q": "a"})
+print(reg.call("search", {"q": "b"}))               # 第 3 次超预算被挡
+print("审计:", reg.audit)
+print("越权/超预算/参数错都被挡")`}
+/>
+
+只读 search 正常用，但有副作用的 delete_db 被默认拦下（需批准）、参数类型错被挡、超过预算被挡，每次调用都留审计——这就是工具的五道边界。**试试**：把 ToolRegistry 设成 `allow_side_effects=True`（模拟人工批准后），看 delete_db 能否执行；想想真实系统里"批准"该是人在回路（M9L9）。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month09/m9l2_tools/`：
+
+```bash
+python labs/month09/m9l2_tools/test_tools.py
+```
+
+实现带边界的工具注册：schema 校验、只读/副作用权限、调用预算、审计日志，未知/越权/超预算/参数错都拦下。
+
+<GuidedExercise
+  title="练习指引：实现受约束工具注册"
+  goal="把“schema + 权限 + 预算 + 审计”做成代码——Agent 安全的第一道防线。"
+  hints={[
+    'call 顺序：未知工具 → 权限(副作用默认禁) → 预算 → schema 校验 → 执行 + 审计。',
+    '权限：readonly=False 的工具，除非 allow_side_effects，否则拦下。',
+    '预算：calls 达 budget 就拦。',
+    '每条路径都记审计（OK/各种拦截原因）。'
+  ]}
+  steps={[
+    '实现 Tool 和 ToolRegistry。',
+    'call：依次检查未知/权限/预算/schema，通过才执行并计数。',
+    '所有结果记入审计。',
+    '写测试：只读正常、副作用被拦、超预算被拦、参数错被拦、未知工具被拦、审计完整。'
+  ]}
+  checks={[
+    '你能列出 Agent 工具的五道边界。',
+    '你的 lab 能拦下越权/超预算/参数错的调用。',
+    '你能区分只读和副作用工具的不同对待。',
+    '你理解工具边界 = Agent 闯祸上限。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 工具风险分级
+
+<TradeoffExplorer
+  title="按副作用给工具分级"
+  dimensions={['可让 Agent 自主调', '风险', '需审计', '需人确认', '常见例子']}
+  options={[
+    {
+      name: '只读工具',
+      scores: [5, 1, 3, 1, 5],
+      note: '查数据、搜索、读文件。风险低，可较自由地让 Agent 调。',
+      whenToUse: 'Agent 的默认工具类型——优先设计成只读。'
+    },
+    {
+      name: '可逆副作用',
+      scores: [3, 3, 5, 2, 3],
+      note: '写草稿、建临时记录等可撤销操作。需审计，部分需确认。',
+      whenToUse: '能回滚的写操作。'
+    },
+    {
+      name: '不可逆/高危副作用',
+      scores: [1, 5, 5, 5, 2],
+      note: '删数据、转账、发外部消息、执行命令。必须人确认 + 审计 + 严格权限。',
+      whenToUse: '尽量避免让 Agent 直接调；改为提议 + 人执行。'
+    }
+  ]}
+/>
+
+### 2. "把工具设计成只读 + 提议"是 Agent 安全的关键设计
+
+降低 Agent 风险最有效的架构选择，不是"让模型更守规矩"，而是**从工具设计上限制它能造成的后果**：让 Agent 的工具尽量是**只读的（获取信息）+ 生成提议的（产出"建议执行的操作"而非直接执行）**，把真正有副作用的执行交给确定的代码或人确认。这样即使模型决策错了，最坏也只是"读了不该读的（靠权限挡）"或"提了个坏建议（靠人/代码把关）"，而不会直接造成不可逆后果。这和 [M6L11 工业 AI"建议 vs 控制"](../cloud-enterprise-industrial/industrial-edge-realtime)、[M7L9 高风险人在回路](../llm-systems/hallucination-guardrails) 是同一条安全原则：**越接近不可逆/高后果的动作，越要把自主权从模型手里收回来。**
+
+### 3. 真实案例：Agent 工具权限事故
+
+Agent 安全事故的典型模式：给 Agent 开放了一个权限过大的工具（能执行任意 SQL、能调任意 API、能读整个文件系统），然后模型——可能因为决策失误、可能因为被用户的 [prompt injection（M9L9）](./agent-guardrails) 诱导——调用它造成了数据泄露/删除/越权。事后复盘几乎都指向同一处：**工具权限太大、没有最小权限和审计**。修法就是本课：工具最小权限、副作用工具人确认、参数严格校验防注入、全程审计。**Agent 的安全边界，95% 由工具的设计决定**——模型再守规矩，给它一把能删库的钥匙也迟早出事。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 列出你 Agent 的所有工具，标出哪些只读、哪些有副作用、哪些不可逆。不可逆的能改成"提议 + 人执行"吗？
+- 模型生成的工具参数，你严格校验了吗（类型/范围/权限/注入）？参数会拼进 SQL/命令/路径吗？
+- 每次工具调用有审计吗？出了事你能追溯到 Agent 哪一步、用什么参数调了什么？
+
+## 自检清单
+
+- [ ] 我能列出 Agent 工具的五道边界（schema/权限/预算/超时/审计）。
+- [ ] 我的 lab 能拦下越权/超预算/参数错的调用并留审计。
+- [ ] 我能按只读 vs 副作用给工具分级、分别对待。
+- [ ] 我理解"只读+提议"是 Agent 安全的关键设计。
+
+## 常见误解
+
+- **"工具调用 M7L6 学过了，Agent 一样"**：Agent 自主反复调用放大了风险，需要更严的边界。
+- **"靠 prompt 让模型别调危险工具"**：模型不可靠、会被诱导；要在工具层用权限硬挡。
+- **"给 Agent 越多越强的工具越好"**：工具越强闯祸上限越高；最小权限、精简工具集。
+
+## 延伸阅读
+
+- [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
+- [Anthropic: Tool use](https://docs.anthropic.com/en/docs/build-with-claude/tool-use)
+- [下一课：ReAct 推理与行动](./react-pattern)

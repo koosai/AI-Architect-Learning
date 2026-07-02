@@ -1,0 +1,196 @@
+---
+title: M5L10 - 分区与分片
+description: 数据一台机器放不下、扛不住怎么办？按 key 分片到多台——哈希/范围分片、一致性哈希、热点与再平衡。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M5L10 · 分区与分片
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M5L1 一致性哈希', href: './load-balancing'}, {label: 'M5L9 复制', href: './replication'}, {label: 'M3L4 SQL/NoSQL', href: '../data-cache-queue/sql-vs-nosql'}]}
+  outcome="能用哈希/范围分片把数据分到多台、识别热点与数据倾斜、用一致性哈希支持平滑再平衡，并理解分片对查询的影响。"
+  howToUse="先看“单库放不下、写不动”的痛，再对比哈希/范围分片，最后做分片路由 + 再平衡 lab。"
+/>
+
+:::tip 复制解决“同一份数据放几份”，分片解决“数据多到一台放不下”
+[复制（M5L9）](./replication)把**整份**数据拷到多台——但每台还是存了全量，单台的容量和写吞吐仍是上限。当数据大到一台装不下、或写多到一台扛不住，就要**分片（sharding）**：把数据**切开**，不同部分放不同机器。复制和分片正交，真实系统两者并用。
+:::
+
+## 一、单库的容量和写吞吐到顶了
+
+你的订单表涨到 10 亿行、单库磁盘快满、写入开始变慢。加从库（复制）只能扩**读**——写还是全压在主库一台上，容量也还是一台的上限。唯一的出路：**把数据按某个 key 切成多片（shard/partition），分到多台机器**，每台只存一部分、只处理一部分写。问题随之而来：按什么切？切了之后怎么找数据？某片特别热怎么办？加机器时怎么搬数据？
+
+## 二、三个核心概念（分层）
+
+### 基础：哈希分片 vs 范围分片
+
+<GlossaryTerm term="Sharding" definition="分片/分区：把一个大数据集按某个分区键切成多个子集（shard），分布到不同节点。每个节点只存一部分数据、处理一部分负载，从而突破单机容量和吞吐上限。" >分片（sharding）</GlossaryTerm>的两种基本切法：
+
+- <GlossaryTerm term="Hash Partitioning" definition="哈希分片：对分区键做哈希再决定归属节点，数据分布均匀、不易热点。但范围查询要扫所有分片（数据被打散）。" >哈希分片</GlossaryTerm>：对 key 哈希决定归属。**分布均匀、不易热点**，但相邻 key 被打散——**范围查询要扫所有分片**。
+- <GlossaryTerm term="Range Partitioning" definition="范围分片：按分区键的区间切分（如按时间、按字母段）。范围查询高效（连续数据在同一分片），但容易产生热点（如最新时间段的写全压在一个分片）。" >范围分片</GlossaryTerm>：按 key 区间切（如按时间/字母）。**范围查询高效**（连续数据在一片），但**容易热点**（如"最新订单"全压在最后一片）。
+
+### 进阶：热点、数据倾斜与一致性哈希再平衡
+
+- <GlossaryTerm term="Hotspot" definition="热点：某个分片承担了远超其它分片的负载（如某个大V、某个爆款商品、最新时间段），成为瓶颈，抵消了分片的好处。" >热点（hotspot）</GlossaryTerm>/数据倾斜：某片特别热（大V、爆款、最新时段），成为瓶颈。对策：更细的分区键、给热 key 加随机后缀打散、热点单独处理。
+- **再平衡（rebalancing）**：加机器时怎么搬数据？朴素 `hash%N` 会让几乎所有数据重新分布（[M5L1 已证](./load-balancing)）。用<GlossaryTerm term="Consistent Hashing" definition="一致性哈希：把节点和键映射到哈希环，增删节点只迁移相邻一小段数据（~1/N），是分片平滑再平衡的基础（详见 M5L1）。" >一致性哈希</GlossaryTerm>（[M5L1](./load-balancing)）则只搬 ~1/N。生产系统还常用**固定数量的虚拟分片**（如预分 1024 个 partition，再把 partition 映射到物理节点），扩容时只迁移整个 partition、不重算哈希。
+
+### 深入（选学）：分片把"简单操作"变难
+
+分片的代价是查询和事务变复杂：
+- **跨分片查询/聚合**：`SELECT ... ORDER BY` 跨所有分片要"分散-聚合"（scatter-gather），慢且放大[尾延迟](../foundations/performance-and-latency)。
+- **跨分片事务**：单分片内可用本地事务，跨分片需分布式事务/[Saga（M3L11）](../data-cache-queue/consistency-patterns)，代价高——所以**分区键的选择极关键**：尽量让常一起访问的数据落在同一分片（如同一用户的所有订单同片）。
+- **二级索引**：按非分区键查询很难，需要全局二级索引或按分区键反范式（[回扣 M3L2 索引](../data-cache-queue/indexing)）。
+- **路由层**：客户端/代理要知道"key 在哪片"——靠分片映射表或一致性哈希计算。
+
+<ResearchNote
+  title="分区：突破单机上限的代价是查询复杂度"
+  source="Kleppmann, DDIA 第 6 章 Partitioning；Google Bigtable（范围分片 tablet）；Amazon Dynamo（一致性哈希分区）"
+  href="https://dataintensive.net/"
+  insight="DDIA 指出分区的两种主流方式——按 key 范围（利于范围查询、易热点）和按 key 哈希（分布均匀、不利范围查询）——以及热点、再平衡、二级索引、请求路由四大难题。Bigtable 用范围分片（tablet 可分裂），Dynamo 用一致性哈希分区。"
+  application="选分区键要兼顾“分布均匀”和“常一起访问的数据同片”。范围分片利于时间序/范围查询但要防热点；哈希分片均匀但范围查询贵。用一致性哈希或固定虚拟分片支持平滑再平衡。分片后尽量避免跨分片事务。"
+/>
+
+## 三、跟我做一遍：分片路由 + 平滑再平衡
+
+<PyRunner
+  rows={32}
+  expect="再平衡只搬一小部分"
+  code={`import hashlib, bisect
+def h(s): return int(hashlib.md5(str(s).encode()).hexdigest(), 16)
+
+# 固定虚拟分片法：预分 P 个 partition（key->partition 永不变），
+# 再用“一致性哈希环”把 partition 分配到节点 —— 增删节点只迁移 ~1/N
+P = 64
+def partition_of(key): return h(key) % P          # key -> 固定 partition
+
+def build_ring(nodes, vnodes=50):                  # 节点环（含虚拟节点）
+    ring = {}
+    for n in nodes:
+        for v in range(vnodes):
+            ring[h("%s#%d" % (n, v))] = n
+    return sorted(ring), ring
+
+def node_of(p, sorted_pts, ring):                  # partition 顺时针归属节点
+    hp = h("partition-%d" % p)
+    idx = bisect.bisect_left(sorted_pts, hp)
+    if idx == len(sorted_pts): idx = 0
+    return ring[sorted_pts[idx]]
+
+def owner(key, sp, rg): return node_of(partition_of(key), sp, rg)
+
+keys = ["order%d" % i for i in range(2000)]
+sp3, rg3 = build_ring(["N1", "N2", "N3"])
+before = {k: owner(k, sp3, rg3) for k in keys}
+
+sp4, rg4 = build_ring(["N1", "N2", "N3", "N4"])    # 扩容一台
+moved = sum(1 for k in keys if owner(k, sp4, rg4) != before[k])
+print("扩容后迁移:", moved, "/", len(keys))         # ~1/4，远小于全量
+
+from collections import Counter
+print("分布:", dict(Counter(owner(k, sp4, rg4) for k in keys)))
+print("再平衡只搬一小部分")`}
+/>
+
+key 到 partition 的映射**永不变**，扩容只改变"partition 到节点"的映射、只迁移少量 partition——这就是平滑再平衡。**试试**：把分区键从 `order_id`（哈希、均匀）换成"按 user_id 前缀范围"，构造一个大用户制造热点，观察某节点负载飙升。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month05/m5l10_sharding/`：
+
+```bash
+python labs/month05/m5l10_sharding/test_sharding.py
+```
+
+实现固定虚拟分片的路由：key 稳定映射到 partition、partition 映射到节点、扩容只迁移少量、检测热点。
+
+<GuidedExercise
+  title="练习指引：实现分片路由 + 再平衡"
+  goal="把“固定 partition + 节点映射 + 平滑再平衡”做成代码，验证扩容只搬一小部分。"
+  hints={[
+    'partition_of(key) = hash(key) % P，P 固定，永不随节点数变。',
+    'assign(nodes)：把 P 个 partition 分配给节点（只在节点变时重算）。',
+    'owner(key) = node of partition_of(key)。',
+    '扩容/缩容只改 partition->node 映射，key->partition 不变。'
+  ]}
+  steps={[
+    '实现 partition_of(key, P)。',
+    '实现 ShardRouter(nodes, P)：维护 partition->node，owner(key)。',
+    '实现 rebalance(new_nodes)：重算映射并报告迁移量。',
+    '写测试：同 key 稳定归属、扩容迁移远小于全量、分布大致均匀、检测某分片热点。'
+  ]}
+  checks={[
+    '你能区分哈希分片和范围分片及取舍。',
+    '你的再平衡只迁移一小部分数据。',
+    '你能解释热点/数据倾斜及对策。',
+    '你能说出分片为什么让跨分片查询/事务变难。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 分区策略对比
+
+<TradeoffExplorer
+  title="分区策略"
+  dimensions={['分布均匀', '范围查询高效', '防热点', '再平衡平滑', '实现复杂度']}
+  options={[
+    {
+      name: '范围分片',
+      scores: [2, 5, 1, 3, 4],
+      note: '按区间切。范围/排序查询高效，但最新数据易成热点。',
+      whenToUse: '时间序、需要范围扫描的场景（日志、监控）。'
+    },
+    {
+      name: '哈希分片',
+      scores: [5, 1, 4, 3, 4],
+      note: '哈希打散、分布均匀、不易热点。但范围查询要扫全部分片。',
+      whenToUse: '点查为主、要均匀分布时——最常用。'
+    },
+    {
+      name: '一致性哈希/固定虚拟分片',
+      scores: [4, 1, 4, 5, 3],
+      note: '哈希均匀 + 再平衡只搬 ~1/N。生产分片系统标配。',
+      whenToUse: '需要频繁、平滑扩缩容时。'
+    }
+  ]}
+/>
+
+### 2. 分区键是分片系统最重要的设计决策
+
+分区键一旦选错，后面全是痛：选了低基数键（如"省份"）→ 数据倾斜；选了不常一起查的键 → 处处跨分片查询/事务；选了单调递增键（如自增 ID/时间）→ 写热点全压最后一片。好的分区键要同时满足：**基数高（分得开）、分布均匀（不倾斜）、贴合访问模式（常一起访问的同片）**。这和 [L7 按查询建模](../foundations/data-modeling) 是同一思想在分布式层的延伸——**为访问模式设计数据布局**。
+
+### 3. 真实案例：分库分表与原生分片
+
+传统做法是应用层"分库分表"（按 user_id 取模路由到不同库），简单但再平衡痛苦、跨片查询要自己拼。现代做法是用原生支持分片的系统：Cassandra/DynamoDB（一致性哈希分区）、MongoDB（chunk + 范围/哈希）、Vitess（MySQL 分片中间件）、TiDB（Region 范围分片自动分裂迁移）。它们把路由、再平衡、跨片查询的复杂度下沉到存储层。理解原理，你才能用好它们、并知道它们的边界（跨片事务/查询仍贵）。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你最大的表该按什么分区键分片？它基数够高、分布够均、贴合查询吗？会不会有大 key 热点？
+- 有个"按时间范围查 + 按用户查"的双重需求，单一分区键满足不了——你怎么办（二级索引/反范式/双写）？
+- 分片 + 复制怎么组合？（每个分片再做主从复制：先分片再各自复制，扩容和故障转移分别怎么发生？）
+
+## 自检清单
+
+- [ ] 我能区分哈希分片和范围分片及取舍。
+- [ ] 我的 lab 实现了稳定路由 + 平滑再平衡。
+- [ ] 我能识别热点/数据倾斜并给出对策。
+- [ ] 我理解分片让跨分片查询/事务变难，分区键是关键。
+
+## 常见误解
+
+- **"分片就是 hash%N"**：扩缩容会几乎全量迁移，要用一致性哈希/固定虚拟分片。
+- **"分片后查询照旧"**：跨分片查询要 scatter-gather、跨分片事务很贵。
+- **"哈希分片一定均匀"**：大 key（大V/爆款）仍会造成热点，要单独处理。
+
+## 延伸阅读
+
+- [DDIA 第 6 章: Partitioning](https://dataintensive.net/)
+- [Google Bigtable (2006)](https://research.google/pubs/bigtable-a-distributed-storage-system-for-structured-data/)
+- [下一课：共识与协调](./consensus-coordination)

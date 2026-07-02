@@ -1,0 +1,67 @@
+---
+title: Month 7 总览 - LLM 作为系统组件
+description: 把 LLM 当成一个有延迟、成本、上下文限制、会出错的系统组件来设计——从 Transformer 原理到提示、工具调用、推理服务、评测与可靠性。
+slug: /llm-systems/overview
+---
+
+import ChapterMeta from '@site/src/components/ChapterMeta';
+
+# Month 7 · LLM 作为系统组件（模块总览）
+
+<ChapterMeta
+  time="整月约 28–34 小时（12 节课）"
+  prereqs={[{label: '完成 Month 5 核心架构', href: '/core-components/overview'}, {label: 'M6 云原生交付', href: '/cloud-enterprise-industrial/overview'}, {label: 'M5 弹性模式', href: '/core-components/circuit-breaker'}]}
+  outcome="能把 LLM 当成一个工程组件来设计：理解它内部怎么生成、有哪些约束（token/上下文/成本/延迟/出错），并用提示、结构化输出、工具调用、缓存、评测、防护把它可靠地接进系统。"
+  howToUse="按周学。第一周搞懂 LLM 内部，第二周把它当系统组件接入，第三周让它可靠、可评测、可上线。"
+/>
+
+:::tip 这个月的视角转变：LLM 不是“魔法大脑”，是“会出错的系统组件”
+前六个月你学会了设计可靠的分布式系统。现在引入一个新组件——大语言模型。它很强，但也很特别：**输出不确定、会一本正经胡说、有上下文长度上限、按 token 收费、延迟高且波动大。** 这个月教你像架构师那样对待它：理解它的内部和约束，再用工程手段（提示、工具、缓存、评测、防护）把它驯服成一个可靠的系统组件。
+:::
+
+## 为什么要先理解 LLM 的内部
+
+很多人把 LLM 当黑魔法，写不出可靠的 AI 系统。架构师的做法相反：**先理解它怎么工作，约束自然就清楚了。**
+
+- 它**一个 token 一个 token 地预测下一个**生成 → 解释了延迟、流式输出、为什么会"越说越偏"。
+- 它**没有真正的记忆，只能看到上下文窗口里的内容** → 解释了为什么要管理上下文、为什么需要 RAG（[Month 8](../rag/overview)）。
+- 它**按 token 收费、上下文越长越慢越贵** → 解释了为什么要精简提示、缓存、选对模型档位。
+- 它**是概率生成、不保证正确** → 解释了为什么必须评测、防护、结构化校验。
+
+理解这些，你就不会把 LLM 当"许愿池"，而会把它当一个**有明确输入输出契约、有失败模式、需要工程包裹**的组件——这正是前六个月一直在训练的思维。
+
+## 本月课程地图
+
+### Week 1 · LLM 的内部与基础
+| # | 课 | 你会学到 |
+|---|---|---|
+| M7L1 | [Transformer 与自回归生成](./transformer-autoregression) | token、注意力直觉、逐 token 预测 |
+| M7L2 | [分词与上下文窗口](./tokenization-context) | 分词、上下文窗口、token 预算 |
+| M7L3 | [采样与解码](./sampling-decoding) | temperature、top-p、确定性 |
+| M7L4 | [提示工程基础](./prompting-basics) | 结构化提示、few-shot、system prompt |
+
+### Week 2 · 把 LLM 当系统组件
+| # | 课 | 你会学到 |
+|---|---|---|
+| M7L5 | [LLM API、成本与延迟](./llm-api-cost-latency) | token 计费、延迟、流式、批处理 |
+| M7L6 | [结构化输出与工具调用](./structured-output-tools) | JSON 模式、schema 校验、function calling |
+| M7L7 | [KV cache 与推理服务](./kv-cache-serving) | KV cache、连续批处理、prefill/decode |
+| M7L8 | [上下文管理与记忆](./context-memory) | 上下文拼装、摘要、对话记忆、预算 |
+
+### Week 3 · 可靠性、评测与综合
+| # | 课 | 你会学到 |
+|---|---|---|
+| M7L9 | [幻觉、可靠性与防护](./hallucination-guardrails) | 幻觉、grounding、校验、护栏 |
+| M7L10 | [LLM 评测](./llm-evaluation) | 评测集、LLM-as-judge、回归 |
+| M7L11 | [缓存、限流与降级](./llm-caching-resilience) | 语义缓存、限流、模型降级 |
+| M7L12 | [Capstone：构建一个 LLM 应用](./capstone-llm-app) | 组装可靠的 LLM 功能 |
+
+## 月末产出
+
+一套"LLM 工程"的可跑实现（自回归生成、token 预算截断、temperature/top-p 采样、提示模板、成本估算、JSON schema 校验、KV cache 前缀复用、上下文窗口拼装、grounding 校验、评测打分、语义缓存 + 模型降级链），以及"给定一个需求，能设计一个可靠、可控成本、可评测的 LLM 功能"的能力。
+
+## 学习建议
+
+- 始终带着前六个月的工程思维：LLM 是个组件，给它加[超时/重试/熔断/降级（M5）](../core-components/circuit-breaker)、[可观测（M6L7）](../cloud-enterprise-industrial/observability-advanced)、[评测门禁（M6L6）](../cloud-enterprise-industrial/cicd-pipelines)。
+- 区分"模型能力"和"系统可靠性"：模型再强，没有评测、防护、缓存、成本控制，也做不出生产级 AI 产品。
+- 选模型默认用最新、最强的 Claude 模型（如 Opus 4.8 `claude-opus-4-8`、Sonnet 4.6 `claude-sonnet-4-6`、Haiku 4.5 `claude-haiku-4-5-20251001`），再按成本/延迟需求向下选档。

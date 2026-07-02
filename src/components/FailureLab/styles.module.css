@@ -1,0 +1,193 @@
+.card {
+  background: var(--comp-bg);
+  border: 1px solid var(--comp-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0 2rem 0;
+  box-shadow: var(--comp-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.togglesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1rem;
+  background: var(--comp-hover);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.toggleLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--comp-text);
+  user-select: none;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--comp-border);
+  transition: .2s;
+  border-radius: 20px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .2s;
+  border-radius: 50%;
+}
+
+.switch input:checked + .slider {
+  background-color: var(--brand-red);
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(16px);
+}
+
+.btnRow {
+  display: flex;
+  justify-content: center;
+}
+
+.sendBtn {
+  background: var(--ifm-color-primary);
+  color: white;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sendBtn:hover {
+  background: var(--ifm-color-primary-dark);
+  transform: translateY(-1px);
+}
+
+.flowDiagram {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+@media (min-width: 768px) {
+  .flowDiagram {
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 0 1rem;
+  }
+}
+
+.flowNode {
+  border: 2px solid var(--comp-border);
+  background: var(--comp-bg);
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: center;
+  min-width: 130px;
+  transition: all 0.3s ease;
+  color: var(--comp-text-muted);
+}
+
+.flowNodeActive {
+  border-color: var(--ifm-color-primary-light);
+  color: var(--ifm-color-primary-light);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.2);
+}
+
+.flowNodePassed {
+  border-color: var(--brand-green);
+  color: var(--brand-green);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.flowNodeFailed {
+  border-color: var(--brand-red);
+  color: var(--brand-red);
+  background: rgba(239, 68, 68, 0.08);
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+  animation: shake 0.3s ease-in-out;
+}
+
+.flowArrow {
+  font-size: 1.2rem;
+  color: var(--comp-border);
+  transition: color 0.3s;
+}
+
+.flowArrowActive {
+  color: var(--ifm-color-primary-light);
+}
+
+.resultsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.resultBox {
+  border: 1px solid var(--comp-border);
+  border-radius: 8px;
+  padding: 1rem;
+  background: var(--comp-hover);
+}
+
+.resultTitle {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--comp-text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.resultText {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--comp-text);
+  margin: 0;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}

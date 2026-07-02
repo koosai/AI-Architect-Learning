@@ -1,0 +1,179 @@
+---
+title: M4L2 - SOLID（上）：SRP 与 OCP
+description: 一个类干十件事，改一件就动全身——单一职责原则与开闭原则，让每块代码只有一个变化的理由。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M4L2 · SOLID（上）：SRP 与 OCP
+
+<ChapterMeta
+  time="约 2 小时"
+  prereqs={[{label: 'M4L1 变化驱动设计', href: './change-driven-design'}, {label: 'L2 内聚与耦合', href: '../foundations/modules-and-contracts'}]}
+  outcome="能识别“上帝类/上帝函数”，用单一职责拆分它，并用开闭原则让它对扩展开放。"
+  howToUse="先看一个“什么都干”的函数为什么难维护，再把它按职责拆开，最后做 lab。"
+/>
+
+:::tip SOLID 不是教条，是减少"改动波及"的五条经验
+SOLID 五原则的共同目标只有一个：**让需求变化时，要改的代码尽量少、尽量局部。** 这一课讲前两条，也是最重要的两条：单一职责（S）和开闭（O）。
+:::
+
+## 一、一个类干了十件事
+
+你的 `OrderService` 里：校验输入、算价格、存数据库、发邮件、写日志、调风控……全挤在一起。结果：改邮件模板要动它、改价格规则要动它、换数据库还要动它——**它有十个"改动的理由"，每次改都可能碰坏别的功能**。这就是<GlossaryTerm term="God Class" definition="上帝类/上帝函数：承担了过多职责的庞大类或函数。任何一个职责变化都要改它，牵一发动全身，是最常见的坏味道。">上帝类</GlossaryTerm>坏味道。
+
+## 二、三个核心概念（分层）
+
+### 基础：单一职责原则（SRP）
+
+<GlossaryTerm term="Single Responsibility Principle" definition="单一职责原则（SRP）：一个模块/类/函数应该只有一个“变化的理由”——即只对一个利益相关者/一类需求负责。">SRP</GlossaryTerm>：一块代码应该**只有一个变化的理由**。把校验、算价、存储、通知拆成各自独立的部分，改邮件就只动通知部分，互不波及（这正是 [L2 高内聚](../foundations/modules-and-contracts) 的延续）。
+
+### 进阶：开闭原则（OCP）
+
+[M4L1](./change-driven-design) 学过的 <GlossaryTerm term="Open-Closed Principle" definition="开闭原则：对扩展开放、对修改关闭——加新功能靠新增代码，而非修改已有代码。">开闭</GlossaryTerm> 在类层面同样适用：加一种新折扣、新支付方式，应该是**新增一个类**，而不是改已有的核心类。SRP 让你拆得开，OCP 让你扩得动——两者配合。
+
+### 深入（选学）：SRP 的"变化的理由"要看利益相关者
+
+SRP 常被误解为"一个类只做一件事"。更准确的表述（Robert Martin）：**一个模块应该只对一类利益相关者负责**。算价规则由财务定、邮件模板由市场定、存储由 DBA 定——它们是不同的人、会因不同原因变化，所以该分开。把"会因不同原因、被不同人改动"的东西分开，就是 SRP 的精髓（一路通向 [Conway 定律](../system-design-bridge/lld-classes) 和微服务边界）。
+
+<ResearchNote
+  title="SOLID：让面向对象代码经得起变化"
+  source="Robert C. Martin, SOLID 原则 / Clean Architecture"
+  href="https://blog.cleancoder.com/uncle-bob/2020/10/18/Solid-Relevance.html"
+  insight="Robert Martin 把 SRP/OCP/LSP/ISP/DIP 五条原则系统化为 SOLID。它们都服务于一个目标：让软件在需求变化时，改动范围最小、最不易引入回归。其思想根源可追溯到 Parnas 的信息隐藏（L2）。"
+  application="SOLID 不是用来“打分”的教条，而是一组“闻坏味道”的嗅觉：一个类有多个改动理由（违反 SRP）、加功能要改核心（违反 OCP），就是重构信号。先有痛点，再用原则诊断。"
+/>
+
+## 三、跟我做一遍：拆掉上帝函数
+
+<PyRunner
+  rows={20}
+  expect="各司其职"
+  code={`# 上帝函数：算价 + 折扣 + 税 全混在一起，改任何规则都要动它
+def total_bad(items, discount, tax):
+    s = 0
+    for i in items:
+        s += i["price"] * i["qty"]
+    s = s * (1 - discount)
+    s = s * (1 + tax)
+    return s
+
+# SRP 版：每个函数只有一个变化的理由
+def subtotal(items):
+    return sum(i["price"] * i["qty"] for i in items)
+
+def apply_discount(amount, pct):
+    return amount * (1 - pct)
+
+def apply_tax(amount, rate):
+    return amount * (1 + rate)
+
+def total(items, discount=0.0, tax=0.0):     # 只负责编排
+    return apply_tax(apply_discount(subtotal(items), discount), tax)
+
+items = [{"price": 10, "qty": 2}, {"price": 5, "qty": 1}]
+print("小计:", subtotal(items))               # 可单独测、单独改
+print("总价:", total(items, discount=0.1, tax=0.08))
+print("各司其职")`}
+/>
+
+拆开后，"折扣规则变了"只动 `apply_discount`、"税率算法变了"只动 `apply_tax`，互不影响，而且每个都能单独测试（[回扣 L13](../foundations/testing-and-tdd)）。**试试**：给 `apply_discount` 加一个"满减"逻辑，看你只需改它一处。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month04/m4l2_srp/`：
+
+```bash
+python labs/month04/m4l2_srp/test_pricing.py
+```
+
+把一个混合职责的计价逻辑，拆成单一职责的函数，再编排起来。
+
+<GuidedExercise
+  title="练习指引：按职责拆分计价"
+  goal="练习 SRP：让每个函数只有一个变化的理由，且能独立测试。"
+  hints={[
+    '每个函数只做一件事：小计、折扣、税，分开。',
+    'total 只负责"编排"这几步，自己不含计算细节。',
+    '每个函数都应能单独测试（这是 SRP 的好处之一）。',
+    '想想：如果折扣规则变了，你需要改几个函数？（应该只有一个。）'
+  ]}
+  steps={[
+    '实现 subtotal(items)：Σ price×qty。',
+    '实现 apply_discount(amount, pct) 和 apply_tax(amount, rate)。',
+    '实现 total(items, discount, tax)：编排三步。',
+    '写测试：分别测三个单一职责函数 + 测 total 的组合结果。'
+  ]}
+  checks={[
+    '你的每个函数只有一个变化的理由。',
+    '你能单独测试每个职责。',
+    '你能解释 SRP 和 OCP 怎么配合。',
+    '你能识别一段代码是不是"上帝类/函数"。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. SRP 的粒度：拆多细？
+
+<TradeoffExplorer
+  title="职责拆分的粒度"
+  dimensions={['单点可维护', '可测试性', '可复用', '过度拆分风险', '可读性']}
+  options={[
+    {
+      name: '上帝类（不拆）',
+      scores: [1, 1, 1, 5, 2],
+      note: '所有逻辑一坨。改一处动全身、难测、难复用。',
+      whenToUse: '几乎从不——除了一次性脚本。'
+    },
+    {
+      name: '按"变化理由"拆（推荐）',
+      scores: [5, 5, 4, 4, 4],
+      note: '把会因不同原因变化的职责分开。可维护、可测、可复用，粒度合理。',
+      whenToUse: '默认做法：识别变化轴，沿轴拆分。'
+    },
+    {
+      name: '拆到极碎（每行一个类）',
+      scores: [3, 4, 3, 1, 1],
+      note: '过度拆分，类爆炸、跳来跳去读不懂。抽象成本压倒收益。',
+      whenToUse: '几乎从不——这是 SRP 用力过猛。'
+    }
+  ]}
+/>
+
+### 2. SRP 从函数一直延伸到服务边界
+
+同一条原则，在不同尺度反复出现：函数（一个函数一件事）→ 类（一个类一个职责）→ 服务（一个微服务一个业务能力，[回扣 M2L9/Conway](../system-design-bridge/lld-classes)）。**"把会因不同原因变化的东西分开"是从代码到架构的统一原则。**
+
+### 3. 真实案例：边界清晰才能小团队驾驭大系统
+
+[WhatsApp 的极简、单一聚焦](../atlas/whatsapp.mdx)（只做消息）本质就是产品级的 SRP；它让架构、团队、复杂度都可控。**职责清晰是"少改、少错、能并行开发"的前提**——这也是 SOLID 的终极目的。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 找你代码里一个"上帝类"，列出它有几个"变化的理由"，按理由把它拆开。
+- SRP 说"一个变化理由"，但拆得太碎会类爆炸。你怎么找那个"刚好"的粒度？
+- 一个 `User` 类既管认证、又管资料、又管计费——该拆成几个？依据是什么（谁会改它）？
+
+## 自检清单
+
+- [ ] 我能识别上帝类/函数。
+- [ ] 我能按"变化的理由"把职责拆开。
+- [ ] 我的 lab 每个函数单一职责、可独立测试。
+- [ ] 我能解释 SRP 和 OCP 如何配合。
+
+## 常见误解
+
+- **"SRP = 一个类只做一件事"**：更准确是"只有一个变化的理由/只对一类人负责"。
+- **"拆得越细越 SOLID"**：过度拆分导致类爆炸，同样是坏设计。
+- **"SOLID 是要遵守的规则"**：它是诊断坏味道的工具，从痛点出发用它。
+
+## 延伸阅读
+
+- [Robert C. Martin, SOLID Relevance](https://blog.cleancoder.com/uncle-bob/2020/10/18/Solid-Relevance.html)
+- [下一课：SOLID（下）LSP/ISP/DIP](./solid-lsp-isp-dip)

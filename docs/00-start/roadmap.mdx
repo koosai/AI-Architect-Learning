@@ -1,0 +1,75 @@
+---
+title: 12个月路线
+description: 系统设计、设计模式与 AI 架构的完整课程地图。
+---
+
+# 12个月路线
+
+这条路线按“先能建小系统，再能设计大系统，最后能设计 AI 系统”的顺序展开。X 文章中的 8 周 freshers roadmap 被吸收为 Month 2 的桥梁内容，但本项目不会停在 placement-ready；最终目标是能形成 AI Architect 作品集。
+
+## 阶段一：工程与系统设计底座
+
+| 月份 | 主题 | 产出 |
+|---|---|---|
+| Month 1 | 编程与工程基础 | Mini service + tests |
+| Month 2 | Freshers System Design Bridge | Chat app HLD/LLD diagram |
+| Month 3 | 数据、缓存、队列 | URL shortener + mini feed lab |
+| Month 4 | 设计原则与 LLD | Parking lot / rate limiter code |
+| Month 5 | 系统设计核心组件 | E-commerce API architecture review |
+| Month 6 | 云原生、企业与工业软件 | IoT telemetry pipeline design |
+
+## 阶段二：AI Architect 核心能力
+
+| 月份 | 主题 | 产出 |
+|---|---|---|
+| Month 7 | LLM 基础与模型系统 | Local vs cloud model decision memo |
+| Month 8 | RAG 与知识系统 | Local-first RAG pipeline |
+| Month 9 | Agent 架构 | Tool-calling architecture assistant |
+| Month 10 | Multi-Agent 与协议 | Supervisor + specialist agents design |
+| Month 11 | 生产级 AI 平台 | Risk review + evaluation harness |
+| Month 12 | Capstone | AI Architect Portfolio System |
+
+## 当前已展开的深度章节
+
+- [Month 1 - 编程基础与系统构件（完整模块）](../foundations/overview)
+- [Month 2 - 系统设计桥梁 HLD/LLD/容量（完整模块）](../system-design-bridge/overview)
+- [Month 3 - 数据、缓存、队列（完整模块）](../data-cache-queue/overview)
+- [Month 4 - 设计原则与设计模式（完整模块）](../design-patterns-lld/overview)
+- [Month 5 - 核心架构能力：分布式构件与可靠性（完整模块）](../core-components/overview)
+- [Month 6 - 云原生、企业应用与工业软件（完整模块）](../cloud-enterprise-industrial/overview)
+- [Month 7 - LLM 作为系统组件（完整模块）](../llm-systems/overview)
+- [Month 8 - RAG 与知识系统（完整模块）](../rag/overview)
+- [Month 9 - Agent Loop 与工具边界](../agent-architectures/overview)
+- [Month 10 - Multi-Agent 与协议](../multi-agent-protocols/overview)
+- [Month 11 - 生产级 AI 平台、评测与风险治理](../production-ai-platform/overview)
+- [Month 12 - 综合毕业项目（Capstone）](../capstone/overview)
+
+## 12个月能力曲线
+
+```mermaid
+flowchart LR
+  A["能运行小服务"] --> B["能画 HLD/LLD"]
+  B --> C["能解释数据与异步"]
+  C --> D["能写可维护 LLD"]
+  D --> E["能设计云端系统"]
+  E --> F["能比较 LLM 系统"]
+  F --> G["能设计 RAG"]
+  G --> H["能设计 Agent"]
+  H --> I["能评审 AI 平台"]
+  I --> J["能展示作品集"]
+```
+
+## 每月固定训练
+
+- **Architect Speaking Drill**：30-45 分钟限时讲解。必须先澄清需求，再画图，再估算，再讨论 trade-off。
+- **Design Review Note**：用一页文档写清楚方案、风险、备选方案和未解决问题。
+- **Code Evidence**：每月至少有一个可运行代码片段或实验。
+- **Source Log**：记录本月读过的外部资料，以及它解决了什么问题。
+- **Research Anchor**：每个关键模块至少绑定一篇论文或官方资料，说明它如何影响现代系统。
+- **Guided Exercise**：练习旁必须有线索、手把手步骤和自检标准，避免“题目看得懂但不知道怎么下手”。
+
+## 不采用的路线
+
+- 不做 8 周速成。速成可以通过面试题，但难以建立 AI Architect 所需的工程判断。
+- 不把 AI 章节写成模型 API 调用手册。模型只是系统的一部分。
+- 不用大量摘抄替代原创讲解。外部仓库会作为来源和延伸阅读，而不是正文搬运。

@@ -1,0 +1,184 @@
+---
+title: M2L8 - 数据存储选型
+description: 不是所有东西都该塞进 MySQL——关系/文档/KV/搜索/对象/图/时序数据库各擅长什么，怎么按访问模式选。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M2L8 · 数据存储选型
+
+<ChapterMeta
+  time="约 1.5–2 小时"
+  prereqs={[{label: 'L7 数据建模', href: '../foundations/data-modeling'}, {label: 'M2L6 CAP', href: './cap-consistency'}, {label: 'M2L7 扩展', href: './scaling-strategies'}]}
+  outcome="能根据访问模式，为不同数据选对存储类型（关系/文档/KV/搜索/对象/图/时序），并理解 polyglot persistence。"
+  howToUse="先看各存储擅长什么，再做 lab 写一个“按需求推荐存储”的小决策器。"
+/>
+
+:::tip 没有"最好的数据库"，只有"最合适的"
+新手默认"就用 MySQL"或"就用 MongoDB"。但搜索、缓存、图片、社交关系、监控指标，各有专门为它们而生的存储。选型的本质是：**先看你怎么访问数据，再选擅长那种访问的存储。**
+:::
+
+## 一、全塞 MySQL，会怎样？
+
+你把全文搜索用 `LIKE '%keyword%'` 做（慢到爆）、把几 MB 的图片存进数据库（撑爆它）、用一堆 JOIN 查"朋友的朋友"（越查越慢）。不是 MySQL 不好，是**你让它做了它不擅长的事**。每类访问模式，都有更合适的存储。
+
+## 二、三个核心概念（分层）
+
+### 基础：主要存储类型及其擅长
+
+| 类型 | 擅长 | 典型 |
+|---|---|---|
+| <GlossaryTerm term="Relational (SQL)" definition="关系型数据库：表 + 行 + 强 schema + 事务 + JOIN。擅长复杂查询和强一致。">关系型</GlossaryTerm> | 复杂查询、事务、强一致 | PostgreSQL, MySQL |
+| <GlossaryTerm term="Document DB" definition="文档数据库：以 JSON 文档为单位存取，schema 灵活。擅长整块读写、快速迭代。">文档型</GlossaryTerm> | 灵活 schema、整块读写 | MongoDB |
+| <GlossaryTerm term="Key-Value" definition="键值存储：按 key 极快读写，常用作缓存或会话。结构简单、延迟极低。">键值</GlossaryTerm> | 极快按 key 读写、缓存 | Redis |
+| <GlossaryTerm term="Wide-Column" definition="宽列存储：为海量写入和水平扩展设计的 NoSQL（如 Cassandra）。擅长超大写吞吐、按分区键查询。">宽列</GlossaryTerm> | 海量写、水平扩展 | Cassandra |
+| <GlossaryTerm term="Search Engine" definition="搜索引擎：为全文检索、相关性排序、聚合分析而生（倒排索引）。">搜索引擎</GlossaryTerm> | 全文搜索、相关性 | Elasticsearch |
+| <GlossaryTerm term="Object Storage" definition="对象存储：存大文件（图片/视频/备份）的廉价、海量、高可用存储，按 URL 取。">对象存储</GlossaryTerm> | 大文件（图片/视频） | S3 |
+| <GlossaryTerm term="Graph DB" definition="图数据库：为关系遍历（朋友的朋友、推荐路径）优化的存储。">图</GlossaryTerm> | 关系遍历 | Neo4j |
+| <GlossaryTerm term="Time-Series DB" definition="时序数据库：为带时间戳的指标/事件（监控、IoT）优化，擅长按时间范围聚合。">时序</GlossaryTerm> | 监控指标、IoT | Prometheus, InfluxDB |
+
+### 进阶：按访问模式选，而不是按习惯选
+
+回扣 [L7：先看查询模式，再定存储](../foundations/data-modeling)。问几个问题：要不要复杂事务？要不要全文搜索？是大文件吗？是关系遍历吗？是海量时间序列吗？**每个"是"都指向一个更合适的存储。**
+
+### 深入（选学）：Polyglot Persistence——一个系统用多种存储
+
+现代大系统几乎不会只用一种存储，而是<GlossaryTerm term="Polyglot Persistence" definition="多语言持久化：在同一个系统里，针对不同数据的不同访问模式，分别选用最合适的存储（如关系库 + 缓存 + 搜索 + 对象存储并用）。">polyglot persistence</GlossaryTerm>：用户资料放关系库、会话放 Redis、搜索放 Elasticsearch、图片放 S3、监控放时序库。**代价是运维多套系统、数据要在它们之间同步**——这本身又是个架构难题（回扣 [M2L6 一致性](./cap-consistency)）。
+
+<ResearchNote
+  title="数据模型与存储引擎，决定系统擅长什么"
+  source="Martin Kleppmann, DDIA 第 2–3 章；Martin Fowler, Polyglot Persistence"
+  href="https://martinfowler.com/bliki/PolyglotPersistence.html"
+  insight="DDIA 指出不同数据模型（关系/文档/图）适配不同的数据关系与查询；Fowler 的 Polyglot Persistence 主张大型系统应针对每类数据选最合适的存储，而非强求单一数据库通吃。"
+  application="架构师选存储，是在选“这套系统天生擅长哪类访问”。先有访问模式，再选存储；并接受现实——一个复杂系统往往要并用多种存储，代价是数据同步与运维复杂度。"
+/>
+
+## 三、跟我做一遍：按需求推荐存储
+
+<PyRunner
+  expect="search_engine"
+  code={`def recommend(req):
+    if req.get("full_text_search"):
+        return "search_engine"      # 全文搜索 → Elasticsearch
+    if req.get("large_blob"):
+        return "object_storage"     # 大文件 → S3
+    if req.get("graph_traversal"):
+        return "graph_db"           # 关系遍历 → Neo4j
+    if req.get("strong_transactions"):
+        return "relational"         # 强事务 → PostgreSQL
+    if req.get("huge_write_scale"):
+        return "wide_column"        # 海量写 → Cassandra
+    return "relational"             # 默认稳妥
+
+print("商品全文搜索:", recommend({"full_text_search": True}))
+print("用户头像:", recommend({"large_blob": True}))
+print("转账记录:", recommend({"strong_transactions": True}))`}
+/>
+
+每个需求，访问模式不同，存储就不同。**试试**：给一个"既要强事务又要全文搜索"的需求——你会发现可能需要**两种存储**（关系库存真相 + 搜索引擎建索引），这就是 polyglot persistence。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month02/m2l8_storage/`：
+
+```bash
+python labs/month02/m2l8_storage/test_store.py
+```
+
+实现一个"按需求推荐存储类型"的小决策器，把选型逻辑显式化。
+
+<GuidedExercise
+  title="练习指引：写一个存储选型决策器"
+  goal="把“按访问模式选存储”变成清晰的规则，告别“默认就用 MySQL”。"
+  hints={[
+    '判断有先后：搜索、大文件、图遍历这些"特殊"需求先判断。',
+    '强事务/复杂查询 → 关系型；海量写 + 水平扩展 → 宽列。',
+    '都不特殊时，关系型是稳妥默认。',
+    '想想：一个真实系统往往要返回"多种存储组合"（polyglot）。'
+  ]}
+  steps={[
+    '实现 recommend(req)：req 是需求标志的 dict。',
+    '按优先级判断：full_text_search→search_engine；large_blob→object_storage；graph_traversal→graph_db；time_series→time_series_db；strong_transactions→relational；huge_write_scale→wide_column。',
+    '都没命中 → 返回 relational（默认）。',
+    '写测试覆盖每种需求，跑到全过。'
+  ]}
+  checks={[
+    '你能说出每种存储类型擅长什么访问模式。',
+    '你的决策器对每种需求给出合理存储。',
+    '你能解释 polyglot persistence 及其代价。',
+    '你能根据 L7 的"先看查询"来驱动选型。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 选型是"访问模式 → 存储"，不是"流行 → 存储"
+
+别因为"大家都用 X"而选 X。先写下**高频访问模式**（按 id 读？范围扫描？全文搜？关系遍历？），再匹配擅长它的存储。选错存储是极难逆转的决定（数据迁移代价巨大）。
+
+### 2. 各存储的取舍
+
+<TradeoffExplorer
+  title="主流存储类型怎么选"
+  dimensions={['复杂查询/事务', '写扩展性', '读延迟', 'schema 灵活', '运维成本']}
+  options={[
+    {
+      name: '关系型 SQL',
+      scores: [5, 2, 3, 2, 4],
+      note: '事务、JOIN、强一致最强。但水平扩写难、schema 较硬。',
+      whenToUse: '核心业务数据：订单、账务、用户——需要事务和复杂查询。'
+    },
+    {
+      name: '文档 / 宽列 NoSQL',
+      scores: [2, 5, 4, 5, 3],
+      note: 'schema 灵活、写扩展强。但弱事务、复杂查询难、易最终一致。',
+      whenToUse: '海量写、schema 多变、按 key/分区访问（feed、日志、画像）。'
+    },
+    {
+      name: 'KV 缓存（Redis）',
+      scores: [1, 4, 5, 3, 3],
+      note: '延迟极低、按 key 极快。但容量有限、非持久化主存。',
+      whenToUse: '缓存、会话、排行榜、计数器（配合主存）。'
+    },
+    {
+      name: '搜索 / 对象 / 图 / 时序（专用）',
+      scores: [3, 4, 4, 4, 2],
+      note: '在各自领域碾压通用库，但每多一种就多一套运维和数据同步。',
+      whenToUse: '有明确的全文搜索/大文件/关系遍历/时序需求时，专库专用。'
+    }
+  ]}
+/>
+
+### 3. 真实案例：大系统都是 polyglot
+
+任何一个 [互联网应用案例](../atlas) 拆开看，都是多存储并用：关系库存核心数据、缓存挡读、搜索引擎做检索、对象存储 + CDN 放媒体、时序库做监控。**"用什么数据库"从来不是单选题。** 关键是想清楚每类数据的访问模式，以及它们之间怎么同步（回扣 [M2L6 一致性](./cap-consistency)）。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- "设计一个微信"：消息、用户关系、媒体文件、已读状态、全文搜索聊天记录——各用什么存储？为什么？
+- 你用了关系库 + 搜索引擎两套，数据怎么保持同步？同步延迟会带来什么问题（回扣最终一致）？
+- 团队只熟悉 MySQL，但需求明显该用搜索引擎——你怎么权衡"用对工具"和"团队能力/运维成本"？
+
+## 自检清单
+
+- [ ] 我能说出 7 类存储各擅长什么访问模式。
+- [ ] 我能按需求为数据选对存储，而非默认 MySQL。
+- [ ] 我的 lab 决策器对各类需求给出合理选择。
+- [ ] 我理解 polyglot persistence 及其数据同步代价。
+
+## 常见误解
+
+- **"一个数据库通吃所有"**：让数据库做不擅长的事会很痛；大系统都是多存储。
+- **"NoSQL 比 SQL 先进"**：各有所长；NoSQL 多为弱事务、换扩展性，不是"更高级"。
+- **"选型看流行度"**：要看访问模式，选错极难逆转。
+
+## 延伸阅读
+
+- [Martin Fowler, Polyglot Persistence](https://martinfowler.com/bliki/PolyglotPersistence.html)
+- [Martin Kleppmann, DDIA](https://dataintensive.net/)
+- [Month 2 总览](./overview)

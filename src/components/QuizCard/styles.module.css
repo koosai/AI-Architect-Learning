@@ -1,0 +1,141 @@
+.card {
+  background: var(--comp-bg);
+  border: 1px solid var(--comp-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0 2rem 0;
+  box-shadow: var(--comp-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--comp-border);
+  padding-bottom: 0.6rem;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--comp-text-muted);
+}
+
+.score {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ifm-color-primary);
+}
+
+.questionText {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--comp-text);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.optionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.optionBtn {
+  background: var(--comp-bg);
+  border: 1.5px solid var(--comp-border);
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  text-align: left;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--comp-text);
+  font-weight: 550;
+}
+
+.optionBtn:hover:not(:disabled) {
+  background: var(--comp-hover);
+  border-color: var(--ifm-color-primary-light);
+}
+
+.optionSelected {
+  border-color: var(--ifm-color-primary);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.optionCorrect {
+  border-color: var(--brand-green) !important;
+  background: rgba(16, 185, 129, 0.08) !important;
+  color: var(--brand-green) !important;
+}
+
+.optionIncorrect {
+  border-color: var(--brand-red) !important;
+  background: rgba(239, 68, 68, 0.08) !important;
+  color: var(--brand-red) !important;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.submitBtn {
+  background: var(--ifm-color-primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background: var(--ifm-color-primary-dark);
+}
+
+.submitBtn:disabled {
+  background: var(--comp-border);
+  color: var(--comp-text-muted);
+  cursor: not-allowed;
+}
+
+.explainBox {
+  background: var(--comp-hover);
+  border-left: 3px solid var(--ifm-color-primary);
+  padding: 0.85rem 1rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--comp-text);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.navBtn {
+  background: none;
+  border: 1px solid var(--comp-border);
+  color: var(--comp-text);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.navBtn:hover {
+  background: var(--comp-hover);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

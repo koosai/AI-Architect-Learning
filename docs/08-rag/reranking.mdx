@@ -1,0 +1,202 @@
+---
+title: M8L6 - 重排序
+description: 检索召回一堆"大致相关"的，但 top-3 才进上下文。用更准但更慢的重排模型对召回结果精排——两阶段检索的精度关键。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M8L6 · 重排序
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M8L2 embedding', href: './embeddings'}, {label: 'M8L5 混合检索', href: './hybrid-search'}, {label: 'M7L2 上下文预算', href: '../llm-systems/tokenization-context'}]}
+  outcome="能解释两阶段检索（召回 + 重排）、cross-encoder 重排为什么更准但更慢，并实现一个重排把最相关的结果排到前面。"
+  howToUse="先看“召回 top-20 但只能放 top-3”的取舍，再理解重排，最后做两阶段检索 lab。"
+/>
+
+:::tip 召回要“广”，进上下文要“精”——中间这一步精排，就是重排
+检索（[向量 M8L3](./vector-search) / [混合 M8L5](./hybrid-search)）为了不漏，往往召回 top-20、top-50 个"大致相关"的。但[上下文预算有限（M7L2）](../llm-systems/tokenization-context)，只能放 top-3、top-5 进去喂给模型。怎么从召回的一堆里挑出**真正最相关**的几个？用一个**更准但更慢**的重排模型，对召回结果重新打分排序。这就是两阶段检索的精度关键。
+:::
+
+## 一、召回得多，但能用的少
+
+检索的两难：
+- **召回要广**：第一阶段检索为了"别漏掉答案所在的块"，会放宽召回 top-20 甚至更多。但召回是用**快速但较粗**的方法（向量相似度/BM25），里面混着不少"看着相关其实没用"的。
+- **进上下文要精**：[上下文窗口和成本有限（M7L2/M7L5）](../llm-systems/tokenization-context)，[塞太多还会"迷失在中间"](../llm-systems/tokenization-context)。只能放最相关的 3~5 个。
+
+矛盾在于：召回阶段的排序不够准（[向量相似≠含答案，M8L2](./embeddings)），直接取它的 top-3 可能漏掉真正最相关的。需要一个更准的"二次排序"——重排。
+
+## 二、三个核心概念（分层）
+
+### 基础：两阶段检索
+
+<GlossaryTerm term="Two-stage Retrieval" definition="两阶段检索：第一阶段用快速方法（向量/BM25）召回较多候选（高召回），第二阶段用更准但更慢的重排模型对候选精排，取 top-k 进上下文（高精度）。兼顾速度和质量。">两阶段检索</GlossaryTerm>：
+1. **召回（retrieve）**：用快的方法从海量文档里捞出 top-N 候选（N=20~100），重点是**高召回**（别漏）。
+2. **重排（rerank）**：用更准的方法给这 N 个候选重新打分，取 top-k（k=3~5）进上下文，重点是**高精度**（挑对）。
+"快方法广撒网 + 慢方法精挑选"——既不让慢方法跑遍全库（太贵），又用它的精度修正召回的粗排。
+
+### 进阶：bi-encoder vs cross-encoder
+
+为什么重排更准？关键在打分方式：
+- <GlossaryTerm term="Bi-encoder" definition="双编码器：把查询和文档分别独立编码成向量，再算相似度。文档向量可预先算好、检索快，适合召回阶段。但 query 和 doc 没有交互，精度有限。">bi-encoder（双编码器）</GlossaryTerm>：[召回用的向量检索](./embeddings)就是这种——query 和 doc **各自独立**编码成向量再比相似度。文档向量可预先算好存库，**检索快**，但 query 和 doc 之间没有"交互"，精度有上限。
+- <GlossaryTerm term="Cross-encoder" definition="交叉编码器：把查询和文档拼在一起送入模型，让两者充分交互后直接输出相关性分数。精度高得多，但每个候选都要现算、无法预存，慢，只适合对少量候选重排。">cross-encoder（交叉编码器）</GlossaryTerm>：把 query 和 doc **拼在一起**送进模型，让两者充分交互后直接输出相关性分数。**精度高得多**，但每个候选都要现场算（无法预存）、**慢**——所以只能用来重排少量候选，不能跑遍全库。两阶段正是为了让 cross-encoder 只在 top-N 上跑。
+
+### 深入（选学）：重排的工程要点
+
+- **重排是性价比很高的质量提升**：在向量检索基础上加一层重排，常能明显提升"喂给模型的内容质量"，进而提升答案质量——而只对 top-N 重排，延迟和成本可控。
+- **也可以用 LLM 重排**：让 LLM 给候选打相关性分（[LLM-as-judge 的变体，M7L10](../llm-systems/llm-evaluation)）——更灵活、能理解复杂相关性，但更贵更慢。专用 reranker 模型通常是性价比之选。
+- **召回 N 和重排 k 是要调的参数**：N 太小召回不够（重排也救不回漏掉的）、太大重排变慢变贵；用 [M8L9 评测](./rag-evaluation) 调。
+- **三阶段也常见**：[混合召回（M8L5）](./hybrid-search) → 重排 → 取 top-k。混合负责高召回、重排负责高精度，配合最佳。
+- **重排只能优化召回里有的**：如果答案所在的块根本没被第一阶段召回，重排无能为力——所以召回的高召回率是前提，[诊断时先看召回再看重排（M8L9）](./rag-evaluation)。
+
+<ResearchNote
+  title="两阶段检索：快召回 + 精重排"
+  source="Nogueira & Cho (2019), Passage Re-ranking with BERT；Sentence-Transformers Cross-Encoders；现代 reranker 实践"
+  href="https://arxiv.org/abs/1901.04085"
+  insight="bi-encoder（双塔）可预存向量、检索快但精度有限；cross-encoder 让 query-doc 充分交互、精度高但慢、无法预存。两阶段检索用 bi-encoder/BM25 高召回出 top-N，再用 cross-encoder 精排出 top-k，兼顾速度与质量，是高质量 RAG 的标准做法。"
+  application="高质量 RAG 用两/三阶段：混合检索高召回出 top-N（20~100）→ cross-encoder/LLM 重排精排出 top-k（3~5）进上下文。调 N 和 k 用评测。记住重排只能从召回结果里挑，召回率是前提。专用 reranker 通常比 LLM 重排更划算。"
+/>
+
+## 三、跟我做一遍：两阶段检索（召回 + 重排）
+
+<PyRunner
+  rows={38}
+  expect="重排把真正相关的提到前面"
+  code={`docs = {
+    "d1": "退货政策概述与适用范围",
+    "d2": "退货需在签收后 7 天内申请，需保持商品完好",   # 真正含“几天”答案
+    "d3": "退款将在审核通过后 3-5 个工作日到账",
+    "d4": "配送范围与物流时效说明",
+    "d5": "退货运费由谁承担的说明",
+}
+
+# 第一阶段：快速召回（简化为关键词重叠，重点是“别漏”，召回多一些）
+def recall(query, docs, n):
+    q = set(query)
+    scored = [(d, len(q & set(docs[d]))) for d in docs]
+    return [d for d, s in sorted(scored, key=lambda x: -x[1])[:n] if s > 0]
+
+# 第二阶段：精排（模拟 cross-encoder：query 和 doc 一起看，给“是否真的回答了问题”打分）
+def rerank(query_intent, candidates, docs):
+    # query_intent 表达“想要什么”，给每个候选一个相关性分（玩具：含关键信息词加分）
+    def score(d):
+        text = docs[d]
+        s = 0
+        for kw, w in query_intent.items():
+            if kw in text:
+                s += w
+        return s
+    return sorted(candidates, key=score, reverse=True)
+
+query = "退货 几天 期限"
+cands = recall(query, docs, n=4)              # 召回 top-4（广）
+print("召回(广):", cands)
+# 重排：真正想知道“天数/期限”，d2 含“7 天内”最相关
+intent = {"7 天": 5, "天内": 5, "申请": 2, "退货": 1}
+top = rerank(query, cands, docs)
+print("重排(精):", top)
+print("进上下文 top-2:", top[:2])             # d2 被提到最前
+print("重排把真正相关的提到前面")`}
+/>
+
+召回阶段广撒网捞出 4 个候选（含粗排噪声），重排阶段用"是否真的回答了问题"精排，把真正含"7 天内"答案的 d2 提到最前——只把 top-2 进上下文。**试试**：把召回 n 调成 2，看如果真正相关的没进召回，重排也救不回来（召回是前提）。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month08/m8l6_rerank/`：
+
+```bash
+python labs/month08/m8l6_rerank/test_rerank.py
+```
+
+实现两阶段检索：第一阶段召回 top-N、第二阶段用更细的打分重排取 top-k，并验证"重排救不回没召回的"。
+
+<GuidedExercise
+  title="练习指引：实现两阶段检索"
+  goal="把“高召回 + 精重排”做成代码，体会两阶段如何兼顾速度和精度、以及召回率为什么是前提。"
+  hints={[
+    'recall：用快方法取 top-N（N 较大，重高召回）。',
+    'rerank：用更细的打分函数对候选重排，取 top-k。',
+    'rerank 只能从 recall 的结果里挑——没召回的救不回。',
+    'N 太小漏召回、太大重排慢，是要调的权衡。'
+  ]}
+  steps={[
+    '实现 recall(query, docs, n)：快速召回 top-N。',
+    '实现 rerank(candidates, scorer)：按更细的分数重排。',
+    '组合成 two_stage(query, docs, n, k)。',
+    '写测试：重排把真正相关的提前、top-k 数量、未召回的无法被重排救回、N 影响召回。'
+  ]}
+  checks={[
+    '你能解释两阶段检索（召回+重排）的分工。',
+    '你能区分 bi-encoder 和 cross-encoder 的快慢/精度。',
+    '你的 lab 重排提升精度、且受召回率限制。',
+    '你知道 N/k 要调、三阶段（混合+重排）的配合。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 检索架构的阶段数
+
+<TradeoffExplorer
+  title="RAG 检索架构"
+  dimensions={['检索质量', '延迟', '成本', '实现复杂度', '适合规模']}
+  options={[
+    {
+      name: '单阶段(纯向量取 top-k)',
+      scores: [2, 5, 5, 5, 3],
+      note: '直接取向量 top-k。快、简单，但精度受限、易漏或带噪。',
+      whenToUse: '原型、质量要求不高时。'
+    },
+    {
+      name: '两阶段(召回+重排)',
+      scores: [4, 3, 3, 3, 5],
+      note: '召回广 + 重排精。质量明显提升，重排只跑 top-N 成本可控。',
+      whenToUse: '多数生产 RAG 的质量基线。'
+    },
+    {
+      name: '三阶段(混合召回+重排)',
+      scores: [5, 2, 2, 2, 5],
+      note: '混合高召回 + 重排高精度。质量最好，但延迟/成本/复杂度最高。',
+      whenToUse: '对检索质量要求高、术语密集的关键系统。'
+    }
+  ]}
+/>
+
+### 2. 召回与精度是两件事，要分开优化
+
+重排这一课点出了检索的一个核心架构思想：**召回（recall，别漏）和精度（precision，别带噪）是两个不同的目标，用不同的手段、在不同的阶段优化。** 召回阶段求全（宽召回、混合检索补盲区），重排阶段求准（精排、cross-encoder）。把它们混在一个阶段做，往往两头不讨好。这种"分阶段、各管一个目标"的思路，和 [M6L6 流水线分阶段门禁](../cloud-enterprise-industrial/cicd-pipelines)、[M5 分层防护](../core-components/bulkhead-isolation) 一脉相承——**复杂目标拆成职责单一的阶段串联**（[呼应 M4 SRP](../design-patterns-lld/solid-srp-ocp)）。
+
+### 3. 真实案例：加一层重排，RAG 质量明显回升
+
+一个常见的真实改进路径：团队的纯向量 RAG 答案质量一般，诊断（[M8L9](./rag-evaluation)）发现"相关文档其实在召回的 top-20 里，但没进喂给模型的 top-3"——典型的"召回到了但精排没排对"。加一层 reranker 后，把真正相关的提到前面，答案质量明显提升，而成本只增加了"对 20 个候选跑一次重排"。这是 RAG 优化里性价比很高的一步，也说明：**很多时候问题不在召回不到，而在排序不对**——重排正是对症的药。诊断清楚是召回问题还是排序问题，才能用对手段。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的 RAG 现在是几阶段？纯向量取 top-k，还是加了重排？诊断过"相关内容召回到了但没排进 top-k"吗？
+- 召回 N 和重排 k 设多少？用评测调过吗？N 够大保证不漏、又不让重排太慢吗？
+- 该用专用 reranker 还是 LLM 重排？延迟/成本/质量怎么权衡？
+
+## 自检清单
+
+- [ ] 我能解释两阶段检索（召回+重排）的分工。
+- [ ] 我能区分 bi-encoder 和 cross-encoder 的快慢与精度。
+- [ ] 我的 lab 实现了重排且理解它受召回率限制。
+- [ ] 我能分开优化召回（别漏）和精度（别带噪）。
+
+## 常见误解
+
+- **"召回 top-k 直接喂模型就行"**：召回粗排不够准，重排能把真正相关的提前。
+- **"重排能解决所有检索问题"**：重排只能从召回结果里挑，没召回的救不回，召回率是前提。
+- **"cross-encoder 又准就全程用它"**：它慢、无法预存，只能对少量候选重排，不能跑全库。
+
+## 延伸阅读
+
+- [Passage Re-ranking with BERT (2019)](https://arxiv.org/abs/1901.04085)
+- [Sentence-Transformers: Cross-Encoders](https://www.sbert.net/examples/applications/cross-encoder/README.html)
+- [下一课：查询改写与扩展](./query-transformation)

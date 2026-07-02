@@ -1,0 +1,391 @@
+---
+title: 组件展厅 (Component Gallery)
+description: 人工验收测试页面，展示本项目实现的 20 个交互式 React 组件。
+---
+
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import ResearchNote from '@site/src/components/ResearchNote';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import PyRunner from '@site/src/components/PyRunner';
+import CaseStudyHeader from '@site/src/components/CaseStudyHeader';
+import DesignIntent from '@site/src/components/DesignIntent';
+import ArchitectureEvolution from '@site/src/components/ArchitectureEvolution';
+import PercentileLab from '@site/src/components/PercentileLab';
+import LatencyNumbers from '@site/src/components/LatencyNumbers';
+import FailureLab from '@site/src/components/FailureLab';
+import CapacityEstimator from '@site/src/components/CapacityEstimator';
+
+import StepFlow from '@site/src/components/StepFlow';
+import ArchLayers from '@site/src/components/ArchLayers';
+import CompareSlider from '@site/src/components/CompareSlider';
+import SystemSimulator from '@site/src/components/SystemSimulator';
+import QuizCard from '@site/src/components/QuizCard';
+import MindMap from '@site/src/components/MindMap';
+import EvolutionTimeline from '@site/src/components/EvolutionTimeline';
+
+# 组件展厅 (Component Gallery)
+
+本页面包含为 **AI 架构师交互式学习站** 实现的所有 20 个核心组件，作为样式和功能的验收测试。
+
+---
+
+## 1. ChapterMeta (章节元数据)
+
+用于章节开头，标注耗时、前置要求及预期成果。
+
+<ChapterMeta
+  time="约 3 小时"
+  prereqs={[
+    { label: '系统架构总览', href: '#' },
+    { label: 'Python 编程基础', href: '#' }
+  ]}
+  outcome="学完本章，你将能熟练操作缓存淘汰模拟器，并徒手估算高并发系统的存储容量。"
+  howToUse="请先跟随 GuidedExercise 完成基础实验，然后在 SystemSimulator 中调整参数观察缓存命中率的变化。"
+/>
+
+---
+
+## 2. GlossaryTerm (悬停术语词条)
+
+用于文章中首次出现的专业术语，鼠标悬浮可查看具体解释。
+
+在分布式系统中，<GlossaryTerm term="Replica Factor" definition="副本因子：数据在分布式集群中保存的物理备份数量。例如副本因子为 3 表示同一份数据会保存在 3 台不同的服务器上。">副本因子 (Replica Factor)</GlossaryTerm> 直接影响系统的数据可用性和强一致性表现。
+
+---
+
+## 3. ResearchNote (文献参考卡片)
+
+用于引用权威论文或工程博客。
+
+<ResearchNote
+  title="vLLM: 虚拟内存思想在 LLM 推理中的应用"
+  source="Kwon et al. (2023), SOSP"
+  href="https://arxiv.org/abs/2309.06180"
+  insight="提出 PagedAttention 机制，将 KV cache 物理显存像操作系统分页一样划分为非连续的固定大小块，极大地消灭了内存碎片。"
+  application="在大模型高并发推理服务中，显存利用率能提高一倍以上，大大提升了系统吞吐量。"
+/>
+
+---
+
+## 4. GuidedExercise (带步骤自检练习)
+
+用于章节动手实践任务。
+
+<GuidedExercise
+  title="实验：本地模拟 LRU 淘汰"
+  goal="亲手使用 Python 实现一个简单的 LRU (Least Recently Used) 缓存淘汰机制。"
+  hints={[
+    '你可以使用 Python 的 collections.OrderedDict 来简化双向链表的操作。',
+    '当写入新元素且容量超标时，使用 popitem(last=False) 弹出最久未访问的元素。'
+  ]}
+  steps={[
+    '创建 OrderedDict 实例，并限制其最大大小为 3。',
+    '依次插入 A=1, B=2, C=3。',
+    '访问元素 A，促使其变为最新状态。',
+    '插入新元素 D=4，验证元素 B 是否被成功剔除。'
+  ]}
+  checks={[
+    '插入 D 之后，打印缓存中是否不包含键 B。',
+    '键 A 的位置是否成功移动到了链表头部。'
+  ]}
+/>
+
+---
+
+## 5. TradeoffExplorer (方案取舍器)
+
+用于对比不同架构方案在多个维度上的得与失。
+
+<TradeoffExplorer
+  title="不同分布式数据库选型取舍"
+  dimensions={['读性能', '写性能', '强一致性', '容错性', '维护成本']}
+  options={[
+    {
+      name: '关系型主从集群 (MySQL Master-Slave)',
+      scores: [5, 3, 4, 3, 3],
+      note: '支持事务和强一致读写，读性能可通过增加从库横向扩展。写性能受限于单机主库，且主库存在单点故障风险。',
+      whenToUse: '强事务支持、数据量中等且一致性要求极高的核心业务（如支付、账单）。'
+    },
+    {
+      name: 'NoSQL 无主复制集群 (Cassandra)',
+      scores: [4, 5, 2, 5, 4],
+      note: '去中心化无主架构，写入性能极佳。通过多副本提供强容错。最终一致性，读写冲突解决逻辑较复杂。',
+      whenToUse: '海量日志写入、高可用容错要求极高的非核心业务（如社交 Feed 流、IoT 传感器日志）。'
+    }
+  ]}
+/>
+
+---
+
+## 6. PyRunner (可编辑 Python 实验运行器)
+
+基于本地 Pyodide 运行 Python 代码的沙箱。
+
+<PyRunner
+  rows={10}
+  expect="计算结果为 15"
+  code={`# 计算斐波那契数列的前几项并打印其和
+def fib(n):
+    if n <= 1: return n
+    return fib(n-1) + fib(n-2)
+
+total_sum = sum(fib(i) for i in range(1, 6))
+print(f"斐波那契序列前 5 项的和: {total_sum}")
+`}
+/>
+
+---
+
+## 7. CaseStudyHeader (案例头部)
+
+案例分析文章专用的简介与关键指标区。
+
+<CaseStudyHeader
+  oneLiner="探究 WhatsApp 如何凭借 50 名工程师，利用 Erlang 的高并发 BEAM 虚拟机以及 FreeBSD 的内核调优，扛住全球数亿用户的长连接。"
+  stats={[
+    { label: '上线时间', value: '2009 年 2 月' },
+    { label: '日活跃用户', value: '4.5 亿 (被收购时)' },
+    { label: '单机并发连接', value: '200 万+' },
+    { label: '开发工程师人数', value: '仅 50 名' }
+  ]}
+/>
+
+---
+
+## 8. DesignIntent (设计意图表)
+
+记录架构规划的输入限制与设计目标。
+
+<DesignIntent
+  problem="在极低成本的前提下，如何确保上亿人在线聊天的实时消息“已送达”状态可靠流式推送。"
+  users="全球即时通讯普通用户，网络环境多变（包含 2G/3G 弱网）。"
+  devices="主流手机 App 客户端。绝大部分状态计算卸载至云端后端进程。"
+  goals={[
+    '单机连接数最大化 (榨干硬件上限)',
+    '弱网自动断线重连且不丢消息',
+    '极低的 CPU 与内存空闲开销'
+  ]}
+  constraints={[
+    '开发资源极少，不接受依靠大面积堆硬件的方案',
+    '禁止在服务端进行冗余的消息内容存储',
+    '网络协议需极其轻量级'
+  ]}
+  firstStep="放弃重量级框架，改造开源轻量级 XMPP 服务器 ejabberd，专注于单机 FreeBSD 系统的并发套接字句柄调优。"
+/>
+
+---
+
+## 9. ArchitectureEvolution (多维架构演进图)
+
+点击不同年代，展示系统架构分层以及新增高亮组件的变迁过程。
+
+<ArchitectureEvolution
+  eras={[
+    {
+      year: '2009',
+      title: '极简原型期',
+      intent: '验证产品可行性，以最低资源快速跑通单对单消息。',
+      change: '引入开源 Erlang ejabberd 实例，用内存型 Mnesia 存储会话状态。',
+      why: 'Erlang 原生进程级并发完美适合长连接消息分发。',
+      layers: [
+        { name: '客户端', comps: [{ label: 'App', isNew: true }] },
+        { name: '网络接入', comps: [{ label: 'XMPP 单例', isNew: true }] },
+        { name: '存储层', comps: [{ label: 'Mnesia 内存库', isNew: true }] }
+      ]
+    },
+    {
+      year: '2012',
+      title: '单机并发攻坚',
+      intent: '用户呈爆发式增长，单机最大连接数成为硬性瓶颈。',
+      change: '深度调优 FreeBSD 内核参数，优化 BEAM 锁竞争。',
+      why: '把单机榨到百万连接，能极大地节省维护开销和机器成本。',
+      layers: [
+        { name: '客户端', comps: [{ label: 'App' }] },
+        { name: '网络接入', comps: [{ label: 'XMPP 调优群组', isNew: true }, { label: '内核参数调优', isNew: true }] },
+        { name: '存储层', comps: [{ label: 'Mnesia 内存库' }] }
+      ]
+    }
+  ]}
+/>
+
+---
+
+## 10. PercentileLab (分位数实验器)
+
+直观对比请求长尾故障对平均数和分位数指标的影响。
+
+<PercentileLab />
+
+---
+
+## 11. LatencyNumbers (系统延迟时钟对照)
+
+查看典型的计算和网络通信耗时，并支持等比例转换为人类时间尺度。
+
+<LatencyNumbers />
+
+---
+
+## 12. FailureLab (故障拓扑开关)
+
+组合开启不同层次的故障，查看请求在哪里被拦截、用户体验以及输出日志。
+
+<FailureLab />
+
+---
+
+## 13. CapacityEstimator (容量与带宽算盘)
+
+交互估算系统服务所需的峰值 QPS、带宽以及总体存储需求。
+
+<CapacityEstimator />
+
+---
+
+## 14. StepFlow (分步步骤演示)
+
+控制上一步/下一步，支持自动演示的工作流展示器。
+
+<StepFlow
+  steps={[
+    { title: 'DNS 解析', desc: '客户端向运营商 LocalDNS 发起解析，获取最优的接入层 IP。' },
+    { title: '握手建连', desc: '客户端与网关建立 TCP 连接，完成 TLS 握手及应用层 Session 绑定。' },
+    { title: '业务鉴权', desc: '网关将 Session 令牌发往鉴权中心验证，验证通过后下发初始路由表。' }
+  ]}
+/>
+
+---
+
+## 15. ArchLayers (折叠分层架构)
+
+逐层点开并查看说明的分层图。
+
+<ArchLayers
+  title="三层微服务经典分层架构"
+  layers={[
+    {
+      name: '网关接入层 Gateway',
+      components: ['Nginx / OpenResty', 'API Gateway', 'SSL Termination'],
+      detail: '网关负责对外暴露统一 API，提供安全过滤、统一限流、动态路由以及 TLS 加密卸载服务。'
+    },
+    {
+      name: '核心业务逻辑层 Service',
+      components: ['User Service', 'Order Service', 'Payment Service'],
+      detail: '根据业务划分的无状态微服务集群，处理核心商业逻辑，服务间通过 RPC / gRPC 通讯。'
+    },
+    {
+      name: '数据持久化层 Database',
+      components: ['PostgreSQL Cluster', 'Redis Cluster', 'Kafka Queue'],
+      detail: '负责核心数据的落盘与缓存，通过主从架构或分片集群确保数据的一致性与高可用。'
+    }
+  ]}
+/>
+
+---
+
+## 16. CompareSlider (对比滑块)
+
+用于对比新旧方案。本处使用带有渐变背景的示意区块充当对比节点。
+
+<CompareSlider
+  before={<div style={{ height: '200px', background: 'var(--brand-red)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '1.5rem', fontWeight: 'bold' }}>单体架构 (Monolith): 耦合紧密，难以水平扩展</div>}
+  after={<div style={{ height: '200px', background: 'var(--brand-green)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '1.5rem', fontWeight: 'bold' }}>微服务架构 (Microservices): 独立自治，按需高弹扩容</div>}
+  labels={['旧架构 (Monolith)', '新架构 (Microservices)']}
+/>
+
+---
+
+## 17. SystemSimulator (系统模拟器)
+
+包含限流、哈希环、缓存三种模式的动画模拟。
+
+### (a) 令牌桶限流模式 (token-bucket)
+<SystemSimulator type="token-bucket" />
+
+### (b) 一致性哈希环模式 (consistent-hash)
+<SystemSimulator type="consistent-hash" />
+
+### (c) LRU 缓存模式 (cache-lru)
+<SystemSimulator type="cache-lru" />
+
+---
+
+## 18. QuizCard (章末选择题测验)
+
+可多道题连续测验，判断对错并给出解析。
+
+<QuizCard
+  questions={[
+    {
+      q: '为什么在高并发环境下，系统工程师首选看 p99 延迟指标，而不是看 Average 平均数？',
+      options: [
+        '因为平均数计算起来太耗 CPU。',
+        '因为平均数会掩盖少数长尾极端请求的耗时，而这 1% 的极慢请求会拖慢整个分布式调用链。',
+        '因为分位数能直接计算出数据库主从延迟。'
+      ],
+      answer: 1,
+      explain: '在分布式架构中，一个用户的页面渲染往往需要发起几十次微服务子请求。只要 1% 的子请求发生阻塞（p99 飙升），在统计学上这名用户感受到的网页载入就是 100% 变慢。因此，平均数是不具代表性的“欺骗性指标”。'
+    },
+    {
+      q: '一致性哈希 (Consistent Hashing) 最核心解决了什么问题？',
+      options: [
+        '解决哈希冲突，保证绝对均匀分配。',
+        '在服务器节点增减时，只重新映射极少数键值（约 K/N），避免缓存发生大面积雪崩。',
+        '将数据库表的写操作变成顺序写入。'
+      ],
+      answer: 1,
+      explain: '传统的普通模余哈希（hash(key) % N）在节点数 N 变动时，几乎 100% 的缓存位置都会发生突变，导致全网缓存瞬间失效并压垮底层数据库。一致性哈希能确保在增减节点时，只有相邻扇区的键会重新路由分发。'
+    }
+  ]}
+/>
+
+---
+
+## 19. MindMap (折叠脑图树)
+
+以点击折叠树的形式，理清大纲和结构。
+
+<MindMap
+  root={{
+    label: 'AI 架构师技能图谱',
+    children: [
+      {
+        label: '系统基石',
+        children: [{ label: '系统延迟量级' }, { label: '故障恢复与隔离' }]
+      },
+      {
+        label: '大规模应用',
+        children: [{ label: '限流与削峰' }, { label: '一致性哈希' }]
+      },
+      {
+        label: 'AI 工程化',
+        children: [{ label: 'LLM 推理服务架构' }, { label: 'RAG 向量检索编排' }]
+      }
+    ]
+  }}
+/>
+
+---
+
+## 20. EvolutionTimeline (演进时间轴)
+
+用于按时间记录系统演化的大事记。
+
+<EvolutionTimeline
+  events={[
+    {
+      year: '2020',
+      title: '单机部署时代',
+      why: '初期用户量在万级，团队追求开发与部署的最快效率，零基建负担。',
+      change: '采用 Flask 单体应用加上单实例 PostgreSQL 数据库。'
+    },
+    {
+      year: '2023',
+      title: '云原生微服务重构',
+      why: '业务模块暴增、多团队并行研发受单体阻碍，高可用存在单点风险。',
+      change: '将 Flask 单体拆分为 5 个独立的 FastAPI 微服务，以 Docker 容器化并部署于 Kubernetes 编排环境，数据层采用主从读写分离。'
+    }
+  ]}
+/>

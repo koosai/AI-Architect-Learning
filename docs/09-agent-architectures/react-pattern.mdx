@@ -1,0 +1,202 @@
+---
+title: M9L3 - ReAct：推理与行动交织
+description: 让 Agent 先“想”（推理为什么要这么做）再“做”（调工具），看到结果再想再做——Thought/Action/Observation 交织，是最常用的 Agent 范式。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M9L3 · ReAct：推理与行动交织
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M9L1 agent loop', href: './agent-loop-basics'}, {label: 'M9L2 工具边界', href: './tools-and-boundaries'}, {label: 'M7L4 思维链', href: '../llm-systems/prompting-basics'}]}
+  outcome="能解释 ReAct 的 Thought/Action/Observation 交织循环、它为什么比“直接行动”更可靠，并实现一个 ReAct 风格的 agent。"
+  howToUse="先看“直接调工具不解释”的问题，再理解 ReAct 三段式，最后做 ReAct 轨迹 lab。"
+/>
+
+:::tip 让 Agent 在每次行动前先“想一句为什么”，它会更靠谱、也更好调试
+[M9L1](./agent-loop-basics) 的循环里，模型直接决定"调哪个工具"。但如果让它**先输出一句推理（Thought：我现在该干嘛、为什么）再决定行动（Action）**，效果往往更好——推理帮模型理清思路、少走弯路（[呼应 M7L4 思维链](../llm-systems/prompting-basics)），而且这串"想→做→看→再想"的轨迹让你能看懂 Agent 在干什么、错在哪。这就是 **ReAct**——最常用、最基础的 Agent 范式。
+:::
+
+## 一、直接行动，容易乱也难懂
+
+如果 Agent 每步只输出"调 search('天气')"，不解释为什么，会有两个问题：
+- **容易乱**：模型没有"想清楚"就行动，可能调错工具、跳步骤、重复劳动。
+- **难懂难调**：你只看到一串工具调用，不知道模型"为什么这么做"——出问题时无法判断是推理错了还是执行错了。
+
+人类做复杂任务时也是"边想边做"：想一下该干嘛、做一步、看结果、再想下一步。让 Agent 也这样**把推理和行动交织**起来，就是 ReAct 的核心思想。
+
+## 二、三个核心概念（分层）
+
+### 基础：ReAct 的三段式
+
+<GlossaryTerm term="ReAct" definition="Reasoning + Acting：让 LLM 交替产出“推理（Thought）”和“行动（Action）”，并把工具返回的“观察（Observation）”喂回去，循环推进任务。推理帮决策、行动获取信息，比纯推理或纯行动都更可靠。">ReAct（推理 + 行动）</GlossaryTerm> 把每一步拆成三段，循环进行：
+1. **Thought（推理）**：模型说出"我现在该做什么、为什么"——理清下一步。
+2. **Action（行动）**：基于推理，决定调用哪个[工具、传什么参数（M9L2）](./tools-and-boundaries)。
+3. **Observation（观察）**：工具返回的结果，喂回给模型作为下一轮 Thought 的输入。
+
+`Thought → Action → Observation → Thought → ...` 循环，直到模型 Thought 出"我已经有答案了"，输出 Finish。
+
+### 进阶：为什么交织比"纯推理"或"纯行动"好
+
+- **纯推理（只思维链、不行动）**：模型凭记忆一路推下去，但无法获取外部信息、无法验证中间步骤——容易[幻觉（M7L9）](../llm-systems/hallucination-guardrails)、一步错步步错。
+- **纯行动（只调工具、不推理）**：模型不"想清楚"就动手，容易乱调、跳步。
+- **ReAct（交织）**：推理帮它**想清楚下一步该获取什么信息**，行动**去获取真实信息**，观察**把真实结果拉回来纠正推理**——三者互相补足。推理让行动有的放矢，行动让推理有据可依（grounding）。这是 ReAct 比两个极端都强的原因。
+
+### 深入（选学）：ReAct 的工程价值与变体
+
+- **可解释、可调试**：ReAct 的 Thought 让 Agent 的"想法"显式化——你能看懂它每步在想什么、错在哪（推理错？工具错？观察理解错？），这对 [Agent 评测和排错（M9L10）](./agent-evaluation) 极有价值。
+- **Thought 也是给模型自己看的**：把推理写进上下文，相当于模型给自己留的"草稿"（[呼应 M9L6 scratchpad](./agent-memory)），帮它在多步中保持连贯、不忘目标。
+- **变体与组合**：ReAct 常和[规划（M9L5）](./planning-decomposition)（先规划再 ReAct 执行）、[反思（M9L7）](./reflection-correction)（行动失败后反思再行动）组合。它是基础范式，上面可叠加更多结构。
+- **代价**：Thought 是额外的输出 token（[更慢更贵 M7L5](../llm-systems/llm-api-cost-latency)），简单任务不一定值得。要权衡"推理带来的可靠性提升"vs"额外成本"。
+- **别让推理变成空转**：模型可能输出一堆冠冕堂皇的 Thought 却没有实质进展（[循环 M9L4](./stopping-budget)）——推理质量要靠[轨迹评测（M9L10）](./agent-evaluation) 看，不能只看它"显得在思考"。
+
+<ResearchNote
+  title="ReAct：推理引导行动，行动校正推理"
+  source="Yao et al. (2022), ReAct: Synergizing Reasoning and Acting in Language Models"
+  href="https://arxiv.org/abs/2210.03629"
+  insight="ReAct 让模型交替生成推理轨迹（Thought）和行动（Action），并把工具的观察（Observation）反馈回去。推理帮模型规划、追踪、处理异常；行动让它从外部获取信息、grounding 到真实世界。相比纯思维链（易幻觉）或纯行动（无规划），ReAct 在交互式任务上更可靠且可解释。"
+  application="用 Thought/Action/Observation 三段式实现 agent loop：每步先推理再行动、把工具结果作为观察喂回。它提供可解释的轨迹（利于评测排错），可与规划、反思组合。注意 Thought 的额外成本，简单任务未必需要，并防止推理空转。"
+/>
+
+## 三、跟我做一遍：ReAct 风格的 Agent
+
+<PyRunner
+  rows={40}
+  expect="Thought→Action→Observation 交织完成"
+  code={`def search(q): return {"巴黎人口": "约 210 万", "法国首都": "巴黎"}.get(q, "未找到")
+tools = {"search": search}
+
+# 模拟一个 ReAct 风格的“决策大脑”：每步产出 thought + action
+def react_policy(state):
+    obs = state["observations"]
+    if not obs:
+        return {"thought": "要回答法国首都的人口，先查首都是哪", "action": "search", "arg": "法国首都"}
+    if len(obs) == 1:
+        capital = obs[0][2]                  # 上一步观察到的首都
+        return {"thought": "首都是%s，再查它的人口" % capital, "action": "search", "arg": capital + "人口"}
+    return {"thought": "已拿到人口数据，可以回答了", "action": "finish",
+            "arg": "法国首都%s人口%s" % (obs[0][2], obs[1][2])}
+
+def run_react(goal, policy, tools, max_steps=6):
+    state = {"goal": goal, "observations": []}
+    trace = []
+    for _ in range(max_steps):
+        d = policy(state)
+        trace.append(("Thought", d["thought"]))
+        if d["action"] == "finish":
+            trace.append(("Finish", d["arg"]))
+            return d["arg"], trace
+        trace.append(("Action", "%s(%s)" % (d["action"], d["arg"])))
+        result = tools[d["action"]](d["arg"])
+        trace.append(("Observation", result))
+        state["observations"].append((d["action"], d["arg"], result))
+    return None, trace
+
+answer, trace = run_react("法国首都的人口", react_policy, tools)
+for kind, content in trace:
+    print("%-12s %s" % (kind, content))
+print("==>", answer)
+print("Thought→Action→Observation 交织完成")`}
+/>
+
+每步都先 Thought（想清楚为什么），再 Action（调工具），再 Observation（拿结果）——这串轨迹既让 Agent 推理更有条理，也让你一眼看懂它怎么一步步推出答案。**试试**：让 search 对"法国首都人口"返回"未找到"，看 Agent 的推理能不能据此调整（这就是下下课的反思）；数一数完成这个两跳任务用了几次工具调用。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month09/m9l3_react/`：
+
+```bash
+python labs/month09/m9l3_react/test_react.py
+```
+
+实现 ReAct agent：每步产出 thought + action，执行工具得 observation 喂回，记录完整 Thought/Action/Observation 轨迹，finish 时输出答案。
+
+<GuidedExercise
+  title="练习指引：实现 ReAct agent"
+  goal="把“推理-行动-观察交织”做成代码，体会推理如何引导行动、轨迹如何便于排错。"
+  hints={[
+    'policy 每步返回 {thought, action, arg}。',
+    'run_react：记录 Thought，再按 action 执行（finish 则结束），记录 Action 和 Observation。',
+    '观察结果喂回 state，供下一步推理用。',
+    '轨迹要完整记录三段，便于评测和排错。'
+  ]}
+  steps={[
+    '实现 run_react(goal, policy, tools, max_steps)。',
+    '每步：记 Thought → finish 判断 → 执行工具 → 记 Action/Observation → 更新 state。',
+    '返回 (answer, trace)。',
+    '写测试：多跳任务正确完成、轨迹含 Thought/Action/Observation、max_steps 兜底、观察喂回影响后续。'
+  ]}
+  checks={[
+    '你能解释 ReAct 的 Thought/Action/Observation 循环。',
+    '你的 lab 能交织推理与行动、记录完整轨迹。',
+    '你能说出 ReAct 为什么比纯推理/纯行动可靠。',
+    '你理解 Thought 既帮决策、也利于排错。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. Agent 推理范式
+
+<TradeoffExplorer
+  title="Agent 的推理/行动范式"
+  dimensions={['可靠性', '可解释/可调试', '获取外部信息', '成本(token)', '实现简单']}
+  options={[
+    {
+      name: '纯思维链(只推理)',
+      scores: [2, 4, 1, 3, 5],
+      note: '凭记忆一路推。能解释，但无法获取/验证外部信息，易幻觉累积。',
+      whenToUse: '无需外部信息的纯推理题。'
+    },
+    {
+      name: '纯行动(只调工具)',
+      scores: [2, 2, 5, 4, 4],
+      note: '直接调工具不解释。能拿信息，但易乱调、跳步、难懂。',
+      whenToUse: '极简单、工具序列明确的任务。'
+    },
+    {
+      name: 'ReAct(交织)',
+      scores: [4, 5, 5, 2, 3],
+      note: '推理引导行动、行动校正推理、轨迹可解释。最常用，但 Thought 有额外成本。',
+      whenToUse: '需要多步 + 外部信息 + 可调试的任务——Agent 默认范式。'
+    }
+  ]}
+/>
+
+### 2. ReAct 的"可解释轨迹"是 Agent 可运维的前提
+
+ReAct 最被低估的价值不是"让模型更聪明"，而是**让 Agent 的行为可解释、可调试**。一个只输出工具调用的 Agent 出了问题，你像在看黑盒；而 ReAct 的 Thought/Action/Observation 轨迹，让你能精确定位：是推理（Thought）错了、还是工具（Action）调错了、还是对结果（Observation）理解错了。这种可观测性对 Agent 至关重要——Agent 是多步、非确定的，没有清晰轨迹根本没法 [评测和排错（M9L10）](./agent-evaluation)。这呼应 [M6L7 可观测性](../cloud-enterprise-industrial/observability-advanced)：**你拆分/自主化系统获得的能力，要靠可观测性来偿还"看不清"的代价**。架构师设计 Agent 时，要把"每步留下可解释的轨迹"当成一等需求。
+
+### 3. 真实案例：ReAct 是大多数 Agent 框架的底座
+
+从研究到工业，ReAct 的"推理-行动-观察"循环是几乎所有 LLM Agent 框架的底层范式（各家叫法不同，但内核一致）。它之所以成为事实标准，正是因为它同时解决了两件事：**让模型能 grounding 到外部真实信息**（靠 Observation，避免纯推理的幻觉）、**让 Agent 的行为可追踪可调试**（靠显式 Thought）。理解 ReAct，你就理解了现代 Agent 的"主循环"长什么样——后面的[规划（M9L5）](./planning-decomposition)、[反思（M9L7）](./reflection-correction)、[记忆（M9L6）](./agent-memory) 都是在这个循环上加结构。它是 Agent 世界的"骨架"。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的 Agent 每步有显式推理（Thought）吗？出问题时你能区分是推理错、工具错还是理解结果错吗？
+- 你的任务真的需要 ReAct 的推理开销吗？还是工具序列其实是固定的（用 workflow 更省）？
+- 你怎么防止 Agent"看起来在认真推理"但实际空转、没有实质进展（要靠轨迹评测，不能只看 Thought 漂不漂亮）？
+
+## 自检清单
+
+- [ ] 我能解释 ReAct 的 Thought/Action/Observation 交织循环。
+- [ ] 我的 lab 能交织推理与行动、记录完整轨迹。
+- [ ] 我能说出 ReAct 为什么比纯推理/纯行动更可靠。
+- [ ] 我理解 ReAct 轨迹对评测排错的价值。
+
+## 常见误解
+
+- **"Agent 直接调工具就行，推理多余"**：推理帮它想清楚、少走弯路，且轨迹利于排错。
+- **"纯思维链就够聪明"**：没有行动获取外部信息，纯推理易幻觉、无法验证。
+- **"有 Thought 就是在认真思考"**：可能空转；推理质量要靠轨迹评测，不能只看表面。
+
+## 延伸阅读
+
+- [ReAct (Yao et al., 2022)](https://arxiv.org/abs/2210.03629)
+- [下一课：停止条件与预算控制](./stopping-budget)

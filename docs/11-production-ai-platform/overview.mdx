@@ -1,0 +1,62 @@
+---
+title: Month 11 - 生产 AI 平台、评估与风险治理
+description: 从“搭一个 AI 系统”到“把 AI 可靠、安全、可负担、可治理地跑在生产、并沉淀成平台”。评估、可观测、风险治理、安全合规、成本、平台化——让 AI 真正能上生产。
+slug: /production-ai-platform/overview
+---
+
+import ChapterMeta from '@site/src/components/ChapterMeta';
+
+# Month 11 · 生产 AI 平台、评估与风险治理
+
+<ChapterMeta
+  time="约 30 小时（12 课）"
+  prereqs={[{label: 'M7 LLM 系统', href: '../llm-systems/overview'}, {label: 'M9 Agent', href: '../agent-architectures/overview'}, {label: 'M10 Multi-Agent', href: '../multi-agent-protocols/overview'}]}
+  outcome="能把一个 AI 系统从“能跑 demo”推进到“能上生产”：有评估兜底、有可观测、有安全护栏与风险治理、成本可控、并能把这些共性能力沉淀成服务多个 AI 应用的平台。"
+  howToUse="这是 AI 阶段的收官模块。按 Week1 评估可观测 → Week2 风险安全治理 → Week3 成本可靠平台化 的顺序学，每课配 lab。"
+/>
+
+:::tip 一句话
+一个 AI **demo** 只要"看起来能回答"；一个 AI **生产系统** 必须能被评估、能被观测、能防风险、能控成本、能被治理和问责——而当你有很多 AI 应用时，这些共性能力要沉淀成**平台**，而不是每个团队各搭一遍。
+:::
+
+## 这个月要回答的问题
+
+前面几个月你学会了搭 [LLM 应用（M7）](../llm-systems/overview)、[RAG（M8）](../rag/overview)、[Agent（M9）](../agent-architectures/overview)、[Multi-Agent（M10）](../multi-agent-protocols/overview)。但"搭出来"和"敢上生产、能长期运营"之间，隔着一整套工程与治理能力：
+
+- **它到底好不好？** 模型输出不确定，传统测试不够——要**评估体系**（离线评估集、CI 门禁、在线质量监控、漂移检测）。
+- **出了什么事我知道吗？** 要 **AI 可观测**——追踪每一步、每一次调用的质量/成本/延迟。
+- **它安全吗、合规吗？** 要**威胁建模、护栏、风险治理**——OWASP LLM Top 10、NIST AI RMF、责任与审计。
+- **它烧多少钱、扛得住吗？** 要**成本工程与可靠性**——token 经济学、预算配额、SLO、降级冗余。
+- **每个团队都重搭一遍吗？** 要**平台化**——把评估/观测/护栏/成本/网关做成共享能力。
+
+贯穿本月的主线：**AI 系统的可靠性、安全性和可负担性，绝大部分来自包裹模型的工程与治理，而非模型本身**——这是 [M7 主线](../llm-systems/overview) 的最终兑现，也是把前十个月所有系统工程能力（[缓存/限流/熔断/观测/容量/安全](../core-components/overview)）在 AI 语境下的收束。
+
+## 课程结构（3 Week / 12 课）
+
+### Week 1 · 评估与可观测：你怎么知道它好不好、出了什么事
+- **M11L1 为什么需要 AI 平台**（why-ai-platform）——从各团队重复造轮子到平台统一供给；平台的价值与克制。
+- **M11L2 评估体系**（evaluation-systems）——评估 vs 测试、离线评估集、三层评估、CI 回归门禁。
+- **M11L3 在线评估与反馈**（online-eval-feedback）——线上质量监控、用户反馈信号、A/B 与影子、漂移检测。
+- **M11L4 AI 可观测性**（ai-observability）——为 LLM/RAG/Agent 做 tracing/metrics/logging，质量+成本+延迟一体。
+
+### Week 2 · 风险、安全与治理：它安全吗、合规吗、出事怪谁
+- **M11L5 威胁建模与 OWASP LLM Top 10**（llm-threat-modeling）——注入/泄露/越权/供应链，AI 的攻击面。
+- **M11L6 平台级护栏与安全**（platform-guardrails）——输入输出过滤、PII 脱敏、内容安全、纵深防御。
+- **M11L7 风险治理框架**（risk-governance-frameworks）——NIST AI RMF、模型卡、审计、合规（GDPR/EU AI Act）。
+- **M11L8 人类监督与失败处理**（human-oversight-fallback）——HITL/HOTL、升级、降级、事故响应、可逆性。
+
+### Week 3 · 成本、可靠性与平台化：它可负担吗、扛得住吗、如何规模化
+- **M11L9 成本工程**（cost-engineering）——token 经济学、路由/缓存/批处理、预算配额、成本归因（AI FinOps）。
+- **M11L10 可靠性与容量**（reliability-capacity）——AI 的 SLO、限流降级、多模型冗余/failover、容量规划。
+- **M11L11 AI 平台架构**（ai-platform-architecture）——model gateway、共享能力、抽象与自助、平台演进。
+- **M11L12 Capstone 生产 AI 平台**（capstone-ai-platform）——给一个 AI 应用配齐评估+观测+护栏+成本+治理。
+
+## 学完你能做到
+
+- 为任一 AI 系统设计**评估体系**（离线+在线），让迭代快而不失控。
+- 为 AI 系统做**可观测**，出问题能追踪归因、成本延迟质量都看得见。
+- 用 **OWASP/NIST 语言**做威胁建模和风险评审，设计平台级护栏与人类监督。
+- 做 AI 的**成本工程与可靠性设计**，并把共性能力沉淀为**平台**。
+- 具备把 AI 系统**负责任地交付到生产**的完整判断力——这是 AI Architect 的核心能力。
+
+> 下个月（[Month 12 Capstone](../capstone/overview)）你将综合全部十一个月，独立设计并交付一个完整系统。本月是最后一块拼图：让 AI 真正**能上生产**。

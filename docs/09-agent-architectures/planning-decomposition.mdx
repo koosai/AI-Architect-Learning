@@ -1,0 +1,196 @@
+---
+title: M9L5 - 规划与任务分解
+description: 复杂任务一步步摸着走容易迷路。先把大目标拆成子任务、定个计划，再逐步执行、按需修正——plan-then-execute。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M9L5 · 规划与任务分解
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M9L3 ReAct', href: './react-pattern'}, {label: 'M4L1 封装变化', href: '../design-patterns-lld/change-driven-design'}, {label: 'M2L1 设计方法论', href: '../system-design-bridge/design-methodology'}]}
+  outcome="能让 Agent 先把复杂目标分解成子任务、制定计划再执行，并在执行中按需修正计划，避免“走一步看一步”迷路。"
+  howToUse="先看“边走边想容易迷路”，再理解 plan-then-execute，最后做任务分解 lab。"
+/>
+
+:::tip 复杂任务，先有计划再动手，比“走一步看一步”靠谱得多
+[ReAct（M9L3）](./react-pattern) 是“想一步、做一步”——适合步骤不多、边走边定的任务。但目标一复杂（“调研三家竞品、对比五个维度、写成报告”），纯反应式很容易**迷路、漏步、重复劳动**。更好的做法：**先把大目标拆成有序的子任务、定个计划，再逐个执行**，执行中发现不对再修正计划。这就是规划（planning）——让 Agent 像架构师做设计那样，先想全局再动手。
+:::
+
+## 一、边走边想，复杂任务容易迷路
+
+纯 ReAct（每步只看当前、决定下一步）对复杂任务有几个毛病：
+- **漏步/跳步**：没有全局视图，容易忘记某个必须做的环节。
+- **重复劳动**：忘了某步已经做过，又做一遍。
+- **顺序混乱**：本该先做 A 再做 B，结果乱序。
+- **迷失目标**：多步之后忘了最初要干嘛（[呼应 M9L6 记忆](./agent-memory)）。
+
+就像人做复杂项目会先列计划/大纲，Agent 也需要：**先分解、再规划、后执行**——给多步任务一个骨架。
+
+## 二、三个核心概念（分层）
+
+### 基础：任务分解
+
+<GlossaryTerm term="Task Decomposition" definition="任务分解：把一个复杂目标拆成若干更小、更明确、可执行的子任务。让 Agent 有清晰的步骤骨架，便于逐个完成、追踪进度、不漏不重。">任务分解</GlossaryTerm>：把大目标拆成**更小、更明确、可执行**的子任务。“写竞品分析报告” → ①列出竞品 ②各查资料 ③对比维度 ④汇总成报告。分解的好处：每个子任务足够具体、可单独完成和验证（[呼应 M4 SRP/分而治之](../design-patterns-lld/solid-srp-ocp)、[M2L1 设计方法论](../system-design-bridge/design-methodology)），还能追踪“做到哪了”。
+
+### 进阶：plan-then-execute
+
+<GlossaryTerm term="Plan-then-Execute" definition="先规划后执行：Agent 先生成一个完整的子任务计划，再按计划逐个执行（每个子任务内部可用 ReAct）。比纯反应式更有全局观、更少漏步迷路。">plan-then-execute（先规划后执行）</GlossaryTerm>：Agent 先产出一个**完整的子任务计划**（有序列表），再**按计划逐个执行**（每个子任务内部可以用 [ReAct](./react-pattern) 反应式地做）。它和纯 ReAct 的区别：ReAct 是“没有预先计划、每步现想”，plan-then-execute 是“先有计划、再照着做”。前者灵活但易迷路，后者有全局观但要应对“计划赶不上变化”。
+
+### 深入（选学）：计划修正与两种模式的结合
+
+- **计划要能修正**：现实中执行会偏离计划（某子任务失败、发现需要新步骤）。好的 Agent 是<GlossaryTerm term="Plan Revision" definition="计划修正：Agent 执行中发现计划不对（子任务失败、信息变化、需要新步骤）时，回头调整剩余计划，而非死守原计划或推倒重来。结合了规划的全局观和反应式的灵活。">可修正计划</GlossaryTerm>的——执行中根据结果**回头调整剩余计划**，而非死守原计划（[呼应 M9L7 反思](./reflection-correction)）。这结合了规划的全局观和 ReAct 的灵活。
+- **分解的粒度**：拆太粗（子任务还是很复杂）等于没拆；拆太细（每步一个子任务）overhead 大。要拆到“每个子任务清晰可执行、可验证”的粒度——这是判断力（[呼应 M4L2 SRP 粒度](../design-patterns-lld/solid-srp-ocp)）。
+- **何时需要规划**：简单任务（一两步）直接 ReAct 即可，上规划是过度（[YAGNI](../design-patterns-lld/change-driven-design)）；复杂、多步、有依赖关系的任务才值得先规划。
+- **规划是更多 token**：生成计划要额外的 LLM 调用和上下文（[成本 M7L5](../llm-systems/llm-api-cost-latency)）——权衡它带来的“少迷路”vs 成本。
+- **子任务依赖与并行**：有些子任务有顺序依赖（B 要 A 的结果），有些可并行（独立查三家竞品）——识别依赖能优化执行。
+
+<ResearchNote
+  title="规划：给复杂任务一个可执行、可修正的骨架"
+  source="Plan-and-Solve（Wang et al., 2023）；Plan-and-Execute；HuggingGPT 任务分解；经典 AI planning"
+  href="https://arxiv.org/abs/2305.04091"
+  insight="对复杂多步任务，先分解再规划（plan-then-execute）比纯反应式（ReAct）更少漏步、迷路、重复。Agent 先产出有序子任务计划、逐个执行、并在偏离时修正计划。分解粒度和是否需要规划要按任务复杂度判断，简单任务无需规划。"
+  application="复杂、多步、有依赖的任务用 plan-then-execute：先让 LLM 把目标分解成清晰可执行的子任务、按序执行（子任务内可用 ReAct）、执行中按结果修正剩余计划。简单任务直接 ReAct。注意分解粒度和规划的额外成本，识别子任务依赖以优化。"
+/>
+
+## 三、跟我做一遍：plan-then-execute
+
+<PyRunner
+  rows={38}
+  expect="先规划再逐步执行"
+  code={`def plan(goal):                                   # 分解成有序子任务（真实由 LLM 产出）
+    return {
+        "写竞品报告": ["列出竞品", "查竞品A资料", "查竞品B资料", "对比维度", "汇总成报告"],
+    }.get(goal, [goal])
+
+def execute_plan(goal, do_subtask, replan=None):  # 按计划逐个执行，支持修正
+    plan_list = plan(goal)
+    results = []
+    i = 0
+    while i < len(plan_list):
+        sub = plan_list[i]
+        ok, result = do_subtask(sub)
+        results.append((sub, "OK" if ok else "FAIL"))
+        if not ok and replan:
+            fix = replan(sub)
+            if fix:
+                plan_list.insert(i + 1, fix)      # 计划修正：插入补救子任务
+        i += 1
+    return plan_list, results
+
+def do_subtask(sub):
+    if sub == "查竞品B资料":
+        return (False, "资料源不可用")            # 模拟一个子任务失败
+    return (True, "完成:" + sub)
+
+def replan(failed_sub):
+    return "改用备用源重查:" + failed_sub          # 失败 -> 补一个修正步骤
+
+final_plan, results = execute_plan("写竞品报告", do_subtask, replan)
+for sub, status in results:
+    print("%-18s %s" % (sub, status))
+print("计划被修正(含补救步):", "改用备用源重查:查竞品B资料" in final_plan)
+print("先规划再逐步执行")`}
+/>
+
+Agent 先把"写竞品报告"分解成 5 个子任务，按序执行；查竞品 B 失败时，计划被修正（插入"改用备用源重查"）而非卡死——这就是 plan-then-execute + 计划修正。**试试**：去掉 replan，看失败的子任务无补救就过去了；想想哪些子任务其实可以并行（查 A 和查 B 资料互不依赖）。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month09/m9l5_planning/`：
+
+```bash
+python labs/month09/m9l5_planning/test_planning.py
+```
+
+实现 plan-then-execute：把目标分解成子任务、按序执行、记录进度、失败时按 replan 修正剩余计划。
+
+<GuidedExercise
+  title="练习指引：实现规划执行"
+  goal="把“分解 + 按计划执行 + 计划修正”做成代码——复杂多步任务的骨架。"
+  hints={[
+    'plan(goal) 返回有序子任务列表。',
+    'execute_plan：用索引遍历（计划可能被插入修正而变长）。',
+    '子任务失败且有 replan 时，把修正子任务插入当前位置之后。',
+    '记录每个子任务的 OK/FAIL，便于追踪进度。'
+  ]}
+  steps={[
+    '实现 plan(goal) 分解（可用给定映射）。',
+    '实现 execute_plan(goal, do_subtask, replan)。',
+    '处理失败时的计划修正（插入补救步）。',
+    '写测试：正常按序执行、失败触发修正、修正步被执行、无 replan 时失败略过、进度记录正确。'
+  ]}
+  checks={[
+    '你能把复杂目标分解成可执行子任务。',
+    '你的 lab 能 plan-then-execute 并修正计划。',
+    '你能区分 ReAct（反应式）和规划（先计划）。',
+    '你理解分解粒度和何时该用规划。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 规划 vs 反应式
+
+<TradeoffExplorer
+  title="Agent 的执行策略"
+  dimensions={['全局观/少漏步', '灵活应变', '简单任务开销低', '可追踪进度', '成本(token)']}
+  options={[
+    {
+      name: '纯 ReAct（反应式）',
+      scores: [2, 5, 5, 2, 4],
+      note: '每步现想、灵活。但无全局视图，复杂任务易迷路、漏步、难追踪。',
+      whenToUse: '步骤少、边走边定的简单任务。'
+    },
+    {
+      name: 'plan-then-execute',
+      scores: [5, 2, 2, 5, 2],
+      note: '先规划、有骨架、可追踪进度。但计划可能赶不上变化、生成计划有成本。',
+      whenToUse: '复杂、多步、有依赖的任务。'
+    },
+    {
+      name: '规划 + 可修正',
+      scores: [5, 4, 2, 5, 1],
+      note: '先规划 + 执行中按结果修正。兼顾全局和灵活，但最复杂、token 最多。',
+      whenToUse: '复杂且执行会偏离预期的任务——常用组合。'
+    }
+  ]}
+/>
+
+### 2. "分而治之"从代码一路贯穿到 Agent
+
+任务分解是个老朋友：[M4 把大类拆成单一职责（SRP）](../design-patterns-lld/solid-srp-ocp)、[M2L1 把大系统拆成模块](../system-design-bridge/design-methodology)、[M5 把大问题拆成构件](../core-components/overview)——现在是把大任务拆成子任务。**"把复杂的东西分解成可管理、可单独验证的小块"是贯穿整个课程的核心方法论**，在 Agent 上的体现就是任务分解 + 规划。架构师设计 Agent 处理复杂任务时，第一反应应该和设计系统一样：**先分解，把大目标拆成清晰、可执行、可验证的子任务**，而不是指望模型一步到位或边走边凑。能不能把任务分解得好，往往决定了复杂 Agent 能不能可靠工作。
+
+### 3. 真实案例：复杂 Agent 的"先规划"价值
+
+让 Agent 做复杂任务（多文件代码重构、多步数据分析、多源调研报告）时，纯反应式常常做到一半迷路、漏掉关键步骤、或在细节里打转忘了大局。引入"先规划后执行"后明显改善：Agent 先产出清晰的步骤计划（人也能审查这个计划是否合理），再逐步执行，进度可追踪、不易漏步。很多生产级 Agent 框架都内建了规划能力。但也要警惕另一极端——给简单任务也强行规划，徒增成本和延迟。**判断"这个任务该反应式还是先规划"，是 Agent 架构师的一项关键判断**，和"该用 Agent 还是 workflow"（[M9L11](./when-not-agent)）一脉相承：按复杂度选最简单够用的方案。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的 Agent 任务复杂吗？纯 ReAct 会不会迷路漏步？先规划能改善多少、值不值额外成本？
+- 你怎么把任务分解到合适粒度（不太粗也不太细）？每个子任务清晰可执行、可验证吗？
+- 执行偏离计划时（子任务失败/需要新步骤），你的 Agent 会修正计划还是死守/卡死？
+
+## 自检清单
+
+- [ ] 我能把复杂目标分解成清晰可执行的子任务。
+- [ ] 我的 lab 能 plan-then-execute 并在失败时修正计划。
+- [ ] 我能区分纯 ReAct 和先规划、知道各自适用。
+- [ ] 我理解分解粒度的判断和规划的成本权衡。
+
+## 常见误解
+
+- **"Agent 让模型一步步走就行"**：复杂任务纯反应式易迷路；先分解规划更可靠。
+- **"计划定了就照做"**：执行会偏离，要能按结果修正计划。
+- **"所有任务都先规划"**：简单任务规划是过度开销；按复杂度选。
+
+## 延伸阅读
+
+- [Plan-and-Solve Prompting (2023)](https://arxiv.org/abs/2305.04091)
+- [下一课：Agent 记忆](./agent-memory)

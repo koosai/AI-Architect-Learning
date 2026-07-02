@@ -1,0 +1,197 @@
+---
+title: M10L6 - 辩论与评审
+description: 多 Agent 最独特的价值——让一个 Agent 提方案、另一个独立挑毛病。独立审查能抓出单 Agent 自评抓不出的错，但成本高、可能空转。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M10L6 · 辩论与评审
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M9L7 自我反思', href: '../agent-architectures/reflection-correction'}, {label: 'M10L2 独立审查角色', href: './roles-specialization'}, {label: 'M7L10 LLM-judge', href: '../llm-systems/llm-evaluation'}]}
+  outcome="能用提议者-批评者/辩论模式让 Agent 互相审查提升质量，理解独立审查为什么比单 Agent 自评更有效，并控制它的成本和空转。"
+  howToUse="先看“单 Agent 自评的盲点”，再学辩论评审模式，最后做提议-批评循环 lab。"
+/>
+
+:::tip 多 Agent 最不可替代的价值：一个独立的 Agent 来挑你的毛病
+[M9L7](../agent-architectures/reflection-correction) 讲过单 Agent 自我反思，但它有个根本盲点：**自己审自己，有自我确认偏差**——容易觉得自己对、看不到自己的错。多 Agent 提供了单 Agent 给不了的东西：**一个独立的、视角不同的 Agent 来挑毛病。** 提议者出方案、批评者专门找问题、再改进——这种“对抗式”协作能抓出单 Agent 自评抓不出的错误，是多 Agent **最独特、最不可替代的价值**（[呼应 M10L1](./why-multi-agent)）。
+:::
+
+## 一、自己审自己，看不到自己的错
+
+[单 Agent 反思（M9L7）](../agent-architectures/reflection-correction) 让 Agent 检查自己的输出，但有局限：
+- **自我确认偏差**：模型倾向于认为自己的输出是对的，容易“自我感觉良好”地放过错误。
+- **同一视角**：自审用的是和生成时一样的“脑子”和角度——它没想到的盲点，反思时大概率还是想不到。
+- **缺乏对抗**：没有“专门来找茬”的压力，反思容易流于表面。
+
+人类写东西也一样——自己校对总不如别人审稿能挑出问题。多 Agent 的辩论/评审，就是给 Agent 引入这个“独立的别人”。
+
+## 二、三个核心概念（分层）
+
+### 基础：提议者-批评者
+
+最基础的审查模式：<GlossaryTerm term="Proposer-Critic" definition="提议者-批评者：一个 Agent（提议者）产出方案/答案，另一个独立的 Agent（批评者）专门找它的问题和反例，提议者据此改进，循环若干轮。用独立视角提升质量。">提议者-批评者（proposer-critic）</GlossaryTerm>。一个 Agent（proposer）出方案，另一个**独立的** Agent（critic）专门找它的问题、漏洞、反例，proposer 据此改进，循环几轮。关键是 critic **独立**于 proposer——不同的 prompt（“你的任务是找出这个方案的所有问题”）、不同的关注点。这是 [M10L2 独立审查角色](./roles-specialization) 的协作形态，比[单 Agent 自评（M9L7）](../agent-architectures/reflection-correction) 更能抓错。
+
+### 进阶：辩论与交叉审查
+
+更强的形式：
+- <GlossaryTerm term="Multi-Agent Debate" definition="多 Agent 辩论：多个 Agent 对一个问题各自给出答案/立场，互相质询、反驳、修正，通过对抗逼出更可靠的结论。比单个答案更能暴露错误和盲点。">辩论（debate）</GlossaryTerm>：多个 Agent 对同一问题各持立场、互相质询反驳，通过对抗逼出更可靠的结论——适合有争议、需要权衡的问题。
+- **交叉审查**：多个 Agent 互相审对方的产出，而非单向。
+- 它们都基于同一原理：**多个独立视角的碰撞，比单一视角更能发现错误**（[呼应 M8L5 互补组合 > 单一](../rag/hybrid-search)、集成思想）。也呼应 [M7L10 用更强模型当 judge](../llm-systems/llm-evaluation)——批评者就是一种聚焦的 judge。
+
+### 深入（选学）：辩论评审的代价与控制
+
+- **成本高、可能空转**：辩论/评审 = 多个 Agent 多轮来回 = token 成本翻几倍（[M10L10](./multi-agent-ops)）。而且可能**空转**——批评者反复挑无关紧要的小毛病、或两个 Agent 各执己见永远不收敛。必须配[停止条件（M9L4）](../agent-architectures/stopping-budget)：最多几轮、或质量达标就停。
+- **批评者要“会批评”**：critic 的 prompt 很关键——要它**具体、有建设性地**指出问题（“这里有单点风险，因为…”），而非空泛否定或鸡蛋里挑骨头。批评质量决定审查价值。
+- **要有裁决/收敛机制**：辩论不能永远进行——需要一个机制收敛到结论：[Supervisor 裁决（M10L3）](./supervisor-orchestration)、[投票（M10L8）](./conflict-consensus)、或达到“批评者无重大异议”就停。
+- **何时值得**：辩论评审最适合**高价值、容错低、需要质量把关**的任务（架构方案、代码安全审查、重要决策）——这时多花的成本换来的质量提升值得。对低价值/容错高的任务（[呼应 M7L9 容错度](../llm-systems/hallucination-guardrails)），单 Agent 甚至不审查就够了，别为了“显得严谨”而过度。
+- 这是多 Agent **唯一单 Agent 难以替代**的能力（专精分工单 Agent 也能勉强串行模拟，但“真正独立的对抗审查”必须多个 Agent）。所以如果你的任务最需要的是质量把关/找反例，辩论评审可能是用多 Agent 的最佳理由。
+
+<ResearchNote
+  title="独立审查/辩论：用对抗逼出更可靠的结论"
+  source="Du et al. (2023), Multi-Agent Debate；Constitutional AI / critic 模型；M7L10 LLM-as-judge"
+  href="https://arxiv.org/abs/2305.14325"
+  insight="单 Agent 自评有自我确认偏差，独立的批评者/辩论能引入不同视角、抓出自评抓不出的错误，提升答案可靠性（研究显示多 Agent 辩论在推理任务上优于单次生成）。代价是成本翻倍、可能空转/不收敛，需停止条件、好的批评 prompt、裁决收敛机制。最适合高价值、需质量把关的任务。"
+  application="高价值/容错低的任务用提议者-批评者或辩论：critic 独立于 proposer、具体建设性地找问题、循环改进。配停止上限防空转、裁决机制收敛（Supervisor/投票）。低价值任务别过度审查。这是多 Agent 最不可替代的价值——独立对抗审查。"
+/>
+
+## 三、跟我做一遍：提议者-批评者循环
+
+<PyRunner
+  rows={40}
+  expect="独立批评驱动改进、达标收敛"
+  code={`def proposer(task, critique=None):             # 提议者:据批评改进
+    if critique is None:
+        return "方案v1: 单实例部署"               # 初版有问题
+    if "单点" in critique:
+        return "方案v2: 多实例+负载均衡"
+    return "方案v3: 多实例+多可用区"
+
+def critic(proposal):                          # 批评者:独立找问题(非自评!)
+    if "单实例" in proposal:
+        return {"ok": False, "critique": "有单点风险,挂了就全停"}
+    if "多可用区" not in proposal:
+        return {"ok": False, "critique": "未跨可用区,扛不住机房故障"}
+    return {"ok": True, "critique": "无重大问题"}
+
+def debate(task, max_rounds=4):
+    critique = None
+    history = []
+    for _ in range(max_rounds):
+        proposal = proposer(task, critique)
+        review = critic(proposal)              # 独立批评
+        history.append((proposal, review["critique"]))
+        if review["ok"]:                       # 收敛:批评者无重大异议
+            return proposal, history
+        critique = review["critique"]          # 带着批评改进
+    return proposal, history                   # 达上限(防空转)
+
+final, history = debate("设计高可用部署")
+for p, c in history:
+    print("提议:", p, "| 批评:", c)
+print("==> 最终:", final)
+print("独立批评驱动改进、达标收敛")`}
+/>
+
+提议者出初版（有单点风险），独立的批评者专门挑问题，提议者据此改进，循环到批评者无重大异议才收敛——独立审查抓出了单 Agent 自评容易放过的问题，且有轮次上限防空转。**试试**：把 critic 改成"自评"（proposer 自己审），看它倾向于觉得初版就挺好（自我确认偏差）；想想 max_rounds 防的是什么（永不收敛的空转）。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month10/m10l6_debate/`：
+
+```bash
+python labs/month10/m10l6_debate/test_debate.py
+```
+
+实现提议者-批评者循环：独立批评驱动改进、达标即收敛、有轮次上限防空转，并记录辩论历史。
+
+<GuidedExercise
+  title="练习指引：实现提议-批评循环"
+  goal="把“独立批评 + 据评改进 + 收敛/上限”做成代码——多 Agent 最不可替代的审查价值。"
+  hints={[
+    'proposer(task, critique)：无批评出初版，有批评据其改进。',
+    'critic(proposal)：独立找问题，返回 {ok, critique}。',
+    'debate：循环 提议->批评->ok 则停/否则带批评再提议。',
+    'max_rounds 防空转(永不收敛)。'
+  ]}
+  steps={[
+    '实现 debate(task, proposer, critic, max_rounds)。',
+    '循环：提议 -> 独立批评 -> ok 收敛 / 否则带批评改进。',
+    '记录每轮 (提议, 批评)；达上限停止。',
+    '写测试：批评驱动改进、达标收敛、上限防空转、历史记录、独立批评抓出问题。'
+  ]}
+  checks={[
+    '你能解释独立审查为什么优于单 Agent 自评。',
+    '你的 lab 能提议-批评循环、收敛、防空转。',
+    '你能说出辩论评审的成本和空转风险及控制。',
+    '你理解这是多 Agent 最不可替代的价值。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 审查方式
+
+<TradeoffExplorer
+  title="提升质量的审查方式"
+  dimensions={['抓错能力', '成本低', '无偏差', '收敛快', '适合高价值任务']}
+  options={[
+    {
+      name: '单 Agent 自评(M9L7)',
+      scores: [2, 5, 1, 5, 2],
+      note: '自己审自己。便宜、快，但有自我确认偏差、同视角盲点。',
+      whenToUse: '低价值任务的轻量改进。'
+    },
+    {
+      name: '提议者-批评者',
+      scores: [4, 3, 4, 3, 4],
+      note: '独立批评者找问题。抓错强、视角独立。但成本翻倍、要防空转。',
+      whenToUse: '需质量把关的任务。'
+    },
+    {
+      name: '多 Agent 辩论',
+      scores: [5, 1, 5, 2, 5],
+      note: '多方对抗逼出可靠结论。最能抓错。但成本最高、最易空转、需裁决。',
+      whenToUse: '高价值、有争议、容错极低的决策。'
+    }
+  ]}
+/>
+
+### 2. "独立对抗审查"是多 Agent 不可替代的核心理由
+
+如果说[专精分工（M10L2）](./roles-specialization)、[编排（M10L3/L5）](./supervisor-orchestration) 单 Agent 串行也能勉强模拟，那"**真正独立的对抗审查**"是多 Agent 唯一难以被单 Agent 替代的能力——因为它的价值恰恰来自"**不是同一个脑子**"。单 Agent 自评再怎么 prompt，本质还是用生成答案的同一个模型实例、同一段上下文来审，逃不开自我确认偏差；而一个独立的批评者 Agent（独立 prompt、专注找茬、不背"我要维护自己答案"的包袱）能提供真正不同的视角。这呼应一个深刻的工程/认知原理：**独立的检查者比自检更可靠**——[代码 review 要别人审、测试要独立于实现、审计要第三方](../design-patterns-lld/code-smells-refactoring)。所以当架构师判断"这任务该不该用多 Agent"时，**"是否需要独立的质量把关/找反例"往往是最有说服力的理由**——这是多 Agent 提供的、其它方案给不了的东西。
+
+### 3. 真实案例：critic Agent 提升关键产出质量
+
+辩论评审最有价值的落地，是给**高风险、容错低**的 AI 产出加一个独立的 critic：代码生成后加一个安全审查 Agent（专找漏洞）、架构方案后加一个风险审查 Agent（专找单点/扩展性问题）、重要决策前加一个唱反调的 Agent（专找反例和盲点）。这些独立 critic 能抓出生成 Agent 自己发现不了的问题，明显提升关键产出的可靠性。但也要克制——给低价值、高容错的产出（如随手生成的草稿）配一堆审查 Agent，是过度工程，徒增成本和延迟。**判断哪些产出值得独立审查、审查到什么程度，是按[容错度（M7L9）](../llm-systems/hallucination-guardrails)做的工程权衡**：越接近钱、安全、不可逆后果的产出，越值得多花成本上独立审查；反之则单 Agent 甚至不审就够。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的关键 AI 产出（代码/方案/决策）有独立审查吗，还是只靠生成 Agent 自评（有自我确认偏差）？
+- 你的 critic 是真正独立的（不同 prompt、专注找茬）吗？它的批评具体有建设性，还是空泛/挑刺？
+- 辩论评审有轮次上限和收敛机制吗？会不会空转（反复挑小毛病/各执己见）？哪些产出值得这个成本？
+
+## 自检清单
+
+- [ ] 我能解释独立审查为什么优于单 Agent 自评（无自我确认偏差）。
+- [ ] 我的 lab 能提议-批评循环、收敛、防空转。
+- [ ] 我能控制辩论评审的成本和空转（上限/裁决/好的批评 prompt）。
+- [ ] 我理解独立对抗审查是多 Agent 最不可替代的价值。
+
+## 常见误解
+
+- **"让 Agent 自己多检查几遍就行"**：自评有自我确认偏差；独立批评者才真正抓错。
+- **"辩论越多轮越好"**：成本翻倍、易空转；要上限和收敛机制。
+- **"所有产出都该独立审查"**：按容错度权衡；低价值产出别过度审查。
+
+## 延伸阅读
+
+- [Multi-Agent Debate (Du et al., 2023)](https://arxiv.org/abs/2305.14325)
+- [M9L7 反思与自我纠错](../agent-architectures/reflection-correction)
+- [下一课：交接与路由](./handoff-routing)

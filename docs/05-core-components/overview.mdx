@@ -1,0 +1,70 @@
+---
+title: Month 5 总览 - 核心架构能力
+description: 从单服务走向分布式：负载均衡、网关、服务发现、限流、熔断、复制、分片、共识——把可靠性和可扩展做成可设计的构件。
+slug: /core-components/overview
+---
+
+import ChapterMeta from '@site/src/components/ChapterMeta';
+
+# Month 5 · 核心架构能力（模块总览）
+
+<ChapterMeta
+  time="整月约 26–32 小时（12 节课）"
+  prereqs={[{label: '完成 Month 2 系统设计', href: '/system-design-bridge/overview'}, {label: 'M3 数据/缓存/队列', href: '/data-cache-queue/overview'}, {label: 'M2L11 容错', href: '/system-design-bridge/reliability-fault-tolerance'}]}
+  outcome="能把“多服务分布式系统”拆成可设计的核心构件：流量怎么进来、怎么分发、怎么扛住故障、数据怎么分布和保持一致——并量化它们的取舍。"
+  howToUse="按周学。每节课从一个“单机能跑、一上规模就崩”的痛点出发，引出一个分布式构件，配可跑 lab。"
+/>
+
+:::tip 这个月的主题：从“一个服务”到“一群服务协作还不出事”
+前四个月你会写干净的单个服务了。但真实系统是**一群服务在不可靠的网络上协作**：机器会挂、网络会断、流量会突增、数据要分布在多台机器上。这个月教你这群服务赖以生存的核心构件——负载均衡、网关、限流、熔断、复制、分片、共识。
+:::
+
+## 为什么需要这些构件
+
+[M2L7 你学过水平扩展](../system-design-bridge/scaling-strategies)、[M2L11 学过容错](../system-design-bridge/reliability-fault-tolerance)的思想。这个月把它们落成**具体的、可设计的构件**：
+
+- 加了 10 台机器，流量怎么均匀分到它们上？→ **负载均衡**
+- 客户端怎么知道有哪些服务、它们在哪？→ **服务发现**
+- 一个依赖变慢，怎么不让它拖垮整条调用链？→ **限流 / 熔断 / 隔离**
+- 数据放一台机器扛不住，怎么分到多台还能查？→ **分区 / 分片**
+- 一台数据库挂了，怎么不丢数据、不停服务？→ **复制 / 共识**
+
+每一个都是"单机思维"到"分布式思维"的一次跃迁。
+
+## 本月课程地图
+
+每节课从"单机能跑、上规模就崩"的痛点出发，引出构件，配可跑 lab。
+
+### Week 1 · 流量入口与服务通信
+| # | 课 | 你会学到 |
+|---|---|---|
+| M5L1 | [负载均衡](./load-balancing) | L4/L7、轮询/最少连接/一致性哈希、健康检查 |
+| M5L2 | [API 网关](./api-gateway) | 入口横切能力、BFF、网关不该做什么 |
+| M5L3 | [服务发现与注册](./service-discovery) | 注册中心、客户端/服务端发现、健康探活 |
+| M5L4 | [反向代理与 CDN](./reverse-proxy-cdn) | 边缘缓存、TLS 终止、就近接入 |
+
+### Week 2 · 弹性模式（让系统扛住故障）
+| # | 课 | 你会学到 |
+|---|---|---|
+| M5L5 | [限流](./rate-limiting) | 令牌桶/漏桶/滑动窗口 |
+| M5L6 | [熔断与降级](./circuit-breaker) | closed/open/half-open 三态 |
+| M5L7 | [重试、退避与超时](./retry-backoff-timeout) | 指数退避 + 抖动、重试预算 |
+| M5L8 | [隔离与舱壁](./bulkhead-isolation) | bulkhead、负载卸载、防级联失败 |
+
+### Week 3 · 数据分布与一致性
+| # | 课 | 你会学到 |
+|---|---|---|
+| M5L9 | [复制](./replication) | 主从/多主/无主、复制延迟、读写法定人数 |
+| M5L10 | [分区与分片](./partitioning-sharding) | 哈希/范围分片、一致性哈希、再平衡 |
+| M5L11 | [共识与协调](./consensus-coordination) | Raft、领导者选举、quorum |
+| M5L12 | [Capstone：设计高可用服务](./capstone-resilient-service) | 把本月构件组装成一个抗故障系统 |
+
+## 月末产出
+
+一套"分布式构件"的可跑实现（一致性哈希负载均衡、令牌桶限流、熔断器、主从复制 + 读写仲裁、Raft 领导者选举），以及"给定一个服务，能设计出它的扩展 + 可靠性方案并量化取舍"的能力。
+
+## 学习建议
+
+- 每个构件先问："不用它会怎样崩？" 痛点想清楚，构件的设计自然成立。
+- 始终带着[量化直觉](../foundations/performance-and-latency)：复制几份、分几片、限流到多少、超时设多久——架构师要会算。
+- 多回 [M2L6 CAP](../system-design-bridge/cap-consistency)、[M2L11 容错](../system-design-bridge/reliability-fault-tolerance)：这个月是它们的工程落地。

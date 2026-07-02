@@ -1,0 +1,196 @@
+---
+title: M5L1 - 负载均衡
+description: 加了 10 台机器，流量怎么均匀分配？轮询/最少连接/一致性哈希、L4 vs L7、健康检查——流量分发的核心。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M5L1 · 负载均衡
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M2L7 水平扩展', href: '../system-design-bridge/scaling-strategies'}, {label: 'L5 无状态服务', href: '../foundations/state-and-storage'}]}
+  outcome="能根据场景选对负载均衡算法（轮询/最少连接/一致性哈希）、区分 L4/L7、并理解健康检查与一致性哈希为什么是扩缩容的关键。"
+  howToUse="先看“多台机器但流量全压一台”的痛，再理解几种分发算法，最后做一致性哈希 lab。"
+/>
+
+:::tip 水平扩展的第一个问题：流量怎么进到那 10 台机器？
+[M2L7](../system-design-bridge/scaling-strategies) 说"加机器"就能扩展。但加了 10 台，客户端总不能记住 10 个 IP。中间需要一个**负载均衡器（load balancer）**：对外一个地址，对内把流量分到后面的一群机器。它怎么分，直接决定了扩展是否均匀、扩缩容是否平滑。
+:::
+
+## 一、加了机器，流量却不均
+
+你部署了 10 个一样的无状态实例（[L5](../foundations/state-and-storage)），但如果分发不当：有的机器忙死、有的闲死；某台挂了流量还往它打；扩容一台新机器却分不到流量。**负载均衡器的职责，就是把请求"公平且健康地"分到后端实例上。** 它怎么决定"下一个请求给谁"，就是负载均衡算法。
+
+## 二、三个核心概念（分层）
+
+### 基础：L4 vs L7 负载均衡
+
+<GlossaryTerm term="Load Balancer" definition="负载均衡器：对外暴露一个地址，把进入的请求按某种算法分发到后端的一组实例上，并跳过不健康的实例。是水平扩展的入口。">负载均衡器</GlossaryTerm>工作在两个层次：
+
+- <GlossaryTerm term="L4 Load Balancing" definition="四层（传输层）负载均衡：只看 TCP/UDP 的 IP 和端口来转发，不解析应用内容。快、开销小，但不能按 URL/Header 做路由。">L4（传输层）</GlossaryTerm>：只看 IP + 端口转发，不懂 HTTP。极快、开销小，但不能按 URL/Cookie 路由。
+- <GlossaryTerm term="L7 Load Balancing" definition="七层（应用层）负载均衡：解析 HTTP 等应用层协议，可按 URL、Header、Cookie 做路由、重写、灰度，还能终止 TLS。功能强但开销略大。">L7（应用层）</GlossaryTerm>：解析 HTTP，能按路径/域名/Header 路由、做灰度、终止 TLS。功能强、开销略大。现代网关多是 L7。
+
+### 进阶：分发算法
+
+- <GlossaryTerm term="Round Robin" definition="轮询：依次把请求轮流发给每个后端实例。实现简单、分发均匀，但不考虑各实例当前负载或请求轻重。">轮询（Round Robin）</GlossaryTerm>：挨个轮。简单均匀，但不管谁更忙。
+- <GlossaryTerm term="Least Connections" definition="最少连接：把新请求发给当前活跃连接数最少的实例。能更好地适应请求耗时不均的场景。">最少连接</GlossaryTerm>：发给当前连接最少的。适合请求耗时不均。
+- **加权**：给配置高的机器更大权重。
+- <GlossaryTerm term="Consistent Hashing" definition="一致性哈希：把实例和键都映射到一个哈希环上，键归属顺时针最近的实例。增删一台实例时，只有环上一小段的键需要迁移，而不是几乎全部重映射。" >一致性哈希</GlossaryTerm>：按 key（如用户 ID）哈希到固定实例——适合需要"同一 key 总到同一台"（会话粘性、缓存命中）的场景。
+
+### 深入（选学）：为什么扩缩容必须用一致性哈希
+
+朴素哈希 `hash(key) % N` 有个致命问题：**机器数 N 一变（扩容/某台挂了），几乎所有 key 的归属都变了**——缓存全部失效、会话全部漂移，瞬间雪崩。一致性哈希把实例和 key 都放到一个环上，key 归属顺时针最近的实例；**增删一台只影响环上相邻的一小段 key**（约 1/N），其余不动。再配<GlossaryTerm term="Virtual Nodes" definition="虚拟节点：让每个物理实例在哈希环上对应多个虚拟点，使键分布更均匀，避免少数实例承担过多键（数据倾斜）。">虚拟节点</GlossaryTerm>让分布更均匀。这是 [Dynamo（M3）](../data-cache-queue/sql-vs-nosql)、缓存集群、分片路由的共同基石。
+
+<ResearchNote
+  title="一致性哈希：让扩缩容只搬一小部分数据"
+  source="Karger et al. (1997), Consistent Hashing and Random Trees；DeCandia et al. (2007), Dynamo"
+  href="https://www.cs.princeton.edu/courses/archive/fall09/cos518/papers/chash.pdf"
+  insight="一致性哈希最初为分布式缓存设计：把节点和键映射到同一个哈希环，键归属顺时针最近节点，增删节点只需迁移相邻一小段键（约 1/N），而非全量重映射。虚拟节点进一步解决分布不均。Dynamo 把它用于数据分区。"
+  application="凡是“key 要稳定地落到某台机器”（缓存分片、会话粘性、数据分区、负载均衡），都用一致性哈希，而不是 hash%N。它让集群可以平滑扩缩容——这是弹性伸缩的前提。"
+/>
+
+## 三、跟我做一遍：朴素哈希 vs 一致性哈希
+
+<PyRunner
+  rows={30}
+  expect="一致性哈希迁移更少"
+  code={`import hashlib
+
+def h(s):
+    return int(hashlib.md5(str(s).encode()).hexdigest(), 16)
+
+keys = ["user%d" % i for i in range(1000)]
+
+# 朴素哈希：节点数变化 -> 几乎全部 key 重映射
+def naive_owner(key, nodes):
+    return nodes[h(key) % len(nodes)]
+
+before = {k: naive_owner(k, ["A", "B", "C"]) for k in keys}
+after  = {k: naive_owner(k, ["A", "B", "C", "D"]) for k in keys}  # 扩容一台
+moved = sum(1 for k in keys if before[k] != after[k])
+print("朴素哈希扩容后迁移:", moved, "/", len(keys))   # 约 750+，灾难
+
+# 一致性哈希：实例放到环上，key 归属顺时针最近的实例
+class Ring:
+    def __init__(self, nodes, vnodes=100):
+        self.ring = {}
+        for n in nodes:
+            for v in range(vnodes):
+                self.ring[h("%s#%d" % (n, v))] = n
+        self.sorted = sorted(self.ring)
+    def owner(self, key):
+        hk = h(key)
+        for point in self.sorted:
+            if hk <= point:
+                return self.ring[point]
+        return self.ring[self.sorted[0]]   # 绕回环首
+
+r1 = Ring(["A", "B", "C"])
+r2 = Ring(["A", "B", "C", "D"])            # 扩容一台
+moved2 = sum(1 for k in keys if r1.owner(k) != r2.owner(k))
+print("一致性哈希扩容后迁移:", moved2, "/", len(keys))  # 约 250 (~1/4)
+print("一致性哈希迁移更少")`}
+/>
+
+朴素哈希扩容一台机器，700+ 个 key 的归属都变了（缓存全废）；一致性哈希只动了约 1/N。**试试**：把扩容改成"删除一台 C"，对比两者迁移量；再调 `vnodes` 看分布均匀度的变化。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month05/m5l1_consistent_hash/`：
+
+```bash
+python labs/month05/m5l1_consistent_hash/test_ring.py
+```
+
+实现一致性哈希环：增删节点时只迁移相邻一小段 key，并支持虚拟节点。
+
+<GuidedExercise
+  title="练习指引：实现一致性哈希环"
+  goal="把“环 + 顺时针归属 + 虚拟节点”做成代码，亲手验证扩缩容只迁移 ~1/N 的 key。"
+  hints={[
+    '把每个节点的多个虚拟点哈希到环上（排序后便于查找）。',
+    'owner(key)：找环上第一个 >= hash(key) 的点；找不到就绕回环首。',
+    '加/删节点只重建环；大部分 key 的归属不变。',
+    '虚拟节点越多，分布越均匀（但内存/查找成本略增）。'
+  ]}
+  steps={[
+    '实现 Ring(nodes, vnodes)：构建哈希环。',
+    '实现 owner(key)：顺时针找最近节点。',
+    '实现 add_node / remove_node：增删并重建环。',
+    '写测试：增删节点后迁移的 key 数远小于全量、同一 key 稳定归属、分布大致均匀。'
+  ]}
+  checks={[
+    '你能解释 hash%N 为什么在扩缩容时灾难性。',
+    '你的环增删节点只迁移一小部分 key。',
+    '你能说出虚拟节点解决什么问题。',
+    '你能区分 L4 和 L7 负载均衡。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 负载均衡算法怎么选
+
+<TradeoffExplorer
+  title="负载均衡算法对比"
+  dimensions={['实现简单', '负载均匀', '适应请求不均', '会话/缓存粘性', '扩缩容平滑']}
+  options={[
+    {
+      name: '轮询 Round Robin',
+      scores: [5, 4, 2, 1, 3],
+      note: '挨个轮。简单均匀，但不管请求轻重、不保证同 key 同机。',
+      whenToUse: '后端同质、请求大致等价、无状态时——最常见默认。'
+    },
+    {
+      name: '最少连接',
+      scores: [3, 4, 5, 1, 3],
+      note: '发给最闲的。适应长短请求混合，但要跟踪连接数。',
+      whenToUse: '请求耗时差异大（有的快有的慢）时。'
+    },
+    {
+      name: '一致性哈希',
+      scores: [2, 3, 2, 5, 5],
+      note: '同 key 稳定到同机、扩缩容只迁移 ~1/N。但要处理倾斜（虚拟节点）。',
+      whenToUse: '需要缓存命中/会话粘性/数据分片路由时。'
+    }
+  ]}
+/>
+
+### 2. 负载均衡器自己也不能是单点
+
+负载均衡器是流量入口，它一挂全完。所以生产里它本身也要高可用：DNS 轮询 + 多个 LB、或云厂商的托管 LB（本身是分布式的）、再配 [健康检查](./service-discovery) 自动摘除坏实例、配 [VIP/keepalived 故障转移]。**入口的高可用是整个系统高可用的前提**——这呼应 [M2L11 消除单点](../system-design-bridge/reliability-fault-tolerance)。
+
+### 3. 真实案例：从 DNS 到全球流量调度
+
+小系统一个 Nginx 就够；大系统是多层：DNS/Anycast 把用户导到最近区域 → 区域内 L4 LB 分到一组 L7 网关 → 网关按路径路由到服务 → 服务前还有一致性哈希分片。[CDN（M5L4）](./reverse-proxy-cdn) 在最外层做就近接入。理解这条链，你才能设计跨区域、抗区域故障的流量架构。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的服务有会话状态（不该有，但假设有），用一致性哈希做粘性 vs 把状态外移到 Redis（[L5](../foundations/state-and-storage)），各有什么取舍？
+- 一台后端实例"假活"（健康检查过但实际处理很慢），轮询会怎样？最少连接呢？怎么探测并摘除它？
+- 扩容时新实例刚启动、缓存是冷的，一下导入大量流量会被打挂（惊群）。怎么"慢启动/预热"？
+
+## 自检清单
+
+- [ ] 我能区分 L4 和 L7 负载均衡及各自适用。
+- [ ] 我能根据场景选轮询/最少连接/一致性哈希。
+- [ ] 我的 lab 一致性哈希环增删节点只迁移 ~1/N。
+- [ ] 我理解负载均衡器自身也要高可用。
+
+## 常见误解
+
+- **"负载均衡就是轮询"**：还有最少连接、一致性哈希等，按场景选。
+- **"用 hash%N 分片就行"**：扩缩容时几乎全量重映射，必须用一致性哈希。
+- **"有了 LB 就高可用了"**：LB 自己也是单点，要让它本身冗余。
+
+## 延伸阅读
+
+- [Consistent Hashing (Karger et al., 1997)](https://www.cs.princeton.edu/courses/archive/fall09/cos518/papers/chash.pdf)
+- [Amazon Dynamo (2007)](https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf)
+- [下一课：API 网关](./api-gateway)

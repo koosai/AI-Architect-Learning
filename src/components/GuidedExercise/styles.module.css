@@ -1,0 +1,193 @@
+.card {
+  background: var(--comp-bg);
+  border: 1px solid var(--comp-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0 2rem 0;
+  box-shadow: var(--comp-shadow);
+}
+
+.header {
+  border-bottom: 1px solid var(--comp-border);
+  padding-bottom: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--brand-green);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.4rem;
+}
+
+.title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--comp-text);
+}
+
+.goalSection {
+  background: var(--comp-hover);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-left: 3px solid var(--brand-green);
+}
+
+.goalLabel {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--brand-green);
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
+}
+
+.goalText {
+  font-size: 0.92rem;
+  color: var(--comp-text);
+  margin: 0;
+}
+
+.sectionTitle {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--comp-text-muted);
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+  margin-top: 1.25rem;
+}
+
+.hintsBox {
+  border: 1px dashed var(--comp-border);
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.hintItem {
+  font-size: 0.88rem;
+  color: var(--comp-text-muted);
+  margin-bottom: 0.3rem;
+  line-height: 1.4;
+}
+
+.hintItem:last-child {
+  margin-bottom: 0;
+}
+
+.progressBarContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1.25rem;
+}
+
+.progressBar {
+  flex: 1;
+  height: 6px;
+  background: var(--comp-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--brand-green);
+  border-radius: 3px;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progressText {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--comp-text-muted);
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.checkItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.checkItem:hover {
+  background: var(--comp-hover);
+}
+
+.checkboxInput {
+  display: none;
+}
+
+.checkboxRepl {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--comp-border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  margin-top: 1px;
+}
+
+.checkboxInput:checked + .checkboxRepl {
+  border-color: var(--brand-green);
+  background: var(--brand-green);
+}
+
+.checkboxRepl svg {
+  stroke: #ffffff;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+.checkboxInput:checked + .checkboxRepl svg {
+  opacity: 1;
+}
+
+.itemLabel {
+  font-size: 0.92rem;
+  line-height: 1.4;
+  color: var(--comp-text);
+  transition: color 0.2s ease;
+}
+
+.checkboxInput:checked ~ .itemLabel {
+  color: var(--comp-text-muted);
+  text-decoration: line-through;
+}
+
+.hintToggleBtn {
+  background: none;
+  border: none;
+  color: var(--ifm-color-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.8rem;
+}
+
+.hintToggleBtn:hover {
+  text-decoration: underline;
+}

@@ -1,0 +1,69 @@
+---
+title: Month 6 总览 - 云原生与工业软件
+description: 从“写服务”到“运行系统”：容器、Kubernetes、IaC、CI/CD、可观测、服务网格、多云，以及企业 ERP 与工业边缘系统。
+slug: /cloud-enterprise-industrial/overview
+---
+
+import ChapterMeta from '@site/src/components/ChapterMeta';
+
+# Month 6 · 云原生与工业软件（模块总览）
+
+<ChapterMeta
+  time="整月约 26–32 小时（12 节课）"
+  prereqs={[{label: '完成 Month 5 核心架构', href: '/core-components/overview'}, {label: 'L14 配置与部署', href: '/foundations/config-and-deploy'}, {label: 'L12 可观测性', href: '/foundations/observability'}]}
+  outcome="能把一个服务用云原生方式交付与运维：容器化、K8s 声明式编排、IaC、CI/CD、可观测、服务网格；并理解企业 ERP 集成和工业/边缘系统的特殊约束。"
+  howToUse="按周学。前两周是“怎么把服务可靠地跑起来、发出去、看得见”，第三周是“企业和工业场景的特殊世界”。"
+/>
+
+:::tip 前五个月教你“设计系统”，这个月教你“运行系统”
+你已经能设计一个高可用服务了（[Month 5](../core-components/overview)）。但设计图不会自己跑起来——它要被**打包、部署、伸缩、配置、观测、升级、回滚**。这个月讲的就是让系统真正在生产里"活着、看得见、能演进"的那套云原生基础设施，以及企业和工业场景里它会变成什么样。
+:::
+
+## 为什么架构师必须懂运行环境
+
+很多人以为架构师只画框图。但一个设计能不能落地、好不好运维，取决于它跑在什么环境里：
+
+- 怎么保证"我本机能跑"在生产也一模一样？→ **容器**
+- 几百个容器、机器会挂，谁来保证"始终有 3 个副本在跑"？→ **Kubernetes 声明式编排**
+- 几十个环境的服务器/网络/数据库，怎么不靠手点、可复现地建出来？→ **基础设施即代码（IaC）**
+- 代码改完怎么自动测试、安全地发到生产、出事能回滚？→ **CI/CD**
+- 线上出问题，怎么在几分钟内定位？→ **可观测性**
+- [Month 5 的熔断/重试/mTLS](../core-components/circuit-breaker) 能不能不写进每个服务？→ **服务网格**
+
+而当系统进入**企业**（ERP/权限/审计/集成）和**工业**（设备/边缘/实时/安全）场景，这些又会有全新的约束。
+
+## 本月课程地图
+
+### Week 1 · 容器与编排
+| # | 课 | 你会学到 |
+|---|---|---|
+| M6L1 | [容器化](./containers) | 镜像分层、命名空间/cgroups、为什么"我本机能跑"终于成立 |
+| M6L2 | [Kubernetes 基础](./kubernetes-basics) | 声明式 API、调和循环、Pod/Deployment/Service |
+| M6L3 | [配置、密钥与探针](./config-secrets-probes) | ConfigMap/Secret、liveness/readiness 探针 |
+| M6L4 | [自动伸缩与滚动发布](./autoscaling-rollout) | HPA、滚动更新、蓝绿/金丝雀 |
+
+### Week 2 · 交付与运维平台
+| # | 课 | 你会学到 |
+|---|---|---|
+| M6L5 | [基础设施即代码](./infrastructure-as-code) | 声明式、幂等 apply、plan/diff |
+| M6L6 | [CI/CD 流水线](./cicd-pipelines) | 构建/测试/部署、质量门禁、制品 |
+| M6L7 | [可观测性进阶](./observability-advanced) | 指标/日志/链路、RED/USE、SLO 告警 |
+| M6L8 | [服务网格](./service-mesh) | sidecar、mTLS、流量治理 |
+
+### Week 3 · 企业与工业软件
+| # | 课 | 你会学到 |
+|---|---|---|
+| M6L9 | [多云与混合云](./multi-cloud) | 厂商锁定、可移植性、成本 |
+| M6L10 | [企业应用与 ERP 集成](./enterprise-erp-integration) | 集成模式、主数据、幂等对接 |
+| M6L11 | [工业软件与边缘实时](./industrial-edge-realtime) | OT/IT、SCADA/PLC、边缘缓冲、实时约束 |
+| M6L12 | [Capstone：云原生交付一个服务](./capstone-cloud-native) | 把 M5 服务用 IaC+CI/CD+K8s+观测 跑起来 |
+
+## 月末产出
+
+一套"云原生交付"的可跑实现（镜像分层缓存、K8s 调和循环、IaC 幂等 plan、CI/CD 门禁流水线、HPA 伸缩、SLO 燃尽率告警），以及"给定一个服务，能设计它的完整部署 + 运维 + 集成方案"的能力。
+
+## 学习建议
+
+- 抓住一条主线：**声明式 + 调和（declarative + reconciliation）**——容器、K8s、IaC、GitOps 全是"声明期望状态，让系统自动逼近它"。
+- 区分 **control plane（决定怎么跑）** 和 **data plane（真正跑业务流量）**——这个二分贯穿 K8s、服务网格、AI 平台。
+- 企业/工业部分别只当"冷知识"：AI 系统最终要嵌入这些已有的权限、数据、流程和物理约束里。

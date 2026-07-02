@@ -1,0 +1,132 @@
+.card {
+  background: var(--comp-bg);
+  border: 1px solid var(--comp-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0 2rem 0;
+  box-shadow: var(--comp-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.timeline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  margin: 0.5rem 0 1rem 0;
+}
+
+.timelineLine {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--comp-border);
+  z-index: 1;
+}
+
+.timelineLineActive {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 2px;
+  background: var(--ifm-color-primary);
+  z-index: 2;
+  transition: width 0.3s ease;
+}
+
+.dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--comp-bg);
+  border: 2.5px solid var(--comp-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--comp-text-muted);
+  cursor: pointer;
+  z-index: 3;
+  transition: all 0.2s ease;
+}
+
+.dotActive {
+  border-color: var(--ifm-color-primary);
+  background: var(--ifm-color-primary);
+  color: white;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+}
+
+.dotPassed {
+  border-color: var(--brand-green);
+  background: var(--brand-green);
+  color: white;
+}
+
+.stepContent {
+  background: var(--comp-hover);
+  border-radius: 10px;
+  padding: 1.25rem;
+  border: 1px solid var(--comp-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  animation: slideIn 0.3s ease-out;
+}
+
+.stepTitle {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--ifm-color-primary);
+  margin: 0;
+}
+
+.stepDesc {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--comp-text);
+  margin: 0;
+}
+
+.controlRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn {
+  background: var(--comp-bg);
+  border: 1px solid var(--comp-border);
+  color: var(--comp-text);
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--comp-hover);
+  border-color: var(--ifm-color-primary-light);
+}
+
+.btnActive {
+  background: var(--ifm-color-primary);
+  color: white;
+  border-color: var(--ifm-color-primary);
+}
+
+.btnActive:hover {
+  background: var(--ifm-color-primary-dark);
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}

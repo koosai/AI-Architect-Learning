@@ -1,0 +1,201 @@
+---
+title: M8L4 - 文档分块
+description: 文档要切成块才能检索。切太大检索不准、切太小丢上下文——chunk 大小、重叠、按语义切，是 RAG 质量的隐形决定因素。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M8L4 · 文档分块
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M8L2 embedding', href: './embeddings'}, {label: 'M8L3 向量检索', href: './vector-search'}, {label: 'M7L2 token', href: '../llm-systems/tokenization-context'}]}
+  outcome="能解释为什么要分块、chunk 大小与重叠的取舍、按语义/结构分块的好处，并实现带重叠的分块。"
+  howToUse="先看“整篇文档不能直接检索”，再理解 chunk 大小/重叠/语义分块，最后做分块 lab。"
+/>
+
+:::tip 分块是 RAG 里最朴素、却最常被低估的质量杠杆
+你不能把整篇 100 页文档当成一个向量去检索——太粗，检索回来一大坨、还塞不进上下文。得把文档**切成块（chunk）**，每块单独向量化、检索。但怎么切大有学问：**切太大检索不精准、塞不下；切太小丢失上下文、答案被割裂。** 很多 RAG 效果差，根因就在分块没做好——它是个隐形但关键的杠杆。
+:::
+
+## 一、整篇文档不能直接检索
+
+回顾流程：文档 → 切块 → 每块 [embedding（M8L2）](./embeddings) → 存[向量库（M8L3）](./vector-search) → 查询时检索最相关的块。为什么要切？因为检索的粒度就是块的粒度：
+- 如果一块是整篇文档：检索回来太大、[塞爆上下文（M7L2）](../llm-systems/tokenization-context)、且一个向量代表整篇太"模糊"、检索不准。
+- 如果一块是一句话：上下文太碎，答案常常跨句、检索回单句不完整。
+
+所以**怎么切块，直接决定检索回来的内容质量**——而这恰恰是新手最容易忽略、随手按字数一切了事的地方。
+
+## 二、三个核心概念（分层）
+
+### 基础：chunk 大小的取舍
+
+<GlossaryTerm term="Chunking" definition="分块：把长文档切成较小的片段（chunk），每块单独向量化和检索。块的大小和切法直接影响检索精度和上下文完整性。">分块（chunking）</GlossaryTerm>的第一参数是**块大小**（按 token 或字符算）：
+- **太大**：一块含多个主题，向量"语义不纯"、检索精度差；检索回来占用大量上下文预算。
+- **太小**：上下文被割裂，一个完整意思被切成几块，检索回单块不足以回答。
+- 经验：按内容类型定（FAQ 一问一答可小、技术文档一节一块、叙述性文本中等），并用 [M8L9 评测](./rag-evaluation) 在你的数据上调出最佳值。**没有万能大小，要按数据测。**
+
+### 进阶：重叠（overlap）
+
+<GlossaryTerm term="Chunk Overlap" definition="块重叠：相邻 chunk 之间共享一部分内容（如末尾 N 个 token 也放进下一块开头）。避免把一个完整意思正好切在块边界而被割裂，提升检索召回。">重叠（overlap）</GlossaryTerm>：让相邻块**共享一小段内容**（如每块末尾的 50 token 也放进下一块开头）。为什么需要：硬切可能正好把一个关键句/一个完整意思切在边界上，两块都不完整。重叠保证"跨边界的内容"至少在某一块里是完整的，提升召回。代价是存储和 token 略增（有冗余）。
+
+### 深入（选学）：语义/结构分块与元数据
+
+按固定大小切是基线，更好的做法是**顺着内容的自然边界切**：
+- <GlossaryTerm term="Semantic / Structural Chunking" definition="语义/结构分块：按文档的自然结构（标题、段落、列表、章节）或语义边界切块，而非机械按字数切，使每块是一个相对完整的意思单元，检索更准。">语义/结构分块</GlossaryTerm>：按标题、段落、章节、列表等自然结构切，让每块是一个**完整的意思单元**——比机械按字数切检索质量高得多。
+- **保留结构与元数据**：每块带上它的标题路径、来源文档、章节、时间、权限标签等元数据——既能在生成时给出处（[M8L8 引用](./rag-generation)），又能[元数据过滤检索（M8L3/M8L11）](./vector-search)。
+- **文档解析是上游隐患**：PDF 表格、图片、页眉页脚、乱码会污染块（[旧占位提到的四大失败点之一]）——分块质量先取决于解析质量，脏数据进、脏检索出。
+- **小块检索、大块喂给模型**：一种进阶技巧——用小块做精准检索命中，再把它所在的大块（或父文档相关部分）喂给模型，兼顾检索精度和上下文完整（"small-to-big"）。
+- 牢记：**分块是 RAG 里性价比极高的优化点**，但也别过早搞复杂语义分块——先按结构 + 合理大小 + 重叠做好基线，按评测再优化。
+
+<ResearchNote
+  title="分块：在检索精度和上下文完整性之间切"
+  source="RAG 工程实践（chunk size/overlap 调优）；LangChain/LlamaIndex 文档；small-to-big 检索"
+  href="https://www.pinecone.io/learn/chunking-strategies/"
+  insight="分块策略（大小、重叠、按结构/语义切）显著影响 RAG 质量：块太大语义不纯、占上下文；太小丢上下文、割裂答案；重叠避免边界割裂；按文档结构切让每块是完整意思单元。没有万能参数，需按数据和评测调，且依赖上游解析质量。"
+  application="基线：按文档结构（标题/段落/章节）切 + 合理大小（按内容类型，用评测调）+ 适度重叠 + 每块带元数据（来源/标题/权限）。先保证解析干净。需要时用 small-to-big（小块检索、大块供模型）。把分块当可评测、可迭代的参数，而非随手按字数切。"
+/>
+
+## 三、跟我做一遍：带重叠的分块
+
+<PyRunner
+  rows={34}
+  expect="按大小切且块间重叠"
+  code={`def chunk_fixed(text, size, overlap):
+    # 按字符切，相邻块重叠 overlap 个字符
+    chunks = []
+    step = size - overlap
+    i = 0
+    while i < len(text):
+        chunks.append(text[i:i+size])
+        if i + size >= len(text):
+            break
+        i += step
+    return chunks
+
+def chunk_by_paragraph(text, max_size):
+    # 结构分块：先按段落（空行）切，再把过大的段落按大小切
+    out = []
+    for para in text.split("\\n\\n"):
+        para = para.strip()
+        if not para:
+            continue
+        if len(para) <= max_size:
+            out.append(para)
+        else:
+            out.extend(chunk_fixed(para, max_size, overlap=0))
+    return out
+
+doc = "退货政策第一段，讲条件。" * 3 + "\\n\\n" + "退款时效第二段，讲到账时间。" * 3
+
+fixed = chunk_fixed(doc.replace("\\n\\n", ""), size=20, overlap=5)
+print("固定分块(size20,overlap5):", len(fixed), "块")
+for c in fixed[:3]:
+    print("  |", c)
+print("相邻块重叠示例:", fixed[0][-5:], "==", fixed[1][:5])  # 末尾=下块开头
+
+para = chunk_by_paragraph(doc, max_size=100)
+print("\\n结构分块:", len(para), "块（按段落，每块是完整意思）")
+print("按大小切且块间重叠")`}
+/>
+
+固定分块保证块大小一致、相邻块重叠（边界内容不丢）；结构分块按段落切、每块是完整意思——后者通常检索质量更好。**试试**：把 overlap 设为 0，看相邻块是否还重叠；把段落 max_size 调很小，看长段落被进一步切开。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month08/m8l4_chunking/`：
+
+```bash
+python labs/month08/m8l4_chunking/test_chunking.py
+```
+
+实现带重叠的固定分块 + 按段落的结构分块：块大小可控、相邻重叠、过大段落再切、不产生空块。
+
+<GuidedExercise
+  title="练习指引：实现分块"
+  goal="把“固定大小+重叠”和“按结构切”做成代码，体会分块对检索粒度的影响。"
+  hints={[
+    'chunk_fixed：step = size - overlap，滑动窗口切；注意最后一块和避免死循环（overlap < size）。',
+    'chunk_by_paragraph：先按空行切段，过大的段再用 chunk_fixed 切。',
+    '去掉空块、首尾空白。',
+    '重叠让相邻块末尾=下块开头，避免边界割裂。'
+  ]}
+  steps={[
+    '实现 chunk_fixed(text, size, overlap)。',
+    '实现 chunk_by_paragraph(text, max_size)。',
+    '处理边界：overlap>=size 报错、空段跳过、最后一块。',
+    '写测试：块大小符合、相邻重叠正确、结构分块按段落、无空块、长段被切。'
+  ]}
+  checks={[
+    '你能解释 chunk 太大/太小各自的问题。',
+    '你的 lab 实现了固定+重叠和结构分块。',
+    '你能说出重叠解决什么、为什么要带元数据。',
+    '你理解分块要按数据和评测调、依赖解析质量。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 分块策略
+
+<TradeoffExplorer
+  title="分块策略"
+  dimensions={['检索精度', '上下文完整', '实现简单', '通用性', '需要好解析']}
+  options={[
+    {
+      name: '固定大小(无重叠)',
+      scores: [2, 2, 5, 5, 2],
+      note: '机械按字数切。最简单，但易割裂意思、边界丢信息。',
+      whenToUse: '快速基线、内容均匀时。'
+    },
+    {
+      name: '固定大小+重叠',
+      scores: [3, 3, 4, 5, 2],
+      note: '加重叠缓解边界割裂。简单有效，是常用基线。',
+      whenToUse: '多数场景的务实默认。'
+    },
+    {
+      name: '语义/结构分块(+元数据)',
+      scores: [5, 5, 2, 3, 4],
+      note: '按标题/段落/语义切、每块完整意思、带元数据。质量最好，但实现复杂、依赖好解析。',
+      whenToUse: '对检索质量要求高、文档结构清晰时。'
+    }
+  ]}
+/>
+
+### 2. 分块是"被低估的 RAG 杠杆"
+
+新手优化 RAG，往往盯着换更强的 embedding 模型、加重排——却忽略了最上游的分块。但**分块决定了检索的粒度和每块的语义纯度**，它没做好，后面全是补救。一个常见的真实改进：把"机械按 500 字切"换成"按文档章节结构切 + 重叠 + 带标题元数据"，检索质量大幅提升，而成本几乎为零。架构师做 RAG 优化时，应该把分块和解析放在很靠前的位置检查（[配合 M8L9 评测](./rag-evaluation) 看是检索问题还是分块问题）——**便宜的杠杆先拉满，再上昂贵的手段**。
+
+### 3. 真实案例：脏解析毁掉一切
+
+RAG 翻车的一大隐形元凶在最上游：文档解析。PDF 里的表格被解析成乱序文字、页眉页脚混进正文、扫描件 OCR 出错、Markdown 的代码块被打散——这些脏数据进了块、向量化、检索，"垃圾进垃圾出"，再好的模型也救不回。成熟的 RAG 工程把**数据摄取和解析质量**当成一等公民（[M8L11 知识库工程](./knowledge-base-ops) 细讲），在分块前就清洗、保结构。很多团队"RAG 效果差"，根因不在检索算法，而在最不起眼的解析和分块。这提醒架构师：**AI 系统的质量，常常由最上游的数据工程决定，而非最下游的模型。**
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的文档是什么结构（FAQ？技术手册？合同？）？该按什么粒度切？用 M8L9 评测试几个 chunk 大小了吗？
+- 你的分块带元数据（来源、标题、权限、时间）吗？没有的话怎么给出处、怎么按权限过滤？
+- 你的文档解析干净吗？表格/页眉页脚/乱码有没有污染块？解析质量是不是你 RAG 的隐形瓶颈？
+
+## 自检清单
+
+- [ ] 我能解释为什么要分块、太大/太小各自的问题。
+- [ ] 我的 lab 实现了固定+重叠和结构分块。
+- [ ] 我理解重叠、元数据、语义分块的作用。
+- [ ] 我知道分块要按数据评测调、且依赖上游解析质量。
+
+## 常见误解
+
+- **"按固定字数切就行"**：易割裂意思；按结构切 + 重叠 + 元数据质量高得多。
+- **"分块不重要，模型够强就行"**：分块决定检索粒度，是被低估的关键杠杆。
+- **"RAG 效果差是模型问题"**：常常是上游解析/分块的脏数据导致，先查数据工程。
+
+## 延伸阅读
+
+- [Chunking Strategies (Pinecone)](https://www.pinecone.io/learn/chunking-strategies/)
+- [下一课：混合检索](./hybrid-search)

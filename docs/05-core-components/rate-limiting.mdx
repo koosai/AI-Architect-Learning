@@ -1,0 +1,188 @@
+---
+title: M5L5 - 限流
+description: 流量突增怎么不被打垮？令牌桶、漏桶、滑动窗口——在入口处主动丢弃超额请求，保护系统活下去。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M5L5 · 限流
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M5L2 API 网关', href: './api-gateway'}, {label: 'L11 队列与背压', href: '../foundations/sync-async-timeout'}]}
+  outcome="能用令牌桶/漏桶/滑动窗口实现限流，理解“允许突发 vs 平滑整形”的区别，并知道限流该放在哪一层。"
+  howToUse="先看“突发流量打垮系统”的痛，再理解几种限流算法，最后做令牌桶 lab。"
+/>
+
+:::tip 限流不是把用户拒之门外，是让系统“活着拒绝”而不是“躺平崩溃”
+当流量超过系统能力，你只有两个选择：要么主动丢弃一部分请求（限流），让其余请求正常服务；要么不管不顾全部接收，最后**所有人**都得到超时和错误。架构师选前者——**有损服务好过无服务。**
+:::
+
+## 一、一波突发流量，整个系统陪葬
+
+促销开始、热点新闻、爬虫失控、上游重试风暴……流量瞬间冲到平时的 10 倍。没有限流，系统会照单全收：线程池占满、内存爆、数据库连接耗尽，然后**雪崩**——不仅扛不住的请求失败，连本来能服务的请求也一起死。限流的作用：**在入口处设一个闸，超过容量的请求快速拒绝（返回 429），保住系统对其余请求的服务能力。**
+
+## 二、三个核心概念（分层）
+
+### 基础：令牌桶——允许突发
+
+<GlossaryTerm term="Token Bucket" definition="令牌桶：以固定速率往桶里放令牌（桶有上限），每个请求要拿走一个令牌才放行，拿不到就拒绝。平时攒下的令牌允许短时突发，长期速率受放令牌速率约束。" >令牌桶（Token Bucket）</GlossaryTerm>：以固定速率往桶里加令牌（桶有容量上限），每个请求消耗一个令牌，没令牌就拒绝。**妙处**：空闲时攒下的令牌，允许之后来一波**突发**（burst）；但长期平均速率仍被加令牌的速率限制住。这是最常用的限流算法。
+
+### 进阶：漏桶 vs 滑动窗口
+
+- <GlossaryTerm term="Leaky Bucket" definition="漏桶：请求进入一个固定容量的桶（队列），以恒定速率“漏出”被处理，桶满则丢弃。强制平滑输出速率，不允许突发。" >漏桶（Leaky Bucket）</GlossaryTerm>：请求排进固定容量的桶，以**恒定速率**漏出处理，桶满则丢。强制平滑、不允许突发——适合保护下游需要稳定速率的场景。
+- <GlossaryTerm term="Sliding Window" definition="滑动窗口限流：统计最近一段时间窗口内的请求数，超过阈值则拒绝。比固定窗口更平滑，避免窗口边界处的双倍突发问题。" >滑动窗口</GlossaryTerm>：统计"最近 N 秒"内的请求数，超阈值就拒。比固定窗口计数更平滑（避免窗口边界的双倍突发）。
+
+### 深入（选学）：单机限流 vs 分布式限流
+
+单机限流（每个实例自己一个桶）简单，但有 10 个实例、每个限 100 QPS，全局其实放过了 1000 QPS——而且实例数一变全局阈值就漂。要**全局精确限流**，得把计数放到共享存储（如 Redis：`INCR` + 过期，或 Redis 实现的令牌桶），所有实例查同一个桶。代价是每次限流判断多一次网络往返（[回扣延迟](../foundations/performance-and-latency)）和对 Redis 的依赖。常见折中：**入口网关层做全局限流 + 各服务做单机兜底**。还要决定超额时是**拒绝（reject）**还是**排队等待（throttle）**——前者快速失败，后者削峰但增加延迟（[回扣 L11 背压](../foundations/sync-async-timeout)）。
+
+<ResearchNote
+  title="限流：用可控的拒绝换系统的存活"
+  source="Google SRE Book — Handling Overload；Token Bucket / Leaky Bucket（流量整形经典算法）"
+  href="https://sre.google/sre-book/handling-overload/"
+  insight="Google SRE 强调过载时必须主动卸载（load shedding）和限流，否则会级联失败。令牌桶允许突发、漏桶强制平滑、滑动窗口精确计数——它们是流量整形的标准工具，最初源自网络 QoS。"
+  application="任何对外接口都该有限流（按用户/IP/API key/全局多维度）。入口网关做粗粒度全局限流，服务内做细粒度兜底。选令牌桶（允许突发）还是漏桶（平滑）取决于下游能否吃突发。配合优先级，过载时优先保住高价值请求。"
+/>
+
+## 三、跟我做一遍：令牌桶限流
+
+<PyRunner
+  rows={30}
+  expect="突发被允许、持续超速被限"
+  code={`class TokenBucket:
+    def __init__(self, rate, capacity):
+        self.rate = rate          # 每秒加多少令牌
+        self.capacity = capacity  # 桶容量（允许的突发上限）
+        self.tokens = capacity    # 初始装满
+        self.last = 0.0
+
+    def allow(self, now, cost=1):
+        # 按经过的时间补充令牌（不超过容量）
+        self.tokens = min(self.capacity, self.tokens + (now - self.last) * self.rate)
+        self.last = now
+        if self.tokens >= cost:
+            self.tokens -= cost
+            return True           # 放行
+        return False              # 拒绝（429）
+
+# 限速 2 令牌/秒，桶容量 5（允许一次最多 5 个的突发）
+tb = TokenBucket(rate=2, capacity=5)
+# t=0 时一次性来 6 个请求：前 5 个有攒下的令牌 -> 放行，第 6 个被拒
+res = [tb.allow(0) for _ in range(6)]
+print("突发 6 个:", res)            # 5 True, 1 False
+
+# 1 秒后补充了 2 个令牌
+print("1 秒后:", tb.allow(1.0))     # True（又有令牌了）
+print("紧接着:", tb.allow(1.0))     # True
+print("再一个:", tb.allow(1.0))     # False（这秒的令牌用完）
+print("突发被允许、持续超速被限")`}
+/>
+
+桶里攒下的令牌让"偶尔突发"被允许，但持续超过 2/秒就会被拒——既不一刀切扼杀突发，又守住长期速率。**试试**：把 `capacity` 调成 1（不允许突发，退化成严格匀速）；再实现一个漏桶对比"平滑输出"的差异。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month05/m5l5_rate_limit/`：
+
+```bash
+python labs/month05/m5l5_rate_limit/test_rate_limit.py
+```
+
+实现令牌桶限流器：按时间补充令牌、允许受控突发、超额拒绝。
+
+<GuidedExercise
+  title="练习指引：实现令牌桶限流"
+  goal="把“按时间补令牌 + 突发 + 拒绝”做成代码——这是最常用的限流算法。"
+  hints={[
+    'tokens 按 (now - last) * rate 补充，但不超过 capacity。',
+    'allow(now)：先补令牌，够就扣 1 放行，不够就拒绝。',
+    'capacity 决定允许的突发大小；rate 决定长期速率。',
+    '别忘了更新 last = now。'
+  ]}
+  steps={[
+    '实现 TokenBucket(rate, capacity)，初始装满。',
+    'allow(now, cost=1)：补令牌→判断→扣减或拒绝。',
+    '写测试：初始突发可放 capacity 个、之后被拒、隔一段时间又能放、长期速率不超 rate。',
+    '（选做）再实现一个漏桶 LeakyBucket，对比突发行为。'
+  ]}
+  checks={[
+    '你能解释限流为什么是“有损服务好过无服务”。',
+    '你的令牌桶允许受控突发、超额拒绝。',
+    '你能区分令牌桶（允许突发）和漏桶（强制平滑）。',
+    '你能说出单机限流和分布式限流的差异。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 限流算法怎么选
+
+<TradeoffExplorer
+  title="限流算法对比"
+  dimensions={['允许突发', '输出平滑', '实现简单', '内存开销', '精确度']}
+  options={[
+    {
+      name: '固定窗口计数',
+      scores: [3, 1, 5, 5, 2],
+      note: '每窗口计数清零。简单省内存，但窗口边界可能放过 2 倍突发。',
+      whenToUse: '粗粒度、能容忍边界误差时。'
+    },
+    {
+      name: '令牌桶',
+      scores: [5, 3, 4, 4, 4],
+      note: '允许攒令牌后突发，长期受 rate 限制。最通用。',
+      whenToUse: '默认选择：既要限速又要容忍合理突发。'
+    },
+    {
+      name: '漏桶',
+      scores: [1, 5, 4, 4, 4],
+      note: '恒定速率漏出、强制平滑、不允许突发。保护脆弱下游。',
+      whenToUse: '下游只能吃稳定速率（如写第三方限速 API）。'
+    },
+    {
+      name: '滑动窗口日志',
+      scores: [3, 4, 2, 1, 5],
+      note: '记录每个请求时间戳、最精确。但内存随请求数增长。',
+      whenToUse: '需要高精度、量不大的限流。'
+    }
+  ]}
+/>
+
+### 2. 限流是过载保护的一环，要配合卸载与优先级
+
+限流（拒绝超额）只是过载保护的第一步。完整的过载策略还包括：<GlossaryTerm term="Load Shedding" definition="负载卸载：系统接近过载时主动丢弃部分请求（通常优先丢低价值/低优先级的），以保住核心请求的服务质量，避免全面崩溃。">负载卸载</GlossaryTerm>（接近过载时优先丢低价值请求）、**优先级队列**（保住付费/核心请求）、[背压（L11）](../foundations/sync-async-timeout)（把压力反馈给上游让它慢下来）。架构师要让系统在过载时**优雅降级**（degrade）而非崩溃——这是 [M2L11 容错](../system-design-bridge/reliability-fault-tolerance) 的核心能力。
+
+### 3. 真实案例：每个公共 API 背后都有限流
+
+你调用任何云 API、支付接口、第三方服务，都会遇到 429 和 `Retry-After`——那就是限流。平台用它防滥用、保公平、控成本。自己做平台时，限流维度通常是多层的：全局、每租户、每 API key、每 IP、每接口。理解限流，你才能既保护自己的系统，又在调用别人时正确地[退避重试（下下课）](./retry-backoff-timeout)。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的接口该按什么维度限流（用户/IP/key/全局）？突发容量设多大才既防攻击又不误伤正常用户？
+- 10 个实例要全局限流到 1000 QPS，用 Redis 集中计数 vs 每实例 100 QPS，各有什么问题？实例扩缩容时呢？
+- 超额时你选"立即拒绝 429"还是"排队等待"？分别适合什么场景（[回扣背压](../foundations/sync-async-timeout)）？
+
+## 自检清单
+
+- [ ] 我理解限流是"有损服务好过无服务"。
+- [ ] 我的 lab 令牌桶允许突发、超额拒绝、长期受 rate 限制。
+- [ ] 我能区分令牌桶/漏桶/滑动窗口。
+- [ ] 我知道单机限流与分布式限流的差异和取舍。
+
+## 常见误解
+
+- **"限流是拒绝用户、体验差"**：不限流会让所有人都崩，限流是保住大多数人的服务。
+- **"令牌桶和漏桶一样"**：令牌桶允许突发，漏桶强制平滑，方向相反。
+- **"单机各限一份就行"**：那是全局速率 × 实例数，且随扩缩容漂移；要全局得集中计数。
+
+## 延伸阅读
+
+- [Google SRE: Handling Overload](https://sre.google/sre-book/handling-overload/)
+- [Stripe: Rate Limiters](https://stripe.com/blog/rate-limiters)
+- [下一课：熔断与降级](./circuit-breaker)

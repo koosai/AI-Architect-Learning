@@ -1,0 +1,187 @@
+---
+title: M3L1 - 数据库读写路径与存储引擎
+description: 为什么有的库写极快、有的读极快？打开数据库引擎舱：B-tree 与 LSM-tree、读写放大。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M3L1 · 数据库读写路径与存储引擎
+
+<ChapterMeta
+  time="约 2 小时"
+  prereqs={[{label: 'L7 数据建模', href: '../foundations/data-modeling'}, {label: 'M2L8 存储选型', href: '../system-design-bridge/storage-selection'}]}
+  outcome="能讲清一次读/写在数据库内部的路径，区分 B-tree 与 LSM-tree 的取舍，并用读/写放大解释为什么不同库快在不同地方。"
+  howToUse="先理解两类引擎的根本差异，再跑 LSM 读路径的 demo，最后做 lab 实现它。"
+/>
+
+:::tip 同样是数据库，引擎决定它擅长什么
+为什么 PostgreSQL 读很稳、Cassandra/RocksDB 写极快？因为它们底层的存储引擎不同：一类"原地更新"（B-tree），一类"只追加"（LSM）。这个根本差异，决定了它们各自的强项和代价。
+:::
+
+## 一、写很快还是读很快？引擎说了算
+
+你选了个数据库，发现它写入飞快但偶尔读有点慢；换一个则相反。这不是玄学——是底层<GlossaryTerm term="Storage Engine" definition="存储引擎：数据库中真正负责把数据存到磁盘、再读出来的核心模块。两大主流是 B-tree（原地更新）和 LSM-tree（只追加 + 合并）。">存储引擎</GlossaryTerm>的设计差异。这一课打开引擎舱，看清两类主流引擎怎么工作。
+
+## 二、三个核心概念（分层）
+
+### 基础：一次读写的路径
+
+一次写大致是：请求 → 内存缓冲（写日志保证不丢，回扣 [L1 持久化](../foundations/programming-systems-primer)）→ 最终落盘。一次读：先查内存/缓存，未命中再去磁盘。**磁盘访问比内存慢几个数量级（回扣 [L1 延迟表](../foundations/request-path)），所以引擎的全部精巧都在"尽量少碰磁盘、碰也要顺序碰"。**
+
+### 进阶：B-tree vs LSM-tree
+
+两种截然不同的哲学：
+
+- <GlossaryTerm term="B-tree" definition="B 树：把数据组织成有序的树，更新时原地修改对应的页。读取稳定高效（少数几次磁盘寻址），是关系数据库的主流索引结构。">B-tree</GlossaryTerm>：**原地更新**，数据始终有序。读快而稳，但写要随机寻址、改页。
+- <GlossaryTerm term="LSM-tree" definition="日志结构合并树（Log-Structured Merge-tree）：写入先进内存表（memtable），满了就顺序刷成不可变文件（SSTable）；后台合并（compaction）。写极快（顺序写），读可能要查多个文件。">LSM-tree</GlossaryTerm>：**只追加**——写先进内存表，满了顺序刷成不可变文件（SSTable），后台再合并。写极快（顺序写），但读可能要翻多个文件。
+
+### 深入（选学）：三种"放大"
+
+引擎的取舍可以用三个指标量化：
+
+- <GlossaryTerm term="Write Amplification" definition="写放大：实际写入磁盘的数据量是逻辑写入量的几倍。LSM 的 compaction 会反复重写数据，写放大较高。">写放大</GlossaryTerm>：实际写盘量 / 逻辑写入量。
+- <GlossaryTerm term="Read Amplification" definition="读放大：一次读实际要访问几次磁盘/几个文件。LSM 读可能要查 memtable + 多个 SSTable，读放大较高。">读放大</GlossaryTerm>：一次读要碰几个文件。
+- <GlossaryTerm term="Space Amplification" definition="空间放大：实际占用磁盘 / 有效数据量。B-tree 有页内碎片，LSM 在 compaction 前有重复/过期数据。">空间放大</GlossaryTerm>：占用空间 / 有效数据。
+
+LSM 用"高写放大、读要查多文件"换"极快的顺序写"；B-tree 反之。**没有免费的午餐，只有放在不同地方的代价。**
+
+<ResearchNote
+  title="两类存储引擎，两套取舍"
+  source="Martin Kleppmann, DDIA 第 3 章；O'Neil et al. (1996), The Log-Structured Merge-Tree"
+  href="https://www.cs.umb.edu/~poneil/lsmtree.pdf"
+  insight="DDIA 系统对比了 B-tree（原地更新、读稳定）与 LSM-tree（顺序追加 + 合并、写吞吐高）。LSM 论文奠定了 Bigtable、Cassandra、RocksDB、LevelDB 等一大批高写入系统的基础。"
+  application="选数据库其实是在选存储引擎的取舍：写密集（日志、时序、消息）偏 LSM；读密集且要稳定低延迟偏 B-tree。理解放大三指标，你才能预判一个库在你的负载下表现如何。"
+/>
+
+## 三、跟我做一遍：LSM 的读路径
+
+LSM 写很简单（追加进内存表）；精髓在**读**——要按"新→旧"的顺序找：
+
+<PyRunner
+  expect="读到最新值"
+  code={`class LSM:
+    def __init__(self):
+        self.memtable = {}      # 内存表（最新写入）
+        self.sstables = []      # 刷盘的不可变文件，越后面越新
+
+    def put(self, k, v):
+        self.memtable[k] = v    # 写：只追加进内存表，极快
+
+    def flush(self):
+        self.sstables.append(dict(self.memtable))   # 内存表满 → 冻结成 SSTable
+        self.memtable = {}
+
+    def get(self, k):
+        if k in self.memtable:          # 1) 先查最新的内存表
+            return self.memtable[k]
+        for table in reversed(self.sstables):  # 2) 再从最新的 SSTable 往旧查
+            if k in table:
+                return table[k]
+        return None
+
+db = LSM()
+db.put("x", "v1"); db.flush()    # v1 落到 SSTable
+db.put("x", "v2")                # v2 还在内存表
+print("get x:", db.get("x"))     # v2：内存表里的更新
+db.flush()
+db.put("x", "v3")
+print("get x:", db.get("x"))     # v3：最新优先
+print("读到最新值")`}
+/>
+
+注意 `get` 的顺序：**永远先查最新的地方**（内存表 → 新 SSTable → 旧 SSTable）。这就是 LSM "读要翻多个文件"（读放大）的来源。**试试**：写很多不同 key 再多次 flush，体会 SSTable 越堆越多、读越慢——这正是为什么 LSM 需要后台 compaction 合并它们。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month03/m3l1_lsm/`：
+
+```bash
+python labs/month03/m3l1_lsm/test_lsm.py
+```
+
+实现一个最小 LSM 存储引擎的读写路径——亲手体会"只追加 + 最新优先"。
+
+<GuidedExercise
+  title="练习指引：实现一个最小 LSM"
+  goal="通过亲手实现，理解 LSM 为什么写快读放大、为什么需要 compaction。"
+  hints={[
+    'put 只写内存表，永远 O(1)，这就是 LSM 写快的原因。',
+    'flush 把内存表冻结成一个不可变 SSTable，追加到列表末尾（最新）。',
+    'get 必须按"新→旧"找：内存表 → 倒序遍历 SSTable。',
+    '同一个 key 的新值会"盖住"旧值（因为先查到新的就返回）。'
+  ]}
+  steps={[
+    '实现 LSM：memtable（dict）+ sstables（list of dict）。',
+    'put(k, v)：写入 memtable。',
+    'flush()：把 memtable 复制成一个 SSTable 追加，清空 memtable。',
+    'get(k)：先查 memtable，再 reversed 遍历 sstables，都没有返回 None。',
+    '写测试：内存表读、flush 后仍可读、新值覆盖旧值、不存在返回 None。'
+  ]}
+  checks={[
+    '你能说出一次读/写在引擎里的路径。',
+    '你能解释 LSM 为什么写快、读为什么有放大。',
+    '你的 get 正确地最新优先。',
+    '你能说出哪类负载适合 LSM、哪类适合 B-tree。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 选库 = 选引擎取舍
+
+<TradeoffExplorer
+  title="B-tree vs LSM-tree"
+  dimensions={['读延迟稳定', '写吞吐', '空间效率', '范围查询', '实现/调优复杂度']}
+  options={[
+    {
+      name: 'B-tree（原地更新）',
+      scores: [5, 3, 3, 5, 3],
+      note: '读稳定、范围查询强、事务友好。写要随机改页，写吞吐不如 LSM。',
+      whenToUse: '读密集、要稳定低延迟和强事务（PostgreSQL/MySQL InnoDB）。'
+    },
+    {
+      name: 'LSM-tree（只追加 + 合并）',
+      scores: [3, 5, 3, 4, 4],
+      note: '顺序写、写吞吐极高。但读放大、compaction 占用后台资源、延迟有毛刺。',
+      whenToUse: '写密集：时序、日志、消息、海量 KV（Cassandra/RocksDB/LevelDB）。'
+    }
+  ]}
+/>
+
+### 2. compaction 是 LSM 的隐藏成本
+
+LSM 写得爽，但后台 compaction 会消耗 CPU/IO、制造延迟毛刺（回扣 [L1 尾延迟](../foundations/programming-systems-primer)）。架构师选 LSM 系数据库时，必须考虑 compaction 对 p99 的影响，并预留资源——这是"写快"的隐藏账单。
+
+### 3. 真实案例：引擎决定能力边界
+
+[ChatGPT 的 KV cache 用分页显存管理](../atlas/chatgpt.mdx)（OS 思想），而消息/时序类系统普遍用 LSM 引擎扛海量写。**数据库的"性格"，是存储引擎决定的**——理解引擎，你才知道一个库的真实能力边界，而不是只看 benchmark 宣传。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的报名/消息系统写远多于读，你会偏向哪种引擎？为什么？
+- LSM 的读放大怎么缓解？（提示：布隆过滤器、compaction、缓存。）
+- 为什么"顺序写比随机写快几个数量级"是 LSM 设计的根本动机？（回扣 L1 磁盘延迟。）
+
+## 自检清单
+
+- [ ] 我能讲清一次读/写在数据库内部的路径。
+- [ ] 我能区分 B-tree 和 LSM 的根本差异与取舍。
+- [ ] 我的 lab LSM 读路径"最新优先"正确。
+- [ ] 我能用读/写/空间放大解释引擎取舍。
+
+## 常见误解
+
+- **"数据库都差不多"**：存储引擎不同，性格天差地别。
+- **"LSM 一定比 B-tree 快"**：它写快，但读放大、有 compaction 成本。
+- **"选库看 benchmark 就行"**：要看引擎在你的真实读写比下的表现。
+
+## 延伸阅读
+
+- [LSM-tree 论文（O'Neil 1996）](https://www.cs.umb.edu/~poneil/lsmtree.pdf)
+- [Martin Kleppmann, DDIA 第 3 章](https://dataintensive.net/)
+- [下一课：索引深入](./indexing)

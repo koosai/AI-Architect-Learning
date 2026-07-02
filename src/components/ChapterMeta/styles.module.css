@@ -1,0 +1,71 @@
+.metaCard {
+  background: var(--comp-bg);
+  border: 1px solid var(--comp-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0 2rem 0;
+  box-shadow: var(--comp-shadow);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.metaCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--comp-gradient);
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+}
+
+.metaSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.metaTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--comp-text-muted);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.metaContent {
+  font-size: 0.95rem;
+  color: var(--comp-text);
+  line-height: 1.5;
+}
+
+.prereqLink {
+  display: inline-flex;
+  align-items: center;
+  background: var(--comp-hover);
+  border: 1px solid var(--comp-border);
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--ifm-color-primary) !important;
+  text-decoration: none !important;
+  transition: all 0.2s ease;
+}
+
+.prereqLink:hover {
+  background: var(--ifm-color-primary);
+  color: #fff !important;
+  transform: translateY(-1px);
+}

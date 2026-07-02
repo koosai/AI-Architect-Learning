@@ -1,0 +1,195 @@
+---
+title: M8L5 - 混合检索
+description: 向量懂语义但漏精确术语，关键词抓术语但不懂换说法——两个一起用、再融合，检索质量远超单用其一。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M8L5 · 混合检索
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M8L2 embedding', href: './embeddings'}, {label: 'M8L3 向量检索', href: './vector-search'}, {label: 'M3L2 索引', href: '../data-cache-queue/indexing'}]}
+  outcome="能解释向量检索和关键词检索各自的强弱、用 RRF 把两路结果融合，做出比单一方法更稳的混合检索。"
+  howToUse="先看“向量漏掉精确术语”的痛，再理解关键词检索和 RRF 融合，最后做混合检索 lab。"
+/>
+
+:::tip 向量和关键词各有盲区，最好的检索是“两个一起用”
+[向量检索（M8L2/L3）](./embeddings) 懂语义、能匹配"换了说法"的内容，但它有个盲区：**对精确术语、产品型号、专有名词、罕见词，常常不如老老实实的关键词匹配。** 反过来关键词匹配抓得住精确术语，却完全不懂同义改写。聪明的做法不是二选一，而是**两路都检索、再把结果融合**——这就是混合检索，生产 RAG 的常见标配。
+:::
+
+## 一、向量检索的盲区
+
+向量检索强在语义，但会在这些地方栽跟头：
+- **精确术语/型号**：用户搜"错误码 E1042"，向量可能把它和一堆"错误处理"的泛泛内容混在一起，反而漏掉那条正好讲 E1042 的。
+- **专有名词/罕见词**：人名、产品名、缩写——embedding 对低频词表示弱。
+- **要求字面精确的场景**：法律条款编号、API 函数名、代码符号。
+
+这些恰恰是**关键词匹配**的强项（[M3L2 倒排索引](../data-cache-queue/indexing) 的老本行）。所以把两者结合，能互补盲区。
+
+## 二、三个核心概念（分层）
+
+### 基础：关键词检索（BM25）
+
+经典的关键词检索算法是 <GlossaryTerm term="BM25" definition="BM25：经典的关键词检索打分算法，基于词频（TF）和逆文档频率（IDF），并对文档长度归一化。擅长精确术语/罕见词匹配，是稀疏检索的代表。">BM25</GlossaryTerm>：基于词频（一个词在文档里出现多少次）和逆文档频率（这个词有多罕见、多有区分度），并对文档长度做归一化打分。它属于<GlossaryTerm term="Sparse Retrieval" definition="稀疏检索：基于词项匹配的检索（如 BM25），文档表示为高维稀疏向量（大部分维度为 0）。擅长精确/罕见词，但不懂语义改写。">稀疏检索</GlossaryTerm>（对应向量的<GlossaryTerm term="Dense Retrieval" definition="稠密检索：基于 embedding 向量相似度的检索，文档表示为低维稠密向量。懂语义改写，但对精确术语/罕见词较弱。">稠密检索</GlossaryTerm>）。对精确术语、罕见词，BM25 往往比向量更准。
+
+### 进阶：混合检索与 RRF 融合
+
+<GlossaryTerm term="Hybrid Search" definition="混合检索：同时用稠密（向量）和稀疏（关键词/BM25）两路检索，再把两路结果融合排序，兼顾语义理解和精确匹配，通常比单一方法更稳更准。">混合检索</GlossaryTerm>：两路并行检索，再融合。怎么融合两个排名？最常用、最稳健的是 <GlossaryTerm term="Reciprocal Rank Fusion" definition="倒数排名融合（RRF）：把每个文档在各路结果里的排名转成分数（1/(k+rank)）再相加，排名越靠前贡献越大。无需各路分数可比，简单稳健，是融合多路检索的常用方法。">RRF（倒数排名融合）</GlossaryTerm>：一个文档在某路排第 r 名，就得 `1/(k+r)` 分（排名越靠前分越高），把它在各路的得分相加再排序。RRF 的妙处：**不需要让向量相似度和 BM25 分数可比**（它们量纲完全不同），只看排名，简单又稳。
+
+### 深入（选学）：混合检索的工程要点
+
+- **为什么 RRF 比"加权分数"好**：向量余弦相似度（0~1）和 BM25 分数（无上界）没法直接加权相加——量纲不一致、分布不同。RRF 只用排名，绕开了归一化难题，所以成为默认选择。当然也可以做更精细的分数归一化加权，但 RRF 性价比最高。
+- **两路的召回要够宽**：每路各取 top-N（N 比最终要的 k 大），融合后再取 top-k——给融合留出"互相补救"的空间。
+- **混合检索常作为重排前的召回层**：混合检索负责"广撒网、别漏"（高召回），[重排（M8L6）](./reranking) 负责"精挑细选"（高精度）——两者配合是生产 RAG 的典型两/三阶段架构。
+- **不是所有场景都需要**：如果你的查询和文档几乎没有精确术语（纯自然语言问答），单向量可能就够；术语密集（技术文档、代码、法律）混合收益大。按 [M8L9 评测](./rag-evaluation) 决定是否值得加这层复杂度（[YAGNI](../design-patterns-lld/change-driven-design)）。
+
+<ResearchNote
+  title="混合检索：稠密 + 稀疏，用 RRF 融合"
+  source="Robertson & Zaragoza (2009), BM25；Cormack et al. (2009), Reciprocal Rank Fusion；现代 RAG 混合检索实践"
+  href="https://plg.uwaterloo.ca/~gvcormack/cormacksigir09-rrf.pdf"
+  insight="稠密检索（向量）懂语义但弱于精确术语；稀疏检索（BM25）强于精确/罕见词但不懂改写。两者互补，混合检索普遍优于单一方法。RRF 用排名的倒数相加来融合多路结果，无需分数可比，简单稳健，成为融合默认方案。"
+  application="术语密集或混合查询场景用混合检索：向量 + BM25 各取较宽 top-N，用 RRF 融合再取 top-k，常作为重排前的召回层。纯自然语言问答单向量可能够用。是否加混合，用评测在你的数据上验证收益。"
+/>
+
+## 三、跟我做一遍：BM25 简版 + 向量 + RRF 融合
+
+<PyRunner
+  rows={38}
+  expect="混合融合兼顾语义和术语"
+  code={`# 文档：每条有 关键词集合 和 一个语义向量（玩具）
+docs = {
+    "d1": {"kw": {"退货", "流程"}, "vec": [0.9, 0.1]},
+    "d2": {"kw": {"退款", "时效"}, "vec": [0.8, 0.2]},
+    "d3": {"kw": {"错误码", "E1042", "排查"}, "vec": [0.1, 0.2]},  # 精确术语文档
+    "d4": {"kw": {"配送", "物流"}, "vec": [0.2, 0.9]},
+}
+
+def keyword_rank(query_kw, docs):              # 稀疏：按关键词重叠排名
+    scored = [(d, len(query_kw & docs[d]["kw"])) for d in docs]
+    return [d for d, s in sorted(scored, key=lambda x: -x[1]) if s > 0]
+
+def vector_rank(qvec, docs):                   # 稠密：按向量点积排名（简化）
+    scored = [(d, sum(a*b for a,b in zip(qvec, docs[d]["vec"]))) for d in docs]
+    return [d for d, s in sorted(scored, key=lambda x: -x[1])]
+
+def rrf(rankings, k=60):                        # RRF 融合多路排名
+    score = {}
+    for ranking in rankings:
+        for rank, doc in enumerate(ranking):
+            score[doc] = score.get(doc, 0) + 1.0 / (k + rank + 1)
+    return [d for d, _ in sorted(score.items(), key=lambda x: -x[1])]
+
+# 查询：“错误码 E1042 怎么处理” —— 含精确术语
+q_kw = {"错误码", "E1042"}
+q_vec = [0.85, 0.15]                            # 语义偏“退货/流程”那一类
+
+kw = keyword_rank(q_kw, docs)
+vec = vector_rank(q_vec, docs)
+print("纯关键词:", kw)        # d3 靠前（精确命中 E1042）
+print("纯向量:", vec)         # d3 靠后（语义不突出）
+print("RRF 融合:", rrf([kw, vec]))   # d3 被关键词拉上来，兼顾两者
+print("混合融合兼顾语义和术语")`}
+/>
+
+纯向量会漏掉精确命中"E1042"的 d3（语义不突出），纯关键词又不懂语义；RRF 融合把两路的优势合起来，d3 被关键词那路拉上来。**试试**：把查询改成纯语义的（去掉术语），看融合结果如何更偏向向量那路；调 RRF 的 k 值看排名变化。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month08/m8l5_hybrid/`：
+
+```bash
+python labs/month08/m8l5_hybrid/test_hybrid.py
+```
+
+实现关键词排名 + 向量排名 + RRF 融合：两路各自检索、用 RRF 合并、兼顾精确术语和语义。
+
+<GuidedExercise
+  title="练习指引：实现混合检索 + RRF"
+  goal="把“稠密 + 稀疏两路检索 + RRF 融合”做成代码——生产 RAG 的常见召回层。"
+  hints={[
+    'keyword_rank：按关键词重叠数降序（重叠为 0 的可不返回）。',
+    'vector_rank：按相似度/点积降序。',
+    'rrf：每路里排名 r（从 0 起）贡献 1/(k+r+1)，各路相加再排序。',
+    'RRF 只用排名，不需要两路分数可比——这是它的关键好处。'
+  ]}
+  steps={[
+    '实现 keyword_rank(query_kw, docs)。',
+    '实现 vector_rank(qvec, docs)。',
+    '实现 rrf(rankings, k=60)。',
+    '写测试：精确术语文档在融合后上升、纯语义查询偏向量、RRF 分数计算正确、空路安全。'
+  ]}
+  checks={[
+    '你能说出向量和关键词检索各自的强弱。',
+    '你的 lab 用 RRF 融合两路、兼顾语义和术语。',
+    '你能解释 RRF 为什么用排名而非分数。',
+    '你知道混合常作召回层、配重排、按评测决定是否用。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 检索方式对比
+
+<TradeoffExplorer
+  title="检索方式"
+  dimensions={['懂语义/改写', '精确术语/罕见词', '实现简单', '召回稳健', '额外成本']}
+  options={[
+    {
+      name: '纯向量(稠密)',
+      scores: [5, 2, 4, 3, 3],
+      note: '懂换说法。但漏精确术语/型号/专名，对罕见词弱。',
+      whenToUse: '纯自然语言问答、术语不多时。'
+    },
+    {
+      name: '纯关键词(BM25/稀疏)',
+      scores: [1, 5, 4, 3, 2],
+      note: '抓精确术语/罕见词、可解释。但完全不懂同义改写。',
+      whenToUse: '术语/代码/编号为主、语义需求低时。'
+    },
+    {
+      name: '混合(向量+关键词+RRF)',
+      scores: [5, 5, 2, 5, 4],
+      note: '兼顾语义和精确、召回最稳。但要维护两套索引、更复杂。',
+      whenToUse: '术语密集或混合查询的生产 RAG——常见标配。'
+    }
+  ]}
+/>
+
+### 2. "互补的弱模型组合 > 单个强模型"
+
+混合检索体现了一个通用的工程智慧：**与其指望一个方法解决所有情况，不如把几个各有盲区、但盲区互补的方法组合起来。** 向量的盲区（精确术语）正是关键词的强项，反之亦然，所以它们的组合比任何单一方法都稳。这和 [M5 的冗余/多副本](../core-components/replication)、[集成学习] 是同一思想。架构师在 RAG（乃至更广的 AI 系统）里要善用这种"互补组合"：混合检索、[多查询（M8L7）](./query-transformation)、[多模型降级（M7L11）](../llm-systems/llm-caching-resilience)、[多路 Agent] 都是它的体现。关键是确保组合的成员**盲区不同**——否则只是冗余而无互补。
+
+### 3. 真实案例：纯向量 RAG 的"找不到精确答案"之痛
+
+一个反复出现的真实问题：团队上了向量 RAG，大部分问答不错，但用户一搜具体的产品型号、错误码、合同条款编号、API 名，就经常找不到——因为这些精确 token 正是向量的盲区。加上 BM25 混合检索后，这类查询的命中率显著回升。这就是为什么成熟的生产 RAG（尤其面向技术文档、企业知识、代码、法律）几乎都是混合检索，而不是教程里常见的"纯向量"。架构师要预判你的查询里有多少"精确匹配"需求，据此决定要不要混合——这是个常被新手漏掉、却影响很大的设计点。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的用户查询里，有多少是精确术语/型号/编号/代码？纯向量会漏掉它们吗？
+- 加 BM25 混合要多维护一套关键词索引——这个复杂度，用 [M8L9 评测](./rag-evaluation) 量化收益值不值？
+- 混合作召回层（高召回）+ 重排作精排（高精度）——你的两/三阶段检索架构怎么设计？
+
+## 自检清单
+
+- [ ] 我能说出向量(稠密)和关键词(稀疏/BM25)各自的强弱盲区。
+- [ ] 我的 lab 用 RRF 融合两路检索。
+- [ ] 我理解 RRF 为什么用排名而非分数。
+- [ ] 我知道混合常作召回层、配重排、按评测决定是否采用。
+
+## 常见误解
+
+- **"向量检索全面碾压关键词"**：向量漏精确术语/罕见词，关键词在这些上更强，互补。
+- **"融合就是把分数相加"**：向量和 BM25 分数量纲不同没法直接加；RRF 用排名更稳。
+- **"RAG 都该用纯向量"**：术语密集场景纯向量漏召回严重，混合才稳。
+
+## 延伸阅读
+
+- [Reciprocal Rank Fusion (Cormack et al., 2009)](https://plg.uwaterloo.ca/~gvcormack/cormacksigir09-rrf.pdf)
+- [BM25 (Robertson & Zaragoza, 2009)](https://www.staff.city.ac.uk/~sbrp622/papers/foundations_bm25_review.pdf)
+- [下一课：重排序](./reranking)

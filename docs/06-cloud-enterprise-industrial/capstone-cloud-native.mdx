@@ -1,0 +1,199 @@
+---
+title: M6L12 - Capstone：云原生交付一个服务
+description: 把 M5 的高可用服务真正“跑起来”——容器化、K8s 部署、IaC 建环境、CI/CD 流水线、可观测，全链路串通。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M6L12 · Capstone：云原生交付一个服务
+
+<ChapterMeta
+  time="约 3.5 小时"
+  prereqs={[{label: 'Month 6 全部', href: './overview'}, {label: 'M5 高可用服务', href: '../core-components/capstone-resilient-service'}]}
+  outcome="能把一个服务从代码到生产完整云原生交付：容器化 + K8s 部署 + IaC 建环境 + CI/CD 流水线 + 可观测，并讲清每一环解决什么。"
+  howToUse="把它当一道完整交付题：拿 M5 的高可用服务，设计它的整条云原生交付链，并用 lab 串起核心环节。"
+/>
+
+:::tip 月末综合题：让 M5 设计好的服务，真正、可靠、可演进地跑在生产
+[M5 的 Capstone](../core-components/capstone-resilient-service) 你**设计**了一个高可用服务。但那还是图纸。这个月教的就是让它**落地运行**：打成[镜像](./containers)、用 [K8s 调和](./kubernetes-basics) 维持、用 [IaC](./infrastructure-as-code) 建环境、用 [CI/CD](./cicd-pipelines) 自动发布、用[可观测](./observability-advanced)看住它。这一课把整条链串起来。
+:::
+
+## 一、从“设计好的服务”到“生产里活着的服务”
+
+M5 你设计了短链/高可用服务（负载均衡 + 限流 + 熔断 + 复制 + SLO）。现在要回答："它怎么真正跑起来、发出去、看得见、能演进？" 缺了交付链，再好的设计也只是 PPT。本课把 Month 6 所学组装成一条完整的交付流水线。
+
+## 二、组装完整交付链
+
+### 基础：打包与部署
+
+- **容器化（[M6L1](./containers)）**：服务打成不可变镜像，依赖随镜像走，分层优化构建。
+- **K8s 部署（[M6L2/L3](./kubernetes-basics)）**：用 Deployment 声明副本数（调和自愈）、Service 提供稳定入口、ConfigMap/Secret 注入配置、liveness/readiness 探针保证健康与零停机。
+
+### 进阶：环境与发布自动化
+
+- **IaC（[M6L5](./infrastructure-as-code)）**：用代码声明集群、数据库、网络——一条命令建出和生产一致的环境，可复制可回滚。
+- **CI/CD（[M6L6](./cicd-pipelines)）**：提交 → 构建镜像 → 测试/安全门禁 → 一次构建逐级晋级 → [金丝雀发布（M6L4）](./autoscaling-rollout) + 失败自动回滚。
+- **弹性（[M6L4](./autoscaling-rollout)）**：HPA 按指标自动伸缩副本。
+
+### 深入（选学）：看得见、治得住、可演进
+
+- **可观测（[M6L7](./observability-advanced)）**：RED/USE 指标 + 结构化日志 + 链路追踪 + 基于 [SLO 燃尽率](./observability-advanced) 的告警——出问题分钟级定位。
+- **服务网格（[M6L8](./service-mesh)，可选）**：服务多了，把 mTLS/重试/熔断/遥测下沉到 sidecar，统一治理。
+- **一条主线贯穿全月**：[声明式 + 调和（M6L2/L5）](./kubernetes-basics)——K8s 声明副本、IaC 声明资源、GitOps 声明环境，全是"声明期望、自动逼近"。理解它，整条交付链就是一个统一心智模型，而非一堆零散工具。
+- **GitOps 终态**：Git 是唯一事实来源，合并即部署、回滚即 revert——把交付变成"改声明 + 自动调和"。
+
+<ResearchNote
+  title="云原生交付：把设计变成可靠、可演进的运行系统"
+  source="CNCF Cloud Native 定义；Google SRE；DORA / Accelerate；The Twelve-Factor App"
+  href="https://github.com/cncf/toc/blob/main/DEFINITION.md"
+  insight="CNCF 定义云原生为：用容器、不可变基础设施、声明式 API、自动化运维构建“可弹性伸缩、可恢复、可频繁低风险变更”的系统。其底层统一范式是声明式 + 调和；其效能由 DORA 四指标度量。交付链各环节（容器/K8s/IaC/CICD/可观测）协同，缺一则有短板。"
+  application="交付一个服务：容器化 → 声明式部署（K8s）→ IaC 建环境 → CI/CD 自动化（含金丝雀+回滚）→ 可观测兜底。用 GitOps 把声明集中到 Git。用 DORA 四指标度量整条链的效能，找最弱环节优化。"
+/>
+
+## 三、跟我做一遍：交付流水线端到端模拟
+
+<PyRunner
+  rows={36}
+  expect="端到端交付成功"
+  code={`# 把 Month 6 各环节串成一条端到端交付流水线（简化模拟）
+def build_image(ctx):
+    return (True, "image app:%s" % ctx["sha"])
+
+def run_tests(ctx):
+    return (ctx["tests_pass"], "tests")
+
+def provision_infra(ctx):
+    # IaC: 声明期望资源，幂等 apply（已存在则不重建）
+    desired = {"cluster", "db", "lb"}
+    ctx["infra"] = ctx.get("infra", set()) | desired
+    return (True, "infra ready: %s" % sorted(ctx["infra"]))
+
+def deploy_k8s(ctx):
+    # K8s 调和：维持期望副本数
+    ctx["replicas"] = ctx["desired_replicas"]
+    return (True, "%d replicas running" % ctx["replicas"])
+
+def canary_and_verify(ctx):
+    # 金丝雀: 小流量验证 SLO，达标才放大，否则回滚
+    if ctx["canary_error_rate"] > 0.01:
+        return (False, "金丝雀指标恶化 -> 自动回滚")
+    return (True, "金丝雀通过 -> 全量发布")
+
+PIPELINE = [build_image, run_tests, provision_infra, deploy_k8s, canary_and_verify]
+
+def deliver(ctx):
+    for stage in PIPELINE:
+        ok, msg = stage(ctx)
+        print(("  ✓" if ok else "  ✗"), stage.__name__, "->", msg)
+        if not ok:
+            return "交付中止（已回滚）"
+    return "端到端交付成功"
+
+print("== 正常发布 ==")
+print(deliver({"sha": "a1", "tests_pass": True, "desired_replicas": 3, "canary_error_rate": 0.001}))
+print("== 金丝雀指标恶化 ==")
+print(deliver({"sha": "b2", "tests_pass": True, "desired_replicas": 3, "canary_error_rate": 0.05}))`}
+/>
+
+一条流水线把构建、测试、IaC 建环境、K8s 调和部署、金丝雀验证串起来；金丝雀指标恶化就自动中止回滚——这就是云原生"自动、安全、可回滚"的交付。**试试**：让 `run_tests` 失败，看流水线 fail-fast 在测试阶段就停（[M6L6](./cicd-pipelines)）；再让 `provision_infra` 重复跑，体会 IaC 的幂等（[M6L5](./infrastructure-as-code)）。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month06/m6l12_delivery/`：
+
+```bash
+python labs/month06/m6l12_delivery/test_delivery.py
+```
+
+实现端到端交付流水线：串联 构建→测试→IaC→K8s 调和→金丝雀，任一失败中止（含金丝雀自动回滚），全过才上线。
+
+<GuidedExercise
+  title="练习指引：端到端云原生交付"
+  goal="把本月各环节组装成一条可跑的交付流水线，体会“声明式 + 自动化 + 安全回滚”如何协同。"
+  hints={[
+    '复用 M6L6 的流水线编排思想：按序跑阶段、fail-fast。',
+    'IaC 阶段要幂等（重复 apply 不重复建）。',
+    'K8s 阶段把实际副本调和到期望副本。',
+    '金丝雀阶段：错误率超阈值返回失败（触发回滚），否则放行。'
+  ]}
+  steps={[
+    '实现各阶段函数（build/test/infra/deploy/canary），返回 (ok, msg)。',
+    'deliver(ctx)：按序执行、任一失败中止。',
+    'infra 幂等、deploy 调和副本、canary 按指标决定放行/回滚。',
+    '写测试：正常全过、测试失败中止、金丝雀恶化回滚、IaC 重复幂等、副本调和正确。'
+  ]}
+  checks={[
+    '你能串起容器/K8s/IaC/CICD/可观测的完整交付链。',
+    '你的流水线 fail-fast、金丝雀能自动回滚。',
+    '你能说出每个环节解决什么问题。',
+    '你能用“声明式 + 调和”这条主线串起全月。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 交付链的成熟度自评
+
+<TradeoffExplorer
+  title="云原生交付成熟度"
+  dimensions={['部署频率', '变更风险', '故障恢复速度', '环境一致性', '建设成本']}
+  options={[
+    {
+      name: '手动 + 单机',
+      scores: [1, 1, 1, 1, 5],
+      note: '手打镜像、手部署、手建环境。慢、险、不一致。',
+      whenToUse: '原型/学习。'
+    },
+    {
+      name: '容器 + K8s + CI',
+      scores: [4, 3, 4, 4, 3],
+      note: '自动构建测试、声明式部署自愈、环境基本一致。部署仍可能半自动。',
+      whenToUse: '多数团队的务实目标态。'
+    },
+    {
+      name: '全链 GitOps + 金丝雀 + 可观测',
+      scores: [5, 5, 5, 5, 1],
+      note: 'Git 驱动、自动金丝雀+回滚、SLO 告警、IaC 全覆盖。高频低风险。建设成本高。',
+      whenToUse: '追求精英级 DORA 指标的成熟组织。'
+    }
+  ]}
+/>
+
+### 2. 整条链只有一条主线：声明式 + 调和
+
+回看整个 Month 6：[容器](./containers)（不可变、声明镜像内容）、[K8s](./kubernetes-basics)（声明副本/配置，调和维持）、[IaC](./infrastructure-as-code)（声明资源，plan/apply 调和）、GitOps（Git 声明环境，自动同步）——**全部是"声明你要的最终状态，让系统持续、幂等地逼近它"**。一旦你用这个统一心智模型看待运维，从一个容器到整个生产环境都通了。这也是它和 [M4L1 封装变化](../design-patterns-lld/change-driven-design)、[M5 自愈](../core-components/service-discovery) 一脉相承的深层原因：**声明意图、隐藏过程、让系统自我维持。**
+
+### 3. 真实案例：交付能力本身就是竞争力
+
+DORA 多年研究证明：交付效能（部署频率、前置时间、变更失败率、恢复时间）高的组织，业务表现也更好。原因很直接——**能安全地一天发几十次，就能更快试验、更快响应市场、更快修复**。本月这套云原生交付链，正是把"交付"从拖后腿的瓶颈变成竞争优势的工程基础。对 AI Architect 尤其重要：AI 系统迭代快、模型/prompt/数据频繁变更（[Month 7-11](../llm-systems/overview)），没有可靠的交付链，AI 系统根本无法安全地快速演进。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 把你 M5 设计的服务，画出它的完整云原生交付链：从 git push 到生产，每一步是什么、谁触发、出错怎么办？
+- 你团队的 DORA 四指标大概在什么水平？整条链最弱的环节是哪个（构建慢？测试不全？部署手动？无可观测？）？
+- 把"声明式 + 调和"这条主线用自己的话讲一遍——它怎么统一了容器、K8s、IaC、GitOps？
+
+## 自检清单
+
+- [ ] 我能串起容器/K8s/IaC/CICD/可观测的完整交付链。
+- [ ] 我的 lab 流水线 fail-fast、金丝雀自动回滚、IaC 幂等、副本调和。
+- [ ] 我能说出每个环节解决什么问题。
+- [ ] 我能用“声明式 + 调和”主线串起整个 Month 6。
+
+## 常见误解
+
+- **"设计好就行了，部署是运维的事"**：交付链决定设计能否可靠落地和快速演进，是架构师的核心关注。
+- **"上了 K8s 就云原生了"**：还要 IaC、CI/CD、可观测、合理发布策略协同，缺一是短板。
+- **"交付效能和稳定性要二选一"**：DORA 证明高频自动化交付同时更快更稳。
+
+## 延伸阅读
+
+- [CNCF Cloud Native Definition](https://github.com/cncf/toc/blob/main/DEFINITION.md)
+- [DORA: DevOps Research](https://dora.dev/)
+- [Month 6 总览](./overview)
+- [进入 Month 7：LLM 作为系统组件](../llm-systems/overview)

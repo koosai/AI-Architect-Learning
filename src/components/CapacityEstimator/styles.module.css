@@ -1,0 +1,118 @@
+.card {
+  background: var(--comp-bg);
+  border: 1px solid var(--comp-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0 2rem 0;
+  box-shadow: var(--comp-shadow);
+}
+
+.title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--comp-text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--comp-border);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .layout {
+    flex-direction: row;
+  }
+}
+
+.inputsPane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.resultsPane {
+  flex: 1;
+  border: 1px solid var(--comp-border);
+  background: var(--comp-hover);
+  border-radius: 10px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.sliderGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.sliderHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--comp-text);
+}
+
+.sliderVal {
+  color: var(--ifm-color-primary);
+}
+
+.inputSlider {
+  width: 100%;
+  accent-color: var(--ifm-color-primary);
+}
+
+.resultTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--comp-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1.5px solid var(--comp-border);
+  padding-bottom: 0.3rem;
+}
+
+.resultsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.resultRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.resultName {
+  font-size: 0.9rem;
+  color: var(--comp-text);
+  font-weight: 600;
+}
+
+.resultVal {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--ifm-color-primary);
+}
+
+.formulaBox {
+  font-size: 0.8rem;
+  color: var(--comp-text-muted);
+  background: var(--comp-bg);
+  border: 1px solid var(--comp-border);
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  line-height: 1.4;
+}

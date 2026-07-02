@@ -1,0 +1,188 @@
+---
+title: M8L8 - RAG 生成与引用
+description: 检索到证据后，怎么让模型只基于证据回答、给出引用、检索不到时老实说不知道——把检索和生成接好的最后一环。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M8L8 · RAG 生成与引用
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M8L6 重排', href: './reranking'}, {label: 'M7L9 grounding/幻觉', href: '../llm-systems/hallucination-guardrails'}, {label: 'M7L4 提示', href: '../llm-systems/prompting-basics'}]}
+  outcome="能把检索到的证据组织进上下文、用 prompt 约束模型只据证据回答、产出带引用的答案，并在证据不足时正确弃答。"
+  howToUse="先看“检索对了但答得不对”，再学生成端的拼装/引用/弃答，最后做带引用的 grounding 生成 lab。"
+/>
+
+:::tip 检索是“找对证据”，生成是“用好证据”——两件事都做对，RAG 才成立
+前面几课把"找对证据"做到了极致（[分块/混合/重排/查询变换](./reranking)）。但 RAG 还有最后一环：**把证据交给模型、让它只基于证据回答、给出引用、找不到就说不知道。** 这一环没做好，前面找得再准也白搭——模型可能无视证据胡说、或编造引用、或在没证据时硬答。这就是 [M7L9 grounding](../llm-systems/hallucination-guardrails) 在 RAG 里的落地。
+:::
+
+## 一、检索对了，不等于答对了
+
+RAG 的失败分两类（[M8L9 会系统化](./rag-evaluation)）：**检索失败**（没找到对的证据）和**生成失败**（找到了但没用好）。这一课管后者。即使检索完美，生成端仍可能出错：
+- 模型**无视证据**，凭自己的记忆答（可能是过时/错误的）。
+- 模型**编造引用**，说"根据文档X"但文档X根本没这内容。
+- 证据里**没有答案**时，模型不肯说"不知道"，硬编一个（[幻觉 M7L9](../llm-systems/hallucination-guardrails)）。
+- 多段证据**冲突**时，模型乱选或拼凑。
+
+所以生成端要专门设计：怎么拼装证据、怎么约束模型、怎么产出可验证的引用、怎么弃答。
+
+## 二、三个核心概念（分层）
+
+### 基础：上下文拼装与 grounding prompt
+
+把检索到的 top-k 证据组织进 prompt（[拼装 M7L8](../llm-systems/context-memory)）：给每段证据**编号**、附**来源**，然后用 [system prompt（M7L4）](../llm-systems/prompting-basics) 明确约束：**"只根据下面的资料回答；资料里没有就说不知道；答案要标注引用了哪几段。"** 这就是 [grounding（M7L9）](../llm-systems/hallucination-guardrails) 的具体实现——把模型的回答"锚定"在给定证据上，而非它的参数记忆。
+
+### 进阶：引用与可验证性
+
+<GlossaryTerm term="Citation / Attribution" definition="引用/溯源：让 RAG 答案标注它用了哪些检索到的证据片段（如 [1][3]），使答案可被追溯和验证。是 RAG 相比纯生成的关键优势，也是降幻觉的手段。">引用（citation）</GlossaryTerm>：让答案标注"这句话来自第 [1] 段、那句来自第 [3] 段"。好处：(1) 用户/系统可**验证**答案是否真有据；(2) 倒逼模型基于证据答（要标引用就不能凭空说）；(3) 出错时能定位是哪段证据的问题。关键工程动作：**校验引用真实存在**——模型说引用了 [3]，就检查 [3] 确实在检索结果里、且内容支撑该说法（[呼应 M7L9 grounding 校验](../llm-systems/hallucination-guardrails)）。编造的引用要拦下。
+
+### 深入（选学）：弃答、冲突与生成端工程
+
+- **证据不足要弃答**：检索回来的证据若不足以回答（相似度都很低、或都不相关），应让模型/系统说"知识库里没有相关信息"并转人工（[M7L9 弃答](../llm-systems/hallucination-guardrails)），**绝不硬编**。可以用"最高相似度低于阈值就直接弃答、不调生成"来兜底。
+- **证据冲突**：多段证据矛盾时（如新旧政策），靠元数据（时间、版本、权威性）排序或提示模型说明冲突——别让它随便选一个。
+- **答案 vs 证据的忠实度**：即使有引用，也要校验答案是否**忠于**证据（没有添油加醋）——这是 [M8L9 faithfulness 指标](./rag-evaluation)。
+- **生成端也是可靠管道的一环**：它要接 [M7 的结构化输出（M7L6）](../llm-systems/structured-output-tools)（输出 `{answer, citations}`）、[校验/护栏（M7L9）](../llm-systems/hallucination-guardrails)、[低温（M7L3）](../llm-systems/sampling-decoding)（事实任务）——RAG 的生成端就是 [M7L12 可靠 LLM 管道](../llm-systems/capstone-llm-app) 接上检索证据。
+- **别让证据"迷失在中间"**：[M7L2](../llm-systems/tokenization-context) 提过，重要证据放上下文开头/结尾，别埋在中间一大堆里。
+
+<ResearchNote
+  title="RAG 生成：grounding + 引用 + 弃答"
+  source="Lewis et al. (2020), RAG；归因/引用生成研究；M7L9 grounding 实践"
+  href="https://arxiv.org/abs/2005.11401"
+  insight="RAG 的生成端要把检索证据编号入上下文，用 prompt 约束模型只据证据回答、产出可验证引用、证据不足时弃答。引用既提升可验证性又抑制幻觉。关键是把模型输出当不可信、校验引用真实存在与答案忠实于证据，而非盲信。"
+  application="生成端：证据编号+来源入上下文；system prompt 约束“只据资料答、标引用、无据说不知道”；结构化输出 {answer, citations}；校验引用存在且答案忠实；相似度过低直接弃答；低温；重要证据放首尾。这就是把 M7 可靠管道接上检索。"
+/>
+
+## 三、跟我做一遍：带引用的 grounding 生成
+
+<PyRunner
+  rows={38}
+  expect="有据答+引用，无据弃答"
+  code={`def assemble(evidence):                          # 证据编号 + 入上下文
+    return "\\n".join("[%d] %s" % (i+1, e["text"]) for i, e in enumerate(evidence))
+
+def generate(question, evidence, model, min_score=0.3):
+    # 证据不足（最高相似度过低）-> 直接弃答，不调模型
+    if not evidence or max(e["score"] for e in evidence) < min_score:
+        return {"answer": "知识库无相关信息,请转人工", "citations": [], "grounded": False}
+    ctx = assemble(evidence)
+    resp = model(question, ctx)                  # 模型基于证据生成 {answer, citations}
+    # 校验：引用必须真实存在于证据编号范围
+    valid_ids = set(range(1, len(evidence)+1))
+    if any(c not in valid_ids for c in resp["citations"]):
+        return {"answer": "答案引用无据,已拦截转人工", "citations": [], "grounded": False}
+    return {"answer": resp["answer"], "citations": resp["citations"], "grounded": True}
+
+# 模拟模型：基于证据答并给引用
+def good_model(q, ctx): return {"answer": "退货需 7 天内申请", "citations": [1]}
+def hallucinating_model(q, ctx): return {"answer": "退货 30 天内", "citations": [9]}  # 编造引用[9]
+
+ev = [{"text": "退货需在签收后 7 天内申请", "score": 0.9}]
+print("正常:", generate("退货期限", ev, good_model))            # 有据 + 引用[1]
+print("编造引用:", generate("退货期限", ev, hallucinating_model)) # 引用[9]不存在 -> 拦下
+print("无证据:", generate("天气", [{"text": "x", "score": 0.1}], good_model))  # 相似度低 -> 弃答
+print("有据答+引用，无据弃答")`}
+/>
+
+正常时基于证据答并给真实引用；模型编造引用 [9]（不存在）被校验拦下；证据相似度过低直接弃答不调模型——三种情况都安全。**试试**：让 good_model 引用 [1] 和 [2]（但只有 1 段证据），看校验拦下越界引用；调 min_score 看弃答阈值的影响。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month08/m8l8_generation/`：
+
+```bash
+python labs/month08/m8l8_generation/test_generation.py
+```
+
+实现 RAG 生成端：证据编号拼装、引用校验（必须真实存在）、证据不足弃答、返回 grounded 标志。
+
+<GuidedExercise
+  title="练习指引：实现带引用的 grounding 生成"
+  goal="把“证据拼装 + 引用校验 + 弃答”做成代码——把检索和生成接好的最后一环。"
+  hints={[
+    'assemble：给证据编号（[1][2]...）入上下文。',
+    'generate：最高相似度 < 阈值或无证据 -> 弃答（不调模型）。',
+    '校验：模型给的 citations 必须都在 1..len(evidence) 范围内，否则拦截。',
+    '返回 grounded 标志，便于上层判断是否可信。'
+  ]}
+  steps={[
+    '实现 assemble(evidence)。',
+    '实现 generate(question, evidence, model, min_score)：弃答 + 调用 + 引用校验。',
+    '处理无证据、低相似度、越界引用三种情况。',
+    '写测试：正常带引用、编造引用被拦、证据不足弃答、grounded 标志正确。'
+  ]}
+  checks={[
+    '你能把检索证据编号拼装进上下文并约束模型据此回答。',
+    '你的 lab 校验引用真实存在、证据不足弃答。',
+    '你能区分检索失败和生成失败。',
+    '你理解 RAG 生成端就是 M7 可靠管道接上检索证据。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 生成端的可靠性手段
+
+<TradeoffExplorer
+  title="RAG 生成端策略"
+  dimensions={['降幻觉', '可验证', '召回不足时安全', '实现复杂度', '用户体验']}
+  options={[
+    {
+      name: '直接把证据塞进去生成',
+      scores: [2, 1, 1, 5, 3],
+      note: '给证据但不约束、不校验、不弃答。比裸生成好，但仍会无视证据/编造/硬答。',
+      whenToUse: '原型；生产不够。'
+    },
+    {
+      name: 'grounding prompt + 引用',
+      scores: [4, 5, 3, 3, 4],
+      note: '约束只据证据答 + 标引用 + 校验引用存在。可验证、降幻觉。',
+      whenToUse: '生产 RAG 的基线。'
+    },
+    {
+      name: '+ 弃答 + 忠实度校验',
+      scores: [5, 5, 5, 2, 3],
+      note: '再加证据不足弃答、答案忠实度校验。最可靠，但更复杂、可能更多“不知道”。',
+      whenToUse: '高风险/低容错（医疗/法律/金融）。'
+    }
+  ]}
+/>
+
+### 2. RAG = 检索 + 生成，两端都要对
+
+很多人以为 RAG 难在检索，其实**生成端同样关键且容易被忽略**。检索负责"把对的证据找来"，生成负责"忠实地用好证据、可验证、不硬答"——两端任一出问题，RAG 都不可靠。这也是为什么 [M8L9 评测](./rag-evaluation) 要把指标拆成"检索质量"和"生成质量"两类、出错时先分清是哪端的问题。架构师要把 RAG 看成一个**两端协同的管道**，而不是只盯检索。生成端的 grounding/引用/弃答，直接复用了 [Month 7 的全部可靠性工程](../llm-systems/capstone-llm-app)——RAG 不过是给那条可靠管道接上了一个高质量的"检索证据"来源。
+
+### 3. 真实案例：引用让 RAG 可信、可用
+
+为什么企业级 RAG（法规问答、医疗助手、客服）几乎都要求"答案带出处"？因为**没有引用的 AI 答案，在严肃场景里不可用**——用户/合规无法验证它是不是编的。带引用后：用户能点开看原文核实、出错能追溯到具体证据、模型也被"要标引用"逼着基于证据答。这是 RAG 相比纯 LLM 生成的核心价值之一（[M8L1](./why-rag) 提过）。能不能产出"忠实、可验证的带引用答案"，往往是一个 RAG 产品能不能进入严肃业务的分水岭——这也呼应 [M6L10 企业 AI 要可审计](../cloud-enterprise-industrial/enterprise-erp-integration)。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 你的 RAG 答案有引用吗？引用是否被校验"真实存在且支撑该说法"，还是模型说啥就信啥？
+- 检索回来的证据不足以回答时，你的系统会弃答还是硬编？弃答阈值怎么定？
+- 一个错误答案出现时，你能快速判断是"检索没找到证据"还是"找到了但生成没用好"吗？
+
+## 自检清单
+
+- [ ] 我能把检索证据编号拼装进上下文、约束模型据此回答。
+- [ ] 我的 lab 校验引用真实存在、证据不足时弃答。
+- [ ] 我能区分检索失败和生成失败。
+- [ ] 我理解 RAG 生成端 = M7 可靠管道 + 检索证据。
+
+## 常见误解
+
+- **"检索对了答案就对了"**：生成端可能无视证据/编造引用/硬答，要专门约束和校验。
+- **"给了证据模型就会用"**：要 prompt 强约束 + 校验引用 + 弃答，不能盲信。
+- **"引用是可选的装饰"**：在严肃场景，可验证的引用是 RAG 能否被采用的关键。
+
+## 延伸阅读
+
+- [RAG (Lewis et al., 2020)](https://arxiv.org/abs/2005.11401)
+- [M7L9 幻觉与 grounding](../llm-systems/hallucination-guardrails)
+- [下一课：RAG 评测](./rag-evaluation)

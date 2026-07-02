@@ -1,0 +1,62 @@
+---
+title: Month 4 总览 - 设计原则与设计模式
+description: 不背模式名字，而是学会"识别变化点、封装它"——SOLID、组合优于继承、从变化推导出策略/工厂/观察者/适配器，落到停车场/电梯/支付等 LLD 实战。
+slug: /design-patterns-lld/overview
+---
+
+import ChapterMeta from '@site/src/components/ChapterMeta';
+
+# Month 4 · 设计原则与设计模式（模块总览）
+
+<ChapterMeta
+  time="整月约 24–30 小时（12 节课）"
+  prereqs={[{label: '完成 Month 1', href: '/foundations/overview'}, {label: 'L2 模块与契约', href: '/foundations/modules-and-contracts'}, {label: 'M2L9 LLD', href: '/system-design-bridge/lld-classes'}]}
+  outcome="能在代码里识别“什么会变”，用 SOLID 和设计模式把变化封装起来，让系统易扩展、易维护——而不是背 23 个模式名。"
+  howToUse="按周学。每个模式都从一个“加新功能就要改一堆代码”的痛点出发，再用模式解决它。"
+/>
+
+:::tip 这个月只教一件事：让代码"对变化友好"
+设计模式不是要你背名字，而是回答一个问题：**当需求变化时，我怎么少改、甚至不改已有代码？** 每个模式都是对某一类"变化"的标准应对。学会识别变化点，模式自然就浮现了。
+:::
+
+## 为什么不背模式，而是学"变化"
+
+新手学设计模式常陷入"背了 23 个模式却不知道何时用"。真正的高手反过来：**先看代码里哪部分会反复变（支付方式？通知渠道？算法？），再用模式把那部分隔离出来。** 这个月的主线就是：识别变化 → 封装变化 → 模式自然浮现。这也呼应 [L2 信息隐藏](../foundations/modules-and-contracts)（把易变的藏在接口后）。
+
+## 本月课程地图
+
+每节课从一个"加功能就要改一堆代码"的痛点出发，用原则/模式解决，并配可跑 lab。
+
+### Week 1 · 设计原则（为什么，而非什么）
+| # | 课 | 你会学到 |
+|---|---|---|
+| M4L1 | [变化驱动设计](./change-driven-design) | 封装变化、DRY/KISS/YAGNI、开闭原则 |
+| M4L2 | [SOLID（上）：SRP 与 OCP](./solid-srp-ocp) | 单一职责、开闭原则 |
+| M4L3 | [SOLID（下）：LSP/ISP/DIP](./solid-lsp-isp-dip) | 里氏替换、接口隔离、依赖倒置 |
+| M4L4 | [组合优于继承](./composition-over-inheritance) | 为什么继承常常是坑 |
+
+### Week 2 · 核心设计模式
+| # | 课 | 你会学到 |
+|---|---|---|
+| M4L5 | [策略模式](./strategy-pattern) | 算法会变 → Strategy |
+| M4L6 | [工厂模式](./factory-pattern) | 创建逻辑会变 → Factory |
+| M4L7 | [观察者模式](./observer-pattern) | 一对多通知 → Observer |
+| M4L8 | [适配器与装饰器](./adapter-decorator) | 接口不匹配/功能叠加 |
+
+### Week 3 · LLD 实战与综合
+| # | 课 | 你会学到 |
+|---|---|---|
+| M4L9 | [状态机与电梯](./state-machine-elevator) | State 模式 |
+| M4L10 | [LLD 实战：停车场](./parking-lot-lld) | 面向对象设计 |
+| M4L11 | [坏味道与重构](./code-smells-refactoring) | 识别坏味道、重构向模式 |
+| M4L12 | [Capstone：可扩展通知系统](./capstone-notification) | 组合多个模式 |
+
+## 月末产出
+
+几个经典 LLD 题的干净实现（停车场、电梯、可扩展支付/通知），以及"看到一段烂代码能说出它违反了哪条原则、该用什么模式重构"的能力。
+
+## 学习建议
+
+- 每个模式先问："这里什么会变？" 再看模式怎么隔离它。
+- 警惕过度设计：模式是用来管理**真实存在的**变化的，不是越多越好（YAGNI）。
+- 多回 [M2L9 LLD](../system-design-bridge/lld-classes) 和 [L2 契约](../foundations/modules-and-contracts)：这个月是它们的深化。

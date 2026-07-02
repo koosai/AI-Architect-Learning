@@ -1,0 +1,188 @@
+---
+title: M7L5 - LLM API、成本与延迟
+description: 把 LLM 当云服务调用：按 token 计费、延迟高且波动、要流式、要选模型档位。算清成本和延迟，才敢上生产。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import ResearchNote from '@site/src/components/ResearchNote';
+import ChapterMeta from '@site/src/components/ChapterMeta';
+import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+
+# M7L5 · LLM API、成本与延迟
+
+<ChapterMeta
+  time="约 2.5 小时"
+  prereqs={[{label: 'M7L2 token', href: './tokenization-context'}, {label: 'M2L3 容量估算', href: '../system-design-bridge/capacity-estimation'}, {label: 'L15 延迟', href: '../foundations/performance-and-latency'}]}
+  outcome="能估算 LLM 功能的 token 成本和延迟、区分首 token 延迟与生成延迟、用流式改善体感，并按成本/延迟/能力选对模型档位。"
+  howToUse="先把 LLM 当一个有计费和延迟的云 API，再学怎么估算和优化，最后做成本/延迟估算 lab。"
+/>
+
+:::tip 把 LLM 当云 API：它有价目表、有延迟 SLA、有限额——都要算进设计
+调用一次大模型不是免费、不是瞬时。它按 [token（M7L2）](./tokenization-context) 收费、延迟以秒计且波动大、还有速率限额。一个 demo 跑得通不代表能上生产——**高频调用下，token 成本和延迟会决定你的功能能不能活、赚不赚钱。** 架构师上线前必须像 [M2L3 容量估算](../system-design-bridge/capacity-estimation) 那样把这两个数算清楚。
+:::
+
+## 一、demo 能跑 ≠ 能上生产
+
+你做了个 AI 客服 demo，效果不错。但上线前要回答：每天 10 万次问答，token 成本多少钱？高峰期延迟会不会让用户等到崩溃？供应商的速率限额够不够？用最强的模型还是便宜的？这些不算清楚就上线，可能账单爆炸、或者慢到没人用、或者被限流打挂。**LLM 是个有明确成本和延迟特性的组件，要用工程方法对待。**
+
+## 二、三个核心概念（分层）
+
+### 基础：token 计费模型
+
+LLM API 几乎都<GlossaryTerm term="Token-based Pricing" definition="按 token 计费：调用成本 = 输入 token 数 × 输入单价 + 输出 token 数 × 输出单价。输出通常比输入贵（因为逐 token 串行生成）。不同模型档位单价差异很大。">按 token 计费</GlossaryTerm>：`成本 = 输入 token × 输入单价 + 输出 token × 输出单价`。两个关键点：**输出通常比输入贵**（[输出是串行生成的 M7L1](./transformer-autoregression)）；**模型档位差价很大**（强模型可能比小模型贵一个数量级）。所以单次成本 = 输入量、输出量、模型档位三者共同决定——优化任一个都能省钱。
+
+### 进阶：延迟的两个维度与流式
+
+LLM 延迟不是一个数，是两段：
+- <GlossaryTerm term="Time To First Token" definition="首 token 延迟（TTFT）：从发出请求到收到第一个输出 token 的时间，主要由输入处理（prefill）决定。影响用户“开始看到响应”的体感。">首 token 延迟（TTFT）</GlossaryTerm>：从请求到吐出第一个字的时间（主要由处理输入决定）。
+- <GlossaryTerm term="Time Per Output Token" definition="每输出 token 时延（TPOT）：生成阶段平均每个输出 token 的耗时。总生成时间 ≈ TTFT + 输出 token 数 × TPOT。输出越长越慢。">每 token 时延（TPOT）</GlossaryTerm>：之后每个字的间隔。**总时间 ≈ TTFT + 输出长度 × TPOT**，所以输出越长越慢。
+- <GlossaryTerm term="Streaming" definition="流式输出：服务端边生成边把 token 推给客户端，让用户在首 token 后就能逐字看到响应，大幅改善体感延迟（虽然总时长不变）。">流式（streaming）</GlossaryTerm>：边生成边推送，用户在 TTFT 后就开始看到内容——**总时长不变，但体感快很多**（[呼应 M7L1 逐 token 生成](./transformer-autoregression)）。
+
+### 深入（选学）：成本/延迟优化与模型档位选择
+
+把 LLM 成本和延迟当系统约束来优化：
+- **选对模型档位**：不是所有任务都要最强模型。简单任务（分类、抽取、格式化）用快而便宜的小模型（如 Haiku 4.5 `claude-haiku-4-5-20251001`），复杂推理用强模型（如 Opus 4.8 `claude-opus-4-8`），中间用均衡档（如 Sonnet 4.6 `claude-sonnet-4-6`）。这叫<GlossaryTerm term="Model Routing" definition="模型路由：根据任务难度把请求分发到不同档位的模型——简单任务用便宜快的小模型，难任务用强模型——在质量、成本、延迟间取平衡。">模型路由</GlossaryTerm>。
+- **省 token**：精简 prompt、压缩历史、控制输出长度（让它只输出必要结果）、[缓存重复内容（M7L11）](./llm-caching-resilience)。
+- **省延迟**：流式改善体感、并行调用独立子任务、缓存命中跳过调用、小模型更快。
+- **批处理（batching）**：离线场景把多个请求一起处理（[呼应 M7L7 连续批处理](./kv-cache-serving)）提升吞吐、摊薄成本。
+- **限额与可靠性**：API 有速率限额，要配 [限流/退避/熔断/降级（M5）](../core-components/rate-limiting)——LLM 调用就是一个会慢、会失败、会被限流的远程依赖。
+
+<ResearchNote
+  title="LLM 推理经济学：token 成本与两段延迟"
+  source="各 LLM 服务商定价与延迟文档；vLLM / 推理服务延迟分析（TTFT/TPOT）"
+  href="https://docs.anthropic.com/en/docs/about-claude/models"
+  insight="LLM 调用成本由输入/输出 token 数和模型档位决定，输出通常更贵。延迟分首 token（TTFT，受输入长度/prefill 影响）和每 token（TPOT，受输出长度影响）两段，总时延随输出长度线性增长。流式可改善体感但不改变总时长。"
+  application="上线前估算 token 成本（按峰值 QPS × 平均输入输出 token × 单价）和延迟（TTFT + 输出×TPOT）。用模型路由把简单任务下放小模型、控制输出长度、缓存、流式、批处理来优化。把 LLM 当会限流会失败的远程依赖，配限流/退避/熔断/降级。选模型默认从最新最强档位起，按成本/延迟需求向下选。"
+/>
+
+## 三、跟我做一遍：成本与延迟估算
+
+<PyRunner
+  rows={36}
+  expect="算清成本与延迟"
+  code={`# 模型档位（单价为相对示意值：每 1K token 的“成本单位”，非真实报价）
+TIERS = {
+    "small":  {"in": 0.25, "out": 1.25, "tpot_ms": 5,  "ttft_ms": 200},   # 快而便宜
+    "mid":    {"in": 3.0,  "out": 15.0, "tpot_ms": 12, "ttft_ms": 400},
+    "large":  {"in": 15.0, "out": 75.0, "tpot_ms": 25, "ttft_ms": 700},   # 强但贵
+}
+
+def cost_per_call(tier, in_tokens, out_tokens):
+    t = TIERS[tier]
+    return (in_tokens / 1000 * t["in"]) + (out_tokens / 1000 * t["out"])
+
+def latency_ms(tier, out_tokens):
+    t = TIERS[tier]
+    return t["ttft_ms"] + out_tokens * t["tpot_ms"]   # 总延迟 ≈ TTFT + 输出×TPOT
+
+# 场景：每天 10 万次问答，平均输入 800 token、输出 200 token
+calls = 100_000
+for tier in ("small", "mid", "large"):
+    c = cost_per_call(tier, 800, 200) * calls
+    lat = latency_ms(tier, 200)
+    print("%-6s 日成本单位: %8.0f   单次延迟: %5.0f ms" % (tier, c, lat))
+
+# 优化：把输出从 200 砍到 80（只要关键结果）+ 用 small 档
+opt = cost_per_call("small", 800, 80) * calls
+print("优化后(small+短输出) 日成本单位:", round(opt))
+print("算清成本与延迟")`}
+/>
+
+同样的量，模型档位差出几十倍成本和数倍延迟；砍输出长度 + 选小模型能再省一大截。**试试**：把输入从 800 砍到 300（精简 prompt / 少塞上下文），看成本变化；想想哪些任务真的需要 large 档、哪些用 small 就够。
+
+## 四、动手 Lab（必做）
+
+打开 `labs/month07/m7l5_cost_latency/`：
+
+```bash
+python labs/month07/m7l5_cost_latency/test_cost.py
+```
+
+实现成本与延迟估算 + 模型路由：按 token 和档位算成本、按输出长度算延迟、按任务难度路由到合适档位。
+
+<GuidedExercise
+  title="练习指引：实现成本/延迟估算 + 模型路由"
+  goal="把“按 token×档位算成本、按输出算延迟、按难度路由模型”做成代码——上线前的必备估算。"
+  hints={[
+    'cost = in/1000*in_price + out/1000*out_price（输出通常更贵）。',
+    'latency ≈ ttft + out_tokens * tpot。',
+    '模型路由：简单任务 -> small，复杂 -> large，其余 mid。',
+    '估日成本 = 单次成本 × 日调用量。'
+  ]}
+  steps={[
+    '实现 cost_per_call(tier, in_tokens, out_tokens)。',
+    '实现 latency_ms(tier, out_tokens)。',
+    '实现 route(task_difficulty) 选档位。',
+    '写测试：成本随 token/档位增长、输出更贵、延迟随输出增长、路由按难度选档。'
+  ]}
+  checks={[
+    '你能估算一个 LLM 功能的日成本和单次延迟。',
+    '你能区分 TTFT 和 TPOT、解释流式改善什么。',
+    '你的 lab 能按难度做模型路由。',
+    '你把 LLM 当会限流/失败的远程依赖来配弹性。'
+  ]}
+/>
+
+## 架构师深潜（Staff+ 视角）
+
+### 1. 成本/延迟优化手段
+
+<TradeoffExplorer
+  title="LLM 成本与延迟优化"
+  dimensions={['省成本', '降延迟', '保质量', '实现复杂度', '通用性']}
+  options={[
+    {
+      name: '模型路由(按难度选档)',
+      scores: [5, 4, 4, 3, 5],
+      note: '简单任务下放小模型。省钱又降延迟，但要会判断难度、可能要分级评测。',
+      whenToUse: '任务难度差异大、量大时——性价比很高。'
+    },
+    {
+      name: '精简 token(prompt/输出/上下文)',
+      scores: [4, 4, 3, 2, 5],
+      note: '减少输入输出 token。直接省钱降延迟，但要小心别砍掉必要信息。',
+      whenToUse: '所有场景的基本功。'
+    },
+    {
+      name: '缓存(M7L11)',
+      scores: [5, 5, 4, 3, 3],
+      note: '命中则跳过调用，成本延迟归零。但只对可复用/确定性输出有效。',
+      whenToUse: '有重复或相似请求时。'
+    }
+  ]}
+/>
+
+### 2. token 经济学决定 AI 功能的商业可行性
+
+一个传统功能的边际成本接近零；一个 LLM 功能每次调用都要花真金白银。这意味着架构师要做**单位经济学（unit economics）**计算：每次调用成本 × 调用量 vs 这个功能创造的价值。如果一个高频功能用最强模型、塞满上下文、输出长篇大论，成本可能高到商业上不成立。优化 token（路由 + 精简 + 缓存）不只是技术问题，是**让 AI 功能商业可行**的问题。这是 AI Architect 区别于"会调 API 的人"的关键判断——和 [M2L3 容量估算](../system-design-bridge/capacity-estimation)、[M6L7 成本意识] 一脉相承。
+
+### 3. 真实案例：成本失控与延迟劝退
+
+两类常见翻车：(1) **成本失控**——团队用最强模型 + 大上下文做一个高频功能，月账单远超预期，被迫紧急优化或下线。(2) **延迟劝退**——功能要等十几秒才出结果（输出太长 + 没流式 + 大模型），用户没耐心、流失。成熟做法是上线前就建立"成本/延迟预算"（[呼应 SLO M6L7](../cloud-enterprise-industrial/observability-advanced)）：每次调用成本上限、p95 延迟目标，并用模型路由、流式、缓存、token 精简守住它。**先算账、再上线**，是 LLM 工程的纪律。
+
+### 4. 架构师深问（给自己 30 分钟）
+
+- 估算你的 LLM 功能：峰值 QPS × 平均输入/输出 token × 单价 = 日/月成本是多少？商业上划算吗？
+- 你的功能 p95 延迟多少？瓶颈是大模型、长输出还是没流式？怎么降到用户能接受？
+- 哪些请求其实用小模型就够？做模型路由能省多少？怎么验证小模型的质量够用（M7L10 评测）？
+
+## 自检清单
+
+- [ ] 我能估算 LLM 功能的 token 成本和延迟。
+- [ ] 我能区分 TTFT 和 TPOT、解释流式的作用。
+- [ ] 我的 lab 能算成本/延迟并按难度路由模型。
+- [ ] 我把 LLM 当会限流/失败的远程依赖配弹性。
+
+## 常见误解
+
+- **"demo 能跑就能上线"**：要先算清高频下的 token 成本、延迟和限额。
+- **"延迟就是一个数"**：分 TTFT 和 TPOT；流式改善体感但不改总时长。
+- **"都用最强模型最省心"**：成本可能高到不可行；按难度做模型路由。
+
+## 延伸阅读
+
+- [Anthropic: Models overview](https://docs.anthropic.com/en/docs/about-claude/models)
+- [LLM Inference Performance (TTFT/TPOT)](https://docs.nvidia.com/nim/benchmarking/llm/latest/metrics.html)
+- [下一课：结构化输出与工具调用](./structured-output-tools)
