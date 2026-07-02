@@ -12,6 +12,7 @@ import FailureLab from '@site/src/components/FailureLab';
 import LatencyNumbers from '@site/src/components/LatencyNumbers';
 import PercentileLab from '@site/src/components/PercentileLab';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # Month 1 - 编程如何变成系统
 
@@ -67,6 +68,41 @@ flowchart TB
   end
 ```
 
+下面是“扛得住版”的请求全链路时序图，展示了四个核心概念是如何贯穿于一次请求的生命周期中的：
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Client as 客户端 (Client)
+  participant Boundary as 边界保安 (Boundary)
+  participant State as 状态检查 (State)
+  participant DB as 数据库 (DB)
+  participant Logger as 日志中心 (Observability)
+
+  Client->>Boundary: 发起报名请求 (name, email)
+  Note over Boundary: 校验规则：<br/>名字非空、邮箱含有@和.
+  alt 校验失败 (Boundary Block)
+    Boundary-->>Client: ❌ 报错：格式不正确 (400 Bad Request)
+  else 校验通过
+    Boundary->>State: 传递规范化数据 (strip, lower)
+    Note over State: 查重：判定 email<br/>是否已经在已报名名单中
+    alt 状态冲突 (Idempotency Hit)
+      State-->>Client: 🎯 缓存命中：直接返回已有 Signup 记录
+    else 状态不冲突
+      State->>DB: 尝试写入新纪录
+      alt 数据库不可用 (Failure Mode)
+        DB--xState: 💥 数据库挂掉/连接超时
+        State->>Logger: 🚨 记录失败日志：event=storage_failed
+        State-->>Client: 🔕 优雅报错：系统繁忙，请稍后重试 (503)
+      else 写入成功
+        DB-->>State: 💾 写入确认
+        State->>Logger: 📈 记录成功日志：event=created
+        State-->>Client: 🎉 返回报名成功纪录与唯一 ID (201)
+      end
+    end
+  end
+```
+
 注意右边那四个英文词：<GlossaryTerm term="Boundary" definition="系统或模块对外暴露的输入、输出和责任的边界。边界清楚，坏数据就进不来，模块也更容易被替换或测试。">Boundary</GlossaryTerm>、<GlossaryTerm term="State" definition="系统在某个时刻保存下来的事实，比如谁已经报过名。状态越重要，越要考虑一致性、去重和恢复。">State</GlossaryTerm>、<GlossaryTerm term="Failure Mode" definition="系统在某类失败下会表现成什么样。架构师必须提前设计失败时的行为，而不是只描述正常路径。">Failure Mode</GlossaryTerm>、<GlossaryTerm term="Observability" definition="通过日志、指标、追踪来理解系统内部正在发生什么。它不是事后装饰，而是排障和运营的前提。">Observability</GlossaryTerm>。这就是这一章的四根支柱，我们一根一根来。
 
 ## 三、四个核心概念（每个都从刚才的崩溃里长出来）
@@ -102,6 +138,26 @@ flowchart TB
 :::note 工程实践：幂等是怎么做的
 真实世界里，支付、下单这类操作绝不能因为用户多点一次就执行两次。一个通用做法是 idempotency key（幂等键）：客户端给每个操作带一个唯一 id，服务端见过这个 id 就直接返回上次的结果。可参考 [Stripe 的幂等请求设计](https://docs.stripe.com/api/idempotent_requests)。在我们的小例子里，"邮箱"就充当了天然的幂等键。
 :::
+
+在物理部署架构上，无状态服务（Stateless Services）与有状态数据存储层（Stateful Storage）的彻底分离是支撑大规模高并发系统设计的最基本物理模型：
+
+```mermaid
+flowchart TD
+  Client1["客户端 App 1"] & Client2["客户端 App 2"] --> LB["负载均衡器 (Load Balancer)"]
+  subgraph Stateless["无状态应用服务层 (Stateless Service Layer)"]
+    App1["App 实例 1 (仅处理边界校验/业务逻辑/写日志)"]
+    App2["App 实例 2 (仅处理边界校验/业务逻辑/写日志)"]
+  end
+  LB --> App1 & App2
+  
+  subgraph Stateful["有状态数据存储层 (Stateful Store Layer)"]
+    Cache["Redis 缓存 (State)"]
+    DB["PostgreSQL 数据库 (State)"]
+  end
+  
+  App1 & App2 -->|读写缓存| Cache
+  App1 & App2 -->|持久化读写| DB
+```
 
 ### 概念 3：Failure Mode（失败模式）——出错时会怎样？
 
@@ -404,7 +460,44 @@ python labs/month01/test_signup.py
 - **"先把功能做出来，日志以后再补"**：没有可观察性，你以后连"哪里错了"都不知道，谈何修复。
 - **"幂等是高并发才需要的高级话题"**：只要用户会点两次、网络会重发，你就需要它——这是常态，不是边缘情况。
 
-## 九、复盘问题
+## 九、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在系统设计中，为什么所有的输入校验（Boundary Check）都应当尽可能在最外层（边界上）拦截，而不是留给底层逻辑？',
+      options: [
+        '因为底层逻辑执行校验的速度比边界上要慢几个数量级。',
+        '这是一种法律合规的强制要求，其他层校验无效。',
+        '为了避免非法或恶意的脏数据渗透到系统深处，造成状态混乱、安全漏洞或引发无谓的数据库计算开销。'
+      ],
+      answer: 2,
+      explain: '“防御性编程”倡导在系统边界设立严密的安全检查。如果让非法数据深入到状态判断或写入数据库等底层模块，就会污染系统状态或导致核心业务报错崩溃，排障成本和安全风险会呈指数级上升。'
+    },
+    {
+      q: '网络发生抖动时，客户端向服务端发送报名请求但未收到回包。客户端选择重新发起相同请求，系统为了保证不重复扣减名额，最正确的方案是？',
+      options: [
+        '依赖 TCP 协议原生的重传重试机制，应用层对此无感知。',
+        '在数据状态层设计幂等性（Idempotency），通过请求唯一键或邮箱去重判断，如发现已报名，则直接返回上次的结果。',
+        '每隔 10 秒钟对数据库清空一次，防止数据出现累积。'
+      ],
+      answer: 1,
+      explain: 'TCP 重试只能解决传输层的数据包丢失，无法解决应用层已处理但回包丢失的情况。高并发高可靠系统必须支持“幂等性（Idempotency）”，让相同操作无论执行多少次，状态只改变一次，常用手段是基于 Idempotency Key 进行状态检索去重。'
+    },
+    {
+      q: '当遇到数据库崩溃等致命物理故障时，以下哪项不符合“优雅失败”的设计原则？',
+      options: [
+        '捕获异常并阻止半截脏数据残留，给客户端返回“系统繁忙”等易懂错误，同时在可观察性日志里记录故障线索。',
+        '在程序中触发未捕获崩溃，直接中断服务进程以实现被动防御。',
+        '通过捕获异常阻止内存状态与数据库状态的不一致性扩充。'
+      ],
+      answer: 1,
+      explain: '在面临系统外部组件发生灾难时，优雅失败（Failure Mode）强调保护主系统的健壮性，防止脏数据入库、避免直接打印带有代码栈的崩溃画面（白屏/挂起），并为运维留存线索，而不是直接进程崩掉。'
+    }
+  ]}
+/>
+
+## 十、复盘问题
 
 - 这一章四个概念里，哪一个是你之前完全没想过的？为什么真实系统离不开它？
 - 如果报名人数从 500 变成 50 万，这四个概念里哪个会最先变成瓶颈？（带着这个问题进入 Month 3。）
