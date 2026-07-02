@@ -11,6 +11,7 @@ import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import LatencyNumbers from '@site/src/components/LatencyNumbers';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # L10 · 一次请求的完整链路
 
@@ -55,6 +56,40 @@ flowchart LR
 
 让请求变快最有效的两招：① **加缓存**，让热点数据不必每次都查慢的数据库；② 缩短<GlossaryTerm term="Critical Path" definition="关键路径：一次请求中必须串行完成、决定总耗时的那条最长链路。优化非关键路径不会让请求更快。">关键路径</GlossaryTerm>——只有关键路径上的延迟才决定用户等多久。
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Client as 客户端 (App)
+  participant App as 应用服务器 (App Server)
+  participant Cache as 缓存 (Redis, 2ms)
+  participant DB as 关系数据库 (MySQL, 30ms)
+
+  Note over Client: 链路一：缓存命中 (Cache Hit) ~ 20ms 网络 + 2ms
+  Client->>App: 1. 请求数据 (GET /signups/42)
+  activate App
+  App->>Cache: 2. 检查缓存
+  activate Cache
+  Cache-->>App: 命中 (Hit)
+  deactivate Cache
+  App-->>Client: 3. 快速返回 (Total ~ 22ms)
+  deactivate App
+
+  Note over Client: 链路二：缓存未命中 (Cache Miss) ~ 20ms 网络 + 2ms + 30ms DB
+  Client->>App: 4. 请求数据 (GET /signups/99)
+  activate App
+  App->>Cache: 5. 检查缓存
+  activate Cache
+  Cache-->>App: 未命中 (Miss)
+  deactivate Cache
+  App->>DB: 6. 穿透查询底层 DB
+  activate DB
+  DB-->>App: 返回真实状态
+  deactivate DB
+  App->>Cache: 7. 异步/同步回写缓存
+  App-->>Client: 8. 慢返回 (Total ~ 52ms)
+  deactivate App
+```
+
 先用 L1 的延迟表重新感受一下各跳的数量级差异（尤其"内存 vs 数据库 vs 跨洲网络"）：
 
 <LatencyNumbers />
@@ -62,6 +97,33 @@ flowchart LR
 ### 深入（选学）：尾延迟在链路里被放大
 
 一次请求往往要串很多跳、甚至扇出到多个后端。回看 [L1 的《The Tail at Scale》](./programming-systems-primer)：**链路越深、扇出越广，慢尾被命中的概率越大**。还有一个隐形杀手——<GlossaryTerm term="N+1 Problem" definition="N+1 查询问题：为了拿一个列表，先查 1 次拿到 N 项，再为每项各查 1 次，总共 N+1 次往返。是后端慢的最常见原因之一。">N+1 问题</GlossaryTerm>：本该 1 次查询的事，写成了 N+1 次网络往返，延迟成倍增长。
+
+```mermaid
+flowchart TD
+  subgraph SerialFanout["串行扇出与 N+1 问题 (Serial Fan-out & N+1)"]
+    direction TB
+    Req1["父请求 (获取 3 个用户的详情)"] --> QueryUser["1. 查列表 (1 RTT)"]
+    QueryUser --> QueryU1["2. 查用户 1 (1 RTT)"]
+    QueryU1 --> QueryU2["3. 查用户 2 (1 RTT)"]
+    QueryU2 --> QueryU3["4. 查用户 3 (1 RTT)"]
+    QueryU3 --> Res1["总耗时 = 4 次 RTT 累加!"]
+  end
+
+  subgraph ParallelFanout["并行扇出与尾延迟控制 (Parallel Fan-out)"]
+    direction TB
+    Req2["父请求 (并发拉取 3 个用户)"] --> QueryList["1. 查列表 (1 RTT)"]
+    QueryList --> Dispatch{"2. 并发分发子请求"}
+    Dispatch --> Node1["查用户 1 (10ms)"]
+    Dispatch --> Node2["查用户 2 (120ms - 发生 GC 抖动)"]
+    Dispatch --> Node3["查用户 3 (15ms)"]
+    
+    Node1 --> Join["3. 等待所有节点返回"]
+    Node2 --> Join
+    Node3 --> Join
+    Join --> Res2["总耗时 = 最慢的那个节点 (120ms)"]
+  end
+```
+
 
 ## 三、跟我做一遍：算清每一跳的延迟
 
@@ -175,6 +237,43 @@ python labs/month01/l10_request_path/test_pipeline.py
 - 画出你的报名系统从浏览器到数据库的完整链路，标出每一跳的典型延迟和失败时的降级策略。
 - 数据库变成瓶颈了，你会先加缓存、加从库、还是分片？依据是什么（读写比、一致性要求）？
 - 一个页面要 800ms 才出来，你怎么定位是哪一跳慢？（这把你引向 L12 的分布式追踪。）
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在分布式 API 或微服务性能优化分析中，所谓的“N+1 查询问题”是如何成倍放大请求耗时的？',
+      options: [
+        '因为 N+1 查询会导致传输的字节大小发生碰撞，进而引起硬件阻塞。',
+        '因为本可以通过 1 次网络往返（RTT）解决的批量联表或批量检索操作，被写成了 1 次查列表加上 N 次单独查子项。在存在网络延迟的临界路径上，这会让总耗时随着 N 的增大而成倍累加网络往返时延。',
+        '因为多次查询数据库会导致主键索引自动发生裂变，使底层数据全表扫描崩盘。'
+      ],
+      answer: 1,
+      explain: '网络往返延迟（RTT）是系统越过单机瓶颈后最显著的延迟来源。如果是 100 条数据，N+1 问题会导致与数据库发生 101 次网络交互。哪怕内网 RTT 仅 1ms，也会凭空增加 100ms 延迟，因而必须使用批量查询（如 SQL `IN` 语句）来合并网络 RTT。'
+    },
+    {
+      q: 'Dean & Barroso 著名的《The Tail at Scale》论文指出，在高扇出（Fan-out）的并行架构中，总延迟几乎会被最慢的那个节点（尾延迟）主导，以下哪项数学机理最能合理解释该现象？',
+      options: [
+        '因为当父请求并行分发给 100 个子服务并必须等待全部返回时，只要有 1 个子服务因垃圾回收（GC）或网络抖动出现 p99 延迟（如 1 秒），则父请求有超过 63%（1 - 0.99^100）的极高概率被该慢节点卡死，导致平均和中位数响应指标失效。',
+        '因为并行计算在物理硬件层只是串行切片的幻觉，并发数增加会导致 CPU 过载烧毁。',
+        '因为子服务接收到的并发量越高，其数据库的 B+ 树索引结构就越容易被物理破坏。'
+      ],
+      answer: 0,
+      explain: '这就是微服务“木桶原理”的体现。当并发扇出的下游节点数增加时，遭遇偶发“慢尾”的概率并不是线性加和，而是呈指数级逼近 100%。这也是为什么在大规模分布式系统里必须对尾延迟进行“对冲请求”或“提前熔断/降级”专门优化的原因。'
+    },
+    {
+      q: '对于本地应用内内存缓存、分布式缓存（如 Redis）与边缘 CDN 缓存三者的定位和一致性权衡，以下描述何者是完全客观的？',
+      options: [
+        '边缘 CDN 缓存能够就近减少跨洲 RTT，适合几乎所有实时变动的核心订单支付数据。',
+        '本地内存缓存具备极速的进程内读取优势（纳秒级），但代价是每个实例独立存储导致的内存数据不一致与重启失效；Redis 分布式缓存提供全局共享的一致快查，但有网络序列化开销；CDN 则用来近用户侧缓存海量静态或低频 API 内容。',
+        '为了简化数据一致性，我们应该完全废除分布式 Redis，统统用 CDN 来顶住核心写库高峰。'
+      ],
+      answer: 1,
+      explain: '缓存的设计是一个经典的“距离 vs 一致性”权衡。CDN 离用户最近，但难以刷新和保证强一致；Redis 作为共享分布式缓存解决实例数据不同步，但存在跨网络 RTT 开销；本地缓存无任何网络损耗，但扩缩容及多节点数据同步成本高昂且不适用于强一致性资源。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
