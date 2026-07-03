@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # L14 · 配置、环境与部署
 
@@ -28,6 +29,30 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 你的代码里写死了 `db_host = "localhost"`、`timeout = 5000`、甚至把数据库密码硬编码进去。在你电脑上当然好——可一旦部署到测试环境、生产环境，这些值全都不对，于是崩。而且密码进了代码 = 进了 Git 仓库 = 全公司可见的安全事故。
 
+```mermaid
+flowchart TD
+  subgraph Pipeline["一次构建，多处部署 (Build Once, Deploy Many)"]
+    direction TB
+    SourceCode["源代码 (Git Repo)"] -->|1. CI 触发构建| Build["编译器/Docker 构建"]
+    Build -->|2. 生成不可变制品| Artifact["不可变制品 (Docker Image v1.1.0)"]
+    
+    subgraph Environments["多环境部署 (注入不同配置)"]
+      direction LR
+      Dev["开发环境 (Dev)"]
+      Stage["预发环境 (Staging)"]
+      Prod["生产环境 (Prod)"]
+    end
+    
+    Artifact -->|3a. 部署并注入开发参数| Dev
+    Artifact -->|3b. 部署并注入预发参数| Stage
+    Artifact -->|3c. 部署并注入生产参数| Prod
+    
+    DevConfig["- DB_HOST=dev-db<br/>- TIMEOUT=1000"] -.->|运行时环境变量| Dev
+    StageConfig["- DB_HOST=stage-db<br/>- TIMEOUT=500"] -.->|运行时环境变量| Stage
+    ProdConfig["- DB_HOST=prod-db<br/>- TIMEOUT=200<br/>- DB_PASSWORD=***(KMS)"] -.->|运行时环境变量| Prod
+  end
+```
+
 > 根因：**会随环境变化的东西（配置、密钥）不该和代码写在一起。** 这一课就讲怎么分开它们，以及怎么把新版本安全地发上线。
 
 ## 二、三个核心概念（分层）
@@ -45,6 +70,44 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 ### 深入（选学）：部署策略与回滚
 
 把新版本送上线不是"覆盖一下"那么简单。常见策略：<GlossaryTerm term="Blue-Green Deployment" definition="蓝绿部署：准备两套环境（蓝=旧、绿=新），新版在绿上就绪后一次性切流量；出问题立刻切回蓝。">蓝绿</GlossaryTerm>、<GlossaryTerm term="Canary Deployment" definition="金丝雀部署：先把新版本放给一小部分流量（如 1%），观察指标正常再逐步放量；异常则回滚。">金丝雀</GlossaryTerm>、滚动。它们都依赖 [L5 的无状态](./state-and-storage)（实例可互换）。而第一原则是：**出问题时，回滚要比修复更快、更可靠。**
+
+```mermaid
+flowchart TD
+  subgraph BlueGreen["蓝绿部署 (Blue-Green Deployment)"]
+    direction TB
+    RouterBG["流量网关 / 负载均衡器"]
+    Blue["旧版本集群 (Blue) - Active 100%"]
+    Green["新版本集群 (Green) - Idle/Testing"]
+    RouterBG -->|瞬间切流 100%| Blue
+    RouterBG -.->|发版成功切换| Green
+  end
+
+  subgraph Canary["金丝雀部署 (Canary Deployment)"]
+    direction TB
+    RouterC["智能网关 / 流量染色"]
+    OldSet["旧版本实例群 (95% 流量)"]
+    CanarySet["金丝雀新版实例 (5% 流量)"]
+    
+    RouterC -->|95% 路由| OldSet
+    RouterC -->|5% 灰度测试| CanarySet
+  end
+```
+
+```mermaid
+flowchart LR
+  subgraph MigrationSteps["数据库架构兼容变更与应用回滚模型 (Safe DB Schema Upgrades)"]
+    direction LR
+    Step1["步骤 1: 写入代码<br/>同时兼容旧表结构<br/>与新表结构字段"]
+    Step2["步骤 2: 变更DB<br/>应用 Schema 修改<br/>(只加字段/不删旧)"]
+    Step3["步骤 3: 全量更新<br/>部署所有容器实例<br/>至新版本代码"]
+    Step4["步骤 4: 后置清理<br/>(数周后) 下线老字段<br/>只保留新字段契约"]
+    
+    Step1 --> Step2
+    Step2 --> Step3
+    Step3 -->|若有严重缺陷| Rollback["安全回滚应用容器<br/>(数据库字段仍存在)"]
+    Step3 --> Step4
+  end
+```
 
 <ResearchNote
   title="配置即环境：Twelve-Factor 的第三条"
@@ -172,6 +235,43 @@ python labs/month01/l14_config/test_config.py
 - 你要给报名服务上一个有风险的新功能，你会用金丝雀怎么放量？看哪些指标（回扣 L12）决定继续还是回滚？
 - 新版本要改数据库表结构，怎么做才能保证"能随时回滚到旧版本"？（提示：先兼容性迁移，分两步走。）
 - 密钥目前在环境变量里，规模大了有什么风险？你会怎么升级到专门的密钥管理？
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在持续交付流水线中，“一次构建，多处部署（Build Once, Deploy Many）”为何被公认为现代工程化的核心原则？',
+      options: [
+        '因为重新编译代码可以让制品文件体积自动缩小 50%。',
+        '因为通过只构建一次不可变制品（如容器镜像），能保证在开发、预发和生产环境运行的绝对是同一行、未经篡改且已被完整测试过的二进制代码，避免了多分支独立编译引入的依赖版本漂移或代码差异隐患。',
+        '因为将配置写死在镜像中能够提供最高级的安全隔离保护。'
+      ],
+      answer: 1,
+      explain: '在多环境生命周期中重新编译代码会破坏测试的确定性。正确的做法是：只在流水线起点构建不可变镜像，推广（Promote）到生产时仅在启动时从环境变量/密钥中心挂载外部配置，终结“在我机器是好的上线却崩了”。'
+    },
+    {
+      q: '在无中断部署策略中，蓝绿部署（Blue-Green）与金丝雀灰度发布（Canary）的核心选型考量是什么？',
+      options: [
+        '蓝绿部署要求系统完全是单机单进程运行，而金丝雀发布要求采用微服务拓扑。',
+        '蓝绿部署通常需要双倍的物理计算资源以运行两套全量环境，但切换是一瞬间的且能达成秒级回滚；金丝雀发布不需要双倍资源，且能够用 1% 等小比例流量做真实线上灰度监测，但对网关的精细化流量调度及监控体系要求较高。',
+        '蓝绿部署因为要多占用机器，因此在故障率上永远是金丝雀的 100 倍。'
+      ],
+      answer: 1,
+      explain: '蓝绿部署是两套独立环境的“硬切换”；金丝雀部署则是渐进式“软切换”。金丝雀能将严重缺陷的影响面控制在极少数早期用户内，再利用可观察性做自动回滚熔断，非常适合高流量的云原生架构。'
+    },
+    {
+      q: '当新代码需要修改数据库表结构（Schema）时，为了让线上应用在发版失败时能安全地一键回滚到上一个版本，以下哪种做法是正确的？',
+      options: [
+        '执行表结构变更前强制暂停数据库服务，回滚时直接清空整张表。',
+        '数据库变更必须是向后兼容的（如只新增列、只添加索引且在代码中做双写），使得旧版应用在回滚后依然能够读写变更后的数据库表结构而不抛出字段缺失异常，直至新版稳定后再清理旧字段。',
+        '回滚代码会自动将数据库的数据自动恢复到一周前的备份状态。'
+      ],
+      answer: 1,
+      explain: '在持续交付中，数据库 Schema 升级必须采取“先加、双写、再删”的向后兼容三部曲。一旦新版代码有致命 Bug 回滚，老版本应用由于仍能识别数据库中的旧字段而正常运行，保障了回滚操作的无损性。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
