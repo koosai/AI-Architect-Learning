@@ -9,6 +9,7 @@ import GuidedExercise from '@site/src/components/GuidedExercise';
 import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M2L1 · 系统设计方法论
 
@@ -39,10 +40,45 @@ flowchart LR
   D --> E["5.取舍与风险<br/>讲清为什么、瓶颈在哪"]
 ```
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Candidate as 求职者 / 架构师 (Candidate)
+  actor Interviewer as 面试官 / 评审委 (Interviewer)
+
+  Note over Candidate,Interviewer: 阶段一：需求澄清 (1-5 min)
+  Candidate->>Interviewer: 询问系统边界、核心功能与非功能边界
+  Interviewer-->>Candidate: 明确 scoping 并限制核心场景
+  Note over Candidate,Interviewer: 阶段二：容量估算 (5-10 min)
+  Candidate->>Candidate: 进行 DAU / QPS / 存储/ 带宽 Back-of-envelope 估算
+  Candidate->>Interviewer: 陈述规模带来的核心挑战与瓶颈假设
+  Note over Candidate,Interviewer: 阶段三：高层设计 HLD (10-20 min)
+  Candidate->>Candidate: 绘制微服务、网关、消息队列与 DB 拓扑
+  Candidate->>Interviewer: 走查关键用户读写请求流向
+  Note over Candidate,Interviewer: 阶段四：关键组件深潜 (20-35 min)
+  Candidate->>Candidate: 对核心难点（如ID生成、消息同步协议）绘制细化方案
+  Note over Candidate,Interviewer: 阶段五：系统取舍与演进 (35-45 min)
+  Candidate->>Interviewer: 论述 Tradeoffs（如AP与CP折中）与未来系统瓶颈
+```
+
+```mermaid
+flowchart TD
+  subgraph LampsonHints["Butler Lampson 系统设计法则 (Lampson Design Hints)"]
+    direction TB
+    Start["设计准则分类"] --> Simplicity["1. 追求简单性 (Simplicity)"]
+    Start --> Speed["2. 追求速度 (Speed)"]
+    Start --> Evolution["3. 追求可演进性 (Evolution)"]
+
+    Simplicity --> Simp1["- 保持简单且功能专注<br/>- 接口与实现强力隔离"]
+    Speed --> Speed1["- 优化常见场景 (Make common case fast)<br/>- 用提示/缓存辅助提升吞吐<br/>- 拆分事务, 异步化慢操作"]
+    Evolution --> Evol1["- 为最坏情况设计冗余<br/>- 预留平滑迁移接口<br/>- 保持架构无状态易横向扩展"]
+  end
+```
+
 | 步骤 | 核心问题 | 对应后续课 |
 |---|---|---|
 | 1. 澄清需求 | 解决什么？给谁？哪些不做？ | M2L2 |
-| 2. 估算规模 | 多少用户/QPS/数据？ | M2L3、M2L4 |
+| 2. 估算规模 | 多少用户/<GlossaryTerm term="QPS" definition="每秒查询率 (Queries Per Second)：系统每秒处理的读/写请求数量，是评估吞吐量的重要非功能指标。">QPS</GlossaryTerm>/数据？ | M2L3、M2L4 |
 | 3. 高层设计 | 主要组件和数据怎么流？ | M2L5 |
 | 4. 深入组件 | 最难/最关键的那块怎么做？ | M2L6–L11 |
 | 5. 取舍与风险 | 为什么这么选？哪会先垮？ | 贯穿全程 |
@@ -51,13 +87,13 @@ flowchart LR
 
 - **澄清**：不要假设。问清功能边界、规模量级、一致性/延迟要求（[M2L2](./requirements)）。把假设**写下来**。
 - **估算**：用数量级心算（[M2L3](./capacity-estimation)）。读多还是写多？要不要缓存/分片？估算直接决定架构形态。
-- **HLD**：先画 [Month 1 学过的构件](../foundations/request-path)——客户端、网关、服务、缓存、数据库、队列，连出数据流。
+- **<GlossaryTerm term="HLD" definition="高层设计 (High-Level Design)：描述系统大局组件和主要数据流向的架构蓝图。">HLD</GlossaryTerm>**：先画 [Month 1 学过的构件](../foundations/request-path)——客户端、网关、服务、缓存、数据库、队列，连出数据流。
 - **深潜**：别面面俱到，挑最关键的 1–2 个点深挖（聊天系统挑"消息投递"、短链挑"ID 生成与重定向"）。
-- **取舍**：每个决定都讲清放弃了什么换了什么（[TradeoffExplorer 思维](../foundations/programming-systems-primer)）。
+- **取舍**：每个决定都讲清放弃了什么换了什么（[<GlossaryTerm term="Tradeoff" definition="折中/权衡：系统设计中不存在完美技术，必须在两个相互竞争的指标（如一致性 vs 延迟，成本 vs 冗余）之间做出妥协取舍。">Tradeoff</GlossaryTerm> 思维](../foundations/programming-systems-primer)）。
 
 ### 深入（选学）：好系统设计的经验法则
 
-系统设计有一些跨越时代的"老法师经验"。Butler Lampson 1983 年的《Hints for Computer System Design》总结了一批，比如：**把常见情况做快（make the common case fast）**、**做一件事并做好**、**用提示而非保证来优化**、**先正确再快**。这些和 Month 1 的 [Parnas 模块化](../foundations/modules-and-contracts)、[Knuth 先测量再优化](../foundations/performance-and-latency) 一脉相承。
+<GlossaryTerm term="System Design" definition="系统设计：定义系统架构、组件、模块、接口及数据以满足特定需求的过程，要求综合权衡功能与非功能指标。">系统设计</GlossaryTerm>有一些跨越时代的"老法师经验"。Butler Lampson 1983 年的《Hints for Computer System Design》总结了一批，比如：**把常见情况做快（make the common case fast）**、**做一件事并做好**、**用提示而非保证来优化**、**先正确再快**。这些和 Month 1 的 [Parnas 模块化](../foundations/modules-and-contracts)、[Knuth 先测量再优化](../foundations/performance-and-latency) 一脉相承。
 
 <ResearchNote
   title="系统设计的经验法则，四十年不过时"
@@ -92,7 +128,7 @@ flowchart LR
   ]}
   steps={[
     '第1步：写下 3 条核心功能 + 2 条明确不做的（scoping）。',
-    '第2步：估算 DAU、写 QPS、读 QPS、存储/年（下一课 M2L3 教你算）。',
+    '第2步：估算 <GlossaryTerm term="DAU" definition="日活跃用户数 (Daily Active Users)：一天之内访问或使用系统的不重复（唯一）用户总数，是估算系统并发与容量的基石指标。">DAU</GlossaryTerm>、写 QPS、读 QPS、存储/年（下一课 M2L3 教你算）。',
     '第3步：画一张 HLD 图（客户端→网关→服务→缓存→DB→队列）。',
     '第4步：挑一个最关键组件，写 3 句它怎么实现、难在哪。',
     '第5步：列出 2 个关键取舍和 1 个最先会垮的瓶颈。',
@@ -152,9 +188,47 @@ flowchart LR
 
 ## 常见误解
 
-- **"系统设计靠记标准答案"**：靠的是流程和取舍判断，不是背架构图。
-- **"上来就选技术栈最高效"**：跳过澄清/估算是返工之源。
-- **"要把每个组件都讲透"**：深潜只挑关键点，面面俱到反而显得没重点。
+- **"系统设计靠记标准答案"**: 靠的是流程、评估规模和取舍判断，不是死记硬背架构图。即使你背下了微信的架构，如果无法根据面试官给出的特定约束（如“仅供 1 万人企业内部使用且绝对保密”）进行裁剪，也会被判定为不合格。
+- **"上来就选技术栈最高效"**: 跳过需求澄清与量级估算是返工之源。如果没有确定是读多写少还是高频写入，任何直接定下“用 Cassandra 还是 Redis”的行为都是盲目的技术堆砌。
+- **"要把每个组件都讲透"**: 45 分钟的面试或 1 小时的评审时间极其有限，深潜应当只聚焦于 1–2 个决定系统成败的关键难点（例如推拉流策略或高并发下的防超卖），面面俱到反而显得抓不住重点。
+- **"Butler Lampson 法则是象牙塔理论"**: 这些法则是数十年来真实大型分布式系统（如 AWS、Google 单体服务演进）血泪教训的结晶。“把常见情况做快”、“先正确再求快”是指导每一行代码和每一张高层架构图设计的黄金法则。
+
+## 自测题 (QuizCard)
+
+<QuizCard
+  questions={[
+    {
+      q: '在系统设计中，著名的 Butler Lampson 经验法则“Make the common case fast”（把常见情况做快）在实际架构中是如何体现的？',
+      options: [
+        '对于读远大于写的短网址系统，由于 99% 的请求都是跳转（读），因此应通过本地缓存或 CDN 进行读取加速，即便写入路径稍慢一点也完全可以接受。',
+        '无条件为写入路径做极速优化，牺牲读取缓存的命中率。',
+        '通过引入极为复杂的同步锁确保每一次写事务都遍历全球全部数据库副本。'
+      ],
+      answer: 0,
+      explain: '把常见情况做快是核心的优化原则。短网址系统中读流量往往是写流量的 1000 倍以上。通过将热门短链接放入高效的缓存（如 Redis）或分布式 CDN 边缘节点，可以极速响应绝大多数请求，从而避免对后端数据库形成高压。'
+    },
+    {
+      q: '很多新手在做系统设计时，往往会犯‘上来就堆砌技术组件和微服务’的毛病。以下关于这一现象的评价，哪项是正确的？',
+      options: [
+        '这显得架构师技术广度高、效率极快，是真实工程环境里的最佳实践。',
+        '这是缺乏流程方法论的典型表现。跳过需求澄清与量级估算，盲目选用组件（如 Kafka 或 NoSQL），极易导致偏离业务目标、做错需求或引入不必要的分布式运维复杂度。',
+        '堆砌组件能完全规避系统运行时的任何可用性风险。'
+      ],
+      answer: 1,
+      explain: '系统设计不是猜谜游戏。没有规模背景和非功能约束的技术选型都是空中楼阁。先澄清做什么/不做、估算 QPS 和数据容量，技术图纸才能画得精准、合理。'
+    },
+    {
+      q: '图灵奖得主 Butler Lampson 提出的‘先正确，再求快’（Keep it simple, get it right first）对架构设计有何启示？',
+      options: [
+        '要求我们先通过模块隔离和接口定义保证系统的逻辑和功能边界是正确的，在此基础上再通过测量分析瓶颈做性能优化，防止因过早优化导致系统高度耦合与腐化。',
+        '要求为了速度可以完全放弃边界校验与数据一致性测试。',
+        '二者互相矛盾，初学者应当直接进行底层的汇编级并发优化。'
+      ],
+      answer: 0,
+      explain: '‘先正确，再求快’强调了首要解决正确性和逻辑边界。没有正确的逻辑，高并发的执行毫无意义。这与 Donald Knuth 的‘过早优化是万恶之源’（Measure before optimize）异曲同工。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
