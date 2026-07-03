@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M2L4 · SLA / SLO 与可用性
 
@@ -43,7 +44,35 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 ### 进阶：可用性会相乘（串联）也会变好（冗余）
 
 - **串联依赖**：请求要依次经过 A、B、C，**任何一个挂就整体挂**，整体可用性 = 各自相乘。5 个 99.9% 串联 = 0.999⁵ ≈ **99.5%**（停机暴增到每年 ~44 小时！）。
+
+```mermaid
+flowchart LR
+  subgraph SeriesAvailability["串联依赖可用性衰减 (Series Dependency Decay)"]
+    direction LR
+    GW["1. API网关<br/>(99.9%)"] --> SVC["2. 业务微服务<br/>(99.9%)"]
+    SVC --> Auth["3. 风控服务<br/>(99.9%)"]
+    Auth --> DB["4. 主数据库<br/>(99.9%)"]
+    DB --> Email["5. 邮件网关<br/>(99.9%)"]
+    
+    Total["整体可用性 = 0.999⁵ ≈ 99.5%<br/>(停机时间从 8.7小时 暴增至 43.8小时/年)"]
+    Email -.-> Total
+  end
+```
+
 - **冗余（并联）**：同一组件放 N 个副本，**全挂才挂**，可用性 = 1 −(1 − a)ⁿ。两个 99% 并联 = 1 − 0.01² = **99.99%**。
+
+```mermaid
+flowchart LR
+  subgraph ParallelAvailability["并联冗余可用性救赎 (Parallel Redundancy)"]
+    direction LR
+    LB["负载均衡器 (LB)"] --> Svc1["应用实例 1 (a=99%)"]
+    LB --> Svc2["应用实例 2 (a=99%)"]
+    
+    Total["整体并联可用性 = 1 - (1-0.99)² = 99.99%<br/>(允许单节点挂掉，整体可用性提升 100倍)"]
+    Svc1 -.-> Total
+    Svc2 -.-> Total
+  end
+```
 
 **这就是架构的核心张力**：依赖越多，可用性越被拉低；要救回来，就得在关键处加冗余（回扣 [L4 舱壁/降级](../foundations/error-handling)）。
 
@@ -51,9 +80,30 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 100% 可用既不可能也不划算。<GlossaryTerm term="Error Budget" definition="错误预算 = 1 − SLO。如 SLO 99.9%，则每月有 0.1% 的时间/请求可以失败。用它平衡上线速度和稳定性：预算够就大胆发，烧完就先稳。">错误预算</GlossaryTerm> 把"允许的不可靠"量化成一笔可花的预算：预算还有，就大胆上线新功能；烧完了，就停下来先做稳定性。它让"快"和"稳"的拉扯有了客观依据。
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Monitor as 监控系统 (Prometheus)
+  participant Git as 部署网关 (CI/CD Pipeline)
+  participant Team as 研发与SRE团队 (DevOps Team)
+
+  Monitor->>Monitor: 1. 持续计算 SLI 可用性成功率
+  alt SLI >= SLO (错误预算充足)
+    Monitor-->>Git: 2a. 状态正常，绿灯通车
+    Git->>Git: 2b. 允许团队高速发版与上线新功能
+  else SLI < SLO (错误预算消耗殆尽!)
+    Monitor->>Monitor: 3a. 触发错误预算燃尽报警
+    Monitor->>Git: 3b. 触发自动策略锁定：挂起发布流水线 (Deploy Freeze)
+    Monitor->>Team: 3c. 紧急通知：冻结一切业务需求变更
+    Team->>Team: 3d. 调动全员治理技术债、优化慢 SQL 与容灾修复
+    Team->>Monitor: 3e. 修复上线，SLI 成功率爬升回 SLO 目标线以上
+    Monitor-->>Git: 3f. 恢复可用错误预算，自动解锁流水线通车
+  end
+```
+
 <ResearchNote
   title="用 SLO 和错误预算管理可靠性"
-  source="Google SRE Book: Embracing Risk / Service Level Objectives"
+  source="Google <GlossaryTerm term='SRE' definition='站点可靠性工程 (Site Reliability Engineering)：将软件工程方法应用于运维领域，用开发思维解决基础设施与稳定性问题的实践。'>SRE</GlossaryTerm> Book: Embracing Risk / Service Level Objectives"
   href="https://sre.google/sre-book/embracing-risk/"
   insight="Google SRE 主张：可靠性不是越高越好，而要定一个恰当的 SLO，并用“错误预算”（1−SLO）来平衡创新速度与稳定性。追求不必要的额外 9 会极大抬高成本、拖慢迭代。"
   application="架构师要帮团队选一个“恰好够好”的可靠性目标，而不是盲目堆 9。这个目标会反过来决定你要不要多活、要多少冗余、能承受多大复杂度——它是成本与体验的总平衡点。"
@@ -176,9 +226,47 @@ python labs/month02/m2l4_availability/test_availability.py
 
 ## 常见误解
 
-- **"可用性越高越好"**：每个 9 成本指数上升，要按业务需要定。
-- **"每个依赖都很可靠，整体就可靠"**：串联会相乘，整体往往低得惊人。
-- **"高可用就是别让它挂"**：还包括挂一部分时的优雅降级。
+- **"可用性越高越好"**: 每个 9 成本指数上升，要按业务需要定。如果一年的停机时间在商业上无关痛痒，追求“五个 9”不仅白花预算，还会给架构注入致命的复杂性。
+- **"每个依赖都很可靠，整体就可靠"**: 串联会相乘，哪怕有 5 个各自 99.9% 可用的微服务，连在一起直接下降到 99.5%。必须在接缝处采用超时、熔断和备用异步降级路由。
+- **"高可用就是别让它挂"**: 高可用本质是一个区间。当依赖服务或某机房挂掉一部分时，系统依然可以通过降级服务（如只读不写、展示过期缓存）优雅运转。
+- **"高可用只需关注 MTBF 而忽视 MTTR"**: 可用性由平均无故障时间（MTBF）和平均恢复时间（<GlossaryTerm term="MTTR" definition="平均修复/恢复时间 (Mean Time to Repair/Restore)：系统从发生故障中断到完全恢复正常运行所需的平均时间。MTTR 越短，可用性越高。">MTTR</GlossaryTerm>）共同决定。通过自动分流切换或自动热重启来将 MTTR 压缩到秒级，往往比强行优化代码以求 MTBF 不挂要划算得多。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '如果你的服务自身承诺了 99.9% 的可用性，但其强依赖了 5 个同样承诺 99.9% 可用性的外部第三方接口（且这 5 个外部接口一旦有任何一个不可用，你的系统就会直接报错），在不考虑降级和容灾的串联链路下，你系统理论上的最大可用性大约是多少？',
+      options: [
+        '99.9%，因为所有依赖的可用性目标都同样是 99.9%。',
+        '大约 99.5%，这意味着每年停机时间会爆增到近 44 小时（翻了 5 倍），这是多级强依赖串联相乘（0.999⁵）的数学惩罚。',
+        '由于概率抵消，整体可用性反而提升到了 99.99%。'
+      ],
+      answer: 1,
+      explain: '在没有降级隔离（如舱壁、熔断、降级）的强依赖串联系统中，可用性是连乘的。每一个串入的依赖都会成为单点故障源，极具杀伤力。因此，限制强依赖深度、对下游慢调用做异步化或弱降级是架构保命的必由之路。'
+    },
+    {
+      q: 'SRE 体系中引入的‘错误预算（Error Budget）’其核心意义不仅是一组数字，更是一套平衡研发效率与稳定性的机制。关于这套机制的运作，以下哪项描述是准确的？',
+      options: [
+        '错误预算必须为零，任何时候都不能允许系统发生错误或重启。',
+        '错误预算 = 1 − SLO。如果预算充足，团队可以加速发版和业务创新；一旦在周期内预算烧完，必须自动或人工暂停新功能发布（部署冻结），全力转向技术债治理和稳定性修补，直至预算恢复。',
+        '错误预算仅仅用于年底打绩效时扣减开发人员的年终奖，与日常发版节奏无关。'
+      ],
+      answer: 1,
+      explain: '错误预算（Error Budget）让‘快’（开发）与‘稳’（运维/SRE）的冲突有了客观、量化的共同标准。它是系统允许的不可靠额度，用来为发布风险和偶尔的系统故障买单。'
+    },
+    {
+      q: '如果通过将原本 99% 可用性的单点服务部署为 2 个互为主备的副本（使用并联冗余），且假设故障检测与自动故障转移（Failover）是完美无缝的。请问该并联冗余系统的理论可用性是多少？',
+      options: [
+        '1 − (1 − 0.99)² = 99.99%，即可用性通过冗余从两个 9 显著提升到了四个 9。',
+        '98.01%，因为两个 99% 的并联可用性相乘会降低整体可用性。',
+        '仍然是 99%，冗余不会带来任何理论可用性的变化。'
+      ],
+      answer: 0,
+      explain: '并联系统（冗余副本）只有在所有节点同时挂掉时才会导致系统不可用。计算公式为 1 − (1 − a)ⁿ。虽然并联提升了可用性，但在真实生产中，由于故障检测响应延迟、脑裂（Split-Brain）以及状态数据同步的一致性开销，实际可用性会略低于理论公式值。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
