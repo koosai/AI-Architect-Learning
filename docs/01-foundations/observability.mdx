@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # L12 · 可观察性深入
 
@@ -28,6 +29,41 @@ L1 你学会了埋日志。但当系统变成几十个服务，单条日志远�
 
 L10 留了个问题：一个页面 800ms 才出来，慢在哪一跳？如果每个服务只各自打孤立的日志，你得登录十台机器、人肉拼时间线。**根本问题是：你没有一根线把"同一个请求在各服务里的足迹"串起来。** 这一课就给你这根线，以及把海量日志变成可看趋势的指标。
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Client as 客户端 (Client)
+  participant GW as 网关 (Gateway)
+  participant Order as 订单服务 (Order Service)
+  participant Pay as 支付服务 (Payment Service)
+  participant DB as 关系数据库 (DB)
+
+  Client->>GW: 1. 发送下单请求
+  activate GW
+  Note over GW: 生成全局唯一跟踪标识：<br/>trace_id = "tr-888"
+  GW->>Order: 2. 路由请求 (Header: trace_id="tr-888")
+  activate Order
+  Note over Order: 记录日志: event=received_order trace_id="tr-888"
+  
+  Order->>Pay: 3. 发起扣款 (Header: trace_id="tr-888")
+  activate Pay
+  Note over Pay: 记录日志: event=charging trace_id="tr-888"
+  
+  Pay->>DB: 4. 更新流水 (SQL Context: trace_id="tr-888")
+  activate DB
+  Note over DB: 记录慢日志: sql="UPDATE..." trace_id="tr-888" ms=250
+  DB-->>Pay: 5. 成功
+  deactivate DB
+  Pay-->>Order: 6. 成功
+  deactivate Pay
+  Order-->>GW: 7. 成功
+  deactivate Order
+  GW-->>Client: 8. 响应
+  deactivate GW
+  
+  Note over Client, DB: 🔍 分析系统把所有 trace_id="tr-888" 的日志串起来，拼出树状时间线！
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：可观察性的三支柱
@@ -38,6 +74,22 @@ L10 留了个问题：一个页面 800ms 才出来，慢在哪一跳？如果每
 - <GlossaryTerm term="Metrics" definition="指标：随时间聚合的数值（QPS、错误率、p95 延迟）。便宜、适合告警和看趋势，但缺少单次请求的细节。">指标（Metrics）</GlossaryTerm>：聚合的数字趋势，便宜、适合告警。
 - <GlossaryTerm term="Traces" definition="追踪：用一个 trace_id 把一次请求在所有服务里的步骤串成一条时间线，看清它经过哪些跳、各花多久。">追踪（Traces）</GlossaryTerm>：用一个 trace_id 把一次请求的全程串起来。
 
+```mermaid
+flowchart TD
+  subgraph Triad["可观测性三支柱协作排障漏斗 (Troubleshooting Funnel)"]
+    M["1. 指标 (Metrics - 宏观大盘)<br/>QPS/错误率/延时趋势"]
+    T["2. 链路追踪 (Traces - 拓扑关联)<br/>Trace ID 串联调用链"]
+    L["3. 日志 (Logs - 行级堆栈)<br/>单进程异常上下文"]
+  end
+
+  Trigger["线上服务异常"] --> M
+  M -->|触发警报: Answer WHEN| Alert["告警: 接口错误率上涨!"]
+  Alert --> T
+  T -->|Trace ID 树: Answer WHERE| Locate["定位: 慢在支付系统的 MySQL 写"]
+  Locate --> L
+  L -->|下钻详情: Answer WHY| RootCause["根因: 数据库连接数占满!"]
+```
+
 ### 进阶：trace_id、RED 方法、SLO
 
 **分布式追踪**的关键是：请求进入系统时生成一个 <GlossaryTerm term="Trace ID" definition="贯穿一次请求全过程的唯一 id。每个服务处理这次请求时都带上它打日志，于是能把跨服务的足迹拼成一条完整时间线。">trace_id</GlossaryTerm>，之后传给每一个下游服务、记进每一条日志。于是你能把散落各处的日志按 trace_id 拼成完整时间线。
@@ -45,6 +97,28 @@ L10 留了个问题：一个页面 800ms 才出来，慢在哪一跳？如果每
 衡量一个服务健康度，常用 <GlossaryTerm term="RED Method" definition="RED 方法：对每个服务监控 Rate（请求量）、Errors（错误率）、Duration（延迟分布）三个核心指标。">RED 方法</GlossaryTerm>：Rate（请求量）、Errors（错误率）、Duration（延迟，尤其 p95/p99）。
 
 再往上是 <GlossaryTerm term="SLO" definition="服务等级目标：对某个 SLI（如“p99 延迟 300ms 内”或“成功率 99.9%”）设定的目标值。它定义了“足够好”的标准，并衍生出错误预算。">SLO</GlossaryTerm>——用一个明确目标（如"99.9% 的请求成功"）定义"多好算好"，并据此分配<GlossaryTerm term="Error Budget" definition="错误预算：1 − SLO。如 SLO 99.9% 则有 0.1% 的预算可以出错，用来平衡“上线速度”和“稳定性”。">错误预算</GlossaryTerm>。
+
+```mermaid
+flowchart TD
+  subgraph SLOLoop["SLO 与错误预算反馈闭环 (SLO & Error Budget)"]
+    SLI["监测指标 (SLI)<br/>例如: 成功率"]
+    SLOTarget{"达成 SLO 目标?<br/>例如: 99.9%"}
+    
+    Budget["错误预算 (Error Budget)<br/>1 - SLO = 0.1% 可用错误率"]
+    
+    Allow["继续部署新功能<br/>(Risk Take)"]
+    Freeze["冷冻新功能部署<br/>(Focus on Stability)"]
+  end
+
+  SLI --> SLOTarget
+  SLOTarget -->|Yes| Budget
+  Budget -->|预算充足| Allow
+  
+  SLOTarget -->|No| Budget
+  Budget -->|预算耗尽 (<=0)| Freeze
+  Freeze -->|倒逼开发修改Bug/治理服务| SLI
+```
+
 
 ### 深入（选学）：可观察性 ≠ 监控；采样与高基数
 
@@ -167,6 +241,43 @@ python labs/month01/l12_observability/test_metrics.py
 - 给你的报名系统定 2 个 SLO（如"p99 < 300ms""成功率 > 99.9%"）。你会怎么用 RED 指标来度量它们？
 - 一个请求慢，你会先看指标、追踪还是日志？三者的排查顺序是什么？
 - 全量存追踪太贵，你怎么采样才能既省钱、又不漏掉重要的慢/错请求？（提示：尾部采样。）
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在分布式微服务系统中，为什么采用结构化日志（如 JSON 格式）排查故障远比非结构化纯文本日志高效？',
+      options: [
+        '因为非结构化文本日志的磁盘存储空间通常是结构化日志的 10 倍以上。',
+        '因为结构化日志包含固定且明确的 Key-Value 字段，能够直接被 ElasticSearch/ClickHouse 等日志分析引擎快速建立索引并进行多维度下钻、过滤和聚合统计；非结构化文本则难以自动结构化，排查时只能人肉 grep。',
+        '因为在未开启 JSON 格式时，常用的日志收集器（如 Logstash/Fluentd）会在解析时频繁崩溃崩溃。'
+      ],
+      answer: 1,
+      explain: '非结构化文本没有确定的字段边界，使得按特定维度（如 userId, traceId）过滤或分析大盘错误率极难，且正则表达式匹配开销极其高昂。结构化 JSON 日志是高可观测性平台的基石。'
+    },
+    {
+      q: '在可观测性三支柱（Metrics, Traces, Logs）的日常排障漏斗中，最合理的故障排查工作流顺序是什么？',
+      options: [
+        '先阅读单机 Logs 排查逻辑，接着用 Traces 大致划定边界，最后用 Metrics 设置整体大盘警报。',
+        '首先通过指标（Metrics）趋势检测到异常并触发告警（回答 WHEN）；接着通过链路追踪（Traces）拓扑时间线精确定位是哪个服务组件出现故障或性能瓶颈（回答 WHERE）；最后通过结构化日志（Logs）查看具体进程抛出的异常堆栈和错误上下文（回答 WHY）。',
+        '三支柱完全是可以互相替代的，一般微服务系统只需配置其中一种即可，没必要配合使用。'
+      ],
+      answer: 1,
+      explain: '这是工业界最推崇的排障工作流。Metrics 便宜适合做告警监控大盘；Traces 是微服务大网的导航，快速确定异常落在哪个节点；Logs 是具体结点的黑匣子，展示核心代码抛错。三者有机结合能极速缩短故障定位时间。'
+    },
+    {
+      q: '关于服务等级目标（SLO）与错误预算（Error Budget）在互联网服务迭代与稳定性维护中的制约关系，以下描述何者是正确的？',
+      options: [
+        '当错误预算（1 - SLO）被耗尽归零时，应该立即冻结所有非紧急新功能发布，强制开发精力聚焦于稳定性和缺陷修复，以此换取系统回归稳态。',
+        'SLO 的设立旨在要求系统达成 100% 可靠性，任何允许服务出错的指标都是不合格的设计。',
+        '错误预算主要用来应对第三方服务商的流量超限罚款，不与产品的发布周期流程挂钩。'
+      ],
+      answer: 0,
+      explain: '错误预算是 SRE 控制变更风险的最佳武器。将 SLO 定位在合理范围内（如 99.9% 成功率），则有 0.1% 的错误余额。若余额充足可快速迭代上线；一旦由于故障频发将这 0.1% 的预算烧光，则必须触发冷冻发布（Freeze），直到服务恢复健康度。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
