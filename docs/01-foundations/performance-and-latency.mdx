@@ -11,6 +11,7 @@ import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import PercentileLab from '@site/src/components/PercentileLab';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # L15 · 性能与延迟
 
@@ -29,6 +30,24 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 你的监控显示平均延迟 50ms，团队很满意。但客服收到一堆"卡死了"的投诉。怎么回事？因为有 1% 的请求要 3 秒——它们被 99% 的快请求"平均"掉了，在平均值里看不见，但那 1% 的用户是真实存在、真实痛苦的。这一课教你用**百分位**看见他们，并系统地分析性能。
 
+```mermaid
+flowchart TD
+  subgraph LatencyDistribution["延迟长尾分布 (Latency Distribution & Long Tail)"]
+    direction TB
+    A["快请求群 (99%)<br/>延迟: ~20ms"]
+    B["慢请求尾部 (1%)<br/>延迟: ~3000ms"]
+    
+    avg["数据计算平均值<br/>Average Latency = 49.8ms"]
+    
+    A -->|99个样本| avg
+    B -->|1个样本| avg
+    
+    Note over avg: ⚠️ 平均值 ~50ms 掩盖了最痛苦的那 1% 的 3000ms 用户体验!
+    Note over A: p50/p90 = 20ms
+    Note over B: p99 = 3000ms (真实体现尾延迟)
+  end
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：延迟、吞吐、百分位
@@ -41,11 +60,50 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 进阶：瓶颈、Little's Law 与扩展
 
-性能由<GlossaryTerm term="Bottleneck" definition="瓶颈：整条链路里最慢/最受限的那个环节。系统的整体性能由瓶颈决定，优化非瓶颈环节几乎没用。">瓶颈</GlossaryTerm>决定——链路里最慢的那一环。优化非瓶颈环节几乎没有效果（回扣 [L10 关键路径](./request-path)）。容量则可用 [L11 的 Little's Law](./sync-async-timeout)（L = λ × W）估算：知道到达率和处理时间，就知道要多少并发。
+性能由<GlossaryTerm term="Bottleneck" definition="瓶颈：整条链路里最慢/最受限的那个环节。系统的整体性能由瓶颈决定，优化非瓶颈环节几乎没用。">瓶颈</GlossaryTerm>决定——链路里最慢的那一环。优化非瓶颈环节几乎没有效果（回扣 [L10 关键路径](./request-path)）。容量则可用 [L11 的 Little's Law](./sync-async-timeout)（L = λ × W）估算：知道到达率 and 处理时间，就知道要多少并发。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as 用户请求 (Request)
+  participant App as 并行段 (Parallel CPU Work)
+  participant DB as 串行段 (Serial DB Lock)
+
+  User->>App: 1. 进入处理逻辑
+  activate App
+  Note over App: 并行步骤 (可水平扩展)<br/>- 格式校验<br/>- 内存解码<br/>- 耗时: 80ms / N个CPU
+  
+  App->>DB: 2. 进入数据库排他锁区 (串行段)
+  activate DB
+  Note over DB: 必须排队执行 (串行天花板)<br/>- 更新库存剩余计数<br/>- 耗时: 20ms (占总时长 20%)
+  DB-->>App: 3. 释放锁并成功
+  deactivate DB
+  
+  App-->>User: 4. 返回响应
+  deactivate App
+
+  Note over User, DB: 💡 即使 CPU 核心增至无限，总处理延迟永远大于 20ms，系统最大加速比被锁死在 5 倍 (1 / 0.2)!
+```
 
 ### 深入（选学）：扩展不是线性的
 
 加机器就能成比例变快吗？[L8 的 Amdahl 定律](./concurrency-basics) 说串行部分是天花板；更进一步，<GlossaryTerm term="Universal Scalability Law" definition="通用扩展律（USL）：在 Amdahl 的串行开销之上，再加入“节点间协调/一致性”的开销。节点多到一定程度，协调成本会让总吞吐不升反降。">通用扩展律（USL）</GlossaryTerm> 指出：节点间的协调/一致性开销，会让系统加到一定规模后**吞吐不升反降**。所以"加机器"有上限，甚至有反效果。
+
+```mermaid
+flowchart TD
+  subgraph USLScale["通用扩展律系统吞吐趋势 (Universal Scalability Law Curves)"]
+    direction TB
+    Ideal["理想线性扩展<br/>- 吞吐与节点数成正比 (O(N))<br/>- 几乎不存在"]
+    Amdahl["阿姆达尔定律极限<br/>- 串行比例阻碍继续攀升<br/>- 吞吐无限逼近渐近线天花板 (1/s)"]
+    USLCurve["USL 吞吐退化曲线<br/>- 考虑节点间数据一致性广播与协调开销 (O(N^2))<br/>- 机器到一定临界点，协调开销占满，吞吐不升反降!"]
+  end
+
+  Ideal -->|串行部分制约| Amdahl
+  Amdahl -->|交叉协调/广播开销| USLCurve
+  
+  Note over USLCurve: ⚠️ 临界点过后，盲目加机器只会拉低吞吐!
+```
+
 
 <ResearchNote
   title="过早优化是万恶之源"
@@ -165,6 +223,43 @@ python labs/month01/l15_performance/test_perf.py
 - 你的报名服务 SLO 定"p99 < 200ms"。你怎么测量它？哪一跳最可能是瓶颈（回扣 L10）？
 - 老板说"加一倍机器让它快一倍"。你怎么用 Amdahl/USL 解释为什么不一定？
 - 你想优化性能，但没有 profiling 数据。第一步该做什么？（提示：别动手，先测量。）
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在分布式服务性能分析中，关于“平均延迟”与“百分位延迟（p95/p99）”的描述，以下哪项是最客观的？',
+      options: [
+        '平均延迟因为使用了全部请求做样本，因此最适合用来代表最痛苦那一批用户的真实访问卡顿体验。',
+        '百分位延迟（如 p99）能真实反映最慢的 1% 请求延迟，这能精确勾勒长尾效应下受损用户的体感；而平均值极易被大比例快请求稀释，使架构师对长尾恶化产生盲区。',
+        '百分位数只能用在小用户量场景，当 QPS 超过 1000 时必须改用平均延迟。'
+      ],
+      answer: 1,
+      explain: '长尾延迟（Tail Latency）是高并发系统优化的核心目标。在一个 10000 次调用的样本中，若有 100 次严重慢阻塞，计算平均值后该部分影响会被完全淡化；只有看 p99 才能抓出它们。'
+    },
+    {
+      q: '根据阿姆达尔定律（Amdahl\'s Law），如果订单系统的处理流程中有 10% 的步骤（例如数据库排他写锁）是绝对无法被并发执行的，那么即便我们将系统的 CPU 并行核心数水平扩展到无限个，理论最大加速比是多少？',
+      options: [
+        '最大能够提速 10 倍',
+        '最大能够提速 100 倍',
+        '系统可以无上限地线性加速'
+      ],
+      answer: 0,
+      explain: 'Amdahl\'s Law 公式中，当 N 趋于无限大时，S = 1 / s。其中 s = 0.10，故理论加速比上限为 1 / 0.10 = 10 倍。这说明系统串行部分比例决定了并行优化的终极天花板。'
+    },
+    {
+      q: '通用扩展律（Universal Scalability Law, USL）相较于阿姆达尔定律，最关键的工程价值在于指出了什么物理事实？',
+      options: [
+        '指出了硬盘转速是影响数据库吞吐的第一要素。',
+        '指出了节点间因为锁协调、网络共识与数据一致性广播产生的“交叉协调（Coherency/Crosstalk）”开销，会随着节点数 N 呈二次方增长；这导致节点加到一定临界点后，协调开销会反噬系统，使总吞吐不升反降。',
+        '指出了在没有 Docker 镜像时系统是完全无法进行任何水平扩展的。'
+      ],
+      answer: 1,
+      explain: 'USL 是水平扩展的定量理论。它证明了在分布式集群中，“加机器”不是包治百病的良药。机器越多，它们之间同步状态的通信风暴就越剧烈，到达拐点后系统吞吐会发生严重恶化退化。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
