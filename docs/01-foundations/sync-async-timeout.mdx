@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # L11 · 同步、异步、超时与背压
 
@@ -28,6 +29,41 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 用户点"报名"，你的代码做了两件事：①写入报名记录（10ms）；②发一封确认邮件（邮件服务很慢，2 秒）。如果你**同步**地等这两件都做完才回复，用户就要干等 2 秒多——而其实他根本不在乎邮件什么时候到。
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as 用户 (Client)
+  participant App as 报名服务 (Server)
+  participant DB as 数据库 (MySQL)
+  participant Email as 邮件网关 (Email Gateway)
+  participant Queue as 消息队列 (Queue)
+  participant Worker as 邮件消费者 (Worker)
+
+  Note over User, Email: 模式一：同步干等 (Blocking Sync)
+  User->>App: 1. 提交报名
+  activate App
+  App->>DB: 2. 写入数据 (10ms)
+  App->>Email: 3. 发送确认邮件 (阻塞 2s)
+  activate Email
+  Email-->>App: 4. 发送成功
+  deactivate Email
+  App-->>User: 5. 响应: 报名成功 (总延迟: ~ 2.01s 🛑)
+  deactivate App
+
+  Note over User, Worker: 模式二：异步解耦 (Non-blocking Async)
+  User->>App: 6. 提交报名
+  activate App
+  App->>DB: 7. 写入数据 (10ms)
+  App->>Queue: 8. 邮件任务入队 (1ms)
+  App-->>User: 9. 响应: 报名成功 (总延迟: ~ 11ms ⚡)
+  deactivate App
+  
+  Queue->>Worker: 10. 后台拉取任务
+  activate Worker
+  Worker->>Email: 11. 异步发送邮件 (消费 2s)
+  deactivate Worker
+```
+
 正确做法：**报名一写完就立刻返回成功，把"发邮件"丢进队列，让后台慢慢发**。用户体验从 2 秒变成 10 毫秒。这就是异步化。
 
 ## 二、三个核心概念（分层）
@@ -43,7 +79,53 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 但队列不是万能的。两个必须配套的机制：
 
 - 超时（[回扣 L4](./error-handling)）：每个等待都要有上限，否则资源被永久占住。整条链路要做<GlossaryTerm term="Timeout Budget" definition="超时预算：给整条调用链分配一个总时间，逐层递减下发，确保失败发生得足够快、资源尽早释放。">超时预算分配</GlossaryTerm>。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Gateway as API 网关 (入口总预算: 500ms)
+  participant Order as 订单服务 (预算: 400ms)
+  participant DB as 数据库 (预算: 200ms)
+
+  Gateway->>Order: 1. 调用下单接口 (携带 Timeout Header: 500ms)
+  activate Order
+  Note over Order: 本地校验花费 100ms,<br/>传给下游的预算递减!
+  
+  Order->>DB: 2. 写入数据 (携带 Timeout Header: 400ms)
+  activate DB
+  Note over DB: DB 繁忙, 阻塞中...
+  alt DB 在 400ms 内未响应 (超时断开)
+    DB--xOrder: 3. 触发超时的异常
+    Order->>Order: 快速回滚本地事务 (10ms)
+    Order-->>Gateway: 4. 返回 504 Gateway Timeout
+  end
+  deactivate DB
+  deactivate Order
+```
+
 - <GlossaryTerm term="Backpressure" definition="背压：当下游处理不过来时，向上游传递“慢一点/别再发了”的信号（如拒绝、限流、阻塞），防止系统被压垮。">背压</GlossaryTerm>：当队列满了、下游处理不过来时，要往上游传"我撑不住了"的信号，而不是无限堆积直到内存爆掉。
+
+```mermaid
+flowchart TD
+  subgraph ProducerSide["生产者 (Ingress / API Server)"]
+    Req["客户端并发请求"] --> CheckQueue{"队列当前大小 < Capacity (1000)?"}
+  end
+
+  subgraph QueueSide["有界缓冲区 (Bounded Buffer)"]
+    Queue["消息队列"]
+  end
+
+  subgraph ConsumerSide["消费者 (Email Workers)"]
+    Worker["Worker 处理线程"] -->|从队列拉取消费| Queue
+  end
+
+  CheckQueue -->|Yes (未满)| Enqueue["写入队列并秒回 202 Accept"]
+  Enqueue --> Queue
+  
+  CheckQueue -->|No (已满 - 触发背压保护)| Backpressure["拒绝请求 / 限制发送速 / 丢弃降载"]
+  Backpressure -->|反馈上游| Shed["返回 429 Too Many Requests / 503"]
+```
+
 
 ### 深入（选学）：用 Little's Law 给系统算账
 
@@ -171,6 +253,43 @@ python labs/month01/l11_async/test_queue.py
 - 你的报名系统在活动开抢瞬间涌入 10 万请求，你用队列削峰。队列该设多大？满了怎么办？（结合 Little's Law 和背压回答。）
 - "发确认邮件"异步化后，如果邮件服务挂了，用户已经看到"报名成功"——这个不一致怎么处理？（提示：[L6 幂等](./idempotency) + 重试 + 最终一致。）
 - 同步调用链 A→B→C，每层超时都设 10 秒合理吗？怎么做超时预算分配？
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在分布式架构中，关于有界队列（Bounded Queue）与无界队列（Unbounded Queue）的防过载设计，以下说法哪项是正确的？',
+      options: [
+        '无界队列能够无限容纳并发请求且不丢失，所以它是防止系统过载宕机的首选方案。',
+        '无界队列会导致在持续过载时积压大量任务，使用户感知的请求延迟飙升，且极易耗尽物理内存导致 OOM 雪崩崩溃；应当使用有界队列，满水位时主动触发背压拒绝或主动降载保护系统。',
+        '有界队列因为无法扩容，一旦在高峰期满了就会导致所有数据永久丢失。'
+      ],
+      answer: 1,
+      explain: '无界队列是一个典型的架构隐形杀手。若入队速度长于消费速度，任务会无限积压在内存中导致系统整体瘫痪。有界队列搭配背压机制能够在过载时主动划出红线、保护核心资源，是高可用微服务的基石。'
+    },
+    {
+      q: '根据利特尔法则（Little\'s Law: L = λ × W），如果一个报名服务平均每秒接收 500 个并发请求（λ），每个请求的平均处理和写库时间（W）为 0.2 秒，该系统若要维持稳态运行而不造成队列无限膨胀，应用层所需的平均并发能力（L）至少为多少？',
+      options: [
+        '至少 100 个',
+        '至少 500 个',
+        '至少 2500 个'
+      ],
+      answer: 0,
+      explain: 'Little\'s Law 公式为 L = λ × W。计算可得：L = 500 × 0.2 = 100。这说明系统在稳态下平均需要并行处理 100 个请求。如果应用服务器的可分配线程池或并发协程数低于 100，队列将无法消化入队流量而崩溃。'
+    },
+    {
+      q: '在微服务同步调用链 A → B → C 中，为什么不应当对每一层接口统一设置相同的静态超时时间（例如统一设为 10 秒）？',
+      options: [
+        '因为相同的超时设置会在网络传输中引起 HTTP 报文大小的物理碰撞。',
+        '因为如果底层 C 发生阻塞，B 在等 C 到 10 秒，A 也在等 B 到 10 秒，会导致整条调用链上的线程和连接资源大面积占满雪崩；应当采用超时预算（Timeout Budget）逐级扣减下发，消耗完即快速失败释放资源。',
+        '因为超时预算是为了给数据加解密算法留足 CPU 时间。'
+      ],
+      answer: 1,
+      explain: '统一超时会导致调用链的“慢雪崩”。超时预算机制确保每一层将“入口剩余的总可用时间”下发给下游。一旦由于网络或底层计算耗尽了当前预算，立刻在下游中断并快速失败，从而极速释放上游的等待资源。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
