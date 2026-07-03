@@ -5,4 +5,4 @@
 - [x] 在 `observability.mdx` 中新增 Mermaid SLO 与错误预算闭环图 (图 3: SLO & Error Budget Loop)
 - [x] 在 `observability.mdx` 末尾引入 `QuizCard` 测验组件 (3 道交互式测试题)
 - [x] 运行 `npm run build` 验证构建与 Mermaid 语法正确性
-- [/] 提交修改代码并输出完成报告
+- [x] 提交修改代码并输出完成报告
