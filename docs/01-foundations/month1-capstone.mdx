@@ -9,6 +9,8 @@ import GuidedExercise from '@site/src/components/GuidedExercise';
 import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # L16 · 月末 Capstone：把 15 节课合成一个系统
 
@@ -31,11 +33,11 @@ import PyRunner from '@site/src/components/PyRunner';
 
 | 需求 | 来自 |
 |---|---|
-| 对外是 REST API，状态码正确 | L9 |
+| 对外是 <GlossaryTerm term="REST API" definition="REST 风格应用程序接口：采用 HTTP 方法（GET/POST/PUT/DELETE）映射标准动作，并使用状态码表达响应状态。">REST API</GlossaryTerm>，状态码正确 | L9 |
 | 输入三层校验，坏数据挡在门外 | L3 |
 | 错误分类，不吞不泄露 | L4 |
 | 状态外移、服务无状态可扩展 | L5 |
-| 重复提交安全（idempotency key） | L6 |
+| 重复提交安全（<GlossaryTerm term="Idempotency Key" definition="幂等键：客户端生成的唯一请求标识，用于重试时让服务端识别重复请求、避免重复扣款/报名。">idempotency key</GlossaryTerm>） | L6 |
 | 按查询建模 + 唯一约束 | L7 |
 | 抢名额并发安全，不超卖 | L8 |
 | 每步结构化日志 + 能算 RED 指标 | L1, L12 |
@@ -57,6 +59,75 @@ flowchart TB
   SVC --> Q["异步队列<br/>L11 发邮件削峰"]
   SVC --> OBS["可观察性<br/>L1/L12 日志+指标+trace"]
   CFG["配置/密钥<br/>L14 环境注入"] -.-> SVC
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 客户端 (Client)
+  participant GW as API 网关/路由 (L9)
+  participant Val as 校验与错误处理 (L3/L4)
+  participant Idem as 幂等检查 (L6)
+  participant Biz as 业务模块 (L2/L5/L14)
+  participant Lock as 并发并发控制 (L8)
+  participant DB as 数据库与索引 (L7)
+  participant Queue as 异步消息队列 (L11)
+  participant Log as 日志可观察性 (L1/L12)
+
+  Client->>GW: 1. 发送报名请求 POST /signups (带 idempotency_key)
+  activate GW
+  GW->>Val: 2. 传递载荷 (Payload)
+  activate Val
+  alt 校验失败
+    Val-->>GW: 3a. 返回 400 Bad Request
+    GW-->>Client: 3b. 拒绝访问
+  else 校验通过
+    Val->>Idem: 4. 幂等拦截 (Idempotency Key Check)
+    activate Idem
+    alt 键已存在 (重复请求)
+      Idem-->>GW: 5a. 返回历史缓存结果
+      GW-->>Client: 5b. 秒回响应 (幂等安全 ✓)
+    else 新增键
+      Idem->>Biz: 6. 调用报名主逻辑 (加载环境配置 L14)
+      activate Biz
+      Biz->>Lock: 7. 并发名额竞争 (锁扣减)
+      activate Lock
+      alt 名额扣减失败 (售罄)
+        Lock-->>Biz: 8a. 提示库存不足
+        Biz-->>Idem: 8b. 缓存失败状态
+        Biz-->>Log: 8c. 记录 rejected_full 结构化日志
+        Biz-->>GW: 8d. 返回 422 Unprocessable Entity
+        GW-->>Client: 8e. 提示名额已满
+      else 扣减成功
+        Lock->>DB: 9. 存储报名实体 (唯一键校验 L7)
+        activate DB
+        DB-->>Lock: 10. 写入成功
+        deactivate DB
+        Lock-->>Biz: 11. 释放锁
+        deactivate Lock
+        
+        Biz->>Queue: 12. "发送确认邮件"慢任务异步入队 (L11)
+        Biz->>Log: 13. 写入事件 created, 携带 trace_id
+        Biz-->>Idem: 14. 缓存成功记录并保存
+        Biz-->>GW: 15. 返回 201 Created
+        deactivate Biz
+        GW-->>Client: 16. 返回报名成功响应
+      end
+    end
+    deactivate Idem
+  end
+  deactivate Val
+  deactivate GW
+```
+
+```mermaid
+flowchart TD
+  subgraph ConcurrencyOptions["抢购名额并发方案决策分支 (ADR Concurrency Branches)"]
+    direction TB
+    Start["开始评估名额并发抢占"] --> Type{"系统主要瓶颈点?"}
+    
+    Type -->|读写冲突低, 偶发抢占| Option1["乐观锁 (Optimistic Lock)<br/>- 版本号 CAS 校验<br/>- 优势: 无死锁, 锁开销低<br/>- 劣势: 冲突高时重试风暴"]
+    Type -->|读写冲突极高, 秒杀场景| Option2["悲观锁 (Pessimistic Lock)<br/>- SELECT FOR UPDATE 排他锁<br/>- 优势: 强一致性, 无空重试<br/>- 劣势: 连接池易占满, 死锁风险高"]
+    Type -->|性能极限, 写入极慢| Option3["原子递减 / 内存计数<br/>- Redis INCRBY / Lua<br/>- 优势: 极高性能, 逻辑卸载<br/>- 劣势: 需额外保证DB最终一致性"]
+  end
 ```
 
 每一层你都已经单独练过；Capstone 就是把它们接成一条完整的请求处理流水线。
@@ -110,6 +181,30 @@ python labs/month01/l16_capstone/test_signup_service.py
     '你能指出这个服务里 L1–L15 各自体现在哪一行。'
   ]}
 />
+<TradeoffExplorer
+  title="并发抢购控制策略取舍"
+  dimensions={['高吞吐性能', '系统低开销', '无死锁风险', '防重试风暴', '实现简易度']}
+  options={[
+    {
+      name: '悲观锁 (SELECT FOR UPDATE)',
+      scores: [2, 1, 1, 5, 4],
+      note: '事务开始即占锁。能够彻底避免应用层重试，但锁竞争长会占满数据库连接池，高并发下极易发生死锁。',
+      whenToUse: '写冲突极其严重、名额极少且不能接受任何性能抖动的场景。'
+    },
+    {
+      name: '乐观锁 (CAS 版本号 / 剩余计数)',
+      scores: [4, 4, 5, 2, 3],
+      note: '提交时校验版本。无死锁、无连接池阻塞，但极端冲突下会因冲突率攀升引发“重试风暴”占满 CPU。',
+      whenToUse: '写冲突呈中低度分布，或能配合前置队列/限流削峰的秒杀系统。'
+    },
+    {
+      name: '基于队列串行化消费',
+      scores: [5, 3, 5, 5, 2],
+      note: '请求全部入有界队列，由后台单线程或限量 Worker 串行扣减。性能最平稳，但系统链路变长。',
+      whenToUse: '超高并发、需要完全保护数据库、且能接受最终一致性异步通知的电商抢购系统。'
+    }
+  ]}
+/>
 
 ## 五、写一份架构决策记录（ADR）
 
@@ -122,8 +217,8 @@ python labs/month01/l16_capstone/test_signup_service.py
 活动开抢瞬间会有大量并发请求抢有限名额，需防止超卖。
 
 ## 选项
-1. 悲观锁：每次抢名额先加锁。简单但并发低。
-2. 乐观锁（版本号）：不加锁，提交时校验版本。并发高，冲突时重试。
+1. <GlossaryTerm term="Pessimistic Locking" definition="悲观锁：一种并发控制策略，假定冲突高，在读取数据时即对记录加排他锁，直到事务提交才释放。安全但阻碍并发。">悲观锁</GlossaryTerm>：每次抢名额先加锁。简单但并发低。
+2. <GlossaryTerm term="Optimistic Locking" definition="乐观锁：一种并发控制策略，假定冲突少，读数据时不加锁，仅在更新时检查在此期间是否有其他事务修改了版本/数值。若冲突则重试。">乐观锁</GlossaryTerm>（版本号）：不加锁，提交时校验版本。并发高，冲突时重试。
 3. 原子扣减：用一条原子操作。最简单，但表达力有限。
 
 ## 决策
@@ -174,6 +269,49 @@ python labs/month01/l16_capstone/test_signup_service.py
 - 把你的 capstone 当面试题，对着架构图讲一遍：需求→约束→设计→取舍→风险。录下来，听听哪里讲不清。
 - 如果用户量 ×1000，你的设计哪一层最先撑不住？怎么改（回扣 L5/L7/L8/L10）？
 - 选一个你做的取舍，写成 ADR，并诚实写下"未解决的问题"。
+
+## 七、常见误解
+
+- **"系统设计的难点在于把每个组件写得完美"**: 实际上，系统设计的真正难点在于“接缝处（Interconnections）”的协调与一致性。例如，当幂等表写入成功，但发送队列失败时，如何补偿？这些协同取舍才最考验架构功底。
+- **"架构决策必须是绝对完美的"**: 没有完美的架构，只有最适合当前业务阶段、研发成本与系统规模的架构。每个决策都有其后果（ADR 的 Consequence），必须诚实地记录与面对。
+- **"只要加上缓存和队列，系统的性能和可用性就自然解决了"**: 缓存引入了数据一致性问题，队列引入了背压防爆和延迟堆积问题。引入组件必须配套引入其代价治理手段。
+
+## 八、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在设计高并发活动抢购（超卖防御）的并发控制逻辑时，以下关于悲观锁与乐观锁的评估，哪项是正确的？',
+      options: [
+        '悲观锁能够完全杜绝应用层由于版本冲突发起的重试，但在高并发竞争剧烈时会导致数据库连接池被排队事务瞬间占满，甚至引发死锁；乐观锁无死锁风险，但在极端冲突下会因高频 CAS 校验失败导致重试风暴从而占满 CPU，需配合前置限流或有界队列。',
+        '乐观锁在任何吞吐量场景下都比悲观锁快 100 倍以上，且不需要任何前置防护。',
+        '悲观锁只在内存中模拟锁，因此绝对不会对物理数据库造成任何连接压力。'
+      ],
+      answer: 0,
+      explain: '这代表了并发控制设计的核心取舍。悲观锁（SELECT FOR UPDATE）在 DB 端排队，开销极大且易死锁；乐观锁通过版本号在应用层自旋重试，但在极端高冲突下会恶化为“重试风暴”压垮 CPU。因此结合有界队列进行串行削峰是极致高并发的优解。'
+    },
+    {
+      q: '在 Capstone 毕业项目中，把“发送确认邮件”这类外部慢任务进行异步化入队，如果邮件网关在高峰期挂了，如何保障系统的最终一致性（Eventual Consistency）？',
+      options: [
+        '一旦邮件网关挂了，就必须自动触发事务回滚，将之前已经写入成功且秒回用户的报名记录彻底物理删除。',
+        '应当通过消息队列的重试策略进行指数退避重试，若重试依然失败则送入死信队列（DLQ），并依靠后台对账监控或人工作业进行补偿修复，确保状态最终一致，而不是在主事务中同步死等。',
+        '邮件异步化后就无法保证最终一致性，只能听之任之，不需要进行任何处理。'
+      ],
+      answer: 1,
+      explain: '外部依赖系统通常是不可控的，不能让它拖慢主交易核心链路。异步化入队后，通过队列重试、死信队列（Dead Letter Queue）归档和后台定时对账任务，是处理这种“分布式事务接缝处”最终一致性落地的通用法则。'
+    },
+    {
+      q: '关于架构决策记录（Architecture Decision Record, ADR）的实际工程价值，以下说法最准确的是？',
+      options: [
+        'ADR 的首要目的是代替编译脚本，自动验证代码的正确性。',
+        'ADR 是将架构师在特定历史时空点做出的核心技术决策（如选择某种数据库或锁机制）时的背景、评估的备选方案、取舍利弊（Tradeoffs）和产生后果进行归档记录，从而防止团队后人在不知悉历史约束的前提下推翻正确的设计而重复踩坑。',
+        'ADR 在系统部署上线后即可直接废弃，不用存放在代码库中。'
+      ],
+      answer: 1,
+      explain: '每一个架构决策都是在当时的产品规模、研发成本与时间约束下做出的权衡。记录 ADR 能让系统架构的演进历史对团队完全透明，避免了“这个烂代码当初是谁写的/为什么要用乐观锁”这类因为历史信息丢失而对老设计产生误解并盲目重构踩坑的悲剧。'
+    }
+  ]}
+/>
 
 ## 恭喜你完成 Month 1
 
