@@ -9,6 +9,7 @@ import GuidedExercise from '@site/src/components/GuidedExercise';
 import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M2L5 · HLD：画端到端系统图
 
@@ -36,13 +37,13 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 | 构件 | 作用 | 对应 Month 1 |
 |---|---|---|
 | 客户端 | 发请求、展示 | L9 |
-| CDN | 就近返回静态内容 | L10 |
-| 负载均衡 | 分发到多台应用机 | L5/L10 |
+| <GlossaryTerm term="CDN" definition="内容分发网络 (Content Delivery Network)：分布在全球多地的边缘服务器集群，用于缓存并就近向用户提供图片、视频、静态网页等内容，以降低延迟和主站带宽压力。">CDN</GlossaryTerm> | 就近返回静态内容 | L10 |
+| <GlossaryTerm term="Load Balancer" definition="负载均衡器 (Load Balancer)：用于将网络流量分发到多个后端服务器实例的设备或软件，以提高系统并发吞吐、可用性并消除单点故障。">负载均衡</GlossaryTerm> | 分发到多台应用机 | L5/L10 |
 | 应用服务（无状态） | 跑业务逻辑 | L5/L9 |
 | 缓存 | 挡住热点读 | L10 |
 | 数据库 | 持久化真实状态 | L5/L7 |
 | 消息队列 | 异步、削峰、解耦 | L11 |
-| 对象存储 | 存大文件（图片/视频） | — |
+| <GlossaryTerm term="Object Storage" definition="对象存储 (Object Storage)：一种非结构化数据存储架构（如 AWS S3），将数据作为带唯一标识的“对象”进行存取，极利于海量图片、视频等扁平化大文件的廉价高扩展存储。">对象存储</GlossaryTerm> | 存大文件（图片/视频） | — |
 
 ### 进阶：画图的顺序与读写路径
 
@@ -55,9 +56,56 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 **读写路径常常不对称**：读多写少的系统，读路径会重缓存/CDN，写路径相对简单。
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 客户端 (Client)
+  participant LB as 负载均衡 (LB)
+  participant App as 应用服务 (App)
+  participant Cache as 缓存 (Redis)
+  participant DB as 数据库 (MySQL)
+  participant Queue as 队列 (MQ)
+  participant W as 异步Worker (Worker)
+
+  Note over Client,DB: 读路径 (Read Path - 极速响应)
+  Client->>LB: 发起读请求
+  LB->>App: 转发请求
+  App->>Cache: 读取缓存
+  alt 缓存命中 (90%)
+    Cache-->>App: 返回数据
+    App-->>Client: 200 OK
+  else 缓存未命中 (10%)
+    Cache-->>App: 未命中 (Nil)
+    App->>DB: 查询数据库
+    DB-->>App: 返回数据
+    App->>Cache: 异步回写缓存
+    App-->>Client: 200 OK
+  end
+
+  Note over Client,W: 写路径 (Write Path - 异步解耦)
+  Client->>LB: 发起上传/写入请求
+  LB->>App: 转发请求
+  App->>DB: 写入核心交易表
+  App->>Queue: 慢任务/通知入队 (异步化)
+  App-->>Client: 201 Created (秒回用户)
+  Queue->>W: 消费者拉取任务
+  W->>W: 生成缩略图/更新Feed流
+```
+
 ### 深入（选学）：抽象层次——别把所有细节画在一张图上
 
 好的架构图分**抽象层次**：高层图只画"系统和系统之间"，下一层才画"某个系统内部的容器/服务"。Simon Brown 的 <GlossaryTerm term="C4 Model" definition="一种分层描述软件架构的方法：Context（系统与外部）、Container（可部署单元）、Component（容器内模块）、Code（类）。逐层放大，避免一张图塞太多。">C4 模型</GlossaryTerm> 就是这个思路：Context → Container → Component → Code，逐层放大。**一张图只讲一个抽象层次**，否则没人看得懂。
+
+```mermaid
+flowchart TD
+  subgraph C4Hierarchy["C4 模型系统分层架构 (C4 Model Hierarchy)"]
+    direction TB
+    L1["1. Context (上下文图)<br/>- 描绘最顶层系统的边界<br/>- 展示系统与外部用户及其他系统的交互关系"]
+    L1 -->|放大细化| L2["2. Container (容器图)<br/>- 展示可部署的运行单元<br/>- 如: Web应用、Mobile端、数据库、中间件"]
+    L2 -->|放大细化| L3["3. Component (组件图)<br/>- 展示每个容器内部的类与服务模块<br/>- 如: 购物车控制器、名额扣减服务"]
+    L3 -->|放大细化| L4["4. Code (类图/代码)<br/>- 展现类之间的依赖与方法级设计模式<br/>- 通常可直接由 IDE 自动反向生成"]
+  end
+```
 
 <ResearchNote
   title="用分层的图来沟通架构"
@@ -170,9 +218,47 @@ flowchart LR
 
 ## 常见误解
 
-- **"图越详细越专业"**：层次混乱、细节过载的图最没用。先画系统级。
-- **"HLD 就是把组件堆上去"**：关键是数据流和读写路径，不是框的数量。
-- **"画完图就完事"**：HLD 是用来发现问题和对齐的，要对着它追问瓶颈与失败路径。
+- **"图越详细越专业"**: 层次混乱、细节过载的图最没用。在讨论高层设计时去纠结类和具体数据表字段只会把所有人带偏。先画好系统级（Context/Container）。
+- **"HLD 就是把组件堆上去"**: 关键是数据流（Data Flow）和读写路径的不对称性设计，而不是纯粹的积木堆砌。画图时必须明确标注连线的箭头方向和数据携带载荷。
+- **"画无向线或者双向箭头"**: 几乎所有的请求都是请求-响应模式，但在 HLD 中，应当用单向箭头表示主动发起调用或数据流动的方向，而不是盲目画双向箭头甚至是没有指向的线段，否则会导致调用关系完全不可读。
+- **"画完图就完事"**: HLD 是用来发现系统缺陷和统一团队认知的。画完后，架构师必须对着图逐一推演“如果 Redis 缓存全部穿透回源怎么办”、“如果消息队列发生堆积会对写路径响应延迟产生什么后果”等边界故障。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在设计大流量的互联网系统高层设计（HLD）时，关于‘读写路径不对称’的设计准则，以下哪项描述是正确的？',
+      options: [
+        '读多写少的系统应当在写路径上采用极为复杂的多级缓存，而读路径上则直接同步读主数据库以保证强一致。',
+        '读路径（读多）适合通过就近的 CDN 以及热点本地/分布式缓存（Redis）来承载，阻断海量请求回源；而写路径则主要关注高可用写入、数据库主从同步与削峰，两者设计偏向完全不同。',
+        '读和写必须共享完全相同的一条同步调用流水线，不允许任何差异。'
+      ],
+      answer: 1,
+      explain: '读多写少是互联网系统的普遍特征。将读写路径分开设计（读走缓存/CDN，写走数据库/队列）是解决高并发、低延迟的核心法则。如果把所有的读请求都同步扔到写库，数据库会在瞬间崩溃。'
+    },
+    {
+      q: 'C4 模型（Simon Brown 提出）是如何解决高层架构图在展示过程中的‘细节过载与层次混乱’痛点的？',
+      options: [
+        '主张废除所有的架构图绘制，只用类名命名规范来表达类结构。',
+        '主张将架构图划分为 Context（系统上下文）、Container（可部署容器）、Component（组件内部模块）和 Code（具体代码）四大互为嵌套的分层，每一层只展示该缩放级别下最合适的信息粒度。',
+        '主张将系统内部全部几万个类的关系全部平铺在一张巨幅白板图里绘制出来。'
+      ],
+      answer: 1,
+      explain: 'C4 模型像电子地图一样提供了可缩放的视图。通过分层描述，可以确保非技术层面的业务方能看懂最高层的 Context 图，而开发人员可以深入查看 Component/Code 图，避免了在一张图里塞入过多不相干细节的悲剧。'
+    },
+    {
+      q: '在一个包含上传大图片/视频以及社交刷 Feed 的 HLD 设计中，以下哪项技术选型与流向设计是符合最佳实践的？',
+      options: [
+        '大图片/视频在客户端直接以 Base64 格式同步存入关系型数据库的单张表主键索引中。',
+        '大图片/视频直接上传至廉价且具备极高扩展性的对象存储（Object Storage），并在读路径上通过边缘 CDN 加速分发；同时将耗时的‘生成缩略图’等后台任务通过消息队列（MQ）异步解耦处理。',
+        '无条件抛记所有的对象存储和队列，强制使用同步文件共享磁盘挂载多台 Web 实例。'
+      ],
+      answer: 1,
+      explain: '这也是 Lampson ‘把常见情况做快’与隔离关注点的体现。大文件不入关系数据库能保护 DB 免受 I/O 打满的风险；对象存储+CDN 承载了大文件的存储与下载加速；消息队列异步化解决了长尾处理任务带来的响应延迟。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
