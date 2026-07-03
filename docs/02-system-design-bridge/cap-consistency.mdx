@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M2L6 · CAP 与一致性模型
 
@@ -31,6 +32,30 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - **拒绝他**：宁可报错，也不返回可能过时的数据（保一致）。
 - **服务他**：返回 B 机房现有的（可能旧的）数据（保可用）。
 
+```mermaid
+flowchart TD
+  subgraph CPPartition["CP 系统（一致性优先 - Partitioned）"]
+    direction TB
+    ClientA_CP["客户端 A"] -->|1. 写入数据 X=1| NodeA_CP["节点 A (主)"]
+    NodeA_CP -.-x|2. 网络分区中断 (无法同步)| NodeB_CP["节点 B (从)"]
+    NodeA_CP -->|3. 同步失败, 报错拒绝| ClientA_CP
+    ClientB_CP["客户端 B"] -->|4. 读取数据| NodeB_CP
+    NodeB_CP -->|5. 锁定/返回错误 (保一致性)| ClientB_CP
+  end
+```
+
+```mermaid
+flowchart TD
+  subgraph APPartition["AP 系统（可用性优先 - Partitioned）"]
+    direction TB
+    ClientA_AP["客户端 A"] -->|1. 写入数据 X=1| NodeA_AP["节点 A"]
+    NodeA_AP -.-x|2. 网络分区中断 (无法同步)| NodeB_AP["节点 B"]
+    NodeA_AP -->|3. 单侧写入成功, 返回 OK| ClientA_AP
+    ClientB_AP["客户端 B"] -->|4. 读取数据| NodeB_AP
+    NodeB_AP -->|5. 返回旧数据 X=0 (保可用性)| ClientB_AP
+  end
+```
+
 **你只能选一个。** 这就是 CAP 定理的核心。
 
 ## 二、三个核心概念（分层）
@@ -48,7 +73,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 | 模型 | 含义 | 例子 |
 |---|---|---|
-| 强一致 | 写完后所有人立刻读到最新 | 银行余额 |
+| <GlossaryTerm term="Linearizability" definition="线性一致性（强一致性）：分布式系统中最高级别的一致性保证。要求所有读请求都能读到最近一次成功写入的值，系统在外界看来像只有一个单机单副本节点一样。">强一致</GlossaryTerm> | 写完后所有人立刻读到最新 | 银行余额 |
 | 读己之写 | 你自己能读到自己刚写的 | 发帖后自己立刻看到 |
 | 最终一致 | 一段时间后所有副本趋于一致 | 点赞数、feed |
 
@@ -57,6 +82,31 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 ### 深入（选学）：CAP 不够用，PACELC 更完整
 
 CAP 只说了"分区时"。但**即使没有分区**，你也在做取舍：要强一致，副本间就得同步等待（高延迟）；要低延迟，就只能放松一致性。这就是 <GlossaryTerm term="PACELC" definition="PACELC 定理：在分区(P)时于可用性(A)和一致性(C)间取舍；否则(E, Else)在延迟(L)和一致性(C)间取舍。比 CAP 更完整，因为它涵盖了没有分区的正常情况。">PACELC</GlossaryTerm>：**分区时 A vs C；否则（Else）延迟 vs C。** 它解释了为什么很多系统平时也选择放松一致性来换低延迟。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 客户端 (Client)
+  participant Primary as 主副本 (Primary Node)
+  participant Replica as 从副本 (Replica Node)
+
+  alt Else 正常无分区场景: 追求低延迟 (Latency Preferred - PA/EL)
+    Client->>Primary: 1. 写入数据
+    Primary->>Primary: 2. 本地提交数据
+    Primary-->>Client: 3. 响应 OK (延迟极低)
+    Primary->>Replica: 4. 异步复制数据 (后台同步)
+  else Else 正常无分区场景: 追求一致性 (Consistency Preferred - PA/EC)
+    Client->>Primary: 1. 写入数据
+    Primary->>Primary: 2. 本地写入暂存
+    Primary->>Replica: 3. 发起同步复制请求
+    activate Replica
+    Replica->>Replica: 4. 副本落盘提交
+    Replica-->>Primary: 5. 复制确认 (ACK)
+    deactivate Replica
+    Primary->>Primary: 6. 最终落盘提交
+    Primary-->>Client: 7. 响应 OK (等待同步复制, 延迟较高)
+  end
+```
 
 <ResearchNote
   title="CAP：从猜想到被证明的定理"
@@ -171,9 +221,47 @@ python labs/month02/m2l6_cap/test_cap.py
 
 ## 常见误解
 
-- **"CAP 是三选二"**：分区不可避免，实际是分区时 C 与 A 二选一。
-- **"最终一致 = 不可靠"**：它是用短暂不一致换高可用，对很多数据完全够用。
-- **"系统要么 CP 要么 AP"**：现代系统多为可调，按数据分级选一致性。
+- **"CAP 是三选二"**: 网络分区 P 在物理世界分布式环境中由于交换机抖动、光纤挖断、垃圾回收停顿（GC Pause）是不可避免的。因此不是“三选二”，而是在“分区发生时”（P），你的系统必须在一致性（C）与可用性（A）之间进行二选一。
+- **"买了极贵极稳定的专用光纤/云网络就不会分区"**: 无论是多么高级的硬件，网络延迟抖动或软件层面的长 GC 导致的“虚假分区”（一侧节点以为另一侧挂了）永远存在。分布式软件设计必须在逻辑层做好 CP/AP 容灾规划。
+- **"最终一致 = 不可靠"**: 最终一致性只是让副本复制的过程异步化。虽然在微秒或秒级窗口期内会读取到旧状态，但这能极大换取极低的写入延迟与多副本的高容灾可用性，适合绝大多数非金融强记账业务。
+- **"系统要么 CP 要么 AP"**: 现代企业级分布式系统（如 DynamoDB、Cassandra）大多支持可调一致性（Tunable Consistency）。对于转账等重要链路，采用强一致读写配置；对于个人社交状态、点赞等非核心操作，采用最终一致性配置，而非全局死板地一刀切。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '分布式系统遭遇‘网络分区（Network Partition）’时，CP 系统与 AP 系统在抉择上的本质区别是什么？',
+      options: [
+        'CP 系统直接切断单机电源，AP 系统则继续给单机增加内存。',
+        'CP 系统优先保证强一致性，为了防止数据发生不一致，宁可向用户报错（牺牲可用性）；AP 系统优先保证高可用，即使网络隔断无法同步，依然接受写入并返回旧数据（牺牲强一致）。',
+        'CP 系统在没有分区时依然报错，AP 系统在有分区时也能够保证强一致性。'
+      ],
+      answer: 1,
+      explain: 'CAP 定理表明，在发生分区 P 的前提下，一致性 C 与可用性 A 互为消长。CP 选择在网络恢复同步前拦截一切不一致读写；AP 则允许各个孤立的分区继续响应请求，待网络恢复后再合并解决不一致。'
+    },
+    {
+      q: 'PACELC 定理在分布式系统设计中，比传统的 CAP 定理补充了哪个至关重要的日常场景？',
+      options: [
+        '补充了‘如果没有网络分区（Else）’时，系统在‘延迟（Latency）’和‘一致性（Consistency）’之间的常态取舍。',
+        '补充了当系统遭遇 CPU 100% 满载时的熔断表现。',
+        '补充了在完全离线状态下移动端 APP 的离线缓存机制。'
+      ],
+      answer: 0,
+      explain: 'CAP 只探讨了‘分区时’的灾难抉择。然而，系统在 99% 的时间里是没有分区的。PACELC 补充了‘正常无分区时’（Else）的取舍：若要保证读写强一致，就必须同步等待副本复制（高延迟 Latency）；若要极低延迟，就必须异步复制（放松一致性）。'
+    },
+    {
+      q: '在线性一致性（Linearizability）与最终一致性（Eventual Consistency）的谱系中，‘读己之写（Read-Your-Own-Writes）’解决的是什么用户体验问题？',
+      options: [
+        '保证全世界所有用户都能在同一毫秒看到该用户发出的新内容。',
+        '保证发帖用户自己提交数据后，刷新页面能立刻看到自己的帖子（即使其他用户可能要晚几秒才能看到），从而避免用户以为‘提交失败’而重复点击。',
+        '保证系统的写 QPS 永远保持在单库几十万次的高位。'
+      ],
+      answer: 1,
+      explain: '读己之写是一种会话级一致性。对于社交网络等应用，最终一致性对旁观者是可以容忍的（朋友圈点赞晚几秒出来），但如果用户自己发完状态刷新却看不见，就会产生‘系统丢数据’的恐慌。该模型能够提供定制的客户端路由来保障发帖者自身的体验。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
