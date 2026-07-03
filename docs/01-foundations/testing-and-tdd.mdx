@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # L13 · 测试与 TDD
 
@@ -34,6 +35,23 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 <GlossaryTerm term="Test Pyramid" definition="测试金字塔：底层大量快而便宜的单元测试，中层适量集成测试，顶层少量慢而贵的端到端测试。比例像金字塔。">测试金字塔</GlossaryTerm> 告诉你测试的配比：
 
+```mermaid
+flowchart TD
+  subgraph TestPyramid["测试金字塔 (Test Pyramid)"]
+    direction TB
+    E2E["端到端测试 (E2E Tests)<br/>数量: 少量 (~5%)<br/>特点: 慢、贵、极易Flaky、信心最高"]
+    Int["集成测试 (Integration Tests)<br/>数量: 适量 (~25%)<br/>特点: 中速、有网路/数据库依赖、真实性好"]
+    Unit["单元测试 (Unit Tests)<br/>数量: 大量 (~70%)<br/>特点: 极快、进程内、便宜、定位精准"]
+  end
+
+  E2E --> Int
+  Int --> Unit
+  
+  Note over E2E: 顶层: 模拟真实用户流 (如: 成功报名)
+  Note over Int: 中层: 验证组件协作 (如: API + 数据库)
+  Note over Unit: 底层: 验证函数逻辑 (如: 格式校验)
+```
+
 | 层 | 测什么 | 特点 |
 |---|---|---|
 | 单元测试（多） | 单个函数/类的逻辑 | 快、便宜、定位准 |
@@ -42,6 +60,19 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 每个测试都遵循 <GlossaryTerm term="AAA Pattern" definition="测试的三段式结构：Arrange（准备数据）、Act（执行被测操作）、Assert（断言结果）。让测试清晰、可读。">AAA</GlossaryTerm>：准备（Arrange）→ 执行（Act）→ 断言（Assert）。
 
+```mermaid
+flowchart TD
+  subgraph AAAPattern["AAA 测试模式规范 (Arrange-Act-Assert)"]
+    direction TB
+    Arrange["1. 准备阶段 (Arrange)<br/>- 构造测试输入参数<br/>- 声明/配置 Test Double 替身"]
+    Act["2. 执行阶段 (Act)<br/>- 触发被测目标函数 / 业务流程"]
+    Assert["3. 断言阶段 (Assert)<br/>- 核对返回值是否符合期望<br/>- 校验 Mock 交互行为数是否匹配"]
+    
+    Arrange --> Act
+    Act --> Assert
+  end
+```
+
 ### 进阶：TDD 红-绿-重构
 
 <GlossaryTerm term="TDD" definition="测试驱动开发：先写一个会失败的测试（红），再写最少的代码让它通过（绿），最后在测试保护下重构。循环往复。">TDD</GlossaryTerm> 把顺序倒过来——**先写测试，再写实现**：
@@ -49,6 +80,20 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 1. **红**：写一个描述期望行为的测试，跑，它失败（因为还没实现）。
 2. **绿**：写最少的代码让它通过。
 3. **重构**：在测试保护下清理代码，再跑确认还绿。
+
+```mermaid
+flowchart TD
+  subgraph TDDLoop["TDD 核心迭代周期 (Red-Green-Refactor)"]
+    direction TB
+    Red["红灯阶段 (RED)<br/>先写一个失败的测试用例"]
+    Green["绿灯阶段 (GREEN)<br/>用最快、最简单的代码让测试通过"]
+    Refactor["重构阶段 (REFACTOR)<br/>在测试安全网下消除冗余、重塑设计"]
+    
+    Red -->|Run & Fail| Green
+    Green -->|Run & Pass| Refactor
+    Refactor -->|Run & Pass| Red
+  end
+```
 
 好处：你被迫先想清楚"正确是什么"，而且永远有一张网。还要分清<GlossaryTerm term="Test Double" definition="测试替身：用来替代真实依赖的假对象。常见有 stub（返回预设值）、mock（验证交互）、fake（轻量真实实现，如内存数据库）。">测试替身</GlossaryTerm>（mock/stub/fake），让单元测试不依赖慢的真实数据库。
 
@@ -175,6 +220,43 @@ python labs/month01/l13_testing/test_money.py
 - 给你前面写的报名服务设计测试组合：哪些用单元、哪些用集成、哪条走 E2E？比例如何？
 - 一个测试偶尔失败，团队倾向"重跑一下就过了"。这是什么信号？你会怎么根治？
 - 覆盖率 100% 就等于没 bug 吗？为什么覆盖率是有用但会误导的指标？
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在构建持续集成（CI/CD）的自动化测试防护网时，为什么大量编写端到端（E2E）测试而不是单元测试（即所谓“冰淇淋蛋筒/倒金字塔”模式）会阻碍团队交付？',
+      options: [
+        '因为 E2E 测试完全无法被集成到任何现代持续集成构建服务器中。',
+        '因为 E2E 测试运行极慢（动辄数十分钟）、受网络与数据环境影响极易出现 Flaky（不稳定失败），且在出错时调用链太长，导致开发极难迅速定位具体故障代码行，极大地拉长了反馈周期。',
+        '因为端到端测试覆盖了真实的数据库，导致代码会在运行后自动格式化硬盘。'
+      ],
+      answer: 1,
+      explain: 'E2E 虽最具信心，但其“脆、慢、贵”的属性注定只能作为金字塔塔尖覆盖主路径。大量边界逻辑、状态分支应当主要由进程内、毫秒级响应、确定性极高的单元测试来进行高比例覆盖。'
+    },
+    {
+      q: '在测试替身（Test Double）中，Stub、Mock 与 Fake 的核心区别是什么？',
+      options: [
+        'Stub 重在提供预设的虚构返回值（控制输入）；Mock 重在验证被测代码与外部组件是否发生了预期的交互行为及次数（校验输出/行为）；Fake 则是一个可运行的、但经过极度简化的轻量实现（如用内存字典实现 FakeDB 隔离磁盘）。',
+        'Stub 是专门为 Python 设计的，Mock 是为了 JavaScript 开发的，Fake 则是专用于 Go 语言的术语。',
+        '它们只是历史遗留的完全相同的概念，彼此没有任何区别。'
+      ],
+      answer: 0,
+      explain: '这是 Martin Fowler 经典的分类法。Stub 扮演被动的“状态供给者”；Mock 扮演主动的“契约核对者”；Fake 是“麻雀虽小五脏俱全”的替代介质，通常用于极速拉起无物理副作用的本地测试。'
+    },
+    {
+      q: '在测试驱动开发（TDD）的红-绿-重构循环中，为什么强调必须在“红灯（RED）”状态下编写测试？',
+      options: [
+        '因为 TDD 的规范框架要求只有在失败时才会自动执行代码格式化。',
+        '因为“红灯”能有效证实新编写的测试本身是具有断言排错能力的，避免测试写错导致代码不管对错都“永远通过”的假阴性问题；同时迫使开发在写代码前站在“调用者”视角想清接口契约。',
+        '因为先写测试可以让生产代码的运行效率自动提升 50%。'
+      ],
+      answer: 1,
+      explain: '在写实现前先写测试，能起到“规格定义”的作用。同时，亲眼见到测试因为缺少实现而“红灯失败”，能够验证你的测试确实有能力捕获该特定行为的缺失，防止写出“永远通过”的废测试。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
