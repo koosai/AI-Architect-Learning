@@ -9,6 +9,7 @@ import GuidedExercise from '@site/src/components/GuidedExercise';
 import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M2L2 · 需求澄清
 
@@ -28,6 +29,24 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 你按"做一个活动报名系统"开干，做出一个常规 CRUD。交付时业务说：这是**限时秒杀报名**——开抢瞬间百万人涌入抢 1000 个名额。这跟常规报名是**完全不同的系统**（要削峰、要防超卖、要抗住尖峰）。你不是代码写错了，是**需求没问清楚**。
 
 > 这一课的铁律：**先把"做什么、给谁、什么规模、什么约束"问清楚并写下来，再设计。**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Biz as 业务方 (Business)
+  actor PM as 产品经理 (PM)
+  actor Arch as 架构师 (Architect)
+  actor Dev as 研发团队 (Developers)
+
+  Biz->>PM: 1. 提议：我们要个“活动报名系统”
+  PM->>Arch: 2. 传达：做一个简单的报名网页
+  Note over Arch,Dev: 缺乏 Scoping 与非功能澄清
+  Arch->>Dev: 3. 指示：写个 CRUD 报名表单即可
+  Dev->>Dev: 4. 编写常规关系型表单写入
+  Biz->>Arch: 5. 验收：“等等，我们这是百万秒杀抢名额！”
+  Arch-->>Dev: 6. 震惊：数据库连接池瞬间打满崩溃！
+  Dev-->>Arch: 7. 痛苦：整个数据模型与架构需要完全推倒重写！
+```
 
 ## 二、三个核心概念（分层）
 
@@ -55,7 +74,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 深入（选学）：需求是本质复杂度
 
-Fred Brooks 在《No Silver Bullet》里区分了<GlossaryTerm term="Essential Complexity" definition="本质复杂度：来自问题本身的、无法被工具消除的复杂度（如搞清楚到底要做什么）。与之相对的是偶然复杂度（accidental，来自工具/实现）。">本质复杂度</GlossaryTerm>和偶然复杂度：换语言、换框架只能消除偶然复杂度；而"想清楚到底要造什么"是本质复杂度，**没有银弹**。这就是为什么需求澄清是架构师最难、最值钱的工作——它处理的是不可消除的那部分难度。
+Fred Brooks 在《No Silver Bullet》里区分了<GlossaryTerm term="Essential Complexity" definition="本质复杂度：来自问题本身的、无法被工具消除的复杂度（如搞清楚到底要做什么）。与之相对的是偶然复杂度（accidental，来自工具/实现）。">本质复杂度</GlossaryTerm>和<GlossaryTerm term="Accidental Complexity" definition="偶然复杂度：在软件开发中由引入的特定实现手段、编程语言或工具框架带来的非本质开销与复杂度（例如配置 Kubernetes 部署脚本或处理 Spring 框架兼容性）。">偶然复杂度</GlossaryTerm>：换语言、换框架只能消除偶然复杂度；而"想清楚到底要造什么"是本质复杂度，**没有银弹**。这就是为什么需求澄清是架构师最难、最值钱的工作——它处理的是不可消除的那部分难度。
 
 <ResearchNote
   title="软件最难的部分，是决定要造什么"
@@ -64,6 +83,16 @@ Fred Brooks 在《No Silver Bullet》里区分了<GlossaryTerm term="Essential C
   insight="Brooks 论证：软件的本质复杂度（理清需求、概念建模）无法靠任何单一技术消除；“软件构建中最难的部分是决定要造什么”。工具进步只能削减偶然复杂度。"
   application="这给需求澄清正名：它不是“正式开工前的客套”，而是处理整个项目里最不可替代的难度。架构师在白板前问的每个问题，都是在攻克本质复杂度。"
 />
+
+```mermaid
+flowchart TD
+  subgraph BrooksComplexity["Fred Brooks 软件复杂度分类 (Brooks Complexity Model)"]
+    direction TB
+    Root["软件总复杂度"] --> Essential["本质复杂度 (Essential Complexity)<br/>- 业务领域的核心逻辑与规则<br/>- 理清用户真正的需求与边界<br/>- 极其困难且‘没有银弹’能消除"]
+    Root --> Accidental["偶然复杂度 (Accidental Complexity)<br/>- 编程语言的繁琐语法与底层细节<br/>- 工具、框架及部署设施的引入开销<br/>- 可以通过高阶语言与成熟框架大大削减"]
+  end
+```
+
 
 ## 三、跟我做一遍：把一句话拆成需求纪要
 
@@ -108,6 +137,21 @@ Fred Brooks 在《No Silver Bullet》里区分了<GlossaryTerm term="Essential C
 
 同一个"报名"功能，非功能需求一变，架构天差地别：普通报名是 CRUD；秒杀报名要队列削峰 + 库存原子扣减 + 限流（回扣 [L8](../foundations/concurrency-basics)、[L11](../foundations/sync-async-timeout)）。**所以澄清非功能需求，就是在选架构。**
 
+```mermaid
+flowchart LR
+  subgraph NFRDrivers["非功能需求 (NFR) 驱动选型路由 (Non-Functional Requirements Routing)"]
+    direction LR
+    Start["评估非功能需求"] --> QPS{"瞬时并发 QPS 量级?"}
+    
+    QPS -->|均值/小流量| DBCRUD["常规关系型 DB CRUD"]
+    QPS -->|百万秒杀/高瞬时| MQ["引入队列削峰 + Redis原子扣减"]
+    
+    Start --> Con{"数据一致性要求?"}
+    Con -->|短暂延迟OK / AP| Eventual["最终一致 (异步推送/消息表)"]
+    Con -->|绝对精准 / CP| Strong["强一致 (分布式锁/两阶段提交)"]
+  end
+```
+
 ### 2. V1 该放什么进去？
 
 <TradeoffExplorer
@@ -115,7 +159,7 @@ Fred Brooks 在《No Silver Bullet》里区分了<GlossaryTerm term="Essential C
   dimensions={['上线速度', '验证价值', '技术风险', '可演进性', '范围可控']}
   options={[
     {
-      name: '最小可行（MVP，只做核心）',
+      name: '最小可行产品（<GlossaryTerm term="MVP" definition="最小可行产品 (Minimum Viable Product)：仅包含能让早期用户使用并收集反馈的最核心功能的产品版本，用于快速验证市场假设。">MVP</GlossaryTerm>，只做核心）',
       scores: [5, 5, 4, 3, 5],
       note: '只做最核心的 1–2 个功能，尽快上线验证。但要小心别把架构做死、难以演进。',
       whenToUse: '需求/市场不确定、要快速验证时。绝大多数新系统的正确起点。'
