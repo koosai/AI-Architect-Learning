@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import SystemSimulator from '@site/src/components/SystemSimulator';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M2L7 · 扩展策略
 
@@ -35,6 +37,26 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - <GlossaryTerm term="Vertical Scaling" definition="垂直扩展（scale up）：换更强的单机（更多 CPU/内存）。简单、无需改架构，但有物理上限、且单点风险。">垂直扩展</GlossaryTerm>：换更强的机器。简单，但有上限、有单点风险。
 - <GlossaryTerm term="Horizontal Scaling" definition="水平扩展（scale out）：加更多机器分担负载。理论上可无限扩，但要求服务无状态、需要负载均衡和数据切分。">水平扩展</GlossaryTerm>：加更多机器。可无限扩，但**前提是无状态**（回扣 [L5](../foundations/state-and-storage)）。
 
+```mermaid
+flowchart TD
+  subgraph ScalingComparison["扩展策略对比 (Vertical vs Horizontal Scaling)"]
+    direction LR
+    
+    subgraph ScaleUp["垂直扩展 (Scale Up / Scale Vertically)"]
+      Host1["单台服务器<br/>(4核 8G)"] ===> Host2["升级后的强力服务器<br/>(64核 256G - 物理硬件上限)"]
+      Note1["优势: 代码零修改, 强一致简单<br/>劣势: 成本昂贵, 存在物理天花板, 单点故障"]
+    end
+    
+    subgraph ScaleOut["水平扩展 (Scale Out / Scale Horizontally)"]
+      Node1["服务器 1"] --- LB["负载均衡器 (LB)"]
+      Node2["服务器 2"] --- LB
+      Node3["服务器 3"] --- LB
+      NodeN["服务器 N (可无限新增节点)"] --- LB
+      Note2["优势: 硬件便宜, 理论无限扩容, 高可用<br/>劣势: 服务必须无状态, 引入网络调用与分发杂度"]
+    end
+  end
+```
+
 **先垂直、后水平**通常是对的：垂直简单，先榨干单机；真不够了再水平（[WhatsApp 就是这个顺序](../atlas/whatsapp.mdx)）。
 
 ### 进阶：复制扩读，分片扩写
@@ -46,9 +68,62 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 读多写少 → 先复制 + 缓存；写或存储超单库 → 才分片（回扣 [M2L3 的判断](./capacity-estimation)）。
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as 用户 (Client)
+  participant App as 应用服务 (App)
+  participant Primary as 主库 (Primary DB)
+  participant Replica as 从库 (Replica DB)
+  participant ShardRouter as 分片路由器 (Shard Router)
+  participant ShardA as 分片A库 (Shard A DB)
+  participant ShardB as 分片B库 (Shard B DB)
+
+  Note over User,Replica: 复制扩读模式 (Replication / Read Scalability)
+  User->>App: 1. 提交写入交易数据
+  App->>Primary: 2. 写入数据
+  Primary-->>App: 3. 写入确认 OK
+  Primary->>Replica: 4. 异步数据同步复制 (Replication Delay)
+  User->>App: 5. 发起并发查询请求
+  App->>Replica: 6. 路由并分摊读取流量到从库 (Scale Read)
+  Replica-->>App: 7. 返回查询结果
+
+  Note over User,ShardB: 分片扩写模式 (Sharding / Write Scalability)
+  User->>App: 8. 写入 user_id=101 订单
+  App->>ShardRouter: 9. 传入 Shard Key (user_id=101)
+  ShardRouter->>ShardRouter: 10. 计算 Hash(101) % 2 = Shard A
+  ShardRouter->>ShardA: 11. 直连写入分片 A 数据库 (Scale Write)
+  User->>App: 12. 写入 user_id=102 订单
+  App->>ShardRouter: 13. 传入 Shard Key (user_id=102)
+  ShardRouter->>ShardRouter: 14. 计算 Hash(102) % 2 = Shard B
+  ShardRouter->>ShardB: 15. 直连写入分片 B 数据库
+```
+
 ### 深入（选学）：为什么分片要用一致性哈希
 
 最朴素的分片是"key % N"。但它有个致命问题：**一旦增减节点（N 变了），几乎所有 key 都要重新落位、海量数据搬迁**。<GlossaryTerm term="Consistent Hashing" definition="一致性哈希：把节点和 key 映射到一个环上，key 归属顺时针最近的节点。增减节点时，只有相邻的一小部分 key 需要迁移，而不是全部。">一致性哈希</GlossaryTerm> 解决了这点：增减节点时只有一小部分 key 需要迁移。这是几乎所有分布式存储（缓存、NoSQL）的基础。
+
+玩一下这个一致性哈希模拟器，输入不同的 Key（如 user_101、order_502），观察它们是如何映射到哈希环上，并顺时针寻找最近的物理节点的：
+
+<SystemSimulator type="consistent-hash" />
+
+```mermaid
+flowchart TB
+  subgraph HashRing["一致性哈希环结构 (Consistent Hash Ring)"]
+    direction TB
+    Ring(("哈希空间环 (0 ~ 2^32 - 1)"))
+    
+    NodeA["节点 A (哈希位置 60°)"] -->|顺时针接管| Key1["Key: user_128 (哈希位置 15°)"]
+    NodeB["节点 B (哈希位置 180°)"] -->|顺时针接管| Key2["Key: user_256 (哈希位置 120°)"]
+    NodeC["节点 C (哈希位置 300°)"] -->|顺时针接管| Key3["Key: user_512 (哈希位置 240°)"]
+    
+    Ring --- NodeA
+    Ring --- NodeB
+    Ring --- NodeC
+    
+    NoteRing["扩缩容性质:<br/>- 增设节点 D (如 150°): 仅需从节点 B 迁移 120°~150° 的 Key<br/>- 节点 A/C 的数据完全不需要发生任何移动"]
+  end
+```
 
 <ResearchNote
   title="去中心化扩展的范本：Dynamo"
@@ -162,9 +237,46 @@ python labs/month02/m2l7_sharding/test_shard.py
 
 ## 常见误解
 
-- **"扩展就是加机器"**：有状态服务加机器会出 bug；要先无状态化。
-- **"一上来就分片最彻底"**：分片复杂度极高，应是最后一步。
-- **"key % N 分片简单又好"**：扩容时要搬几乎所有数据，生产灾难。
+- **"扩展就是加机器"**: 很多初学者误以为只要加机器就能解决一切性能瓶颈。如果你的应用服务器内部在本地内存中存放了用户的 Session 状态，强行水平扩展加机器会导致请求在不同服务器间跳转时发生状态丢失（Session 失效）。水平扩展的前提是应用必须做到“无状态（Stateless）”。
+- **"一上来就分片最彻底"**: 数据库水平分片（Sharding）是数据层架构设计的“终极核武器”，但它伴随极其恐怖的副作用：无法进行跨分片的 Join 查询、分布式事务带来严重的延迟开销、分片键一旦选错后续二次迁移极其痛苦。应当严格遵循“垂直升级 -> 缓存阻挡 -> 读写分离复制 -> 最终才分片”的防御性扩展路径。
+- **"key % N 分片简单又好用"**: 朴素取模哈希分片最容易实现，但也最脆弱。一旦集群需要扩缩容（N 变 N+1 或 N-1），几乎所有的 key 重新计算取模都会落到不同的节点上，产生高达 80%~90% 以上的海量数据搬迁。这在生产环境中会瞬间打爆网卡、磁盘 I/O 并让缓存大规模穿透，是绝对的生产灾难。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在状态层（数据库）的水平扩展中，‘一主多从复制（Replication）’与‘水平分片（Sharding）’各自最适合解决什么痛点？',
+      options: [
+        '一主多从复制最适合解决高并发读（读多写少）的系统瓶颈；而水平分片则是为了扩充数据库的整体写吞吐上限与物理存储容量瓶颈。',
+        '一主多从复制是为了扩充写吞吐；水平分片则是为了处理轻量级读。',
+        '两者完全相同，可以在任何场景下互换使用。'
+      ],
+      answer: 0,
+      explain: '主从复制中，所有写操作依然必须经过主库，因此主从复制无法提升写 QPS；从库分摊了读压力，因此最适合扩读。而分片将数据水平拆分存放在多台独立数据库实例上，各自承担一部分写，从而真正实现了写 QPS 与存储空间的水平扩展。'
+    },
+    {
+      q: '当分布式缓存或 NoSQL 数据库集群需要进行节点扩缩容时，为什么应当优先引入‘一致性哈希（Consistent Hashing）’算法？',
+      options: [
+        '因为一致性哈希可以加快 CPU 执行 % 取模运算的物理速度。',
+        '因为在增减节点时，一致性哈希通过哈希环映射机制，只需要迁移大约 1/N（N 为节点总数）的局部 Key，避免了传统 key % N 取模导致的全量数据重落位与缓存雪崩。',
+        '因为一致性哈希可以强制实现分布式事务强一致性。'
+      ],
+      answer: 1,
+      explain: '朴素取模分片在 N 变动时会导致近乎 100% 的 Key 映射位置发生偏移；一致性哈希把节点与 Key 同时映射到环形空间，使得节点增加或减少时，仅影响环上相邻节点之间的那一部分 Key，极大地降低了扩容搬迁的数据量与网络开销。'
+    },
+    {
+      q: '架构师在考虑将单体系统演进到水平扩展架构之前，首要完成的软件架构改造是什么？',
+      options: [
+        '必须将业务应用服务层改造为“无状态（Stateless）”，将 Session、缓存等状态外置到 Redis 或数据库中，确保任意一台新拉起的实例都能等价处理任何用户的请求。',
+        '必须先购买市面上最昂贵的数据库服务器硬件。',
+        '必须先引入分布式消息队列（MQ）进行所有接口调用的异步化。'
+      ],
+      answer: 0,
+      explain: '水平扩展的核心是多台等价的应用实例在负载均衡器后并行运行。如果应用实例中包含不可共享的状态（如本地 Session），请求被分发到不同实例时就会出错。因此，“无状态化”是应用层能够进行水平扩展的绝对前置基石。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
