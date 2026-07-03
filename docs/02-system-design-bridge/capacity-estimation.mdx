@@ -11,6 +11,7 @@ import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import CapacityEstimator from '@site/src/components/CapacityEstimator';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M2L3 · 容量估算
 
@@ -22,12 +23,27 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 />
 
 :::tip 估算不求精确，只求数量级
-没人能精确预测流量。但"每秒 10 次"还是"每秒 10 万次"，是完全不同的两个系统。容量估算就是快速算出**数量级**，让你在白板上几分钟内就排除掉一大半错误方案。
+没人能精确预测流量。但"每秒 10 次"还是"每秒 10 万次"，是完全不同的两个系统。利用 <GlossaryTerm term="Back-of-the-Envelope Estimation" definition="信封背面估算：在纸张/信封背面利用极简乘除法进行数量级粗估的方法，不求精确，只求量级对，以便快速筛选技术可行性。">back-of-the-envelope 估算</GlossaryTerm> 快速算出**数量级**，让你在白板上几分钟内就排除掉一大半错误方案。
 :::
 
 ## 一、"这系统要几台机器？"
 
 面试官或老板问"这系统要几台机器、什么数据库扛得住？"——答不上来，是因为你没做容量估算。其实只要几个数字相乘：用户量 × 人均操作 → 每天操作数 → 每秒操作数（QPS）→ 再乘大小 → 存储和带宽。**会算这套，你就能把"感觉"变成"数字"。**
+
+```mermaid
+flowchart LR
+  subgraph CalculationFlow["容量心算推导流 (Back-of-the-Envelope Workflow)"]
+    direction LR
+    DAU["日活用户数 (DAU)"] -->|x 人均日操作数| DailyOps["日均总操作次数 (Daily Ops)"]
+    DailyOps -->|除以 86400 (秒/天)| AvgQPS["平均每秒 QPS (Avg QPS)"]
+    AvgQPS -->|x 峰值因子 (2-10)| PeakQPS["峰值 QPS (Peak QPS)"]
+    
+    DailyOps -->|x 单条负载字节大小| Storage["日新增存储量 (Storage/Day)"]
+    Storage -->|x 365| YearStorage["年新增存储量 (Storage/Year)"]
+    
+    PeakQPS -->|x 单条字节大小| Bandwidth["网络带宽需求 (Bandwidth/s)"]
+  end
+```
 
 ## 二、三个核心概念（分层）
 
@@ -37,7 +53,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 - <GlossaryTerm term="QPS" definition="每秒查询/请求数（Queries Per Second）。把每天的操作数除以 86400（一天的秒数）就得到平均 QPS。">QPS</GlossaryTerm>：每秒多少请求 = 每天操作数 ÷ 86400。
 - 存储：每天新增数据 = 每天写入数 × 每条大小；再乘天数/年数。
-- 带宽：QPS × 每次的数据大小。
+- <GlossaryTerm term="Bandwidth" definition="带宽：网络在单位时间内传输数据的最大容量，通常在估算中用每秒传输的字节数（Bytes/s）来表示，公式为 QPS × 平均请求/响应载荷大小。">带宽</GlossaryTerm>：QPS × 每次的数据大小。
 
 记住几个数量级锚点：一天 ≈ **86400 秒**（约 10 万）；常用 [Jeff Dean 延迟数字](../foundations/request-path)。
 
@@ -50,14 +66,56 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 玩一下这个估算器，拖动参数看 QPS / 存储怎么变：
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as 海量用户群 (Users)
+  participant ELB as 负载均衡器 (ELB)
+  participant Svc as 应用集群 (App Servers)
+  participant Auto as 弹性伸缩组 (Auto-scaler)
+  participant DB as 数据库 (Database)
+
+  Note over User,DB: 常态阶段 (平均 QPS = 500/s)
+  User->>ELB: 1. 平稳访问
+  ELB->>Svc: 2. 路由请求到现有的 2 台实例
+  Svc->>DB: 3. 执行日常写读交易
+  
+  Note over User,DB: 高峰突发阶段 (峰值因子 = 5, QPS 爆冲至 2500/s)
+  User->>ELB: 4. 突发秒杀活动/流量爆发
+  activate ELB
+  ELB->>Svc: 5. 瞬间冲刷，CPU 使用率飙升至 95%
+  activate Svc
+  Svc-->>Auto: 6. 触发高 CPU 告警指标
+  activate Auto
+  Auto->>Svc: 7. 紧急扩容拉起 8 台新实例 (Scale Out)
+  deactivate Auto
+  Svc->>DB: 8. 后端写库压力激增，评估连接池与吞吐上限
+  deactivate Svc
+  deactivate ELB
+```
+
 <CapacityEstimator />
 
 ### 深入（选学）：估算直接决定架构
 
 估算的结果会**直接淘汰方案**：
-- 写 QPS 几十 → 单库够；写 QPS 几万 → 必须分片（回扣 [L7 分片](../foundations/data-modeling)）。
+- 写 QPS 几十 → 单库够；写 QPS 几万 → 必须<GlossaryTerm term="Database Sharding" definition="数据库分片：将大表水平切分到多个物理数据库节点上，以解决单机存储容量和写入性能瓶颈。">分片</GlossaryTerm>（回扣 [L7 分片](../foundations/data-modeling)）。
 - 读写比 100:1 → 缓存是第一优先；1:1 → 缓存收益有限。
 - 存储 TB 级且增长快 → 要考虑冷热分层、对象存储。
+
+```mermaid
+flowchart TD
+  subgraph ScaleDecisions["数据库架构演进决策 (Storage Scaling Paths)"]
+    direction TB
+    Start["评估系统峰值写 QPS 与存储"] --> QPS1{"写 QPS < 1,000 / 年增 < 1TB?"}
+    
+    QPS1 -->|Yes - 小规模| OptionA["极简单机数据库 (Single DB)<br/>- 策略: 读写都在单个实例<br/>- 优势: 简单, 强一致, 无网络同步延迟"]
+    QPS1 -->|No - 中大规模| QPS2{"写 QPS 1,000 - 10,000?"}
+    
+    QPS2 -->|Yes| OptionB["读写分离 + 主从架构 (Read Replicas)<br/>- 策略: 单主写, 多从读, 前置 Redis 缓存<br/>- 优势: 极大扩充读吞吐, 适合读多写少"]
+    QPS2 -->|No - 巨型规模| OptionC["分库分表 / 分片 (Sharding / NoSQL集群)<br/>- 策略: 一致性哈希分片或分区机制<br/>- 优势: 水平扩充写入能力与存储上限"]
+  end
+```
 
 <ResearchNote
   title="back-of-the-envelope：工程师的快速估算术"
@@ -177,9 +235,47 @@ python labs/month02/m2l3_capacity/test_estimate.py
 
 ## 常见误解
 
-- **"估算要算得很准"**：量级对就够，纠结小数点是浪费时间。
-- **"按平均流量准备机器"**：高峰会直接打垮你，要按峰值。
-- **"先选数据库再说"**：先估算，让数字告诉你需要什么数据库。
+- **"估算要算得很准"**: 量级对就够，纠结个位数或小数点后几位是浪费时间。每天 110 万次写和 100 万次写在架构选型上没有任何区别，但 100 万次和 1 亿次写则会带来本质差异。
+- **"按平均流量准备机器"**: 真实世界的访问具有强烈的“长尾效应”和突发波动。按平均值规划，在高峰期（如早晚通勤或活动整点）服务器会直接 CPU/内存被打满而崩溃。系统必须按峰值系数（Peak Factor）或通过弹性伸缩配合限流熔断来做容量规划。
+- **"先选数据库再说"**: “Cassandra 大而全，所以必须用它”是典型的偶然复杂度思维。先进行容量估算，让数字逻辑告诉你是否需要分片、读写比是否需要强缓存。
+- **"只顾业务数据，忽视系统冗余"**: 物理磁盘的采购和规划要考虑索引文件（可能占用 30%-100% 数据量）、日志文件（WAL/Binlog）、备份保留策略以及主从副本三倍物理空间冗余。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在系统设计面试或真实的容量规划中，为什么要将“1天 ≈ 86400秒（粗估为 10 万秒）”作为计算 QPS 的核心锚点？',
+      options: [
+        '因为每天的操作总数除以 100,000 可以帮助我们在白板前快速估算出平均 QPS，虽然略微低估，但在数量级估算中极其简便、易于心算且能光速筛选方案。',
+        '因为 86400 是世界上所有操作系统的绝对最高并发上限限制。',
+        '因为在估算中必须使用小数点后四位的精确秒数，否则系统编译会报错。'
+      ],
+      answer: 0,
+      explain: 'Back-of-the-envelope 心算的核心是“快速估算数量级”。将一天秒数取 10 万，可以在极短时间内完成除法，得出大概的操作流量大小。在此基础上乘上峰值系数（如 3 或 5），即可快步推演架构图。'
+    },
+    {
+      q: '在计算数据库的年度存储量时，以下哪个计算因素是初学者常常忽略，但在生产规划中至关重要的？',
+      options: [
+        '忽略了关系型数据库的索引开销、日志（WAL/Binlog）所占容量、备份留存策略以及多副本冗余因子（如 3 副本存储乘 3），导致物理磁盘采购量被严重低估。',
+        '忽略了 CPU 的风扇转速对磁盘写入速度的影响。',
+        '忽略了每次网络请求时数据包里的 HTTP 报头大小。'
+      ],
+      answer: 0,
+      explain: '原始数据负载大小不等于物理存储大小。在生产中，索引（Index）可能占去原始数据大小的 50% 甚至更多；WAL 日志和备份（Backup）也是巨大的空间消耗者；更不用说高可用集群的多副本冗余。因此，估算完原始大小后，通常要乘上一个 2-3 倍的冗余及辅助因子。'
+    },
+    {
+      q: '如果估算得出系统的写入 QPS 均值是 50/s，而峰值 QPS 为 150/s，存储量每年约 20GB，我们在选择存储方案时该如何抉择？',
+      options: [
+        '直接引入包含 10 个节点的 Sharding 数据库集群、部署 Kafka 以及多层缓存，以防系统崩溃。',
+        '单台常规的关系型数据库（如 PostgreSQL/MySQL）便足以轻松应对此读写规模，不需要任何分布式分片或缓存，应当保持架构简单，避免过度设计。',
+        '无条件选择大而全的对象存储（如 S3）来存放所有的结构化交易数据。'
+      ],
+      answer: 1,
+      explain: '容量估算是优秀的“方案淘汰器”。150/s 峰值 QPS 和 20GB/年存储属于极小的负载量级，一台配置合理的单机数据库即可应对（常规单机 DB 能轻松应对几千 QPS 写入）。在这个规模下，引入分片和消息队列会带来极高且毫无意义的偶然复杂度。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
