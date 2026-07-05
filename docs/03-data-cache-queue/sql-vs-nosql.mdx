@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M3L4 · SQL vs NoSQL 建模实战
 
@@ -28,12 +29,59 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 要展示"某用户的所有订单"。关系型：users 表 + orders 表，查时 <GlossaryTerm term="JOIN" definition="连接：关系数据库把多张表按关联键拼起来的操作（如 users.id = orders.user_id）。强大灵活，但跨表 join 在大数据量/分片下可能很慢。">join</GlossaryTerm> 两张表。文档型：把订单**嵌入**用户文档，一次读出。两条路各有代价——这一课讲清楚。
 
+```mermaid
+flowchart LR
+  subgraph RelationalModel["关系型规范化多表模型 (Relational Normalized Model)"]
+    direction TB
+    UsersTable["users 表<br/>- id (PK)<br/>- name"]
+    OrdersTable["orders 表<br/>- id (PK)<br/>- user_id (FK)<br/>- item_id (FK)<br/>- order_date"]
+    ItemsTable["items 表<br/>- id (PK)<br/>- name<br/>- price"]
+    
+    OrdersTable -->|FK| UsersTable
+    OrdersTable -->|FK| ItemsTable
+    NoteRel["特征:<br/>- 每个事实只存一处<br/>- 严格外键关联<br/>- 零数据冗余"]
+  end
+
+  subgraph DocumentModel["文档型反规范化嵌套模型 (Document Denormalized Model)"]
+    direction TB
+    UserDoc["用户文档 (MongoDB User Document)<br/>{<br/>&nbsp;&nbsp;_id: 1,<br/>&nbsp;&nbsp;name: 'Ada',<br/>&nbsp;&nbsp;orders: [<br/>&nbsp;&nbsp;&nbsp;&nbsp;{ id: 11, item: 'book', price: 99.0 },<br/>&nbsp;&nbsp;&nbsp;&nbsp;{ id: 12, item: 'pen', price: 5.0 }<br/>&nbsp;&nbsp;]<br/>}"]
+    NoteDoc["特征:<br/>- 自包含嵌套数组<br/>- 故意冗余商品名/价格<br/>- 无需多表外键"]
+  end
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：规范化 + join vs 嵌入
 
 - **关系型**：数据<GlossaryTerm term="Normalization" definition="规范化：每个事实只存一处、不冗余（如订单只存 user_id 引用用户）。改一处即全对，但查询常需 join。">规范化</GlossaryTerm>成多表，用 join 关联。无冗余、一致性好，但查询要拼表。
-- **文档型**：把相关数据<GlossaryTerm term="Embedding" definition="嵌入：把关联数据直接放进同一个文档（如用户文档里嵌一个 orders 数组）。一次读就拿全，但数据可能冗余、更新要改多处。">嵌入</GlossaryTerm>一个文档。一次读拿全（快），但冗余、更新麻烦。
+- **文档型**：基于 <GlossaryTerm term="Document Model" definition="文档模型：以文档形式（通常为 JSON 或 BSON）存储和查询数据的 NoSQL 数据库模型，典型代表为 MongoDB。特别适合自包含、树形嵌套结构的数据。">文档模型</GlossaryTerm>，将相关数据<GlossaryTerm term="Embedding" definition="嵌入：把关联数据直接放进同一个文档（如用户文档里嵌一个 orders 数组）。一次读就拿全，但数据可能冗余、更新要改多处。">嵌入</GlossaryTerm>一个文档。这种模型往往具备 <GlossaryTerm term="Schema-less" definition="无固定 Schema：指数据库不在物理引擎层强制校验数据表结构。文档与文档之间可以拥有完全不同的字段组合，具备极高的敏捷扩展能力，但一致性校验责任随之转移至应用层。">无固定 Schema (Schema-less)</GlossaryTerm> 特性。一次读拿全（快），但冗余、更新麻烦。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 客户端 (Client)
+  participant SQL as 关系型数据库 (MySQL)
+  participant NoSQL as 文档型数据库 (MongoDB)
+
+  Note over Client,SQL: 场景 1: 关系型规范化读取 (需要 Join 拼表 - 产生多次 I/O)
+  Client->>SQL: SELECT ... FROM users JOIN orders ON ... WHERE users.id=1
+  activate SQL
+  SQL->>SQL: 扫描 users 索引找到 Ada 的页偏置
+  SQL->>SQL: 扫描 orders 索引查找 user_id=1 的行主键
+  SQL->>SQL: 回表读取 orders 物理行数据
+  SQL->>SQL: 内存行拼接 (Hash Join / Nested Loop)
+  SQL-->>Client: 返回行拼接后的订单详情集
+  deactivate SQL
+  Note over Client,SQL: 缺点: 并发高或表分片(Sharding)后跨网络 Join 性能衰退极快!
+
+  Note over Client,NoSQL: 场景 2: 文档型嵌入读取 (一键拉回 - 物理连续或单次 I/O)
+  Client->>NoSQL: db.users.findOne({_id: 1})
+  activate NoSQL
+  NoSQL->>NoSQL: 扫描 _id 聚集索引，定位到对应文档 BSON 数据块
+  NoSQL-->>Client: 一次性拉出包含内嵌 orders 数组的完整文档
+  deactivate NoSQL
+  Note over Client,NoSQL: 优点: 零 Join 计算, 单次磁盘 I/O 读完数据即走, 读取效率极佳!
+```
 
 ### 进阶：按访问模式选嵌入还是引用
 
@@ -43,6 +91,27 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - **独立查询、多对多、数量无界** → 引用（如订单引用商品，商品被很多订单引用）。
 
 嵌入优化读，引用优化一致性和灵活查询。
+
+```mermaid
+flowchart TD
+  subgraph EmbedDecide["嵌入 (Embed) 还是引用 (Reference) 决策树"]
+    direction TB
+    StartDecide["判定实体关系类型与访问模式"] --> Q_Relationship{"1. 数据是一对一 (1:1)<br/>还是多对多 (M:N)?"}
+    
+    Q_Relationship -->|1:1 关系| Q_Together{"2. 是否总是一起读取和修改?"}
+    Q_Relationship -->|M:N 关系| Choice_Ref["建议: 引用 (Reference)<br/>- 避免产生毁灭性数据冗余<br/>- SQL 联表或应用层手动 Join"]
+    
+    Q_Together -->|No| Choice_Ref
+    Q_Together -->|Yes| Choice_Embed["建议: 嵌入 (Embedding)<br/>- 比如订单的详情/运费详情"]
+    
+    Q_Relationship -->|1:N 关系| Q_Bounded{"3. 子级数量是否有上限 (Bounded)?"}
+    Q_Bounded -->|No - 数量极其巨大或无限增长<br/>如大V的粉丝列表| Choice_Ref
+    Q_Bounded -->|Yes - 有固定且少量的限制<br/>如订单下包含的商品子项| Q_UpdateFreq{"4. 被嵌入的数据是否被其他实体共享且频繁更新?"}
+    
+    Q_UpdateFreq -->|Yes - 例如商品的价格/描述频繁修改| Choice_Ref
+    Q_UpdateFreq -->|No - 属于订单私有, 归档后极少改动| Choice_Embed
+  end
+```
 
 ### 深入（选学）：很多 NoSQL 没有 join
 
@@ -164,9 +233,46 @@ NoSQL 里嵌入/冗余很常见，但**冗余的每一份都要在更新时同�
 
 ## 常见误解
 
-- **"NoSQL 没有 schema 所以随便存"**：恰恰要更用心按访问模式设计，否则查询会很痛。
-- **"NoSQL 比 SQL 快"**：它读快是因为反规范化/嵌入，代价是写和一致性。
-- **"嵌入总是更好"**：多对多、反查、无界增长的数据，引用才合适。
+- **"NoSQL 具备无固定 Schema (Schema-less) 特性，所以可以野蛮随意存放任意格式的数据"**: 这是极具欺骗性的陷阱。Schema-less 仅仅是数据库引擎不再主动校验，实际上应用程序内部对读取字段有极其脆弱的契约约束。如果缺乏精心规划的“隐式 Schema”访问模式（Access Patterns）设计，直接混合嵌入各种残缺格式，很快系统就会由于无法反查和过滤陷入死锁泥潭。
+- **"NoSQL 数据库天然就比关系型 SQL 数据库读取速度要快"**: 这种对比完全脱离了物理机制。NoSQL 的高速读取主要是通过“反规范化与数据嵌入”，将多表 Join 计算前置分摊到了“写时冗余投递”。其读加速的本质是应用层代码用“写放大”和“最终一致性一致性折损”做出的赌注性置换，并不是物理引擎硬件层面的神奇魔法。
+- **"既然文档嵌套读性能这么好，那应该全面采用嵌入，废除引用关联"**: 嵌入极易引发“无界增长（Unbounded Grow）”。例如，将商品的每条买家评论直接嵌在商品文档内部，随着时间推移，单条商品文档将无限膨胀，严重时甚至直接击穿单文档 16MB 的存储上限，并在磁盘上产生频繁的文件块迁移（File Move）产生极高的写尾延迟。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '关于关系型数据库的‘规范化 (Normalization)’与文档型 NoSQL 数据库的‘反规范化 (Denormalization)’，以下哪项关于读写成本转移的陈述是正确的？',
+      options: [
+        '文档型 NoSQL 数据库消除了所有的计算开销，无论是读还是写都比 SQL 便宜数万倍。',
+        '关系型规范化将复杂度放在‘读时 Join’上，写入只需更新一处物理记录，一致性极强但高频 Join 耗费 CPU/磁盘 I/O；文档型反规范化则‘用写换读’，将复杂度转移到‘写时维护冗余’（写入多处或修改大文档），以牺牲写入性能与强一致性换取极高的单次读取性能。',
+        'SQL 数据库完全不支持反规范化建模，只能通过视图（View）实现查询。'
+      ],
+      answer: 1,
+      explain: '用写换读。反规范化的本质是在写入时耗费额外的计算与多份冗余空间，从而保证在读取时能通过单次 Key-Value 或单条文档提取拉回全部所需状态，这是海量高并发读取的核心手段。'
+    },
+    {
+      q: '在设计一对多（1:N）数据关联时，什么情况下应该采用‘嵌入（Embedding）’，什么情况下应该采用‘引用（Referencing/外键关联）’？',
+      options: [
+        '只要是多表关联就必须使用引用，文档型数据库中装配引用是不合法的。',
+        '当关联实体总是一起被读取、存在从属关系、且 N 的数量有确定上限（如订单的多个收货地址）时适合‘嵌入’；当关联实体独立查询、或者 N 的数量无界/非常巨大（如一个大V的千万级粉丝列表，可能引起文档超过 16MB 限制）时，必须采用‘引用’。',
+        '当需要频繁修改关联实体的共享字段时应该选择嵌入。'
+      ],
+      answer: 1,
+      explain: '嵌入 vs 引用。如果子文档数量无限增长（Unbounded 1:N），在文档型 NoSQL（如 MongoDB）中嵌入会导致文档不断物理膨胀、频繁触发磁盘文件移动和页重构，甚至突破单文档尺寸上限，此时必须使用外键引用进行分表或关联存储。'
+    },
+    {
+      q: '为什么在许多不支持跨节点分布式 Join 的 NoSQL 场景中，架构师设计业务时必须接受并处理‘最终一致性’？',
+      options: [
+        '因为 NoSQL 数据库没有预写日志，一旦断电数据一定会损坏。',
+        '因为为了读性能把同一份数据（如用户名）冗余到了订单文档、朋友圈文档等多个物理集合中。当用户修改用户名时，系统必须写多处或异步更新这些多余副本，在所有副本被串行更新完的间隔内，读取端会看到新旧名字并存。这就是为了极致读性能而在应用层对最终一致性的妥协。',
+        '因为 NoSQL 必须使用分布式一致性共识算法 Raft 才能写入单机记录。'
+      ],
+      answer: 1,
+      explain: '最终一致性的业务成因。反规范化将写压力和一致性责任推给了应用层。冗余存储的物理事实决定了‘并发双写’或‘异步队列广播更新’会产生不可避免的同步延迟，因此必须在架构层面对最终一致性进行妥协。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
