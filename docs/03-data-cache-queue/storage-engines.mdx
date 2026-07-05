@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M3L1 · 数据库读写路径与存储引擎
 
@@ -28,6 +29,31 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 你选了个数据库，发现它写入飞快但偶尔读有点慢；换一个则相反。这不是玄学——是底层<GlossaryTerm term="Storage Engine" definition="存储引擎：数据库中真正负责把数据存到磁盘、再读出来的核心模块。两大主流是 B-tree（原地更新）和 LSM-tree（只追加 + 合并）。">存储引擎</GlossaryTerm>的设计差异。这一课打开引擎舱，看清两类主流引擎怎么工作。
 
+```mermaid
+flowchart TD
+  subgraph MemorySpace["内存空间 (Memory Space)"]
+    direction TB
+    WAL["预写日志 (Write-Ahead Log - 顺序写追加)"]
+    MemTable["活动内存表 (Active MemTable - 跳表/红黑树)"]
+    ImMemTable["只读/冻结内存表 (Immutable MemTable)"]
+  end
+
+  subgraph DiskSpace["磁盘持久化空间 (Disk Space - SSTables)"]
+    direction TB
+    L0["Level 0 SSTables (无序/重叠 Key 空间)"]
+    L1["Level 1 SSTables (物理有序且无重叠 Key)"]
+    L2["Level 2 SSTables (物理有序且无重叠 Key)"]
+    
+    L0 -->|Compaction 合并排序| L1
+    L1 -->|Compaction 合并排序| L2
+  end
+
+  Client["客户端写操作 (Put)"] -->|1. 顺序写防丢失| WAL
+  Client -->|2. 同步写入| MemTable
+  MemTable -->|3. 满则冻结| ImMemTable
+  ImMemTable -->|4. 异步刷盘 Minor Flush| L0
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：一次读写的路径
@@ -39,17 +65,73 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 两种截然不同的哲学：
 
 - <GlossaryTerm term="B-tree" definition="B 树：把数据组织成有序的树，更新时原地修改对应的页。读取稳定高效（少数几次磁盘寻址），是关系数据库的主流索引结构。">B-tree</GlossaryTerm>：**原地更新**，数据始终有序。读快而稳，但写要随机寻址、改页。
-- <GlossaryTerm term="LSM-tree" definition="日志结构合并树（Log-Structured Merge-tree）：写入先进内存表（memtable），满了就顺序刷成不可变文件（SSTable）；后台合并（compaction）。写极快（顺序写），读可能要查多个文件。">LSM-tree</GlossaryTerm>：**只追加**——写先进内存表，满了顺序刷成不可变文件（SSTable），后台再合并。写极快（顺序写），但读可能要翻多个文件。
+
+```mermaid
+flowchart TD
+  subgraph BTreeStructure["B-Tree 磁盘节点页结构 (B-Tree Disk Page Layout)"]
+    direction TB
+    Root["根节点页 (Root Page)<br/>- 包含 Key 范围与子页物理指针"]
+    
+    InternalA["中间节点页 A (Internal Page)"]
+    InternalB["中间节点页 B (Internal Page)"]
+    
+    Leaf1["叶子节点页 1 (Leaf Page)<br/>[Key: 1..10 | Row Data]"]
+    Leaf2["叶子节点页 2 (Leaf Page)<br/>[Key: 11..20 | Row Data]"]
+    Leaf3["叶子节点页 3 (Leaf Page)<br/>[Key: 21..30 | Row Data]"]
+    
+    Root -->|指针 0..10| InternalA
+    Root -->|指针 11..30| InternalB
+    
+    InternalA -->|指针 1..10| Leaf1
+    InternalA -->|指针 11..20| Leaf2
+    InternalB -->|指针 21..30| Leaf3
+    
+    Leaf1 <-->|双向链表指针| Leaf2
+    Leaf2 <-->|双向链表指针| Leaf3
+    
+    WriteAction["更新操作 (Put / Update)<br/>- 定位到 Leaf Page 物理地址<br/>- 原地改写该 Page 的二进制数据落盘 (In-place Update)"] -.->|覆写该块| Leaf2
+  end
+```
+
+- <GlossaryTerm term="LSM-tree" definition="日志结构合并树（Log-Structured Merge-tree）：写入先进内存表（memtable），满了就顺序刷成不可变文件（SSTable）；后台合并（compaction）。写极快（顺序写），读可能要查多个文件。">LSM-tree</GlossaryTerm>：**只追加**——写先进内存表，满了顺序刷成不可变文件（SSTable），后台通过 <GlossaryTerm term="Compaction" definition="合并排序 (Compaction)：LSM-Tree 后台将多个无序/重叠的 SSTable 文件合并并输出为按主键排序的、去除了过期/删除标志的更大 SSTable 文件的过程。这是 LSM 维持读性能和回收磁盘空间的关键。">Compaction (合并/压实)</GlossaryTerm> 整理。写极快（顺序写），但读可能要翻多个文件。
 
 ### 深入（选学）：三种"放大"
 
 引擎的取舍可以用三个指标量化：
 
 - <GlossaryTerm term="Write Amplification" definition="写放大：实际写入磁盘的数据量是逻辑写入量的几倍。LSM 的 compaction 会反复重写数据，写放大较高。">写放大</GlossaryTerm>：实际写盘量 / 逻辑写入量。
-- <GlossaryTerm term="Read Amplification" definition="读放大：一次读实际要访问几次磁盘/几个文件。LSM 读可能要查 memtable + 多个 SSTable，读放大较高。">读放大</GlossaryTerm>：一次读要碰几个文件。
+- <GlossaryTerm term="Read Amplification" definition="读放大：一次读实际要访问几次磁盘/几个文件。LSM 读可能要查 memtable + 多个 SSTable，读放大较高。">读放大</GlossaryTerm>：一次读要碰几个文件，可以通过在每个 SSTable 旁配置一个 <GlossaryTerm term="Bloom Filter" definition="布隆过滤器：一种空间效率极高的概率型数据结构，用于判断一个元素是否在一个集合中。它可能会误判存在，但绝不会误判不存在，常用于 LSM 中过滤掉不包含目标 Key 的 SSTable 以减少磁盘 I/O。">布隆过滤器 (Bloom Filter)</GlossaryTerm> 极大缓解。
 - <GlossaryTerm term="Space Amplification" definition="空间放大：实际占用磁盘 / 有效数据量。B-tree 有页内碎片，LSM 在 compaction 前有重复/过期数据。">空间放大</GlossaryTerm>：占用空间 / 有效数据。
 
 LSM 用"高写放大、读要查多文件"换"极快的顺序写"；B-tree 反之。**没有免费的午餐，只有放在不同地方的代价。**
+
+```mermaid
+flowchart TD
+  subgraph ReadPathComp["LSM-Tree vs B-Tree 读路径物理对比 (Read Path Lookup Comparison)"]
+    direction TB
+    
+    subgraph LSMRead["LSM-Tree 读路径 (翻阅多个文件 - 读放大)"]
+      direction TB
+      LSM_Key["查找 Key = 'user_99'"] --> LSM_Mem{"1. 命中 MemTable?"}
+      LSM_Mem -->|Yes| LSM_Found1["在内存直接返回 (最快)"]
+      LSM_Mem -->|No| LSM_Bloom{"2. 命中 L0 SSTable 布隆过滤器?"}
+      
+      LSM_Bloom -->|No| LSM_SkipL0["跳过该 SSTable (免去 I/O)"]
+      LSM_Bloom -->|Yes| LSM_L0{"3. 命中 L0 SSTable?"}
+      
+      LSM_L0 -->|Yes| LSM_Found2["读取落盘的数据块返回"]
+      LSM_L0 -->|No| LSM_L1{"4. 查找下一层 (Level 1..N) SSTables"}
+    end
+    
+    subgraph BTreeRead["B-Tree 读路径 (稳定查找次数 - 原地读取)"]
+      direction TB
+      BT_Key["查找 Key = 99"] --> BT_Root["1. 访问内存/磁盘 Root 页"]
+      BT_Root -->|B树分叉指针寻址| BT_Internal["2. 访问中间层物理页"]
+      BT_Internal -->|Page Offset 指针| BT_Leaf["3. 访问叶子页页内二分查找"]
+      BT_Leaf --> BT_Found["直接提取具体行记录返回"]
+    end
+  end
+```
 
 <ResearchNote
   title="两类存储引擎，两套取舍"
@@ -177,9 +259,46 @@ LSM 写得爽，但后台 compaction 会消耗 CPU/IO、制造延迟毛刺（回
 
 ## 常见误解
 
-- **"数据库都差不多"**：存储引擎不同，性格天差地别。
-- **"LSM 一定比 B-tree 快"**：它写快，但读放大、有 compaction 成本。
-- **"选库看 benchmark 就行"**：要看引擎在你的真实读写比下的表现。
+- **"所有数据库都差不多，随便选个时髦的就行"**: 存储引擎的数据结构决定了数据库的物理性格。拿针对 ACID 关系联表优化（B-tree）的传统 RDBMS 去强顶每秒百万级别的时序/日志写入，或者拿没有强关联和事务保护的 LSM KV 存储去做高并发高精度的银行对账，都是在以己之短攻敌之长。
+- **"LSM-Tree 全面优于 B-tree"**: LSM-tree 虽然写性能极佳，但是由于多个 SSTable 重叠，读放大严重，导致读延迟容易产生抖动和毛刺。且后台 Compaction 会在 CPU 和 I/O 紧张时与前台写入争抢物理硬件资源，产生严重的尾延迟（Tail Latency）。
+- **"选型时只需要看官方给出的高大上 Benchmark"**: 大多数厂商的性能测试都是在特定读写比例、且没有 Compaction 压力积累（例如只写 10 分钟）的纯理想状态下进行的。架构师必须在真实的数据规模和读写比下进行压测以观察长周期表现。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 LSM-Tree (日志结构合并树) 引擎中，为什么写入操作几乎永远是常量时间复杂度 O(1)？',
+      options: [
+        '因为它在写入时对磁盘所有分区的数据页进行实时的重排序。',
+        '因为任何写操作都是将数据追加写入预写日志（WAL）以保证持久化，并同步写入内存中的有序跳表/红黑树（MemTable）后立即返回。它完全避免了磁盘随机 I/O 原地修改（In-place update），从而将写吞吐推向极致。',
+        '因为它使用高精度的量子存储，不依赖普通物理磁盘。'
+      ],
+      answer: 1,
+      explain: 'LSM-Tree 用内存缓冲（MemTable）和顺序追加写（Append-only）换取极高的写速度。它绝不在刷盘时寻找旧位置改写，而是推迟并分批进行磁盘排序（Compaction）。'
+    },
+    {
+      q: '既然 LSM-Tree 写性能暴增，那它所带来的最核心架构代价是什么？',
+      options: [
+        '读放大较高（读数据可能需要查找 MemTable 与多个层级的 SSTable，且由于 Compaction 重写带来高写放大，以及过期版本带来的空间放大）与读延迟抖动。',
+        '无法持久化保存任何数据，重启后数据全部丢失。',
+        '对 CPU 算力的要求呈指数级暴增，要求每秒计算数万次 Hash。'
+      ],
+      answer: 0,
+      explain: '正如放大三指标（Read/Write/Space Amplification）所揭示的：LSM 引擎高吞吐是以读性能衰退和 Compaction 占用的额外盘 I/O 为代价的。为了缓解读放大，业界引入了布隆过滤器（Bloom Filter）和 LSM 整理合并。'
+    },
+    {
+      q: 'B-Tree 引擎在以 InnoDB 为代表的传统关系型 SQL 数据库中长盛不衰，其主要物理优势是什么？',
+      options: [
+        '它对每次随机写入都非常平滑，完全不需要任何磁盘寻址。',
+        '它的原地更新设计能维持高精度的物理顺序。读取性能极度稳定（稳定 O(log N) 寻页延迟），因为每次读在树高有限的结构中仅需 3~4 次随机物理 page 读取，且由于数据按主键聚集，非常适合做范围查询与强事务一致性判定。',
+        '它能够完全代替内存，使整个服务器不需要任何 RAM 芯片。'
+      ],
+      answer: 1,
+      explain: 'B-Tree 的原地更新（In-place update）牺牲了高频写性能，以保证页的完美分配和高读稳定度。因为每一个叶子页都有明确的边界，故可以实现行锁、页锁以确保完美事务性。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
