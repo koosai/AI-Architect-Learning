@@ -7,6 +7,8 @@ description: 不背模式名字，用变化点理解 SOLID、Factory、Strategy�
 import GlossaryTerm from '@site/src/components/GlossaryTerm';
 import GuidedExercise from '@site/src/components/GuidedExercise';
 import ResearchNote from '@site/src/components/ResearchNote';
+import QuizCard from '@site/src/components/QuizCard';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 # Month 4 - 从变化理解设计模式
 
@@ -26,14 +28,30 @@ import ResearchNote from '@site/src/components/ResearchNote';
 - 能把 Factory、Strategy、Observer、Adapter 写成简单代码。
 - 能判断什么时候不需要设计模式。
 
+```mermaid
+flowchart TD
+  subgraph PatternSelector["面向变化的设计模式选型抉择 (Change-driven Selection Pipeline)"]
+    direction TB
+    IdentifyChange["1. 识别代码中的未来潜在变化轴"] --> CheckFrequency{"2. 该变化轴是否频繁改变<br/>或在多处复用?"}
+    
+    CheckFrequency -->|No - 概率低 / 极简| KISS["KISS 原则 (Keep It Simple)<br/>直接写简单代码, 避免过度设计"]
+    CheckFrequency -->|Yes - 需要封装| Classify["3. 划分该变化所属的维度领域"]
+    
+    Classify -->|创建关系会变化| Factory["工厂模式 (Factory)<br/>根据配置或环境动态创建对象"]
+    Classify -->|算法/行为会变化| Strategy["策略模式 (Strategy)<br/>将算法封装在独立的可替换类中"]
+    Classify -->|状态变动需要通知多方| Observer["观察者模式 (Observer)<br/>发布订阅解耦状态消费者"]
+    Classify -->|外部接口不一致需要对齐| Adapter["适配器模式 (Adapter)<br/>转换不兼容的外部 SDK 到统一接口"]
+  end
+```
+
 ## 变化点视角
 
 | 变化点 | 常见模式 | 例子 |
 |---|---|---|
-| 创建哪种对象会变化 | Factory | 根据模型供应商创建不同 LLM client |
-| 算法策略会变化 | Strategy | 缓存淘汰策略、排序策略、检索策略 |
-| 状态变化要通知多个对象 | Observer | 订单状态通知、Agent event tracing |
-| 外部接口不一致 | Adapter | OpenAI、Anthropic、本地模型统一接口 |
+| 创建哪种对象会变化 | <GlossaryTerm term="Factory Pattern" definition="工厂模式：一种创建型设计模式。通过定义公共创建接口，将对象的实例化延迟到子类或工厂函数中进行，使得客户端代码不与具体产品的构造器强耦合，易于扩展新产品类型。">Factory (工厂模式)</GlossaryTerm> | 根据模型供应商创建不同 LLM client |
+| 算法策略会变化 | <GlossaryTerm term="Strategy Pattern" definition="策略模式：一种行为型设计模式。定义一系列算法，把它们一个个封装起来，并且使它们可以相互替换。本模式使得算法可独立于使用它的客户端而变化，满足开闭原则。">Strategy (策略模式)</GlossaryTerm> | 缓存淘汰策略、排序策略、检索策略 |
+| 状态变化要通知多个对象 | <GlossaryTerm term="Observer Pattern" definition="观察者模式：一种行为型设计模式。定义对象间的一种一对多的依赖关系，当一个对象的状态发生改变时，所有依赖于它的对象都得到通知并被自动更新，实现观察者与被观察者解耦。">Observer (观察者模式)</GlossaryTerm> | 订单状态通知、Agent event tracing |
+| 外部接口不一致 | <GlossaryTerm term="Adapter Pattern" definition="适配器模式：一种结构型设计模式。将一个类的接口转换成客户希望的另外一个接口，使得原本由于接口不兼容而不能一起工作的那些类可以一起工作。">Adapter (适配器模式)</GlossaryTerm> | OpenAI、Anthropic、本地模型统一接口 |
 
 ## Strategy 示例
 
@@ -60,23 +78,117 @@ class Retriever:
 
 这里的变化点是 ranking 方法。未来你可以把 `KeywordRanking` 换成 embedding ranking，而不重写 `Retriever`。
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as 业务调用端 (Client)
+  participant R as 检索器 (Retriever)
+  participant S as 策略接口 (RankingStrategy Protocol)
+  participant Keyword as 关键字评分具体策略 (KeywordRanking)
+  participant Embed as 向量评分具体策略 (EmbeddingRanking)
+
+  User->>R: 1. 执行 search(query, docs)
+  activate R
+  
+  loop 对每个文档 doc 评分
+    R->>S: 2. 调用 score(query, doc)
+    activate S
+    
+    alt 策略绑定为 Keyword (默认)
+      S->>Keyword: 3. 运行 Keyword 统计
+      activate Keyword
+      Keyword-->>S: 返回匹配度分值
+      deactivate Keyword
+    else 运行时切换为向量模式 (Runtime Strategy Switch)
+      S->>Embed: 3. 运行向量余弦相似度计算
+      activate Embed
+      Embed-->>S: 返回向量空间分值
+      deactivate Embed
+    end
+    
+    S-->>R: 4. 返回计算分值 (score: float)
+    deactivate S
+  end
+  
+  R->>R: 5. 内存按 score 对 docs 进行降序排序
+  R-->>User: 6. 返回排序后的文档列表 (有序 List)
+  deactivate R
+```
+
 ## AI Architect 里的设计模式
 
 AI 系统里设计模式会重新出现：
 
 - Factory：创建不同模型 client。
 - Adapter：统一不同模型、向量库、工具协议。
+
+```mermaid
+flowchart LR
+  subgraph ClientApp["业务应用层 (App Core)"]
+    Agent["智能体 (Agent Core)"] -->|只依赖稳定抽象| Interface["ModelClient <br/>(稳定接口 / Protocol)"]
+  end
+
+  subgraph AdapterLayer["适配适配层 (Adapter Layer)"]
+    Interface -.->|接口实现| OpenAIAdapter["OpenAIAdapter<br/>(适配 OpenAI SDK)"]
+    Interface -.->|接口实现| AnthropicAdapter["AnthropicAdapter<br/>(适配 Anthropic SDK)"]
+    Interface -.->|接口实现| OllamaAdapter["OllamaAdapter<br/>(适配本地 Ollama API)"]
+  end
+
+  subgraph ExternalSDKs["外部大模型提供商 (Providers)"]
+    OpenAIAdapter -->|1. invoke_chat| OpenAI["OpenAI API"]
+    AnthropicAdapter -->|2. client.messages| Anthropic["Anthropic API"]
+    OllamaAdapter -->|3. generate_completion| Ollama["Ollama Local Host"]
+  end
+```
+
 - Observer：记录 Agent 的每一步事件。
 - Strategy：切换检索、rerank、prompt、评测策略。
 - Circuit Breaker：模型服务或第三方工具不稳定时保护系统。
 
-这里的关键词是 <GlossaryTerm term="Abstraction Boundary" definition="把可替换实现藏在稳定接口后面的边界。边界设计得好，系统可以从本地模型切到云模型，而上层业务不需要重写。">Abstraction Boundary</GlossaryTerm>。没有边界时，你会在业务代码里到处写 `if provider == "openai"` 或 `if vector_db == "qdrant"`；项目小的时候能跑，项目大时就会变成难以替换的依赖网。
+这里的关键词是 <GlossaryTerm term="Abstraction Boundary" definition="把可替换实现藏在稳定接口后面的边界。边界设计得好，系统可以从本地模型切到云模型，而上层业务不需要重写。">Abstraction Boundary (抽象边界)</GlossaryTerm>。设计边界本质上是实现 <GlossaryTerm term="Separation of Concerns" definition="关注点分离：软件设计核心原则。将程序划分成互不重叠的模块，每个模块只关注单一职责（如模型创建、模型调用、业务调度），从而降低认知负荷，防止局部修改扩散为全局级灾难。">Separation of Concerns (关注点分离)</GlossaryTerm>。没有边界时，你会在业务代码里到处写 `if provider == "openai"` 或 `if vector_db == "qdrant"`；项目小的时候能跑，项目大时就会变成难以替换的依赖网。
 
 ## 常见误解
 
-- 使用模式越多越专业。错，模式会增加间接层，必须换来真实收益。
-- SOLID 只属于 Java/C#。错，它描述的是依赖、边界和变化，不绑定语言。
-- LLD 只是面试题。错，AI 工具调用、权限隔离、模型适配都需要 LLD。
+- **"使用模式和间接层越多越显得专业，哪怕是极小项目也应该把 Strategy、Factory 强行套上"**: 这是初学者极易陷入的“过度设计模式病 (Pattern-itis)”。设计模式引入了额外的接口和抽象边界，这些间接层在带来扩展性的同时，也会使代码结构碎片化、增加首屏理解成本。如果某个业务逻辑在未来 12 到 24 个月内完全没有被修改或替换的任何可能，保持 KISS 原则（简单直接）是更好的工程实践。
+- **"设计模式只适合 Java / C# 这种强类型、支持严格继承的静态编译面向对象语言，Python/JS 等动态脚本语言不需要模式"**: 完全是井底之蛙之见。大名鼎鼎的设计模式是对“变化轴”的抽象分类，不绑定任何特定语言。在 Python、JavaScript 中，由于鸭子类型 (Duck Typing) 以及函数一等公民的特性，部分模式（如 Strategy、Command）的实现可能会简化为一个函数或 Protocol 协议，但“解耦创建”、“屏蔽外部 API 不一致适配”等面向变化的设计思维依然是 AI 架构设计的核心。
+- **"统一底层不同模型 API 的接口，不需要用 Adapter 模式，直接在代码中通过 if-else 简单判断最干净"**: 忽视了扩展性灾难。如果没有稳定统一的抽象边界，业务层代码中的每个节点（例如：Prompt 渲染、Tool 调用、日志监控）都会散落着 `if provider == "openai"` 的分支判断。当底层模型供应商接口发生升级迭代或新增本地千亿模型时，需要逐行重构并测试整个业务系统，极易产生大面积逻辑漏洞。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在面向对象与系统设计中，设计模式的本质作用是什么？',
+      options: [
+        '设计模式是编写更多类和接口的模板，能显著增加代码量。',
+        '设计模式的本质是为了‘隔离变化，解耦依赖’。通过引入抽象边界（如接口或协议），将未来易于变化的实现（如算法、对象创建、第三方 API）封装起来，使上层稳定业务逻辑在变化发生时无需修改代码，达到开闭原则（OCP）。',
+        '设计模式能够物理加速程序的 CPU 执行效率。'
+      ],
+      answer: 1,
+      explain: '设计模式的本质作用。初学者常犯过度设计（Over-engineering）的错误。模式不是炫技，而是对变化点的封装。只有当系统存在明确的“变化轴”时，模式带来的间接层和复杂度才是划算的。'
+    },
+    {
+      q: '在设计 AI Gateway 时，如果需要统一 OpenAI、Anthropic 以及本地 Llama 模型的接口，最适合采用哪种设计模式？',
+      options: [
+        '观察者模式 (Observer Pattern)',
+        '适配器模式 (Adapter Pattern)，通过定义统一的内部接口（如 ModelClient ），并为每个第三方 SDK 编写各自的适配器类，将它们千差万别的输入参数和返回格式映射为内部统一格式，从而使上层 Agent 业务不感知供应商差异。',
+        '单例模式 (Singleton Pattern)'
+      ],
+      answer: 1,
+      explain: '适配器模式在 AI 适配中的应用。第三方大模型供应商的 API 接口极度零碎且经常迭代，使用 Adapter 包装它们是业界主流做法。这样能够轻松做到在切换底层模型时业务零修改。'
+    },
+    {
+      q: '如果我们要为大模型检索系统设计一个动态切换重排（Rerank）算法的逻辑，且该重排算法会在 BM25、Vector Sim、CrossEncoder 之间频繁切换，我们应该选择什么模式？',
+      options: [
+        '策略模式 (Strategy Pattern)，定义统一的 RerankStrategy 接口，将不同的重排算法封装成不同的策略具体实现类，以便在运行时根据配置动态切换算法而不需要修改 Retriever 主体调用逻辑。',
+        '工厂模式 (Factory Pattern) 负责对重排结果进行复制。',
+        '装饰器模式 (Decorator Pattern) 用于直接在网络层拦截重排结果。'
+      ],
+      answer: 0,
+      explain: '策略模式。策略模式非常适合处理“算法/行为会发生变化”的场景。它使得算法的变化独立于使用它的客户端，满足关注点分离的设计要求。'
+    }
+  ]}
+/>
 
 ## 练习
 
