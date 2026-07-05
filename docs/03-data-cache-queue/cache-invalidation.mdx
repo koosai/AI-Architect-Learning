@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M3L6 · 缓存失效与一致性
 
@@ -32,7 +33,22 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 基础：TTL 过期
 
-给每个缓存项设一个<GlossaryTerm term="TTL" definition="存活时间（Time To Live）：缓存项的过期时间。到期自动失效、下次读重新从库加载。是最简单的最终一致手段：陈旧最多持续一个 TTL。">TTL</GlossaryTerm>，到期自动失效、下次读重新加载。它简单可靠，代价是：**在 TTL 内数据可能是旧的**（最终一致，回扣 [M2L6](../system-design-bridge/cap-consistency)）。TTL 越短越新鲜、但命中率越低；越长命中率越高、但越可能陈旧。
+给每个缓存项设一个<GlossaryTerm term="TTL" definition="存活时间（Time To Live）：缓存项的过期时间。到期自动失效、下次读重新从库加载。是最简单的最终一致手段：陈旧最多持续一个 TTL。">TTL</GlossaryTerm>，到期自动失效、下次读重新加载。它简单可靠，但冷启动时常需要通过 <GlossaryTerm term="Cache Warm-up" definition="缓存预热：在系统上线或高并发流量来临前，提前将热点数据写入缓存内存，避免海量请求瞬间涌入数据库造成瞬间压垮。">缓存预热 (Cache Warm-up)</GlossaryTerm> 前置填充。TTL 的代价是：**在 TTL 内数据可能是旧的**（最终一致，回扣 [M2L6](../system-design-bridge/cap-consistency)）。TTL 越短越新鲜、但命中率越低；越长命中率越高、但越可能陈旧。
+
+```mermaid
+flowchart TD
+  subgraph ShortTTL["短 TTL 策略 (Short TTL)"]
+    direction TB
+    TTL_Short["存活时间短 (例如 5秒)"] --> Freshest["新鲜度极高<br/>- 脏缓存窗口极小"]
+    TTL_Short --> HighDB["命中率较低<br/>- 频繁请求回表<br/>- 数据库并发压力大"]
+  end
+
+  subgraph LongTTL["长 TTL 策略 (Long TTL)"]
+    direction TB
+    TTL_Long["存活时间长 (例如 1小时)"] --> Staler["新鲜度较差<br/>- 脏缓存滞留时间长<br/>- 读到旧数据概率大"]
+    TTL_Long --> LowDB["命中率极高<br/>- 绝大部分读被缓存挡下<br/>- 物理数据库负载低"]
+  end
+```
 
 ### 进阶：写时失效，且要"删"不要"改"
 
@@ -43,7 +59,54 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 深入（选学）：一个挥之不去的竞态
 
-即使"先写库再删缓存"，仍有罕见竞态：读请求 miss、从库读到**旧值**，正要回填时，另一个写请求更新库并删了缓存；结果读请求把**旧值**填了回去——缓存又脏了。对策有延迟双删、版本号、或干脆靠 TTL 兜底。**这就是为什么缓存失效被称为难题：它本质是 [L8 的并发竞态](../foundations/concurrency-basics) 跨越了两个系统。**
+即使"先写库再删缓存"，仍有罕见竞态：读请求 miss、从库读到**旧值**，正要回填时，另一个写请求更新库并删了缓存；结果读请求把**旧值**填了回去——缓存又脏了。对策有 <GlossaryTerm term="Delayed Double Delete" definition="延迟双删：一种应对 Cache-Aside 并发读写竞态脏缓存的一致性兜底策略。步骤为：先删缓存，再写数据库，延迟一段时间（等并发读的事务回填完旧值），最后再次删除缓存以清除脏缓存值。">延迟双删 (Delayed Double Delete)</GlossaryTerm>、版本号、或干脆靠 TTL 兜底。**这就是为什么缓存失效被称为难题：它本质是 [L8 的并发竞态](../foundations/concurrency-basics) 跨越了两个系统。**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor ReadApp as 读并发线程 (Thread A - Read)
+  actor WriteApp as 写并发线程 (Thread B - Write)
+  participant Cache as 旁路缓存 (Redis)
+  participant DB as 物理数据库 (MySQL)
+
+  Note over ReadApp,DB: 场景 1: Cache-Aside 并发竞态导致永久脏数据 (极罕见竞态)
+  ReadApp->>Cache: 1. 读 Key 'user_1' (Miss)
+  activate Cache
+  Cache-->>ReadApp: 返回空 (Null)
+  deactivate Cache
+  ReadApp->>DB: 2. 查库读取旧值 'Ada' (LSN=10)
+  
+  Note over WriteApp,DB: 写请求并发插队!
+  WriteApp->>DB: 3. 更新库新值 'Bob' (LSN=11)
+  WriteApp->>Cache: 4. 失效/删除缓存 DEL 'user_1' (本就是空的，删了也没用)
+  
+  Note over ReadApp,Cache: 读请求慢了一步，开始写入回填!
+  ReadApp->>Cache: 5. 回填旧值 SET 'user_1' = 'Ada'
+  Note over Cache,DB: 此时不一致成立: 缓存为旧值 'Ada'，而数据库已是新值 'Bob'。永久脏数据，直到下一个 TTL!
+```
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor ReadApp as 读并发线程 (Thread A - Read)
+  actor WriteApp as 写并发线程 (Thread B - Write)
+  participant Cache as 旁路缓存 (Redis)
+  participant DB as 物理数据库 (MySQL)
+
+  Note over ReadApp,DB: 场景 2: 延迟双删解决脏数据竞态机制 (Delayed Double Delete)
+  WriteApp->>Cache: 1. (第1次删除) DEL 'user_1'
+  ReadApp->>Cache: 2. 读 Key 'user_1' (Miss)
+  ReadApp->>DB: 3. 查库读取旧值 'Ada'
+  WriteApp->>DB: 4. 更新数据库新值 'Bob'
+  ReadApp->>Cache: 5. 慢回填旧值 SET 'user_1' = 'Ada' (造成脏缓存)
+  
+  Note over WriteApp,Cache: 写线程休眠 500ms，等待 Thread A 回填完成后再次清场!
+  rect rgb(200, 240, 200)
+    WriteApp->>WriteApp: 6. Sleep(500ms)
+    WriteApp->>Cache: 7. (第2次删除) DEL 'user_1'
+  end
+  Note over ReadApp,Cache: 脏缓存 'Ada' 被第 2 次删除彻底清除，下一次读取正常重新从库拉取 'Bob'！
+```
 
 <ResearchNote
   title="缓存失效，公认的两大难题之一"
@@ -174,9 +237,46 @@ python labs/month03/m3l6_ttl/test_ttl.py
 
 ## 常见误解
 
-- **"设了缓存就实时一致"**：缓存天然滞后，要主动失效 + 接受最终一致。
-- **"写时更新缓存最新最好"**：并发下易写入旧值；删除更安全。
-- **"TTL 越长越好"**：命中率高但越可能陈旧，要按容忍度权衡。
+- **"给缓存加上了写时删除或者短 TTL，系统就能保证强一致性了"**: 缓存本质上是不可靠的一致性模型。由于网络分区（Network Partition）或者并发竞态的物理时间差，强一致性在客户端是无法获得 100% 物理保证的。对于金融资产、扣款等强一致性场景，绝对不能使用旁路缓存做主要决策路径，应直达数据库事务或基于分布式强一致协议。
+- **"既然‘先写库再删缓存’存在竞态脏数据，那么我们改成‘先删缓存再写库’就完美了"**: 恰恰相反！“先删缓存再写库”的竞态发生概率要大得多。如果先删除缓存，在更新数据库成功前（这个写事务往往耗时几十毫秒），这几十毫秒内所有的并发读请求都会发生 Cache Miss 去读库，并把旧值回填至缓存中，导致数据库更新完毕后，缓存立刻且长久地成为脏数据。
+- **"TTL 可以随便设置，反正在写时会主动调用删除"**: 这是不可预测的风险。因为在微服务、分布式拓扑中，数据库 binlog 消费失败、后台删除事件丢失是常态。如果没有科学的 TTL 时间在物理时序上兜底清理，任何网络或机器抖动导致的删除事件丢失，都会让缓存项永久陈旧。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 Cache-Aside 模式下，即便采用了‘先写数据库，再删缓存’的标准写法，依然存在一种极罕见的脏数据竞态。以下哪项物理步骤能够完美复现该脏数据竞态？',
+      options: [
+        '读请求直接写缓存 -> 写请求直接读数据库。',
+        '① 读请求未命中缓存，去数据库读取了旧值 V1；② 此时并发的写请求修改数据库为 V2，并执行删缓存操作（此时缓存本来就是空的，删除操作无实际影响）；③ 读请求在写请求删除之后，将刚才在数据库读到的旧值 V1 写入缓存。从而导致缓存永久存放了旧值 V1，直到 TTL 到期。',
+        '写请求更新数据库 -> 读请求在库中修改值并提交。'
+      ],
+      answer: 1,
+      explain: 'Cache-Aside 并发读写竞态。此竞态发生的物理前提是：读请求去数据库读旧值，并在写请求完成‘改库+删缓存’这两步之后，才执行写缓存的操作。由于数据库读一般极快，写缓存又紧随其后，因此该竞态极为罕见，但仍需用 TTL 兜底或使用延迟双删。'
+    },
+    {
+      q: '‘延迟双删’ (Delayed Double Delete) 是业界用来解决缓存与数据库双写一致性竞态的一种工程折中方案。关于其执行步骤，以下描述哪项是正确的？',
+      options: [
+        '先修改缓存 -> 延迟删除数据库 -> 再删除一次缓存。',
+        '① 先删除缓存；② 更新数据库物理行数据；③ 线程休眠一段时间（例如 500ms，以确保并发的读事务已经完成其读库和回填动作）；④ 再次执行缓存删除操作。其核心目的是清除由于并发读回填造成的脏缓存数据。',
+        '删除缓存 -> 再次删除缓存 -> 接着写数据库。'
+      ],
+      answer: 1,
+      explain: '延迟双删旨在清理在‘写库’期间，由于读请求并发读旧库并写回缓存而产生的旧脏数据。延迟的时间应略大于读库+回填的时间。由于延迟双删会产生线程挂起，通常可配合消息队列异步处理第二次删除。'
+    },
+    {
+      q: '在为缓存项设置 TTL (TimeToLive) 存活时间时，以下哪项设计准则是架构师在新鲜度与缓存命中率之间权衡时应当遵循的？',
+      options: [
+        'TTL 必须始终设置为 0 秒，以保证绝对没有脏数据。',
+        'TTL 越长，缓存命中率越高（减少数据库访问），但数据陈旧期越长（一致性差）；TTL 越短，数据一致性越好，但频繁回表会导致数据库压力剧增。因此对于高频修改数据应设置短 TTL 并配合写时失效，对低频更改数据应设置长 TTL。',
+        'TTL 长度取决于网络延迟，与数据修改频次无关。'
+      ],
+      answer: 1,
+      explain: 'TTL Tradeoff. 缓存命中率是系统瓶颈的直接指标。如果命中率掉得太低，缓存就失去了屏蔽并发请求的屏障意义，通常需要结合‘主动写失效 + 适度长 TTL 兜底’来维持二者的科学平衡。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
