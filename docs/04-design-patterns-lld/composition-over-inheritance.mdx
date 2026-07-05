@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M4L4 · 组合优于继承
 
@@ -28,20 +29,113 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 你有个 `Duck` 基类，加了 `fly()`。然后来了橡皮鸭（不会飞）、诱饵鸭（不会飞不会叫）……你要么在基类塞一堆开关、要么搞出一棵越来越深的继承树，还可能撞上"会飞的橡皮鸭"这种尴尬。**继承把"是什么"和"怎么做"绑死了**——一旦行为要按对象不同而变化、甚至运行时变化，继承就处处别扭。
 
+```mermaid
+flowchart TD
+  subgraph InheritanceTree["1. 静态深层继承树 (Subclassing Hierarchy - violates OCP/LSP)"]
+    direction TB
+    Duck1["抽象基类 Duck <br/>(定义 fly(), quack())"]
+    
+    Duck1 --> MallardDuck1["绿头鸭 <br/>(继承 fly, quack)"]
+    Duck1 --> RubberDuck1["橡皮鸭 <br/>(重写 fly() 抛异常, 重写 quack() 吱吱)"]
+    Duck1 --> DecoyDuck1["诱饵鸭 <br/>(重写 fly() 抛异常, 重写 quack() 抛异常)"]
+  end
+
+  subgraph CompositionDesign["2. 部件装配的组合设计 (Composition - has-a Behavior)"]
+    direction TB
+    Duck2["实体 Duck 类 <br/>(持有行为引用)"]
+    
+    Duck2 -->|组合 has-a| FlyBehavior["飞行行为抽象接口 <br/>(FlyBehavior)"]
+    Duck2 -->|组合 has-a| QuackBehavior["叫声行为抽象接口 <br/>(QuackBehavior)"]
+    
+    FlyWithWings["翼飞 (FlyWithWings)"] -.->|符合契约| FlyBehavior
+    FlyNoWay["不飞 (FlyNoWay)"] -.->|符合契约| FlyBehavior
+    
+    Quack["嘎嘎 (Quack)"] -.->|符合契约| QuackBehavior
+    Squeak["吱吱 (Squeak)"] -.->|符合契约| QuackBehavior
+    MuteQuack["哑巴 (MuteQuack)"] -.->|符合契约| QuackBehavior
+  end
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：继承（is-a）vs 组合（has-a）
 
-- **继承**：`RubberDuck` **是一种** `Duck`——继承它的实现。强耦合父类，改父类可能波及所有子类（[脆弱基类](#)）。
-- <GlossaryTerm term="Composition" definition="组合：一个对象“拥有（has-a）”另一些对象/行为，通过持有并委托它们来实现功能，而不是继承。可灵活拼装、可运行时替换。">组合（has-a）</GlossaryTerm>：`Duck` **拥有一个** `FlyBehavior`——把"怎么飞"做成一个可替换的部件，鸭子持有它、委托它。
+- **继承**：`RubberDuck` **是一种** `Duck`——继承它的实现。它在编译期通过 <GlossaryTerm term="Compile-time Binding" definition="编译期绑定 (静态绑定)：对象的类型关系与方法调用在编译或代码声明阶段就已经完全确定，无法在运行过程中进行动态更改。继承就是典型的编译期绑定。">编译期静态绑定 (Compile-time Binding)</GlossaryTerm> 硬编码了父子依赖，强耦合父类，改父类可能波及所有子类（[脆弱基类](#)）。
+- <GlossaryTerm term="Composition" definition="组合：一个对象“拥有（has-a）”另一些对象/行为，通过持有并委托它们来实现功能，而不是继承。可灵活拼装、可运行时替换。">组合（has-a）</GlossaryTerm>：`Duck` **拥有一个** `FlyBehavior`——把"怎么飞"做成一个可替换的部件，鸭子持有它并通过 <GlossaryTerm term="Behavior Delegation" definition="行为委托：一个对象将自身的某个方法调用转交给另一个关联对象进行处理的编程模式。是组合优于继承中实现代码复用的核心机制，可有效避免继承的深层依赖。">行为委托 (Behavior Delegation)</GlossaryTerm> 执行它。
 
 ### 进阶：把"会变的行为"组合进来
 
-回到 [M4L1 封装变化](./change-driven-design)：鸭子的"飞法""叫法"会因品种而变——那就把它们**抽成可替换的行为部件**，组合进鸭子。不同鸭子 = 不同行为部件的不同组合。而且能**运行时替换**（橡皮鸭充气后会飞了？换个 fly 部件即可）——这是继承做不到的。**这其实已经是策略模式了**（下一课 M4L5 正式讲）。
+回到 [M4L1 封装变化](./change-driven-design)：鸭子的"飞法""叫法"会因品种而变——那就把它们**抽成可替换的行为部件**，组合进鸭子。不同鸭子 = 不同行为部件的不同组合。而且能通过 <GlossaryTerm term="Late Binding" definition="动态绑定 (迟绑定 / Late Binding)：在运行时才确定具体调用的方法实现。组合模式中由于持有的是抽象接口，运行时随时可将内部指向具体实现，实现极佳的灵活性。">迟绑定 (Late Binding / 动态绑定)</GlossaryTerm> 实现**运行时替换**（橡皮鸭充气后会飞了？换个 fly 部件即可）——这是继承做不到的。**这其实已经是策略模式了**（下一课 M4L5 正式讲）。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as 客户端 (Client)
+  participant Duck as 宿主类 (Duck)
+  participant FlyNoWay as 具体不会飞行为 (FlyNoWay)
+  participant FlyWithWings as 具体翼飞行为 (FlyWithWings)
+
+  Note over User,Duck: 1. 初始状态 (橡皮鸭不会飞)
+  User->>Duck: 调用 fly()
+  activate Duck
+  Duck->>FlyNoWay: 行为委托 delegation: fly()
+  activate FlyNoWay
+  FlyNoWay-->>Duck: 返回 "我不会飞"
+  deactivate FlyNoWay
+  Duck-->>User: 返回 "我不会飞"
+  deactivate Duck
+
+  Note over User,Duck: 2. 运行时动态替换行为 (Runtime Swap)
+  User->>Duck: 调用 set_fly_behavior(FlyWithWings)
+  activate Duck
+  Note over Duck: 重新绑定内部的抽象行为组件指针 (迟绑定)
+  Duck-->>User: 成功
+  deactivate Duck
+
+  Note over User,Duck: 3. 再次执行 fly()
+  User->>Duck: 调用 fly()
+  activate Duck
+  Duck->>FlyWithWings: 行为委托 delegation: fly()
+  activate FlyWithWings
+  FlyWithWings-->>Duck: 返回 "我能飞"
+  deactivate FlyWithWings
+  Duck-->>User: 返回 "我能飞"
+  deactivate Duck
+```
 
 ### 深入（选学）：继承的真实代价
 
 继承的坑：<GlossaryTerm term="Fragile Base Class" definition="脆弱基类：修改父类可能意外破坏所有子类的行为，因为子类依赖了父类的实现细节。继承的强耦合导致的问题。">脆弱基类</GlossaryTerm>（改父类炸一片）、菱形继承、以及 [M4L3 的 LSP 违反](./solid-lsp-isp-dip)。组合没有这些问题，代价只是要多写一点"持有 + 委托"的样板。**经验法则：默认用组合，只有在确定是稳定的 is-a 且行为完全兼容时才用继承。**
+
+```mermaid
+flowchart LR
+  subgraph FragileBaseClassProblem["脆弱基类改动传导 (Fragile Base Class Propagation Cascade)"]
+    direction TB
+    
+    subgraph ParentClass["父类 (Super Class V1)"]
+      Add1["add(item) <br/>{保存数据}"]
+      AddAll1["addAll(items) <br/>{循环调用 add(item)}"]
+    end
+    
+    subgraph ChildClass["子类 (Sub Class)"]
+      Count["count = 0 <br/>(记录数据总数)"]
+      AddChild["add(item) <br/>{count++; super.add()}"]
+      AddAllChild["addAll(items) <br/>{count += items.len; super.addAll()}"]
+    end
+    
+    AddAll1 -->|V1版本内部依赖| Add1
+    AddChild -.->|继承覆盖| Add1
+    AddAllChild -.->|继承覆盖| AddAll1
+    
+    Trigger["客户端调用 sub.addAll(3个元素)"] --> AddAllChild
+    AddAllChild -->|1. count += 3| Count
+    AddAllChild -->|2. super.addAll()| AddAll1
+    AddAll1 -->|3. 内部循环调用 3次 add()| AddChild
+    AddChild -->|4. count 累加 3次| Count
+    
+    Count --> Result["最终 count 等于 6! (产生重复累加 Bug!)"]
+  end
+```
 
 <ResearchNote
   title="优先组合：四人帮的核心建议"
@@ -158,9 +252,46 @@ python labs/month04/m4l4_composition/test_duck.py
 
 ## 常见误解
 
-- **"继承是 OOP 的核心，要多用"**：现代实践是"优先组合"，继承要谨慎。
-- **"组合就是把对象塞进去"**：关键是持有抽象 + 委托，行为可替换。
-- **"组合样板多所以不好"**：多一点样板换来巨大的灵活性和低耦合，值得。
+- **"继承是面向对象设计（OOP）的灵魂，写面向对象代码就必须疯狂地写多层 extends 继承树"**: 这是典型的历史遗留偏见。在 90 年代初 OOP 刚兴起时，人们过度鼓吹了类继承的“代码复用”红利。但在过去的二十多年里，软件工程界深刻体会到了深层类继承带来的“脆弱基类”与“白盒复用（暴露父类细节破坏封装）”的沉痛代价。现代工业界的共识是“优先使用组合，谨慎使用继承”。
+- **"直接把一个实体类 new 出来塞进宿主类里，就算是完美地践行了组合优于继承"**: 属于半吊子的伪组合设计。真正的组合复用，宿主类持有的应该是一个“抽象接口或行为 Protocol”，并且将具体的行为委托 (Behavior Delegation) 给它。如果直接在宿主内部强耦合地 new 出了具体的行为实体类，不仅没有实现运行时可替换性，反而退化为了紧耦合的编译期静态绑定。
+- **"组合需要多写很多‘持有 + 委托’的垃圾样板代码（Boilerplate），所以继承依然是最高效的复用手段"**: 拿暂时的开发速度换取长期的可维护性灾难。继承确实少写了方法转发，但它将子类和父类强行绑定，日后一旦基类要修改（例如修改 add 和 addAll 之间的调用逻辑），所有子类都会大面积意外崩溃。为了省去几行委托代码而背负脆弱基类和 LSP 违反的噩梦，在工程上是非常愚蠢的交易。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在面向对象软件工程中，‘组合优于继承’（Composition over Inheritance）的核心原因是什么？',
+      options: [
+        '继承会破坏封装性，子类不仅要依赖父类的公开接口，还要被迫暴露于父类的内部实现细节（白盒复用），导致脆弱基类（Fragile Base Class）问题；而组合通过‘委托’接口完成，完全遵循黑盒复用，降低了耦合度。',
+        '组合方式比继承写起来要省去 80% 的代码量。',
+        '继承只适用于 Python，组合只适用于 C++。'
+      ],
+      answer: 0,
+      explain: '组合与继承的权衡。继承在编译期就硬编码了关系，暴露了基类的内部细节。如果基类更改，子类会被意外碰坏。组合将行为委托给外部对象，保持了对象的自治性与黑盒复用。'
+    },
+    {
+      q: '‘运行时行为替换’（Dynamic Runtime Behavior Swap）相比继承的最显著技术红利是？',
+      options: [
+        '能够在不重新编译运行、不重建或销毁原对象实例的前提下，通过注入新的具体策略，在运行期动态切换对象的算法或行为（例如在限流策略被触发时动态替换为拒绝服务行为，或对充气的橡皮鸭切换为飞行行为）。',
+        '能够自动增加 CPU 缓存命中率。',
+        '能够确保对象在物理存储上是不占内存的。'
+      ],
+      answer: 0,
+      explain: '运行时切换的红利。对于继承来说，一个对象的类型在创建（new）时就确定了，不可能在运行时突然改变。但通过组合委托，我们只需将内部持有的行为引用指向新类，就能实现动态变身，这是设计模式中 Strategy / State 模式的基石。'
+    },
+    {
+      q: '什么是‘脆弱基类’（Fragile Base Class）问题？',
+      options: [
+        '父类的内存占用过大，导致子类实例化时直接崩溃。',
+        '由于子类强耦合了父类的实现细节，一旦父类在后续维护中修改了某个方法的内部调用逻辑，会导致那些表面上完全没有修改过的子类发生意料之外的行为越轨或死循环崩溃。',
+        '基类完全不支持继承，继承时直接报错。'
+      ],
+      answer: 1,
+      explain: '脆弱基类定义。改父类炸子类。很多子类可能依赖了父类某个方法（例如 A 调用 B）。如果父类某天改成了 A 不调用 B，子类重写了 B 就无法生效。这是一种隐蔽性极高、极其难以调试的回归缺陷。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
