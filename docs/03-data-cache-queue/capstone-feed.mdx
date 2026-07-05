@@ -8,6 +8,7 @@ import GlossaryTerm from '@site/src/components/GlossaryTerm';
 import GuidedExercise from '@site/src/components/GuidedExercise';
 import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M3L12 · Capstone：mini feed 系统
 
@@ -25,8 +26,8 @@ import ChapterMeta from '@site/src/components/ChapterMeta';
 ## 一、需求与设计（用 Month 2 方法）
 
 - **功能**：关注、发帖、刷时间线（关注的人的帖子按时间倒序）。
-- **非功能**：刷 feed（读）远多于发帖（写）→ **读多写少 → 写扩散 + 缓存**（[M3L10](./feed-fanout) / [M3L5](./cache-patterns)）。
-- **关键取舍**：写扩散（读快、大V写爆）vs 读扩散 vs 混合（[M3L10](./feed-fanout)）。
+- **非功能**：刷 feed（读）远多于发帖（写）→ **读多写少 → 写扩散 + 缓存**（[M3L10](./feed-fanout) / [M3L5](./cache-patterns)）。写扩散虽然能换取极致读性能，但可能会在普通人给大量粉丝发帖时引起严重的 <GlossaryTerm term="Write Amplification" definition="写放大：在系统设计中指一次逻辑写请求，在底层数据库或磁盘中引发了成百上千倍物理写入的现象。在 Feed 写扩散中表现为粉丝数等于写放大倍数。">写放大 (Write Amplification)</GlossaryTerm>。
+- **关键取舍**：写扩散（读快、大V写爆）vs 读扩散 vs 混合（[M3L10](./feed-fanout)）。当面临大V粉丝众多时，需要选择混合模式，即普通人写扩散、大V读扩散，并在用户刷新动态时，在业务层内存对多路数据流执行高性能的 <GlossaryTerm term="Merge Sort" definition="归并排序：一种分治算法，在 Feed 系统的读扩散与混合模式中常用于将多个局部有序的帖子流（如各个大V的帖子列表与自身的收件箱）快速合并为一个全局按时间戳倒序排列的时间线流。">归并排序 (Merge Sort)</GlossaryTerm>。
 
 ```mermaid
 flowchart TB
@@ -38,7 +39,44 @@ flowchart TB
   CACHE -. "未命中" .-> TL
 ```
 
-注意它怎么综合本月：发帖走**队列异步扇出**（[M3L9](./message-queues)，发帖快速返回）；扇出是**写扩散**（[M3L10](./feed-fanout)）；时间线读走**缓存**（[M3L5-7](./cache-patterns)）；扇出事件可靠投递用**发件箱**（[M3L11](./consistency-patterns)）；整体最终一致（[M2L6](../system-design-bridge/cap-consistency)）。
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as 用户 (User/大V)
+  participant FeedApp as Feed 服务
+  participant DB as 本地数据库 (MySQL)
+  participant MQ as 消息队列 (Kafka)
+  participant Worker as 异步扇出 Worker
+  participant Cache as Redis 缓存 (粉丝收件箱)
+
+  User->>FeedApp: 1. 发布帖子 post(content)
+  activate FeedApp
+  
+  Note over FeedApp,DB: 开启本地事务
+  FeedApp->>DB: 2. 保存帖子内容 (posts 表)
+  FeedApp->>DB: 3. 写入事件到发件箱 (outbox 表: 待发送)
+  FeedApp->>DB: 4. 提交事务
+  Note over FeedApp,DB: 原子写入本地事务，保证数据可靠
+  
+  FeedApp-->>User: 5. 瞬间响应“发布成功”
+  deactivate FeedApp
+
+  Note over DB,MQ: 独立中继进程轮询 outbox 并发送事件
+  DB-->>MQ: 6. 异步读取事件并发布至 MQ
+  
+  MQ->>Worker: 7. 投递‘发帖事件’
+  activate Worker
+  Worker->>DB: 8. 查询发帖人的粉丝列表 (followers 表)
+  DB-->>Worker: 返回粉丝列表 (e.g., FanA, FanB)
+  
+  loop 批量写扩散
+    Worker->>Cache: 9. 写入粉丝收件箱 (Home Timeline ZSet)
+  end
+  Worker-->>MQ: 10. 返回 ACK 确认 (处理完毕)
+  deactivate Worker
+```
+
+注意它怎么综合本月：发帖走**队列异步扇出**（[M3L9](./message-queues)，发帖快速返回），依靠后台 <GlossaryTerm term="Fan-out Worker" definition="扇出工作协程/线程：负责从消息队列中拉取‘发帖事件’，并遍历发帖者的粉丝列表，将帖子数据（或 ID 指针）批量复制分发至粉丝收件箱的时间线消费进程。">扇出 Worker (Fan-out Worker)</GlossaryTerm> 实现解耦；扇出是**写扩散**（[M3L10](./feed-fanout)）；时间线读走**缓存**（[M3L5-7](./cache-patterns)）；为了防止双写不一致，将待发送事件写入 <GlossaryTerm term="Outbox Table" definition="发件箱表：在 Transactional Outbox 模式中，用于在本地数据库中持久化存储待发布事件记录的辅助表，以保证它与核心业务状态更新在同一个事务中原子 commit。">发件箱表 (Outbox Table)</GlossaryTerm> 中可靠发布（[M3L11](./consistency-patterns)）；整体最终一致（[M2L6](../system-design-bridge/cap-consistency)）。
 
 ## 二、动手 Capstone（必做）
 
@@ -74,7 +112,7 @@ python labs/month03/m3l12_feed_capstone/test_feed_service.py
   ]}
 />
 
-## 三、写一份 ADR
+## 三、写一份 <GlossaryTerm term="ADR" definition="架构决策记录 (Architecture Decision Record - ADR)：一种捕获关键架构决策及其上下文、备选方案和技术后果的轻量级文档结构。常用于团队协同与架构演进追溯。">ADR (架构决策记录)</GlossaryTerm>
 
 ```markdown
 # ADR: feed 采用写扩散 + 异步扇出
@@ -110,6 +148,39 @@ python labs/month03/m3l12_feed_capstone/test_feed_service.py
 
 一个 feed 系统里：帖子存储要选引擎（[M3L1](./storage-engines)）、按用户/时间建索引（[M3L2](./indexing)）、用反规范化写扩散（[M3L4](./sql-vs-nosql)/[M3L10](./feed-fanout)）、时间线重缓存且防三大难题（[M3L5-7](./cache-patterns)）、扇出走队列（[M3L9](./message-queues)）、事件可靠用发件箱（[M3L11](./consistency-patterns)）、整体最终一致（[M2L6](../system-design-bridge/cap-consistency)）。**它是检验你是否真正掌握数据层的试金石。**
 
+```mermaid
+flowchart TD
+  subgraph Month3Integration["Month 3 知识交汇图 (Month 3 Curriculum Integration)"]
+    direction TB
+    
+    subgraph StorageLayer["1. 存储与索引层 (Storage & Index)"]
+      M3L1["M3L1 存储引擎<br/>(帖子物理落库: LSM / B+树)"]
+      M3L2["M3L2 索引设计<br/>(按发帖人/时间戳建立索引)"]
+    end
+    
+    subgraph ConsistencyLayer["2. 一致性与并发 (Concurrency & ACID)"]
+      M3L3["M3L3 事务与隔离<br/>(本地原子写订单与发件箱)"]
+      M3L11["M3L11 一致性模式<br/>(事务发件箱 Outbox 保证至少一次)"]
+    end
+
+    subgraph CacheQueueLayer["3. 缓存与队列 (Cache & Message Queue)"]
+      M3L9["M3L9 消息队列<br/>(异步削峰发帖扇出)"]
+      M3L5_7["M3L5-7 缓存架构<br/>(读路径 Timeline 缓存拦截 & 防穿透)"]
+    end
+
+    subgraph FanoutLayer["4. 反规范化与分发 (De-normalization & Fan-out)"]
+      M3L4["M3L4 反规范化设计<br/>(Timeline 空间换时间冗余副本)"]
+      M3L10["M3L10 扇出策略<br/>(写扩散 Push / 读扩散 Pull 混合选型)"]
+    end
+
+    StorageLayer --> ConsistencyLayer
+    ConsistencyLayer --> CacheQueueLayer
+    CacheQueueLayer --> FanoutLayer
+    
+    FanoutLayer --> Capstone["Capstone Mini Feed System<br/>(终极拼装落地)"]
+  end
+```
+
 ### 2. 从这里通向真实社交系统
 
 你做的 mini feed，正是抖音/微博/朋友圈核心的简化版。后续 [架构案例库](../atlas) 会做 TikTok/YouTube 等，到时回来对照：真实系统在你的骨架上，加了推荐排序、多级缓存、跨区域、A/B 实验等。**但骨架就是你现在做的这个。**
@@ -134,7 +205,50 @@ python labs/month03/m3l12_feed_capstone/test_feed_service.py
 
 **下一步**：Month 4 进入设计原则与设计模式（从变化点推导模式），把代码层面的可维护性提上来。也常回 [架构案例库](../atlas) 对照真实系统。
 
-## 延伸阅读
+## 常见误解
+
+- **"这个 mini feed 系统只是个玩具练习，离真实微博、朋友圈的技术架构差了十万八千里"**: 这种看法极其短视。虽然玩具练习在单机内存中运行，但是它所对应的“写时扇出副本分发”、“按时间戳倒序归并”、“异步队列削峰发帖”和“事务发件箱防双写丢失”的逻辑结构，与新浪微博、Twitter 和微信朋友圈的分布式骨架完全一致。大厂架构无非是在这些核心骨架之上，引入了分布式锁、Redis 分片集群、分库分表持久化、以及海量服务器节点而已。
+- **"实现写扩散时，发帖主线程直接用多线程并发向所有粉丝的收件箱推送即可，不需要什么异步队列"**: 极其危险。当粉丝数量达到数万甚至百万时，在发帖主线程中进行如此大规模的并发网络写操作，会导致当前用户的发帖接口耗时飙升至数秒甚至超时失败。更糟糕的是，一旦中途某几个线程写失败，会遗留大量半成功数据，极难实现数据最终一致性。只有通过消息队列将发帖动作剥离，由后台专职的 Fan-out Worker 线程池进行异步流式处理，才是弹性系统的标准解法。
+- **"既然写扩散缓存了所有人的 Timeline，那么不管是要按时间排序，还是以后升级为复杂的机器学习推荐排序，写扩散都是最优解"**: 这是巨大的架构误区。写扩散极其依赖“按时间戳自增追加”的顺序存储特性（如 Redis ZSet 顺次插入）。一旦产品要求变更为“基于用户兴趣推荐算法得分的智能推荐排序”，每个粉丝看到的帖子得分会随着时间、行为不断发生动态变化，写扩散无法预测这些动态分值并提前算好，系统必须退化为读扩散（Pull），在用户刷新时动态实时运行打分和多路召回排序。
+
+## 六、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 Month 3 的 Capstone 项目中，将‘写扩散 (Push)’扇出逻辑放入‘消息队列 (MQ)’中进行异步处理，其核心价值是什么？',
+      options: [
+        '这消除了所有的存储空间开销，使得帖子完全不需要写入物理数据库中。',
+        '这使得发帖操作能够极其迅速地返回成功响应给发帖用户，将后续向成千上万个粉丝 Timeline 复制分发帖子的高延时、高并发写压力从‘主请求线程’中解耦剥离出去，平摊至后台的异步 Worker 线程池中，极大地改善了写路径的用户体验。',
+        '消息队列能够确保发帖内容不通过任何内存直接落盘。'
+      ],
+      answer: 1,
+      explain: '异步扇出的价值。写扩散发帖时最耗时的部分是“向数千个粉丝收件箱批量写副本”。如果放在同步线程中，会由于网络分区或数据库写延迟导致接口响应时间极长。通过 MQ 进行异步解耦是社交网络系统的标配。'
+    },
+    {
+      q: '当系统演进为混合扇出策略（大V读扩散，普通人写扩散）时，粉丝的 Timeline 缓存读取逻辑如何实现数据合并以保证呈现的时序正确？',
+      options: [
+        '直接读取个人收件箱，无需任何大V的数据合并。',
+        '系统需要并发拉取‘粉丝自己的 Home Timeline 收件箱（推管道数据）’以及该粉丝‘关注的所有大V的发件箱（拉管道数据）’。由于两部分数据各自在局部内都是按时间有序的，系统在应用层内存中使用高效的归并排序（Merge Sort）算法，进行多路归并及截断分页，最终拼出统一的、无缝的合并时间线。',
+        '强制清空所有大V的旧帖子，只保留最新的 1 条。'
+      ],
+      answer: 1,
+      explain: '混合时间线合并归并。混合模式的核心技术点在读路径。它利用了多路归并排序，将预先 Push 的轻量 timeline 和拉回来的大V timeline 合并。由于大V数量一般可控，拉取和归并可以在几十毫秒内完成，兼顾了读写两端的极限性能。'
+    },
+    {
+      q: '如果我们要为 mini feed 系统加入‘事务发件箱 (Transactional Outbox)’以防范由于进程崩溃导致的‘发帖成功但未推送给粉丝’的双写不一致问题，以下步骤正确的是？',
+      options: [
+        '在发帖的主线程里，首先通过 HTTP 触发向粉丝推送消息，推送完再写入关系型数据库的 Orders 表。',
+        '将发帖操作写入‘帖子物理表’和写入‘Outbox 待分发事件表’在同一个数据库本地 ACID 事务中一并提交。然后由一个中继后台进程异步扫描 Outbox 表，将事件推送至 MQ 投递给扇出 Worker。若投递成功，则修改该 Outbox 事件状态为已发送。这利用了本地事务原子性，保证了事件的可靠投递。',
+        '不需要数据库事务，直接使用两个独立线程分别并发写入即可。'
+      ],
+      answer: 1,
+      explain: '发件箱与双写防护。使用事务发件箱模式是确保分布式跨系统（MySQL 与 MQ 之间）最终一致性的经典防线。任何没有经过本地事务锁或提交日志捕获（CDC）的跨服务双写都无法在局部故障时实现状态闭环。'
+    }
+  ]}
+/>
+
+## 七、延伸阅读
 
 - [M3L10 feed 与扇出](./feed-fanout)
 - [架构案例库](../atlas)
