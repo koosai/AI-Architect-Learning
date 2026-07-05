@@ -9,13 +9,14 @@ import GuidedExercise from '@site/src/components/GuidedExercise';
 import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M2L12 · Capstone：设计一个聊天应用
 
 <ChapterMeta
   time="约 6–10 小时（整周项目）"
   prereqs={[{label: 'Month 2 全部 M2L1–M2L11', href: './overview'}]}
-  outcome="一份完整的聊天应用系统设计：需求 + 估算 + HLD + 关键深潜 + 一致性/存储/扩展/容错决策 + ADR，并与真实 WhatsApp 架构对照。"
+  outcome="一份完整的聊天应用系统设计：需求 + 估算 + HLD + 关键深潜 + 一致性/存储/扩展/容错决策 + <GlossaryTerm term='ADR' definition='架构决策记录 (Architecture Decision Record)：一种简短的文本文档，用于捕获一个技术决定（如采用某种架构模式）、背景条件及其带来的商业/技术后果，是团队追溯决策历史的黄金工具。'>ADR</GlossaryTerm>，并与真实 WhatsApp 架构对照。"
   howToUse="这是 Month 2 的毕业作品。按五步法走一遍，每一步都用本月对应的课，最后对照 WhatsApp 案例查漏补缺。"
 />
 
@@ -31,7 +32,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 - **功能需求**：一对一消息、群聊、在线状态、已读回执、离线消息、多设备。
 - **明确不做（V1）**：音视频通话、朋友圈、支付。
-- **非功能需求**：海量长连接、消息近实时送达、弱网下最终送达、极高可用、端到端加密。
+- **非功能需求**：海量<GlossaryTerm term="Long Connection" definition="长连接：客户端与服务器建立的持久化双向通信连接（如 WebSocket、TCP），在此通道上服务器可主动向客户端推送数据，而无需客户端反复轮询。是实时通讯系统（IM）的基石。">长连接</GlossaryTerm>、消息近实时送达、弱网下最终送达、极高可用、端到端加密。
 - **关键澄清问题**：消息要强一致顺序吗？（答：同一会话内有序即可，全局无需）——这一个问题就决定了存储和分片方式。
 
 ### 第 2 步：容量估算（[M2L3](./capacity-estimation)）
@@ -40,7 +41,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 - 写 QPS ≈ 10亿 × 40 / 86400 ≈ **46 万/s**（均值），峰值更高 → **单库远远不够，必须分片**。
 - 连接数：数亿级长连接 → 需要专门的连接层（回扣 [WhatsApp 单机百万连接](../atlas/whatsapp.mdx)）。
-- 存储：投递即删可大幅降低（[WhatsApp 的 store-and-forward](../atlas/whatsapp.mdx)）。
+- 存储：投递即删可大幅降低（[WhatsApp 的 <GlossaryTerm term="Store and Forward" definition="存储转发：一种消息投递哲学，接收方在线时由服务器直接路由直发；接收方离线时，消息暂时存放在服务器的离线队列中，一旦接收方上线并确认拉取成功（Delivery ACK），服务器便立即将其物理删除。">store-and-forward</GlossaryTerm>](../atlas/whatsapp.mdx)）。
 
 ### 第 3 步：高层设计 HLD（[M2L5](./hld-diagramming)）
 
@@ -58,9 +59,50 @@ flowchart LR
   GW -. "离线推送" .-> PUSH["APNs / FCM"]
 ```
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor UserA as 发送方 (User A)
+  participant GWA as 网关A (Gateway A)
+  participant Router as 消息路由 (Route Svc)
+  participant DB as 消息存储/离线队列 (DB/Store)
+  participant GWB as 网关B (Gateway B)
+  actor UserB as 接收方 (User B)
+
+  UserA->>GWA: 1. 发送加密消息 {to: B, msg: "Hi"} (长连接)
+  GWA->>Router: 2. 消息流转路由
+  Router->>Router: 3. 查询 B 的网关所在路由 (在线状态)
+  
+  alt 接收方 B 在线 (Online Path)
+    Router->>GWB: 4a. 转发消息至网关 B
+    GWB->>UserB: 4b. 推送消息给 B (长连接)
+    UserB-->>GWB: 4c. 返回接收 ACK (Delivery ACK)
+    GWB-->>Router: 4d. 上报投递确认
+    Router-->>GWA: 4e. 回传投递状态给 A 网关
+    GWA-->>UserA: 4f. A 客户端渲染“双勾”已送达
+  else 接收方 B 离线 (Offline Store-and-Forward Path)
+    Router->>DB: 5a. 写入离线消息队列 (暂存)
+    DB-->>Router: 5b. 写入成功
+    Router-->>GWA: 5c. 回传暂存成功
+    GWA-->>UserA: 5d. A 客户端渲染“单勾”服务器已收
+    Note over UserB,DB: 一段时间后，用户 B 重新连接上线...
+    UserB->>GWB: 5e. 网关登录建立连接
+    GWB->>Router: 5f. 触发上线事件查询
+    Router->>DB: 5g. 读取 B 的离线消息流
+    DB-->>Router: 5h. 返回离线消息列表
+    Router->>GWB: 5i. 转发给网关 B
+    GWB->>UserB: 5j. 推送离线消息给 B
+    UserB-->>GWB: 5k. B 返回接收 ACK 确认
+    GWB->>Router: 5l. 上报投递状态
+    Router->>DB: 5m. 物理删除服务器上的离线消息 (E2EE 投递即删)
+    Router-->>GWA: 5n. 通知 A 网关更新状态
+    GWA-->>UserA: 5o. A 客户端渲染更新为“双勾”
+  end
+```
+
 ### 第 4 步：深潜关键组件
 
-- **消息投递**：在线直发、离线入队、投递即删（隐私+省存储）。一对多群聊要**扇出**（写扩散 vs 读扩散，见下取舍）。
+- **消息投递**：在线直发、离线入队、投递即删（隐私+省存储）。一对多群聊要<GlossaryTerm term="Fan-out" definition="扇出/扩散：发布-订阅模型或社交网络中，一条消息产生后分发给多个订阅者/群成员的逻辑路径。分为写扩散（Push，写多份收件箱）与读扩散（Pull，只写一份发件箱，读时动态拉取）。">扇出</GlossaryTerm>（写扩散 vs 读扩散，见下取舍）。
 - **在线状态**：用 Redis 存 presence，心跳维持。
 - **多设备**：每设备独立会话密钥（回扣 [WhatsApp 2021 多设备重构](../atlas/whatsapp.mdx)）。
 
@@ -99,6 +141,27 @@ flowchart LR
 />
 
 这正是 feed/IM 系统的经典难题——它把 [L7 数据建模](../foundations/data-modeling)、[M2L7 扩展](./scaling-strategies)、[M2L6 一致性](./cap-consistency) 全串在了一起。
+
+```mermaid
+flowchart TD
+  subgraph FanOutComp["群消息扩散机制对比 (Fan-out Comparison)"]
+    direction TB
+    
+    subgraph WriteAmp["写扩散 (Push / Fan-out on Write)"]
+      UserA["发送方 A"] -->|1. 发送一条消息| GroupSvc1["群聊服务"]
+      GroupSvc1 -->|2. 查询群成员 (B, C, D)| MemberDB1["群成员列表"]
+      GroupSvc1 -->|3. 多次写入 (写放大)| InboxB[("成员 B 收件箱")] & InboxC[("成员 C 收件箱")] & InboxD[("成员 D 收件箱")]
+      Note1["特点:<br/>- 读延迟极低 (用户只需读自己的一封信)<br/>- 写开销大 (群人数 N 越大, 写入放大 N 倍)"]
+    end
+    
+    subgraph ReadAmp["读扩散 (Pull / Fan-out on Read)"]
+      UserA2["发送方 A"] -->|1. 发送一条消息| GroupSvc2["群聊服务"]
+      GroupSvc2 -->|2. 单次写入 (无写放大)| GroupInbox[("群消息主收件箱")]
+      MemberB["成员 B"] & MemberC["成员 C"] & MemberD["成员 D"] -->|3. 查询时动态拉取聚合 (读放大)| GroupInbox
+      Note2["特点:<br/>- 写开销极小 (只需写一份数据)<br/>- 读延迟高 (多成员并发拉取时, 带来狂暴的 DB 聚合读压力)"]
+    end
+  end
+```
 
 ## 三、和真实 WhatsApp 对照
 
@@ -147,7 +210,50 @@ flowchart LR
   ]}
 />
 
-## 五、自评 Rubric
+## 常见误解
+
+- **"设计聊天应用第一步就是写代码或定下 WebSocket 技术"**: 这是初学者的做法。Staff+ 架构师的第一步永远是**需求澄清**（功能边界、并发规模、多设备支持）和**容量估算**。这决定了存储选型是单库还是分布式分片、长连接是否需要独立的无状态物理层。
+- **"聊天消息必须使用分布式关系型强一致事务存储"**: 聊天消息的典型特征是高并发写入，且接收方拉取完离线消息后即物理删除。强求 ACID 复杂关联存储会导致极其高昂的同步代价和性能瓶颈。业界通常采用宽列 NoSQL（Cassandra/ScyllaDB）或 Key-Value（如端到端加密下的暂存队列），结合最终一致性来换取无限的水平写扩展。
+- **"群聊消息只能使用单一的写扩散或读扩散"**: 极端化设计不可行。面对超级大群（如万人或十万人群），写扩散会导致写放大数十万倍吞噬磁盘 I/O；而读扩散在全体成员并发拉取时又会导致读放大。现实中百万级 IM 系统（微信/WhatsApp）一定是根据群活跃度和群人数，动态切换读写扩散策略的混合架构。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在设计支持 10 亿用户的即时通讯（IM）系统时，连接层网关的主要物理挑战是什么？针对该挑战，为何通常让连接层网关保持‘无状态’并与存储层分离？',
+      options: [
+        '主要是磁盘容量瓶颈。必须把连接层和存储层合二为一以节省网线。',
+        '主要是操作系统维持数亿级长连接的内存与 Socket 句柄开销。保持长连接网关无状态，使其只负责数据包的接收与推送，而将路由信息与聊天记录外置到 Redis/Cassandra 中，能确保网关节点可以弹性水平扩展，任意节点宕机只影响局部连接，由客户端自动重连即可自愈。',
+        '网关只支持 HTTP 单向短连接，不需要考虑长连接管理。'
+      ],
+      answer: 1,
+      explain: 'Erlang/Go 节点最擅长单机维持百万连接。为了避免状态复杂性拖垮网关，连接网关不应保存除了会话路由之外的任何持久状态。一旦网关故障，客户端自动寻找另一台网关重连并拉取离线消息，这是业内海量连接的核心打法。'
+    },
+    {
+      q: '关于即时通讯系统群聊设计中的‘写扩散（Fan-out on Write）’与‘读扩散（Fan-out on Read）’，以下哪项取舍分析是正确的？',
+      options: [
+        '写扩散对十万人的超大群非常友好，因为只写一次；读扩散对小群极不友好，因为浪费存储。',
+        '写扩散（Push）在发送消息时同步写入所有接收者的收件箱，读极快，但面对万人大群会造成瞬时数据库写入风暴；读扩散（Pull）消息只写一份群收件箱，群成员在线时拉取，写成本低，但多成员并发读聚合会给数据库带来巨大读取压力。商业大厂常根据群规模混合使用。',
+        '写扩散和读扩散在性能和资源开销上没有任何区别。'
+      ],
+      answer: 1,
+      explain: '扇出（Fan-out）是一项经典的系统设计取舍。写扩散用‘空间和写开销’换取‘读取的极低延迟’；读扩散则反之。混合模式（大群用读扩散、小群用写扩散）则是兼具两方优点的混合设计，被微信、飞书等大厂使用。'
+    },
+    {
+      q: '在 IM 系统的离线消息投递中，‘Store-and-forward（存储转发）’设计为什么能在保护用户隐私的同时大幅削减物理存储成本？',
+      options: [
+        '因为它要求所有离线消息在传输时都不进行任何加密，并且保留永久的历史记录以方便分析。',
+        '因为消息在接收方离线时暂时存放在数据库中；一旦接收方重新上线并确认收到（Delivery ACK），该离线消息便在服务器端被物理删除。这极大地释放了服务器的存储空间，并配合端到端加密（E2EE）确保了聊天数据不留存在云端服务器。',
+        '因为它要求服务器强制使用昂贵的对象存储把所有文本存成独立文件。'
+      ],
+      answer: 1,
+      explain: '这也是 WhatsApp 等国际主流 IM 的核心哲学。服务器并不想永久保留用户的聊天记录。离线存储只是充当过渡队列。这种‘投递即删’的模式不仅极度符合合规与隐私，更将物理服务器的磁盘采购量缩减了几个数量级。'
+    }
+  ]}
+/>
+
+## 六、自评 Rubric
 
 - [ ] **方法完整**：五步法每步都有产出（M2L1–M2L5）。
 - [ ] **估算驱动**：架构选择由容量数字支撑（M2L3）。
