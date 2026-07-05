@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M3L3 · 事务与隔离级别
 
@@ -27,6 +28,32 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 ## 一、两个转账同时跑，钱会算错吗？
 
 [L8](../foundations/concurrency-basics) 讲过竞态。事务把竞态搬到了数据库：两个事务并发，一个可能读到另一个**还没提交**的数据（脏读）、或同一行读两次结果不同（不可重复读）、或汇总时多出/少了行（幻读）。**这些异常发生与否，取决于你设的隔离级别。**
+
+```mermaid
+flowchart TD
+  subgraph IsolationHierarchy["事务隔离级别与并发异常防范树 (Isolation Anomaly Hierarchy)"]
+    direction TB
+    
+    Level0["1. 读未提交 (Read Uncommitted)<br/>- 没有任何并发隔离防线"]
+    Level1["2. 读已提交 (Read Committed)<br/>- 防止脏读"]
+    Level2["3. 可重复读 (Repeatable Read / MVCC 快照隔离)<br/>- 防止脏读、不可重复读、部分幻读"]
+    Level3["4. 可串行化 (Serializable / 锁或串行)<br/>- 防止全部并发异常 (包含写偏斜 Write Skew)"]
+    
+    Level0 -->|阻断脏读| Level1
+    Level1 -->|阻断不可重复读| Level2
+    Level2 -->|阻断写偏斜/幻读| Level3
+    
+    Dirty["脏读 (Dirty Read)<br/>- 读到未提交垃圾版本"]
+    NonRep["不可重复读 (Non-repeatable Read)<br/>- 两次读取单行值被更改"]
+    Phantom["幻读 (Phantom Read)<br/>- 两次查询结果行数变多/变少"]
+    Skew["写偏斜 (Write Skew)<br/>- 快照决策后写不同行导致约束破损"]
+    
+    Level0 -.- x Dirty
+    Level1 -.- x NonRep
+    Level2 -.- x Skew
+    Level2 -.- x Phantom
+  end
+```
 
 ## 二、三个核心概念（分层）
 
@@ -46,12 +73,53 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 | 可串行化 | 全部 | （最慢） |
 
 - <GlossaryTerm term="Dirty Read" definition="脏读：读到了另一个事务还未提交的数据；若那个事务回滚，你就读到了根本不存在的值。">脏读</GlossaryTerm>：读到别人没提交的。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor UserA as 事务 A (Tx A)
+  actor UserB as 事务 B (Tx B)
+  participant DB as 数据库物理存储 (DB Storage)
+
+  Note over UserA,DB: 场景: 读未提交 (Read Uncommitted) 隔离级别下的脏读故障
+  UserA->>DB: UPDATE account SET balance=100 WHERE id=1
+  Note over DB: 内存脏页被更新, 但未进行 COMMIT!
+  UserB->>DB: SELECT balance FROM account WHERE id=1
+  DB-->>UserB: 返回 balance = 100 (脏数据!)
+  Note over UserB: 事务 B 拿着 100 额度做业务逻辑...
+  UserA->>DB: 发生错误! ROLLBACK 事务
+  Note over DB: 数据回滚还原为旧值 50
+  Note over UserA,UserB: 结果: 事务 B 携带从不存在的 100 额度完成了业务, 数据彻底算错!
+```
+
 - <GlossaryTerm term="Non-repeatable Read" definition="不可重复读：同一事务内读同一行两次，结果不同（因为中间被别的事务改并提交了）。">不可重复读</GlossaryTerm>：读两次不一样。
-- <GlossaryTerm term="Phantom Read" definition="幻读：同一事务内按同一条件查两次，第二次多出/少了行（别的事务插入/删除并提交了）。">幻读</GlossaryTerm>：行数变了。
+- <GlossaryTerm term="Phantom Read" definition="幻读：同一事务内按同一条件查两次，第二次多出/少了行（别的事务插入/删除并提交了）。">幻读</GlossaryTerm>：行数变了，防住它常需借助行锁与 <GlossaryTerm term="Gap Lock" definition="间隙锁：锁定索引记录之间的间隙（即排他区间），防止其他事务在该间隙中插入新数据，从而在可重复读级别下避免幻读异常。">间隙锁 (Gap Lock)</GlossaryTerm>。
 
 ### 深入（选学）：MVCC 与快照隔离
 
-大多数现代数据库不靠"加锁锁住所有人"实现高隔离，而用 <GlossaryTerm term="MVCC" definition="多版本并发控制：每次写产生一个新版本，读取看到的是事务开始那一刻的一致快照。读不阻塞写、写不阻塞读，是现代数据库高并发的基石。">MVCC</GlossaryTerm>（多版本并发控制）：每次写产生新版本，每个事务读到的是它**开始那一刻的一致快照**（<GlossaryTerm term="Snapshot Isolation" definition="快照隔离：事务读到一个固定时刻的一致快照，期间别人的提交对它不可见。读不阻塞写。但仍可能有写偏斜（write skew）。">快照隔离</GlossaryTerm>）。读不阻塞写、写不阻塞读，并发高得多。但它仍有一个微妙漏洞——<GlossaryTerm term="Write Skew" definition="写偏斜：两个事务各自基于同一份快照做决定并写不同的行，单独都合法，合起来却破坏了约束（如两个医生同时请假，各自看到还有人值班）。可串行化才能完全防住。">写偏斜</GlossaryTerm>，需要可串行化才能完全防住。
+大多数现代数据库不靠"加锁锁住所有人"实现高隔离，而用 <GlossaryTerm term="MVCC" definition="多版本并发控制：每次写产生一个新版本，读取看到的是事务开始那一刻的一致快照。读不阻塞写、写不阻塞读，是现代数据库高并发的基石。">MVCC</GlossaryTerm>（多版本并发控制）：每次写产生新版本，每个读取事务生成一个 <GlossaryTerm term="ReadView" definition="读视图：MVCC 在快照读时创建的一个快照数据结构，记录当前活跃（未提交）的事务 ID 列表。读取线程根据此视图判定行版本链中的每个版本对当前事务是否可见。">ReadView (读视图)</GlossaryTerm>，使读到的是它**开始那一刻的一刻快照**（<GlossaryTerm term="Snapshot Isolation" definition="快照隔离：事务读到一个固定时刻的一致快照，期间别人的提交对它不可见。读不阻塞写。但仍可能有写偏斜（write skew）。">快照隔离</GlossaryTerm>）。读不阻塞写、写不阻塞读，并发高得多。但它仍有一个微妙漏洞——<GlossaryTerm term="Write Skew" definition="写偏斜：两个事务各自基于同一份快照做决定并写不同的行，单独都合法，合起来却破坏了约束（如两个医生同时请假，各自看到还有人值班）。可串行化才能完全防住。">写偏斜</GlossaryTerm>，需要可串行化才能完全防住。
+
+```mermaid
+flowchart TD
+  subgraph MVCCCheck["MVCC 版本可见性判定规则 (ReadView Check Flow)"]
+    direction TB
+    RowVersion["行记录物理版本 (Row Version with trx_id)"] --> CheckCreator{"1. trx_id == Creator_ID (当前事务创建的?)"}
+    
+    CheckCreator -->|Yes| Visible["版本可见 (Visible)"]
+    CheckCreator -->|No| CheckMin{"2. trx_id < Min_Trx_ID (在 ReadView 生成前已提交?)"}
+    
+    CheckMin -->|Yes| Visible
+    CheckMin -->|No| CheckMax{"3. trx_id >= Max_Trx_ID (在 ReadView 生成后才开启?)"}
+    
+    CheckMax -->|Yes| Invisible["版本不可见 (Invisible) - 查找 Undo Log 链中的上一个旧版本"]
+    CheckMax -->|No| CheckActive{"4. trx_id 是否在活跃事务列表 ids 中?"}
+    
+    CheckActive -->|Yes| Invisible
+    CheckActive -->|No| Visible
+    
+    Invisible --> RowVersion
+  end
+```
 
 <ResearchNote
   title="隔离级别其实定义得并不干净"
@@ -183,9 +251,46 @@ PostgreSQL、MySQL InnoDB、几乎所有现代关系库都用 MVCC——这也�
 
 ## 常见误解
 
-- **"事务就是加个 BEGIN/COMMIT"**：关键是隔离级别决定了并发下你看到什么。
-- **"隔离级别越高越好"**：可串行化最慢、最易冲突，要按需选。
-- **"可重复读就没有任何异常"**：它常是快照隔离，仍有写偏斜。
+- **"事务就是加个 BEGIN 和 COMMIT，剩下的数据库会自动解决"**: 这种理解非常肤浅。事务的核心在于并发隔离。你如果不去显式指定事务的隔离级别，或者在需要时显式加上排他锁（例如 `FOR UPDATE`），并发时就会由于读到垃圾快照、丢失更新或因为写偏斜彻底把账算错。
+- **"事务隔离级别越高越好，直接全部设成可串行化（Serializable）即可"**: 可串行化虽然能完全杜绝数据不一致，但这是以完全丧失并发吞吐、增加大范围锁冲突和极高的死锁（Deadlock）概率为代价的。一旦高并发请求进来，数据库将大面积阻塞排队或抛错重试。
+- **"可重复读（Repeatable Read）就完全等价于快照隔离，没有任何数据不一致的死角"**: 这是很多工程师的盲区。以 InnoDB 可重复读级别为例，虽然用 MVCC 防治了幻读（读快照时行数一致），但在多事务各自读取并写不同关联行的场景下，依然会触发“写偏斜”（Write Skew）导致整体约束失效。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在数据库事务隔离级别中，‘不可重复读’ (Non-repeatable Read) 和 ‘幻读’ (Phantom Read) 两种异常的最根本区别是什么？',
+      options: [
+        '不可重复读只能在 MySQL 中发生，而幻读只会在 Oracle 中发生。',
+        '不可重复读关注的是同一条物理记录行（Row）的值被修改并提交（同一个行的值读两次不一样）；而幻读关注的是满足特定查询条件的数据集合的记录行数（Set of Rows）发生变化（别的事务插入或删除了新行并提交）。',
+        '它们是完全相同的概念，只是国内外的翻译叫法不同。'
+      ],
+      answer: 1,
+      explain: '修改 vs 插入/删除。不可重复读可以通过对特定数据行加锁（Row Lock）来规避；但幻读由于涉及之前不存在的新插入行，必须通过间隙锁（Gap Lock）或者多版本并发控制（MVCC）配合快照隔离来解决。'
+    },
+    {
+      q: '多版本并发控制 (MVCC) 广泛应用于现代主流关系型数据库（如 MySQL InnoDB、PostgreSQL），其核心物理优势是什么？',
+      options: [
+        '它彻底摒弃了磁盘，使得事务操作只在 RAM 中快速交换。',
+        '它做到了‘读不阻塞写，写不阻塞读’。读取事务根据其 Snapshot 拍下的全局事务 LSN/版本号，查找版本历史链中匹配的数据，完全不需要对正在读取的数据加共享锁，从而彻底释放了读写并发性能。',
+        '它能够让多个事务同时更新同一行数据的同一个字段而不会发生任何冲突。'
+      ],
+      answer: 1,
+      explain: 'MVCC 的核心机制是通过版本链和 ReadView 消除读写锁冲突。读取者走历史版本（快照读），写入者改最新版本，两者互不干扰。这比传统的强锁机制（可串行化）吞吐量提升了数个数量级。'
+    },
+    {
+      q: '在快照隔离级别下，依然无法完全防住的一种极其微妙的并发数据损坏异常是‘写偏斜’ (Write Skew)。以下关于写偏斜的经典场景描述哪项正确？',
+      options: [
+        '两个用户同时抢购同一件商品的最后 1 个库存，最终导致库存扣减成了负数。',
+        '系统要求必须至少有 1 名医生值班。医生 A 和 B 在各自事务中查到当前值班人数为 2，均在各自事务中请假并成功提交。由于两者均在未提交的快照中作决策，最终提交后值班人数变为 0，破坏了一致性约束。',
+        '在转账事务中，A 账户的钱减少了，但 B 账户的钱没有增加。'
+      ],
+      answer: 1,
+      explain: 'Write Skew。写偏斜是在快照隔离（Snapshot Isolation）下，多个事务基于互不重叠但彼此关联的行作出判定。各自更改自己那行（没有直接写锁冲突），但全局约束被破坏。必须通过 SELECT ... FOR UPDATE 显式加排他锁或使用可串行化（Serializable）级别来防范。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
