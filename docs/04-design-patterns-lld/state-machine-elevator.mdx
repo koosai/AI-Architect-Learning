@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M4L9 · 状态机与电梯
 
@@ -28,21 +29,90 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 订单逻辑里你写了 `if status == "paid" and not shipped and not cancelled ...`，状态一多，布尔标志和判断组合爆炸，还经常漏掉“已取消的订单不能发货”这种非法转移，导致脏数据。**根因：你把“状态”和“允许的转移规则”散落在各处 if 里，没有一个集中的地方说清楚“谁能转到谁”。**
 
+```mermaid
+stateDiagram-v2
+  [*] --> idle : 初始创建
+  
+  idle --> up : call_up (上呼)
+  idle --> down : call_down (下呼)
+  idle --> door_open : open (手动开门)
+  
+  up --> idle : arrive (到达停靠)
+  down --> idle : arrive (到达停靠)
+  
+  door_open --> idle : close (自动关门)
+  
+  note right of up : 上行中不能直接下呼转为 down 状态<br/>必须先 arrive 回到 idle 停靠状态
+  note right of door_open : 开门状态下不能直接呼叫上下行<br/>必须先 close 关门回到 idle
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：有限状态机（FSM）
 
-<GlossaryTerm term="Finite State Machine" definition="有限状态机（FSM）：系统在任一时刻处于有限个状态之一，只能通过预先定义的“合法转移”从一个状态切换到另一个。把状态和允许的转移集中描述，非法转移被显式拒绝。">有限状态机</GlossaryTerm>：明确列出所有**状态**和**合法转移**（事件 + 当前状态 → 新状态）。最直接的实现是一张<GlossaryTerm term="Transition Table" definition="转移表：用一张数据结构（如字典）集中描述“(当前状态, 事件) → 新状态”的所有合法转移。查表即转移，非法转移直接拒绝。">转移表</GlossaryTerm> `{(状态, 事件): 新状态}`——转移就是查表，查不到就是非法转移，直接拒绝。
+<GlossaryTerm term="Finite State Machine" definition="有限状态机（FSM）：系统在任一时刻处于有限个状态之一，只能通过预先定义的“合法转移”从一个状态切换到另一个。把状态和允许的转移集中描述，非法转移被显式拒绝。">有限状态机</GlossaryTerm>：明确列出所有**状态**和**合法转移**（事件 + 当前状态 → 新状态）。最直接的实现是一张<GlossaryTerm term="Transition Table" definition="转移表：用一张数据结构（如字典）集中描述“(当前状态, 事件) → 新状态”的所有合法转移。查表即转移，非法转移直接拒绝。">转移表</GlossaryTerm> `{(状态, 事件): 新状态}`——进行 <GlossaryTerm term="State Transition" definition="状态转移 (State Transition)：系统从当前拥有的某个特定状态，响应特定触发事件 (Event) 后切换到新目标状态的行为。状态转移由合法性规则严格管辖。">状态转移 (State Transition)</GlossaryTerm> 就是查表，查不到就是非法转移，直接拒绝。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 客户端 (Client)
+  participant Context as 状态机环境 (Context)
+  participant Table as 转移匹配表 (TransitionTable)
+
+  Note over Client,Table: 1. 合法状态转移流 (idle + call_up -> up)
+  Client->>Context: send("call_up")
+  activate Context
+  Context->>Table: 查询规则: ("idle", "call_up")
+  activate Table
+  Table-->>Context: 返回目标状态 "up"
+  deactivate Table
+  Note over Context: 更新状态为 "up"
+  Context-->>Client: 成功 (状态转移完成: up)
+  deactivate Context
+
+  Note over Client,Table: 2. 非法状态转移流 (up + call_down -> 拒绝)
+  Client->>Context: send("call_down")
+  activate Context
+  Context->>Table: 查询规则: ("up", "call_down")
+  activate Table
+  Table-->>Context: 返回未定义 (None/undefined)
+  deactivate Table
+  Note over Context: 规则校验失败: 拒绝转移!
+  Context-->>Client: 抛出错误 Exception ("非法转移")
+  deactivate Context
+```
 
 ### 进阶：State 模式——把每个状态做成对象
 
-当“每个状态下的行为”很不一样时，用<GlossaryTerm term="State Pattern" definition="状态模式（GoF）：把每个状态做成一个对象，对象自己知道“在本状态下各事件怎么处理、该转到哪个状态”。context 把请求委托给当前状态对象，换状态=换对象，消除大量 if-else。">State 模式</GlossaryTerm>：每个状态是一个对象，**自己知道本状态下各事件怎么响应、该转到哪**。context 把请求委托给“当前状态对象”，切换状态 = 换一个对象。这其实就是 [策略模式](./strategy-pattern) 的近亲——只不过策略换的是“算法”，State 换的是“状态”，且状态之间会互相转移。
+当“每个状态下的行为”很不一样时，用<GlossaryTerm term="State Pattern" definition="状态模式（GoF）：把每个状态做成一个对象，对象自己知道“在本状态下各事件怎么处理、该转到哪个状态”。context 把请求委托给当前状态对象，换状态=换对象，消除大量 if-else。">State 模式</GlossaryTerm>：每个状态是一个对象，**自己知道本状态下各事件怎么响应、该转到哪**。状态机的持有者即 <GlossaryTerm term="Context" definition="上下文环境 (Context)：状态机模式中维护当前状态实例的宿主对象。它负责对外暴露业务接口，并在内部将具体行为委托给当前所处的具体状态对象执行。">Context (上下文环境)</GlossaryTerm> 把请求委托给“当前状态对象”，切换状态 = 换一个对象。这其实就是 [策略模式](./strategy-pattern) 的近亲——只不过策略换的是“算法”，State 换的是“状态”，且状态之间会互相转移。
 
 ### 深入（选学）：转移表 vs State 模式怎么选
 
 - **状态多、每状态行为简单**（主要就是“能不能转”）→ **转移表**最省事、最一目了然。
 - **每状态行为复杂、差异大**（不同状态对同一事件做完全不同的事）→ **State 模式**更清晰，避免巨型 if。
 - 真实系统常**混合**：用表管转移合法性，用对象/函数管每状态的动作。关键是：**把“合法转移”这件事集中到一个可审查的地方**，而不是散落在判断里——这才是状态机的核心价值。
+
+```mermaid
+flowchart TD
+  subgraph TransitionsTableStyle["1. 数据驱动: 转移表模式 (Transition Table FSM)"]
+    direction TB
+    Context1["电梯环境 (Elevator Context)"] -->|1. 校验事件是否合法| FsmEngine1["状态机引擎 (FSM Engine)"]
+    FsmEngine1 -->|2. 查询哈希映射| Dictionary1["转移映射表 (Dict / Hash Map)<br/>{ (State, Event) -> NewState }"]
+    FsmEngine1 -->|3. 执行通用过渡回调| ActionCallback1["进入/退出动作函数 (State Actions)"]
+  end
+
+  subgraph StatePatternStyle["2. 面向对象: 状态模式 (State Design Pattern)"]
+    direction TB
+    Context2["电梯环境 (Elevator Context)"] -->|委托调用| StateBase["状态抽象基类 (State Base Class)<br/>{ handle_call_up() / handle_arrive() }"]
+    
+    IdleState["停靠状态 (IdleState)"] -.->|实现具体转移逻辑| StateBase
+    UpState["上行状态 (UpState)"] -.->|实现具体转移逻辑| StateBase
+    DownState["下行状态 (DownState)"] -.->|实现具体转移逻辑| StateBase
+    
+    IdleState -->|运行时替换当前状态实例| UpState
+    UpState -->|运行时替换当前状态实例| IdleState
+  end
+```
 
 <ResearchNote
   title="把控制流变成可检查的状态与转移"
@@ -176,9 +246,46 @@ TCP 连接（[L9/L11](../foundations/api-and-http)）、[消息消费的 ack 状
 
 ## 常见误解
 
-- **“状态用几个布尔标志就够了”**：标志组合会爆炸、易产生矛盾状态；状态机更安全。
-- **“State 模式必须建一堆类”**：状态多但行为简单时，转移表更省事。
-- **“状态机只用于协议”**：订单、审批、UI 流程、游戏 AI 全是状态机。
+- **"给对象设计状态时，用 `is_paid`、`is_shipped`、`is_cancelled` 等几个布尔标志位组合判断非常简单，根本不需要引入状态机引擎或状态模式"**: 这是引发脏状态灾难的典型泥潭。随着业务演进，布尔值数量增加，会带来可怕的 $2^N$ 状态空间组合爆炸。很多组合在逻辑上是完全矛盾的（例如 `is_shipped == True` 同时 `is_cancelled == True`），并且由于校验规则分散在无数个业务 if 语句中，漏掉某处防御就会导致核心数据发生逻辑冲突。状态机则强制将状态空间收敛为有限且排他的主轴状态，结构上消灭了矛盾组合。
+- **"状态模式（State Pattern）把状态做成类，只不过是把原本属于 Context 的 if-else 拆分到了各个具体的状态子类中，代码并没有减少，因此完全是过度设计"**: 混淆了“控制逻辑内聚”与“代码行数”的度量。状态模式的价值绝不在于减少总代码行数，而是在于实现 **开闭原则（OCP）** 和 **单一职责原则（SRP）**。如果不采用状态模式，每当新增一种状态（如“部分退款”），你必须在 Context 类里的每个动作方法（如 `ship()`、`cancel()`、`refund()`）中都去翻改 if-else。而在状态模式下，你只需要新增一个 State 子类，并在此子类内实现本状态下的少量特定事件逻辑，Context 类的所有主干动作代码均无需做任何改动。
+- **"既然我们使用了状态机，那么高并发分布式架构下的‘状态一致性’和‘防状态回退’问题就自然解决了，不需要在数据库加锁"**: 这是一个极度危险的安全误解。经典的内存状态机（包括 GoF 的 State 模式与转移表）只管“进程内”的转移逻辑是否合法。在分布式场景中，多个请求可能并发抵达不同的服务实例，同时试图修改同一个订单的持久化状态。如果只在内存中走状态机校验，随后进行无锁 update，必然会发生并发覆写（如已支付状态被并发的超时取消请求覆写）。在持久化层设计**乐观锁（版本号 / 状态前置条件 `status = expected_status`）** 或分布式排他锁，是状态机在工业级落地中不可分割的底层防卫。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在面向对象设计中，State 模式（状态模式）与 Strategy 模式（策略模式）的类图结构几乎完全一致，那么它们的最核心区别是什么？',
+      options: [
+        '区别在于意图与状态流转：策略模式各个策略算法之间是完全独立、互不感知的，通常在初始化时选定一个就不会再变；而状态模式的各个状态子类之间通常需要相互了解，并且会在执行行为时发生‘自我状态流转’，即动态地将 Context 对象的当前状态指针替换为另一个状态对象。',
+        '策略模式只支持单例，而状态模式必须每次实例化新对象。',
+        '策略模式只能在后台运行，状态模式可以用在前端 UI。'
+      ],
+      answer: 0,
+      explain: '状态模式与策略模式的差异。虽然它们的骨架非常相似，都是把行为委托给被组合的子类对象，但策略模式是单次静态分流（如选折扣），状态模式则是动态状态切换序列，状态之间存在显式的状态转移流转逻辑。'
+    },
+    {
+      q: '为什么在订单、审批流、网络连接等高并发高可靠的后端系统中，建议使用‘转移表（Transition Table）’而不是散落在各处的 if-else 标志位来管理状态转移？',
+      options: [
+        '因为 if-else 会导致 CPU 分支预测失败，从而使性能降低几千倍。',
+        '因为转移表把所有的‘(当前状态, 事件) -> 新状态’合法流转规则集中定义在一处（如哈希表/配置表），易于进行代码审查和可视化，并且通过查不到对应的 key 就能直接拒绝非法转移（防卫设计），防止因为零散判断漏洞导致账目数据不一致。',
+        '转移表能自动把 Python 代码转换成 C++ 代码运行。'
+      ],
+      answer: 1,
+      explain: '状态转移的可审查性与防卫设计。在实际工程中，漏掉某些非法状态转移（如‘已退款的订单还能点击确认收货’）是灾难性的。将所有转移规则集中到一张表上，不仅能让团队一眼看清整个生命周期，还能在引擎底层提供统一的拒绝逻辑，杜绝脏状态注入。'
+    },
+    {
+      q: '如果在一个高并发分布式系统中（如电商订单服务），多台服务器实例同时处理同一个订单的状态变更请求，如何在使用状态机的同时避免并发冲突或‘状态回退’？',
+      options: [
+        '使用分布式锁或者乐观锁（基于数据库的版本号或当前状态作为 SQL 更新的 Where 条件：`where id = :id and status = :current_status`），并在变更状态前校验是否属于状态机定义的合法转移路径，防止并发修改导致旧状态覆盖新状态。',
+        '状态机只允许单线程运行，不允许分布式多实例处理。',
+        '只要状态机是用 State 模式写的，操作系统就会自动在物理层加锁。'
+      ],
+      answer: 0,
+      explain: '分布式环境下的状态一致性。在分布式架构中，仅在内存中跑状态机是不够的，必须配合数据库级别的锁（如 `update order set status = :new_state, version = version + 1 where id = :id and status = :expected_state`）来进行状态防回退与冲突拦截，这属于状态一致性设计的核心常识。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
