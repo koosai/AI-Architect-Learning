@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M4L1 · 变化驱动设计
 
@@ -28,11 +29,32 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 你的算面积函数里写满了 `if shape == "circle" ... elif shape == "rect" ...`。产品要加"三角形"，你又得回去改这个函数。加支付方式、加通知渠道、加文件格式——同样的痛：**每次需求变化，都要去修改已有的、已经测试过的代码**，改一处错一片。问题的根源：**你把"会变的部分"和"不变的骨架"混在了一起。**
 
+```mermaid
+flowchart TD
+  subgraph RigidDesign["1. 僵硬的强耦合设计 (Rigid nested if-else)"]
+    direction TB
+    App1["客户端调用"] --> CoreFn1["核心 area(shape) 函数"]
+    CoreFn1 -->|"shape=='circle'"| circle_calc["圆形面积计算逻辑"]
+    CoreFn1 -->|"shape=='rect'"| rect_calc["矩形面积计算逻辑"]
+    CoreFn1 -.->|"shape=='triangle'<br/>(修改核心代码才能新增!)"| tri_calc["三角形面积计算逻辑"]
+  end
+
+  subgraph OpenClosedDesign["2. 插件式开闭设计 (Registry/Map-based OCP)"]
+    direction TB
+    App2["客户端调用"] --> CoreFn2["核心 area(shape) 函数"]
+    CoreFn2 -->|查表分发| Map["形状算法注册表 (Map)"]
+    
+    Map -->|Key: 'circle'| fn_circle["lambda_circle fn"]
+    Map -->|Key: 'rect'| fn_rect["lambda_rect fn"]
+    Map -.->|Key: 'triangle'<br/>(调用 register 动态扩展, 零改动核心!)| fn_triangle["lambda_triangle fn"]
+  end
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：封装变化 + 三条朴素原则
 
-设计的第一动作：**识别什么会变（变化点），把它隔离/封装起来**，让不变的骨架不受它影响。配三条朴素原则：
+设计的第一动作：**识别什么会变（变化点），把它隔离/封装起来**，让不变的骨架不受它影响。这本身符合 <GlossaryTerm term="Single Responsibility Principle" definition="单一职责原则 (SRP)：SOLID 原则的第一项。主张一个类或模块应该有且仅有一个引起它变化的原因。将‘会变的地方’剥离，使其只承担单一的职责。">单一职责原则 (Single Responsibility Principle)</GlossaryTerm>。在具体实践中，配合三条朴素原则：
 
 - <GlossaryTerm term="DRY" definition="Don't Repeat Yourself：同一份知识只在一处表达，避免复制粘贴导致改一处漏一处。">DRY</GlossaryTerm>：别重复（同一逻辑别写多遍）。
 - <GlossaryTerm term="KISS" definition="Keep It Simple：优先用最简单能解决问题的方案，别过度复杂。">KISS</GlossaryTerm>：保持简单。
@@ -42,9 +64,69 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 封装变化的目标，是达成<GlossaryTerm term="Open-Closed Principle" definition="开闭原则（OCP）：软件实体应对扩展开放、对修改关闭。加新功能时通过“新增代码”实现，而不是“修改已有代码”。">开闭原则（OCP）</GlossaryTerm>：**对扩展开放、对修改关闭**。加"三角形"时，你应该能**新增**一段代码，而不必**修改**算面积的核心逻辑。怎么做到？把"每种形状怎么算"做成可插拔的（注册表/多态），核心只负责"分发"。
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as 客户端 (Client)
+  participant Core as 核心分发模块 (area fn)
+  participant Map as 形状算法注册表 (Registry Map)
+  participant Circle as 圆形计算逻辑 (lambda_circle)
+  participant Triangle as 三角形计算逻辑 (lambda_triangle)
+
+  Note over User,Map: 1. 初始化/扩展阶段: 动态注册形状算法
+  User->>Map: register("circle", lambda_circle)
+  User->>Map: register("triangle", lambda_triangle)
+  
+  Note over User,Core: 2. 运行时阶段: 计算面积
+  User->>Core: 调用 area(shape: {"type": "circle", "r": 2})
+  activate Core
+  
+  Core->>Map: 查找 "circle" 对应的算法函数
+  Map-->>Core: 返回 lambda_circle fn
+  
+  Core->>Circle: 执行算法并传入形状参数
+  activate Circle
+  Circle-->>Core: 返回计算好的面积值 12.566
+  deactivate Circle
+  
+  Core-->>User: 返回面积值
+  deactivate Core
+  
+  Note over User,Core: 3. 无感知扩展测试
+  User->>Core: 调用 area(shape: {"type": "triangle", "base": 3, "height": 4})
+  activate Core
+  Core->>Map: 查找 "triangle"
+  Map-->>Core: 返回 lambda_triangle fn
+  Core->>Triangle: 执行算法
+  activate Triangle
+  Triangle-->>Core: 返回面积值 6.0
+  deactivate Triangle
+  Core-->>User: 返回面积值
+  deactivate Core
+```
+
 ### 深入（选学）：抽象是有成本的，别过度
 
-OCP 很美，但**抽象有成本**——每多一层间接，代码就更难直接读懂。这就是 YAGNI 的意义：**只为真实存在、确实会变的轴做抽象**。给一个永远只有一种实现的东西抽接口，是过度设计。判断标准：这个"变化"真的会发生吗？发生过几次？（"事不过三"——变第三次才抽象，是常见经验法则。）
+OCP 很美，但存在不可忽视的 <GlossaryTerm term="Abstraction Cost" definition="抽象成本：在系统设计中引入接口、适配层或中间件等解耦手段时所付出的代价。包括代码认知负荷上升、调试复杂度增加、以及间接调用引入的轻微运行性能损耗。">抽象成本 (Abstraction Cost)</GlossaryTerm>——每多一层间接，代码就更难直接读懂。这就是 YAGNI 的意义：**只为真实存在、确实会变的轴做抽象**。给一个永远只有一种实现的东西抽接口，是过度设计。判断标准：这个"变化"真的会发生吗？发生过几次？（"事不过三"——变第三次才抽象，是常见经验法则。）
+
+```mermaid
+flowchart TD
+  subgraph YAGNIvsOCP["YAGNI 与 OCP 的平衡决策 (YAGNI vs OCP Balance Decision)"]
+    direction TB
+    Req["新类型/新算法需求提出"] --> CheckAxis{"该维度是否在系统中<br/>被预测为未来的变化轴?"}
+    
+    CheckAxis -->|No - 概率极低| KISS["直接以最直接的代码实现<br/>(KISS 朴素原则)"]
+    CheckAxis -->|Yes - 有变化可能| RuleOfThree{"评估该变化发生的次数<br/>(Rule of Three 事不过三)"}
+    
+    RuleOfThree -->|第一次出现| Inline["直接硬编码写在主体函数中<br/>(YAGNI - 别提前买单)"]
+    RuleOfThree -->|第二次出现| KeepEye["保持关注, 预留修改点<br/>不急于抽象成接口"]
+    RuleOfThree -->|第三次及以上发生| Refactor["通过多态或注册表进行重构解耦<br/>(OCP - 隔离出变化部分)"]
+    
+    KISS --> Stable["系统结构稳定扁平, 无冗余类"]
+    Inline --> Stable
+    Refactor --> Flex["扩展时仅新增子类或算法函数<br/>不修改原有核心逻辑"]
+  end
+```
 
 <ResearchNote
   title="封装变化：设计模式的共同内核"
@@ -187,9 +269,46 @@ python labs/month04/m4l1_ocp/test_shapes.py
 
 ## 常见误解
 
-- **"设计模式要多用才显水平"**：过度设计比不设计更糟；只为真实变化抽象。
-- **"开闭就是给一切加接口"**：只给会变的轴做开闭，其余保持简单。
-- **"if-else 一定是坏的"**：类型少且稳定时，直白的 if-else 反而最好读。
+- **"设计模式要多用才显水平，任何微小的程序都应该写几层接口和工厂"**: 这是典型的过度抽象误区。所有的设计模式都是在用“引入新类和抽象间接层”的代价来换取“局部的灵活性”。如果在整个项目生命周期中根本没有变化的诉求，引入模式只会让代码变得碎片化、增加了认知成本，属于典型的过度工程（Over-engineering）。
+- **"开闭原则（OCP）就是给所有类都提取出一个 Interface，并用接口来调用"**: 这是对开闭原则的最浅层理解。开闭原则的本质是“封装变化点”。只有当某一部分逻辑被确定为系统的“变化轴”时，给它定义接口和注册表才是合情合理的。如果为一个万年不变、且仅有一种实现的实体类强行提取接口，反而违反了 YAGNI 和 KISS 原则，白白付出了抽象成本。
+- **"代码里只要出现 if-else 就是有代码坏味道（Code Smell），必须强行用类多态和重构干掉它"**: 极其极端的教条主义。如果分支判断的类型极少、固定，且在未来几乎没有新增可能（例如一周只有 `周一至周日` 七个状态，或文件操作只有 `读/写` 两个分支），直接用直白可见的 `if-else` 或 `switch-case` 反而具备极高的可读性，千万别为了所谓的“消除分支”去编写庞大的多态类结构。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '关于开闭原则（Open-Closed Principle, OCP），以下哪项是架构设计中核心追求的工程状态？',
+      options: [
+        '系统的代码不能被编译，只能动态解释运行。',
+        '当系统需要增加新需求、新算法或新类型时，工程师能够通过‘新增代码’（扩展）来实现，而完全不需要触及或‘修改’那些已经开发、测试完毕的核心业务骨架代码。这极大地降低了回归测试（Regression Test）引入新 bug 的风险。',
+        '把所有的类和方法全部密封起来，不允许外部进行任何实例化或调用。'
+      ],
+      answer: 1,
+      explain: '开闭原则的真谛。OCP 的实现机制往往是通过多态、策略模式或注册表模式。它让我们将不变的‘控制骨架’和经常变动的‘业务子类’从依赖上切断，极大地提高了大型团队协同开发的安全度。'
+    },
+    {
+      q: '‘YAGNI (You Aren\'t Gonna Need It)’原则与开闭原则（OCP）在实战中似乎存在冲突。架构师应该如何平衡这两者？',
+      options: [
+        '对于所有未来的臆想扩展点，一律在项目初期全部设计成复杂的接口和配置文件层。',
+        '遵循‘Rule of Three（事不过三）’原则：第一次遇到时用最直接的代码（如 if-else）快速搞定（KISS/YAGNI），当该类型代码发生第三次变动或需要支持第三种算法类型时，再通过重构将其抽象出来以满足 OCP。不要为了可能根本不会发生的未来变化提前买单。',
+        '永远不进行重构，直接用大量的复制粘贴来快速应付所有变化。'
+      ],
+      answer: 1,
+      explain: 'KISS/YAGNI 与 OCP 的平衡。优秀的架构是演进出来的，不是设计出来的。提前设计未来的变化轴不仅增加当前开发成本，还往往由于猜错未来的变化方向而导致写出无用且繁琐的代码。'
+    },
+    {
+      q: '在本章 Lab 中引入的‘动态注册表 (Dynamic Registry)’机制，其相比直接继承和类多态（Polymorphism），在 Python/JavaScript 这类动态语言中的优势是什么？',
+      options: [
+        '动态注册表能让运行时动态注册与卸载算法，并且由于将‘算法函数’当作一等公民进行传递，避免了为了多态而强行编写繁琐的‘类声明继承结构’，使得代码结构更加轻量和扁平。',
+        '动态注册表能物理提升 CPU 计算浮点数面积时的硬件速度。',
+        '动态注册表能强制将所有变量编译成静态类型。'
+      ],
+      answer: 0,
+      explain: '动态语言中的注册表。在传统的静态强类型面向对象语言里（如 C++/Java），要实现多态往往需要定义严格的基类和继承结构；在 Python/JS 里，函数可以作为对象在注册表（Map）中灵活分发，极大地降低了满足 OCP 的代码代价。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
