@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M2L9 · LLD：从 HLD 到类与接口
 
@@ -34,13 +35,69 @@ HLD 告诉你"有个限流服务"；LLD 告诉你这个服务里有哪些类、�
 
 把一个组件细化为：
 
-- **类与职责**：有哪些类，各自负责什么（单一职责，回扣 [L2 内聚](../foundations/modules-and-contracts)）。
+- **类与职责**：有哪些类，各自负责什么（<GlossaryTerm term="Single Responsibility Principle" definition="单一职责原则 (SRP)：面向对象设计原则之一，要求一个类应该仅有一个引起它变化的原因，即只负责完成一项特定的业务功能，以提高类的内聚度和可重用性。">单一职责</GlossaryTerm>，回扣 [L2 内聚](../foundations/modules-and-contracts)）。
 - **接口/方法签名**：对外暴露什么方法、入参出参是什么（契约）。
 - **数据模型**：核心实体的字段和关系（回扣 [L7](../foundations/data-modeling)）。
 
+```mermaid
+classDiagram
+  class RateLimiter {
+    <<interface>>
+    +allow(key: String, now: Double) Boolean
+  }
+  class TokenBucket {
+    -capacity: Double
+    -refillPerSec: Double
+    -tokens: Double
+    -lastRefillTime: Double
+    +allow(key: String, now: Double) Boolean
+  }
+  class LeakyBucket {
+    -capacity: Double
+    -leakRatePerSec: Double
+    -waterLevel: Double
+    -lastLeakTime: Double
+    +allow(key: String, now: Double) Boolean
+  }
+  class RateLimitInterceptor {
+    -limiter: RateLimiter
+    +onPrepareRequest(request: Request)
+  }
+
+  RateLimiter <|.. TokenBucket : Realize
+  RateLimiter <|.. LeakyBucket : Realize
+  RateLimitInterceptor --> RateLimiter : Depend
+```
+
 ### 进阶：面向接口，而非实现
 
-<GlossaryTerm term="Program to an Interface" definition="面向接口编程：依赖一个抽象接口而非具体实现类。这样可以替换实现（如内存版换数据库版）而不改调用方。">面向接口编程</GlossaryTerm> 是 LLD 的灵魂（也是 [L2 契约](../foundations/modules-and-contracts) 的延续）：先定义一个接口（如 `RateLimiter.allow()`），再写具体实现（令牌桶、漏桶……）。调用方只依赖接口，于是实现可以随便换、可以做测试替身（回扣 [L13](../foundations/testing-and-tdd)）。
+<GlossaryTerm term="Program to an Interface" definition="面向接口编程：依赖一个抽象接口而非具体实现类。这样可以替换实现（如内存版换数据库版）而不改调用方。">面向接口编程</GlossaryTerm> 是 LLD 的灵魂（也是 [L2 契约](../foundations/modules-and-contracts) 的延续）：先定义一个接口（如 `RateLimiter.allow()`），再通过面向对象的 <GlossaryTerm term="Polymorphism" definition="多态：面向对象编程的核心特征之一。允许不同子类对象对同一接口/抽象方法做出不同的实现响应，使得调用方只需编写针对接口的通用逻辑，即可在运行时动态绑定具体实现。">多态性</GlossaryTerm> 编写具体实现（令牌桶、漏桶……）。调用方只依赖接口，于是实现可以随便换、可以做测试替身（回扣 [L13](../foundations/testing-and-tdd)）。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as 客户端 (Client)
+  participant Interceptor as 限流拦截器 (Interceptor)
+  participant Limiter as 限流抽象接口 (RateLimiter)
+  participant Scfg as 令牌桶实现 (TokenBucket / Policy)
+
+  User->>Interceptor: 发起 API 请求
+  Interceptor->>Limiter: allow(key="uid_9527", now=1719912000.0)
+  activate Limiter
+  Limiter->>Scfg: 运行时动态多态分发
+  activate Scfg
+  Note over Scfg: 1. 计算自上次以来的令牌增量<br/>2. 补充令牌并更新时间戳<br/>3. 判断扣减是否成功
+  Scfg-->>Limiter: 返回 Boolean (True/False)
+  deactivate Scfg
+  Limiter-->>Interceptor: 返回是否放行 (Boolean)
+  deactivate Limiter
+  
+  alt 放行 (True)
+    Interceptor-->>User: 路由至后端微服务并返回
+  else 拦截限流 (False)
+    Interceptor-->>User: 拦截请求并直接秒回 HTTP 429 Too Many Requests
+  end
+```
 
 ### 深入（选学）：设计模式是复用的解法
 
@@ -57,6 +114,24 @@ HLD 告诉你"有个限流服务"；LLD 告诉你这个服务里有哪些类、�
 ## 三、跟我做一遍：限流器的 LLD
 
 把 HLD 的"限流服务"框，放大成接口 + 令牌桶实现：
+
+```mermaid
+flowchart TD
+  subgraph TokenBucketLogic["令牌桶核心 allow(now) 逻辑"]
+    direction TB
+    Start["请求到达 allow(now)"] --> CalcDelta["1. 计算自上次请求以来的时间差:<br/>dt = now - last"]
+    CalcDelta --> CalcTokens["2. 计算补充令牌数:<br/>new_tokens = dt * refill_per_sec"]
+    CalcTokens --> UpdateTokens["3. 累加令牌并限制在最大容量内:<br/>tokens = min(capacity, tokens + new_tokens)"]
+    UpdateTokens --> SetLast["4. 更新上次请求时间戳:<br/>last = now"]
+    SetLast --> CheckTokens{"5. 当前令牌 tokens >= 1?"}
+    
+    CheckTokens -->|Yes| Consume["6a. 扣除 1 个令牌:<br/>tokens = tokens - 1"]
+    Consume --> ReturnTrue["返回 True (放行)"]
+    
+    CheckTokens -->|No| ReturnFalse["6b. 拒绝请求"]
+    ReturnFalse --> ReturnFalseVal["返回 False (拦截)"]
+  end
+```
 
 <PyRunner
   expect="限流生效"
@@ -179,9 +254,46 @@ LLD 的高低之分，在于你有没有识别出"未来会变的点"，并用�
 
 ## 常见误解
 
-- **"LLD 就是把代码写出来"**：LLD 是类/接口/数据模型的设计，先于实现。
-- **"接口越多越灵活"**：只在变化点抽接口，过度抽象是负担。
-- **"设计模式要尽量多用"**：模式是管理变化的工具，套不对反而增加复杂度。
+- **"LLD 就是把代码写出来"**: LLD 是类/接口/数据模型的设计，核心是定义系统的协作契约和职责边界，应发生在真正编写细节代码之前。直接动手码代码而不做接口抽象，极易陷入不断修改类结构和依赖传递的重构泥潭。
+- **"接口越多越灵活"**: 接口确实能提供解耦性，但同时会引入额外的调用跳转、类层级膨胀以及认知成本。只有在存在“多种潜在算法实现（如不同限流策略）”或“需要解耦具体技术组件（如内存 vs Redis）”的变化点才应当定义接口，过度抽象是典型的过度设计。
+- **"设计模式要尽量多用"**: 很多初学者为了体现自己的技术水平，在设计时不管业务是否真有变化点，生硬套用各种工厂、策略、装饰器等，导致一个简单的限流需要十几个类，反而让系统维护极其困难。应该“顺应变化、延迟引入”。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在低层设计（LLD）阶段，‘面向接口编程而非面向实现编程’的黄金准则如何体现其架构价值？',
+      options: [
+        '它要求给每一个类写一个完全一模一样的子类，以保证代码量充足。',
+        '通过抽离出行为契约（接口），如 `RateLimiter.allow()`，使调用方完全不依赖具体实现。这样后续在将令牌桶换为滑动窗口限流、或者内存版换为 Redis 分布式限流时，调用方的业务代码无需做出任何改动，且能通过 mock 接口实现完美单元测试。',
+        '它能直接将多线程下的 CPU 争用问题物理化解为零。'
+      ],
+      answer: 1,
+      explain: '接口是软件架构隔离变动最核心的手段。面向接口隔离了具体细节，符合高内聚低耦合与开闭原则（OCP）。'
+    },
+    {
+      q: '在令牌桶（Token Bucket）限流算法的低层设计（LLD）数据建模中，最少需要哪些状态字段就能在无定时器的状态下实现计算？',
+      options: [
+        '只需当前令牌数，并开一个后台物理线程每毫秒加 1 个令牌。',
+        '需要当前累积的令牌数（tokens）、上次请求时间戳（last_refill_time）、桶最大容量（capacity）和每秒补充速率（refill_rate）。基于这四个字段，在每次请求到达时，通过时间增量动态计算补充的令牌，避免了轮询线程造成的 CPU 开销。',
+        '只需记录一个请求计数器和固定窗口的开始时间。'
+      ],
+      answer: 1,
+      explain: '懒加载（Lazy Refill）计算。即利用 `(now - last_refill_time) * refill_rate` 计算当前应补的令牌，是令牌桶在高性能高并发无定时器场景下的标准 LLD 建模实践。'
+    },
+    {
+      q: '如果面试官让你设计一个接口以支持‘多维限流’（例如：IP 级别、用户 ID 级别、接口名级别），在 LLD 中应该怎样设计该接口的入参？',
+      options: [
+        '设计一个通用的 `allow(key: String, now: Double)` 方法，其中 `key` 代表限流的维度标识（如 `ip_192.168.1.1` 或 `uid_9527`），这使得限流引擎可以保持逻辑纯粹性，而把维度的生成规则解耦到调用方。',
+        '将 IP、用户 ID、接口名等字段作为特定参数全部硬编码定义在 `allow(ip, userId, apiName, now)` 方法签名中。',
+        '强制要求只支持一种维度，不提供多维限流接口。'
+      ],
+      answer: 0,
+      explain: '设计要解耦。接口应当对底层的存储和过滤保持通用性。如果将维度直接硬编码到接口中，就会丧失灵活性。传递通用 `key` 是业界最标准的扩展解法。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
