@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M3L9 · 消息队列深入
 
@@ -26,13 +27,68 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ## 一、消费者挂了，消息会怎样？
 
-生产者把消息放进队列，消费者取出处理。但如果消费者取出后、还没处理完就崩了——这条消息丢了吗？答案取决于<GlossaryTerm term="Acknowledgement" definition="确认（ack）：消费者处理成功后给队列发的信号。队列收到 ack 才删除消息；没收到就在超时后重新投递，保证消息不丢。">ack 机制</GlossaryTerm>：队列**只有收到 ack 才删消息**，否则会重投。
+生产者把消息放进队列，消费者取出处理。在企业架构中，消息队列大体分为两类：一是基于传统消息代理的 <GlossaryTerm term="Broker-based MQ" definition="代理型消息队列：以 RabbitMQ 或 ActiveMQ 为代表。由 Broker 负责推送消息给消费者，并跟踪每条消息的 ACK 状态，消息一旦被消费确认立即从物理队列中擦除，水位低，但无法重放。">Broker-based MQ (代理型消息队列)</GlossaryTerm>，二是基于追加日志流的 <GlossaryTerm term="Log-based MQ" definition="日志型消息队列：以 Apache Kafka 或 Pulsar 为代表。消息以只读追加日志（Log）物理持久化在磁盘上，消费端以 Pull 形式拉取，消费进度仅靠移动 Offset 偏置指针标记。消息不会因消费而被物理删除，支持历史事件随意重放。">Log-based MQ (日志型消息队列)</GlossaryTerm>。
+
+但无论哪种模型，如果消费者取出后、还没处理完就崩了——这条消息丢了吗？答案取决于<GlossaryTerm term="Acknowledgement" definition="确认（ack）：消费者处理成功后给队列发的信号。队列收到 ack 才删除消息；没收到就在超时后重新投递，保证消息不丢。">ack 机制</GlossaryTerm>：队列**只有收到 ack 才删消息**，否则会重投。
+
+```mermaid
+flowchart LR
+  subgraph BrokerModel["1. 代理型队列 (Broker-based: RabbitMQ)"]
+    direction TB
+    P1["生产者 (Producer)"] -->|Push| Queue1["Broker 队列<br/>(内存/磁盘)"]
+    Queue1 -->|Push| C1["消费者 1 (Consumer)"]
+    C1 -->|Ack| Queue1
+    NoteB["确认后物理删除:<br/>- 消费成功即刻从队列清除<br/>- 水位极低<br/>- 无法重复消费历史"]
+  end
+
+  subgraph LogModel["2. 日志型队列 (Log-based: Kafka Partition)"]
+    direction TB
+    P2["生产者 (Producer)"] -->|Append Write| Log2["只读追加物理日志 (Log)<br/>[msg0] [msg1] [msg2] [msg3]"]
+    C2["消费者 (Consumer)"] -->|Pull & Move Offset| Log2
+    NoteL["Offset 逻辑移动:<br/>- 消息只读追加, 物理不删<br/>- 消费进度仅移动指针<br/>- 随时支持重置 Offset 重放"]
+  end
+```
 
 ## 二、三个核心概念（分层）
 
 ### 基础：ack 与至少一次
 
-消费流程：取出消息 → 处理 → **成功后 ack** → 队列才删除。如果消费者没 ack（崩了/超时），队列会**重新投递**给另一个消费者。这就保证了<GlossaryTerm term="At-least-once" definition="至少一次：消息保证被处理至少一次（靠没 ack 就重投），但可能重复。配合幂等消费即可达到“效果上一次”。">至少一次</GlossaryTerm>投递——不丢，但可能重复（所以消费要[幂等，L6](../foundations/idempotency)）。
+消费流程：取出消息 → 处理 → **成功后 ack** → 队列才删除。如果消费者没 ack（崩了/超时），队列会**重新投递**给另一个消费者。这就保证了<GlossaryTerm term="At-least-once" definition="至少一次：消息保证被处理至少一次（靠没 ack 就重投），本意是防止数据丢失，但可能在消费者执行成功但网络确认丢失时发生消息重复。配合幂等消费即可达到“效果上一次”。">至少一次</GlossaryTerm>投递——不丢，但可能重复（所以消费要[幂等，L6](../foundations/idempotency)）。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Producer as 生产者 (Producer)
+  participant MQ as 消息队列 (Broker)
+  actor Consumer1 as 消费者 1 (Consumer)
+  actor Consumer2 as 消费者 2 (Consumer)
+
+  Producer->>MQ: 1. 发送消息 'msg_101'
+  MQ->>MQ: 消息入队, 状态记为 PENDING
+  
+  MQ->>Consumer1: 2. 投递消息 'msg_101'
+  MQ->>MQ: 消息状态变更为 INFLIGHT (等待确认)
+  
+  activate Consumer1
+  Consumer1->>Consumer1: 3. 执行本地业务逻辑 (如处理扣款并持久化成功)
+  Note over Consumer1,MQ: 在发送 ACK 前，消费者 1 突发网络分区断连或崩溃 (Crash)!
+  deactivate Consumer1
+
+  Note over MQ,Consumer2: 消息确认超时 (ACK Timeout)
+  MQ->>MQ: 4. 检测到 'msg_101' 长时间处于 INFLIGHT 状态
+  MQ->>MQ: 将消息重新写回队头 (PENDING)
+  
+  MQ->>Consumer2: 5. 重新投递消息 'msg_101'
+  activate Consumer2
+  Consumer2->>Consumer2: 6. 消费去重拦截校验 (唯一键幂等判定!)
+  alt 发现已处理过 (Idempotent Hit)
+    Consumer2-->>MQ: 7. 立即返回 ACK 确认 (清除队列)
+  else 未处理过 (Idempotency Miss)
+    Consumer2->>Consumer2: 执行本地业务并返回 ACK
+  end
+  deactivate Consumer2
+  Note over MQ,Consumer2: 依靠At-least-once加幂等过滤，既防止数据丢失，又实现了防重复消费！
+```
 
 ### 进阶：消费者组与顺序
 
@@ -42,6 +98,22 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 ### 深入（选学）：死信队列与毒消息
 
 一条永远处理失败的<GlossaryTerm term="Poison Message" definition="毒消息：因格式错误或 bug 而永远处理失败的消息。若无限重试会卡住队列、浪费资源。">毒消息</GlossaryTerm>，如果无限重投，会一直占着队头、浪费资源、甚至卡住消费。对策是<GlossaryTerm term="Dead Letter Queue" definition="死信队列（DLQ）：消息重试超过上限后被移到的专门队列，供人工排查，而不是无限重试卡住主队列。">死信队列（DLQ）</GlossaryTerm>：重试超过上限就移到 DLQ，主队列继续往下走，毒消息留待人工排查。
+
+```mermaid
+flowchart TD
+  subgraph DLQPipeline["死信队列重试流转控制 (DLQ Routing Pipeline)"]
+    direction TB
+    StartLoop["拉取到新消息 msg"] --> ProcessMsg["消费者执行消费逻辑 (try-catch)"]
+    ProcessMsg -->|消费成功| SendAck["1. 向 Broker 回发 ACK 确认<br/>(Broker 彻底清除该消息)"]
+    ProcessMsg -->|消费异常 / 失败| CheckAttempts{"2. 已重试次数attempts<br/>是否达到上限 max_retries?"}
+    
+    CheckAttempts -->|No - 尚有尝试空间| SendNack["3. 回发 NACK 或放回重投<br/>- attempts++<br/>- 消息重新进入 PENDING 等待下次消费"]
+    CheckAttempts -->|Yes - 重试已达阈值| MoveToDLQ["4. 移送死信队列 DLQ<br/>- 将原消息包复制并投递到 dlq 主题<br/>- 主队列发 ACK 确认(将消息从主队头删除)"]
+    
+    MoveToDLQ --> LogAlert["5. 触发告警，等待开发人员人工介入/Bug排查"]
+    SendNack --> StartLoop
+  end
+```
 
 <ResearchNote
   title="日志型队列：偏移量、消费者组与重放"
@@ -177,9 +249,46 @@ python labs/month03/m3l9_queue/test_queue.py
 
 ## 常见误解
 
-- **"消息进了队列就不会丢"**：消费者崩溃没 ack 才靠重投保证不丢；要理解 ack 机制。
-- **"队列能保证全局顺序"**：通常只保证分区内有序。
-- **"一条坏消息无所谓"**：毒消息会卡队列，要用 DLQ 隔离。
+- **"既然有至少一次 (At-least-once) 投递保证，应用端就完全不需要考虑幂等和重复处理了"**: 极其严重的架构疏忽。 At-least-once 语义的代价是“可能重复”。在真实网络中，消费者处理成功后，向 Broker 发送的 ACK 很有可能因为网络瞬间丢包或断连而丢失。Broker 在超时后会启动重投，此时消费者会面临完全相同的重复消息。消费端“幂等去重（Idempotency Check）”是保障数据正确性的终极防线。
+- **"消息队列为了保障业务时序，必须实现全局严格有序消费"**: 这会扼杀系统的吞吐量。为了保证全局绝对有序，系统在物理上只能配备一个分区和单个消费者节点串行工作，任何并发并行的水平扩展都会破坏全局顺序。在实际工程中，架构师应通过“分区有序（Partition-order）”，即按关键业务实体（如 order_id 或 user_id）哈希，把同一实体的事件分发到同一分区来保证局部有序，而分区间则能并发处理获取极致吞吐。
+- **"消息处理报错时，直接在代码中 catch 住并执行无脑无限重试即可，不需要什么死信队列"**: 这是导致“队头阻塞（Head of Line Blocking）”的元凶。若某条消息因为格式错误、数据畸形或代码逻辑 Bug 导致永远无法消费成功，无限重试会让该消息长久卡在队头，拖死当前分区，使得该分区后面的成千上万条正常消息全部被挂起。引入死信队列（DLQ）在重试超限后将其挪移，是隔离故障的关键“安全阀”。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '关于传统的‘拉/日志型消息队列 (Log-based, 如 Kafka)’与‘推/代理型消息队列 (Broker-based, 如 RabbitMQ)’在删除已消费消息机制上的区别，以下描述正确的是？',
+      options: [
+        'RabbitMQ 不存储历史消息，消费者 ACK 后消息在物理上立刻删除；Kafka 是追加写的只读日志，消费者 ACK / 提交 Offset 仅在逻辑上移动消费进度指针，消息物理上不会因为消费而立刻删除，而是按照统一的保留策略（如时间/空间上限）异步清理。这使得 Kafka 天然支持历史消息重放。',
+        'Kafka 消费者确认消费后会从日志中物理擦除整行文件；RabbitMQ 将所有消息存入内存数据库永不清理。',
+        '由于 RabbitMQ 会记录 Offset，因此它也支持消息的任意重放。'
+      ],
+      answer: 0,
+      explain: '拉与推存储设计的区别。RabbitMQ 采用队列模型，消费完即物理删除，以保持极低的队列水位；Kafka 采用事件流日志模型，消费本质上只是移动读取偏移量（Offset），日志物理文件不可变，支持任意时刻通过调整 Offset 来重放数据。'
+    },
+    {
+      q: '为什么说‘At-least-once (至少一次)’投递语义必须要与‘Idempotence (幂等消费)’在应用层配合，才能实现可靠的‘Exactly-once (效果上仅一次)’处理？',
+      options: [
+        '因为 At-least-once 保证消息绝对不会重复发送，但幂等消费能加快读取速度。',
+        '因为在网络瞬断或消费者崩溃的边缘，消费者可能已经成功执行了本地数据库事务，但尚未向 MQ Broker 成功发回 ACK 确认，此时 MQ 会因超时将该消息重新投递。如果消费端不具备幂等性，就会重复扣款或生成重复订单。因此至少一次语义必须依赖应用层幂等机制对重复消息进行物理去重。',
+        '因为如果不实现幂等消费，MQ Broker 会自动发生死锁并触发崩溃。'
+      ],
+      answer: 1,
+      explain: '至少一次与幂等的防线配合。ACK 本身受网络限制。没有任何网络协议能在分布式环境下单凭网络机制实现绝对零差错的 Exactly-once 传输（二军问题）。所以 MQ 采用 At-least-once 保底，把去重校验的终局责任留给消费端应用，形成闭环防重。'
+    },
+    {
+      q: '在面对永远无法被成功消费的‘毒消息 (Poison Message)’时，死信队列 (Dead Letter Queue, DLQ) 的核心架构作用是什么？',
+      options: [
+        'DLQ 负责对毒消息进行自动修复并强制重新入队处理。',
+        '隔离错误，防止队列阻塞。如果对毒消息无限无脑重试，它将长久盘踞在队列头部（Head of Line Blocking），导致后续正常的消息全被挂起延迟；将毒消息在重试超限后导流至 DLQ 并给 MQ 发回 ACK，可以使得主队列继续向前推进，同时提供一个隔离的错误日志供架构师手动排查、分析代码 Bug 或畸形报文。',
+        'DLQ 用来存储高优先级的急件，以便抢先消费。'
+      ],
+      answer: 1,
+      explain: 'DLQ 的定位。死信队列是异步解耦系统中的“安全阀”。毒消息往往是格式破损、超大字节或应用 Bug 的产物。通过将其剥离并输出到单独的 DLQ 中，主业务流才不至于因为单条消息的物理顽疾产生全局服务挂起崩溃。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
