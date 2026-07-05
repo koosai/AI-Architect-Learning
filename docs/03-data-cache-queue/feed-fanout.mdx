@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M3L10 · feed 与扇出
 
@@ -26,7 +27,25 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ## 一、500 个关注，怎么毫秒出 feed？
 
-时间线（timeline）= 你关注的所有人的最新帖子，按时间排序。最直白的做法：你刷新时，**实时**去查 500 个人各自的最新帖、合并排序——但这要 join/扫描很多数据，慢。怎么做到秒出？两种根本不同的策略。
+<GlossaryTerm term="Timeline" definition="时间线 (Timeline)：指用户所能查阅的最新动态流（通常按照时间戳倒序排列）。可分为用户发件箱（User Timeline - 存放个人发的帖子）与用户收件箱（Home Timeline - 存放所关注的所有人的聚合帖子）。">时间线 (Timeline)</GlossaryTerm> = 你关注的所有人的最新帖子，按时间排序。最直白的做法：你刷新时，**实时**去查 500 个人各自 the 最新帖、合并排序——但这要 join/扫描很多数据，慢。怎么做到秒出？两种根本不同的策略。
+
+```mermaid
+flowchart LR
+  subgraph PullModel["1. 读扩散 (Fan-out on Read / Pull)"]
+    direction TB
+    A_Post["大V/普通人发帖"] -->|写 1 次| DB_Post["Post Table<br/>(帖子物理表)"]
+    UserRefresh["粉丝刷新 Feed"] -->|读 N 次并合并| Fetch["拉取所有关注者的帖子"]
+    Fetch -->|内存排序| Display1["呈现给用户 (慢)"]
+  end
+
+  subgraph PushModel["2. 写扩散 (Fan-out on Write / Push)"]
+    direction TB
+    B_Post["普通用户发帖"] -->|写 N 次副本| FanOut["遍历粉丝列表分发"]
+    FanOut -->|推送给粉丝 1| Inbox1["粉丝1收件箱 (ZSet)"]
+    FanOut -->|推送给粉丝 2| Inbox2["粉丝2收件箱 (ZSet)"]
+    UserRefresh2["粉丝刷新 Feed"] -->|读 1 次| ReadInbox["直接读自己的收件箱 (秒出)"]
+  end
+```
 
 ## 二、三个核心概念（分层）
 
@@ -39,11 +58,65 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 进阶：大V问题
 
-写扩散有个致命软肋：<GlossaryTerm term="Celebrity Problem" definition="大V问题：一个有千万粉丝的用户发一条帖，写扩散要写千万份收件箱，瞬间产生巨大写放大，甚至卡住系统。">大V问题</GlossaryTerm>。一个千万粉丝的大V发一条帖，写扩散要写**一千万份**——写放大爆炸（回扣 [M3L1](./storage-engines)）。给普通人写扩散没问题，给大V就是灾难。
+写扩散有个致命软肋：<GlossaryTerm term="Celebrity Problem" definition="大V问题：一个有千万粉丝的用户发一条帖，写扩散要写千万份收件箱，瞬间产生巨大写放大，甚至卡住系统。">大V问题</GlossaryTerm>。一个千万粉丝的大V发一条帖，写扩散要写**一千万份**——这会引起极其严重的 <GlossaryTerm term="Write Amplification" definition="写放大：在系统设计中指一次逻辑写请求，在底层数据库或磁盘中引发了成百上千倍物理写入的现象。在 Feed 写扩散中表现为粉丝数等于写放大倍数。">写放大 (Write Amplification)</GlossaryTerm> 乃至写吞吐爆炸（回扣 [M3L1](./storage-engines)）。给普通人写扩散没问题，给大V就是灾难。
+
+```mermaid
+flowchart TD
+  subgraph CelebrityDispatch["大V发帖写放大分支流转 (Celebrity Write Dispatching)"]
+    direction TB
+    UserPost["发帖请求 post(user_id, content)"] --> WritePostTable["1. 写入全局 Post 帖子物理表"]
+    WritePostTable --> GetFollowerCount["2. 查询发帖人的粉丝总数"]
+    GetFollowerCount --> IsCelebrity{"3. 粉丝数是否大于大V阈值?<br/>(e.g., > 10,000)"}
+    
+    IsCelebrity -->|Yes - 是大V| PullOnly["4. 仅写入个人发件箱 (Outbox)<br/>(退化为读扩散 / 不发消息队列)"]
+    PullOnly --> ReturnPostSuccess["5. 发帖处理结束, 瞬间响应"]
+    
+    IsCelebrity -->|No - 普通用户| PushQueue["4. 投递异步写扩散任务到消息队列 MQ"]
+    PushQueue --> RunFanOut["5. MQ 消费者异步消费发号任务"]
+    RunFanOut --> GetFollowers["6. 拉取该用户所有粉丝列表"]
+    GetFollowers --> BatchWriteInbox["7. 批量写入所有粉丝收件箱 (Home Timeline)<br/>(写放大倍数 = 粉丝数)"]
+    BatchWriteInbox --> FanOutDone["8. 写扩散分发结束"]
+  end
+```
 
 ### 深入（选学）：混合策略
 
 现实方案是<GlossaryTerm term="Hybrid Fan-out" definition="混合扇出：普通用户用写扩散（读快），大V用读扩散（避免写爆）。用户刷新时，把“推来的普通人帖子”和“实时拉的大V帖子”合并。兼顾两者。">混合扇出</GlossaryTerm>：**普通人写扩散**（推到粉丝收件箱），**大V读扩散**（不推，粉丝刷新时实时拉大V的帖子再合并）。这样既让普通 feed 秒出，又避免大V写爆。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as 用户 (User/粉丝)
+  participant FeedApp as Feed 服务业务层
+  participant Inbox as Redis 收件箱 (Home Timeline)
+  participant Outbox as Redis 大V发件箱 (Outbox)
+  participant DB as MySQL/NoSQL 数据库
+
+  User->>FeedApp: 1. 请求刷新 Feed 流
+  activate FeedApp
+  
+  par 异步并发读取
+    FeedApp->>Inbox: 2. 读取收件箱 (Push 部分: 普通人帖子)
+    activate Inbox
+    Inbox-->>FeedApp: 返回前 50 条消息 ID 与时间戳
+    deactivate Inbox
+  and
+    FeedApp->>FeedApp: 3. 获取用户关注列表中的“大V列表”
+    FeedApp->>Outbox: 4. 并发拉取关注大V的发件箱 (Pull 部分)
+    activate Outbox
+    Outbox-->>FeedApp: 返回各选定大V的最新帖子
+    deactivate Outbox
+  end
+
+  FeedApp->>FeedApp: 5. 内存双路排序归并 (Merge & Sort by timestamp)
+  FeedApp->>DB: 6. (可选) 针对筛选出的 Top 20 帖子拉取详细文本及图片
+  activate DB
+  DB-->>FeedApp: 返回帖子详情 (Content detail)
+  deactivate DB
+  
+  FeedApp-->>User: 7. 返回秒出的聚合 Feed 流
+  deactivate FeedApp
+```
 
 <ResearchNote
   title="feed 物化：在写成本和读成本之间选"
@@ -169,9 +242,46 @@ Twitter/微博/朋友圈/抖音的 feed，背后都是扇出策略 + 缓存 + �
 
 ## 常见误解
 
-- **"feed 就是查关注的人的帖子排序"**：那是读扩散，大规模下太慢；主流是写扩散/混合。
-- **"写扩散最好"**：大V会写爆，要混合。
-- **"扇出只是存储问题"**：它还牵涉队列（异步推）、缓存、排序，是综合工程。
+- **"设计 Feed 系统只需要用 SQL 写一个 JOIN 关注表和帖子表并 ORDER BY timestamp 的查询即可，很简单"**: 这是极小规模开发时的偏见。在分布式高并发的真实社交应用中，用户关注数往往成百上千，直接使用实时 JOIN 进行读扩散，会对数据库引擎造成巨大的随机 I/O 与 CPU 压力。在高并发 QPS 面前，数据库会瞬间发生死锁或连接耗尽，根本无法满足毫秒级刷出的性能指标。
+- **"既然写扩散性能好，那就无脑对所有用户使用写扩散，这样架构最统一"**: 这是典型的大V灾难（Celebrity Problem）。当微博上有千万级甚至亿级粉丝的超级大V发帖时，如果采用纯写扩散，发帖操作会在后台产生千万次以上的批量 ZSet/NoSQL 写入。这种“写放大”会瞬间耗尽 Redis 内存带宽、造成消息队列严重积压甚至消费者线程池 OOM，导致大量普通用户的发帖投递被阻塞数分钟以上。
+- **"混合扇出（普通 push + 大V pull）实现十分简单，直接对两部分数据查出来然后用 concat 拼接即可"**: 忽视了时间线正确归并算法。普通用户的收件箱一般限制保存 500 到 1000 条，但用户关注了多个大V时，大V们的帖子穿插其间。当用户刷新 Timeline 时，必须将“收件箱中的有序普通帖”与“拉取的多个大V时间序列”进行多路归并排序（Merge Sort）算法，并在内存中进行高效分页截断（Pagination），才能避免数据错乱和老帖复现。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在设计高并发社交 Feed 系统时，为什么‘写扩散 (Push)’模式能够提供极低的读延迟，它的核心牺牲是什么？',
+      options: [
+        '写扩散消除了所有的存储消耗，它把帖子缓存在客户端浏览器中。',
+        '写扩散本质上是反规范化空间换时间的巅峰应用，将耗时的多表聚合在写入时异步算好投递到粉丝的收件箱（Timeline），从而换取极佳的读取性能；其核心牺牲是巨大的存储空间冗余（帖子副本存了 N 份）以及在发帖人粉丝数极其庞大时面临毁灭性的写放大与投递延迟。',
+        '写扩散牺牲了读取的实时性，刷新需要长达 1 小时才能拉取。'
+      ],
+      answer: 1,
+      explain: '写扩散的取舍。在社交应用中，用户刷 Feed 的次数（读）远远大于发微博发帖的次数（写），读写比往往是 100:1 甚至更高。写扩散把每次读取时的“多路拉取与排序计算”平摊到发帖时的“异步扇出写”，让读只读自己的收件箱（单表极速读），极大提升了读吞吐。'
+    },
+    {
+      q: '‘大V问题 (Celebrity Problem)’是单纯写扩散系统的噩梦。混合扇出 (Hybrid Fan-out) 是如何完美平衡大V和普通用户的数据流向的？',
+      options: [
+        '强制大V付费才能发帖，或者限制大V的粉丝数量在 1 万人以内。',
+        '普通用户发帖时采用写扩散（Push）直接推送给其粉丝的收件箱；大V发帖时则退化为读扩散（Pull），仅写入大V个人的发件箱。当粉丝刷新 Feed 时，系统从‘自己的收件箱’中拉取普通用户的推送，并并发去拉取所关注大V的最新帖子，最终在内存中快速合并并按时间排序。这避开了大V发帖时的写洪峰，又保障了读性能。',
+        '所有的读写全部强制走读扩散，放弃任何写扩散。'
+      ],
+      answer: 1,
+      explain: '混合扇出机制。混合扇出通过关注列表的“大V标记”来分支流向。普通人粉丝少，Push 没有任何并发问题；大V粉丝多，只记录单份。刷新时拉取这两条管道并利用高性能的时间线归并（Merge Sort）对两部分数据在应用内存中快速拼接，是新浪微博和 Twitter 的核心架构。'
+    },
+    {
+      q: '当使用 Redis ZSet 存储用户的收件箱（Timeline）时，为了防范内存随时间无限增长，架构师通常采取什么截断策略？',
+      options: [
+        '对用户的 ZSet 限制最大长度（如仅保留最新的 500 条），其余历史老数据定期修剪（Trim）出内存。因为用户极少会向下滚动翻页到几千条前的历史 Feed，查看历史动态时可走分库分表的 MySQL 归档查询。',
+        '强制当用户满 500 条后自动注销其账号。',
+        'ZSet 的大小由网络带宽决定，不需要做任何限制。'
+      ],
+      answer: 0,
+      explain: 'Timeline 的 Trim 策略。用户的注意力是极度有限的（通常只看最新几屏）。如果对上亿用户的 Timeline ZSet 进行全量无限期存储，Redis 内存将瞬间被冷数据耗尽。通过限制 ZSet 容量并利用 Redis 的 LTRIM/ZREMRANGEBYRANK 命令定时修剪，能够使 Redis 内存处于极为平稳的状态。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
