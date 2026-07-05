@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M4L11 · 坏味道与重构
 
@@ -37,7 +38,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - **超长函数 / 上帝类**：一个函数/类做太多事 → 违反 [SRP](./solid-srp-ocp)。
 - **重复代码（Duplicated Code）**：同样逻辑多处复制 → 违反 [DRY](./change-driven-design)。
 - **过长参数列表 / 数据泥团**：一堆参数总是一起出现 → 该打包成对象。
-- **发散式变化 / 霰弹式修改**：改一个需求要动很多处（或一个类因多种原因变）→ 违反 SRP/OCP。
+- **发散式变化 / <GlossaryTerm term="Shotgun Surgery" definition="霰弹式修改 (Shotgun Surgery)：一种常见的代码坏味道。指每当你要修改某个单一业务规则或增加新特性时，被迫在代码库里像发射霰弹一样，同时修改非常多不同的类或文件。这预示着系统职责划分混乱、高耦合度。">霰弹式修改 (Shotgun Surgery)</GlossaryTerm>**：改一个需求要动很多处（或一个类因多种原因变）→ 违反 SRP/OCP。
 - **冗长的 switch/if 链**：按类型分发 → 常可用[多态/策略](./strategy-pattern)替换。
 
 ### 进阶：安全重构的流程
@@ -47,9 +48,52 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 2. 每次只做一个**小重构**（提取函数、改名、引入参数对象……），改完立刻跑测试。
 3. 测试一直绿，就一直安全；一红立刻回退上一步。
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Dev as 开发人员 (Developer)
+  participant Code as 目标代码 (Production Code)
+  participant Test as 特征测试套件 (Characterization Tests)
+
+  Note over Dev,Test: 1. 建立安全防护网 (Lock in current behavior)
+  Dev->>Test: 编写并运行特征测试
+  Test-->>Dev: 返回全部通过 (Green - Status Quo locked)
+
+  loop 小步迭代重构 (The Red-Green Refactoring Steps)
+    Dev->>Code: 执行极其微小的修改 (如: 提取提取函数 / 字段重命名)
+    Dev->>Test: 运行测试验证行为
+    
+    alt 测试通过 (Green - Safe!)
+      Test-->>Dev: 提示绿灯 (Tests Pass)
+      Note over Dev: 保持修改, 准备进入下一步
+    else 测试失败 (Red - Regression!)
+      Test-->>Dev: 提示红灯 (Tests Fail - broken logic)
+      Dev->>Code: 撤销本次修改 (git checkout/rollback)
+      Note over Dev: 恢复到上一步绿灯状态, 拆小步骤重新尝试
+    end
+  end
+```
+
 ### 深入（选学）：重构向模式（refactor toward patterns）
 
 不要一上来就套模式（那是过度设计）。正确顺序是 [M4L1](./change-driven-design) 讲的：**先写朴素代码 → 出现真实的变化压力 / 坏味道 → 再重构出对应的模式。** 比如“一长串 if 按类型分发”反复要改，就重构成[策略/多态](./strategy-pattern)；“到处 new 具体类”就重构出[工厂](./factory-pattern)。模式是重构的**目的地**，不是起点——这正是 Kerievsky《Refactoring to Patterns》的核心主张。
+
+```mermaid
+flowchart TD
+  subgraph RefactoringToPatterns["重构向模式演进模型 (Refactoring to Patterns Evolutionary Model)"]
+    direction TB
+    
+    StepA["1. 编写朴素直观代码 <br/>(满足当前业务，保持最简设计 YAGNI)"] --> StepB["2. 遇到变化压力/识别出坏味道 <br/>(如: 出现长 switch-case 且不断增加分支)")
+    
+    StepB --> StepC["3. 引入特征测试 <br/>(建立回归测试安全网，锁定可观察外部行为)")
+    
+    StepC --> StepD["4. 实施小步安全重构手法 <br/>(运用 Fowler 定义的 Extract Method / Rename Variable)"]
+    
+    StepD --> StepE["5. 演进出合适的设计模式 <br/>(如: 逐步聚合成 Strategy 策略字典或 Factory 工厂方法)"]
+    
+    StepE -->|保持绿灯，拒绝预先设计的臃肿框架| StepA
+  end
+```
 
 <ResearchNote
   title="坏味道驱动重构，重构通向模式"
@@ -60,6 +104,33 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 />
 
 ## 三、跟我做一遍：以多态/策略取代条件式
+
+```mermaid
+flowchart LR
+  subgraph SmellyCode["1. 重构前: 堆积的分支判断 (Smelly switch-case - violates OCP)"]
+    direction TB
+    pay_bad["pay_bad(emp)"] -->|type == full_time| R1["return 8000"]
+    pay_bad -->|type == part_time| R2["return hours * 50"]
+    pay_bad -->|type == contractor| R3["return projects * 3000"]
+    pay_bad -->|新增员工类型| Change["每次都必须直接修改 pay_bad 内部分支!"]
+  end
+
+  subgraph RefactoredCode["2. 重构后: 注册表映射分发 (Strategy Registry - OCP compliant)"]
+    direction TB
+    pay["pay(emp)"] -->|1. 根据 type 查表| MapLookup["strategies.get(emp.type)"]
+    
+    subgraph RegistryMap["策略映射字典 (Registry Map)"]
+      S1["'full_time': lambda e: 8000"]
+      S2["'part_time': lambda e: e.hours * 50"]
+      S3["'contractor': lambda e: e.projects * 3000"]
+    end
+    
+    MapLookup --> RegistryMap
+    RegistryMap -->|2. 动态委托执行| Result["返回计算薪资结果"]
+    
+    AddType["新增员工类型: 仅往字典加一行, pay 函数主干代码 0 修改!"]
+  end
+```
 
 <PyRunner
   rows={26}
@@ -144,7 +215,7 @@ python labs/month04/m4l11_refactor/test_refactor.py
   dimensions={['风险', '见效速度', '需要测试', '适合范围', '团队接受度']}
   options={[
     {
-      name: '随手小重构（童子军法则）',
+      name: '随手小重构（<GlossaryTerm term="Boy Scout Rule" definition="童子军法则 (Boy Scout Rule)：‘离开时让营地比你来时更干净’。在软件开发中指每次修改代码时，顺手对接触到的周边代码做一点点微小的重构增强，从而依靠团队日常点滴维护来对抗系统软件熵增。">童子军法则 (Boy Scout Rule)</GlossaryTerm>）',
       scores: [1, 4, 3, 5, 5],
       note: '每次改代码顺手把碰到的地方变好一点。低风险、可持续。',
       whenToUse: '日常默认做法——“离开时让营地比来时更干净”。'
@@ -187,9 +258,46 @@ python labs/month04/m4l11_refactor/test_refactor.py
 
 ## 常见误解
 
-- **“重构 = 重写”**：重构不改行为、小步进行；重写是推倒重来，风险天差地别。
-- **“没空写测试，先重构”**：没测试的重构是赌博；测试是重构的前提。
-- **“一开始就该套好模式”**：模式应由真实坏味道驱动地重构出来，否则就是过度设计。
+- **"重构就是‘彻底重写（Rewrite）’。既然代码写得这么烂，直接推倒把整个模块重新写一遍才是最痛快的，也是唯一的解决手段"**: 典型的危险开发习惯。重构（Refactoring）和重写（Rewrite）在风险层面上有着天壤之别。重构的定义是在 **外部可观察行为不改变** 的前提下小步调整内部结构，强调测试保护与安全回滚；而重写是推倒重来，风险极高，极易遗漏原系统中的隐性细节与边缘需求，导致产生海量新 Bug 并长期阻塞功能发布。
+- **"项目时间非常紧张，根本没有多余时间先写测试，所以我只能先改代码，等以后有空了再补写测试"**: 裸奔式重构，自欺欺人。没有特征测试（Characterization Test）护体的所谓重构其实只是在修改代码，然后闭上眼睛向天祈祷不要出错。随着代码改动量累积，你将完全失去对是否破坏了已有边缘功能的掌控。记住：**没有测试，就绝不能动结构。** 补齐针对现状行为的测试是任何重构动作无法省去的“安全入场券”。
+- **"作为一个资深的软件架构师，应该在工程还没动工时，就预先套用好所有的抽象工厂、策略模式与代理模式，防止代码日后出现坏味道"**: 忽视了过度设计的巨大危害，违反 **YAGNI** 原则。 Joshua Kerievsky 在《Refactoring to Patterns》中极力反对一开始就预设复杂的模式框架。设计模式应该是由真实的业务变化压力、真实浮现的代码坏味道（如发散式变化、霰弹式修改）驱动，依靠有测试保护的重构手段，从朴素的简易代码中**自然演进生长**出来的。模式是终点，而不是起点。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在对没有任何单元测试的遗留系统（Legacy Code）进行重构之前，第一步且最核心的安全保障工作是什么？',
+      options: [
+        '直接使用最新的 IDE 自动化重构工具进行一键转换。',
+        '编写特征测试（Characterization Test）以‘锁死’当前的真实运行时行为（不论好坏），然后再实施小步重构，并在每一步后跑通特征测试确保可观察外部行为无偏离。',
+        '把类名和变量名全部改成拼音，增加代码的可读性。'
+      ],
+      answer: 1,
+      explain: '特征测试（Characterization Test）是安全重构的头号前提。对于遗留系统，因为没有测试保护，任何看似安全的改动都可能引发隐秘的 Bug。用特征测试‘拍照留存’当前的行为，是建立重构安全网的标准第一步。'
+    },
+    {
+      q: 'Joshua Kerievsky 在其著作《Refactoring to Patterns（重构向模式）》中提出的核心工程设计观点是？',
+      options: [
+        '设计模式应该是由真实发生的‘坏味道’和‘变化压力’驱动，通过重构重组手段自然演进‘长’出来的，而不是在项目初期由主观设计预先塞入到架构中的（避免过度设计）。',
+        '我们应该在项目还没写一行代码时，先把 23 种设计模式的类图全部声明好。',
+        '重构不需要考虑测试，只需要考虑类图结构是否优雅。'
+      ],
+      answer: 0,
+      explain: '重构向模式（Refactor to Patterns）的核心意图是推迟多态抽象的引入，遵循 YAGNI 原则。先写朴素的直观代码，当代码中确实出现‘发散式变化’或‘重复’等坏味道并面临扩展压力时，再通过有测试保护的重构手段让模式自然浮现。'
+    },
+    {
+      q: '如果当你在重构过程中应用了某个重构步骤（例如提取函数），突然发现测试红了（Assert 失败），最正确且高效的行为是？',
+      options: [
+        '继续编写新的代码，寄希望于下一阶段的重构会自动修复它。',
+        '立即执行 `git diff` 寻找原因，如果无法在 1-2 分钟内快速修复，应果断回退（rollback）至上一步全绿的可运行状态，然后将重构步子拆得更小重新尝试。',
+        '直接修改测试断言里的期望值，让测试强行变绿。'
+      ],
+      answer: 1,
+      explain: '小步快跑与纪律性回退。重构的核心纪律是‘绿到绿的平滑过渡’。如果测试红了且无法瞬时排错，继续堆砌改动只会让情况越发复杂。冷静地回滚到上一个安全节点并拆小步子，比死磕复杂的红测试要快得多。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
