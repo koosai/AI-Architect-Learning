@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M4L5 · 策略模式
 
@@ -21,28 +22,125 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 />
 
 :::tip 策略模式 = 上一课“组合可替换行为”的正式命名
-M4L4 你已经在做策略模式了——把“会变的行为”抽成部件、组合进来、运行时可换。这一课给它一个正式的名字和结构：**定义一族可互换的算法，把每个封装起来，让它们可以自由替换。**
+M4L4 你已经在做策略模式了——把“会变的行为”抽成部件、组合进来、运行时可换。这一课给它一个正式的名字和结构：**定义一族可互换的 <GlossaryTerm term="Algorithm Family" definition="算法族 (Algorithm Family)：在策略模式中，针对同一个业务目标（如运费计算、重排算法）的一组具有相同接口契约的可互换算法具体实现集合。">算法族 (Algorithm Family)</GlossaryTerm>，把每个封装起来，让它们可以自由替换。**
 :::
 
 ## 一、一个函数里塞了三种算法
 
 你的结算函数要支持多种运费算法：普通、加急、海外。于是里面又是 `if method == "normal" ... elif "express" ... elif "overseas" ...`。每加一种运费方式就改这个函数（违反 [开闭，M4L2](./solid-srp-ocp)），而且没法在运行时按用户等级动态切换算法。**问题的变化点很清楚：“怎么算运费”这个算法本身会变、会增、要能换。**
 
+```mermaid
+classDiagram
+  class Cart {
+    -items: list
+    -shipping: ShippingStrategy
+    +add(name, weight)
+    +total_weight() float
+    +shipping_fee() float
+  }
+
+  class ShippingStrategy {
+    <<interface>>
+    +calculate(weight) float
+  }
+
+  class NormalShipping {
+    +calculate(weight) float
+  }
+
+  class ExpressShipping {
+    +calculate(weight) float
+  }
+
+  class OverseasShipping {
+    +calculate(weight) float
+  }
+
+  Cart --> ShippingStrategy : 持有 & 委托 (has-a)
+  NormalShipping ..|> ShippingStrategy : 实现
+  ExpressShipping ..|> ShippingStrategy : 实现
+  OverseasShipping ..|> ShippingStrategy : 实现
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：什么是策略模式
 
-<GlossaryTerm term="Strategy Pattern" definition="策略模式：定义一族可互换的算法，把每个算法封装成独立对象，让它们可以在运行时自由替换。使用者持有一个策略、委托它执行，而不写死某一种算法。">策略模式</GlossaryTerm>：把“同一件事的不同做法”各自封装成一个**策略对象**，使用者（context）持有一个策略、把活儿**委托**给它。换算法 = 换一个策略对象，使用者一行不用改。
+<GlossaryTerm term="Strategy Pattern" definition="策略模式：定义一族可互换的算法，把每个算法封装成独立对象，让它们可以在运行时自由替换。使用者持有一个策略、委托它执行，而不写死某一种算法。">策略模式</GlossaryTerm>：把“同一件事的不同做法”各自封装成一个**策略对象**，使用者 <GlossaryTerm term="Context" definition="上下文 (Context)：策略模式中的核心类，扮演算法消费者的角色。它持有一个抽象策略的引用，负责接收数据并委托给当前策略去运行，自身不感知具体算法实现。">上下文 (Context)</GlossaryTerm> 持有一个策略、把活儿**委托**给它。换算法 = 换一个策略对象，使用者一行不用改。
 
 ### 进阶：context 与 strategy 的分工
 
 - **策略（strategy）**：只负责“怎么算”——每种算法一个对象，接口统一（如都有 `cost(weight)`）。
 - **上下文（context）**：持有一个策略，负责“什么时候用、用它算什么”，自己不含算法细节。
-- 这正是 [DIP（M4L3）](./solid-lsp-isp-dip)：context 依赖“策略抽象”，具体算法注入进来。
+- 这项设计能实现极其健康的 <GlossaryTerm term="Loose Coupling" definition="松耦合：系统设计核心追求，模块与模块之间的依赖度极低。在策略模式中表现为 Context 仅依赖 Strategy 抽象接口，即使后续大范围修改或新增具体策略类，Context 代码也完全无感知。">松耦合 (Loose Coupling)</GlossaryTerm>（这正是 [DIP（M4L3）](./solid-lsp-isp-dip)：context 依赖“策略抽象”，具体算法注入进来）。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 客户端 (Client)
+  participant Cart as 购物车 (Cart Context)
+  participant Strategy as 运费抽象接口 (ShippingStrategy)
+  participant Normal as 普通策略 (NormalShipping)
+  participant Express as 加急策略 (ExpressShipping)
+
+  Note over Client,Cart: 1. 注入默认策略 (Normal)
+  Client->>Normal: new NormalShipping()
+  Client->>Cart: new Cart(NormalInstance)
+  Client->>Cart: calculate()
+  activate Cart
+  Cart->>Strategy: calculate_fee(weight)
+  activate Strategy
+  Strategy->>Normal: 执行普通运费计费
+  activate Normal
+  Normal-->>Strategy: 返回 3.0
+  deactivate Normal
+  Strategy-->>Cart: 返回 3.0
+  deactivate Strategy
+  Cart-->>Client: 返回 3.0
+  deactivate Cart
+
+  Note over Client,Cart: 2. 运行时动态替换策略 (Express)
+  Client->>Express: new ExpressShipping()
+  Client->>Cart: set_shipping(ExpressInstance)
+  Client->>Cart: calculate()
+  activate Cart
+  Cart->>Strategy: calculate_fee(weight)
+  activate Strategy
+  Strategy->>Express: 执行加急计费 (加收10元)
+  activate Express
+  Express-->>Strategy: 返回 13.0
+  deactivate Express
+  Strategy-->>Cart: 返回 13.0
+  deactivate Strategy
+  Cart-->>Client: 返回 13.0
+  deactivate Cart
+```
 
 ### 深入（选学）：策略模式与“一等函数”
 
 在 Python/JS 这类有<GlossaryTerm term="First-class Function" definition="一等函数：函数可以像普通值一样被传递、赋值、存进变量或数据结构。在这类语言里，一个简单的策略往往直接用函数就够了，不必为它建一个类。">一等函数</GlossaryTerm>的语言里，一个简单策略**直接传函数**就够了，不必为它造一个类（回扣 [M4L1 KISS](./change-driven-design)）。只有当策略需要自己的状态、配置或多个方法时，才升级成类。GoF 的类版策略，在动态语言里常退化成“传个函数”——这不是偷懒，是语言特性带来的简化。
+
+```mermaid
+flowchart TD
+  subgraph ConfigDrivenStrategyPipeline["注册表 + 策略模式：动态配置装配流水线 (Config-driven Strategy Loading Pipeline)"]
+    direction TB
+    
+    Payload["1. 客户端传入订单载荷 <br/>(Order Payload: {items, method: 'express'})"] --> Decision["2. 决策路由决策器 <br/>(Strategy Router)"]
+    
+    subgraph StrategyRegistry["3. 策略注册表 (Registry Map)"]
+      RegNormal["'normal' -> normal_shipping_func"]
+      RegExpress["'express' -> express_shipping_func"]
+      RegOverseas["'overseas' -> overseas_shipping_func"]
+    end
+    
+    Decision -->|解析 method='express'| StrategyRegistry
+    StrategyRegistry -->|匹配查找到策略实体| Match["4. 提取策略函数/对象 <br/>(express_shipping_func)"]
+    
+    Match --> Inject["5. 动态注入 Context <br/>(Cart.shipping = express_shipping_func)"]
+    Inject --> Execute["6. 委托计算 <br/>(Cart.shipping_fee())"]
+    Execute --> Result["7. 输出最终计算结果"]
+  end
+```
 
 <ResearchNote
   title="把算法做成可互换的对象"
@@ -166,9 +264,46 @@ python labs/month04/m4l5_strategy/test_strategy.py
 
 ## 常见误解
 
-- **“策略模式必须建一堆类”**：动态语言里简单策略用函数即可。
-- **“有 if-else 就该上策略”**：算法极少且稳定时，if-else 更简单（KISS）。
-- **“策略模式很高级”**：它就是组合 + 委托 + 面向接口的组合拳，你上一课已经会了。
+- **"既然策略模式是为了消灭 if-else，那么我代码里只要出现任何 if-else 分支，都应当强行改写成策略类"**: 典型的过度设计与生搬硬套。如果业务逻辑中的算法极少（例如仅有 2 个稳定分支），且未来几乎没有任何变化和新增可能性，直接使用 if-else 是符合 KISS（Keep It Simple, Stupid）原则的最优解。强行抽取策略类反而会导致类文件数量爆炸，增加了认知负载和维护成本。
+- **"策略模式在动态语言（如 Python / JS）中非常繁琐，还要去写 Abstract Class 并继承实现"**: 这是对动态语言特性的严重无视。在支持一等函数（First-class Functions）的语言中，每一个“策略”都可以直接退化成一个普通函数。Context 只需要接收函数作为参数并直接调用即可，完全不需要去定义冗余的抽象类和多态子类，极大地精简了模板代码。
+- **"把算法写死在 Context 里运行速度最快，使用策略模式会因为多了一层‘持有 + 委托’的多态调用而导致严重的系统性能瓶颈"**: 这纯属脱离工程实际的微观性能强迫症。在现代硬件和虚拟机（JIT）优化下，多态或函数委托调用的时间开销在纳秒级，而实际业务中无论是查库、调 RPC 还是大模型网关路由，网络和磁盘 I/O 都在毫秒级。用几乎忽略不计的微小调用开销，换取系统极佳的可替换性、开闭原则支持和极高的单元测试价值，是完全稳赚不赔的工程置换。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在策略模式中，上下文（Context）与策略（Strategy）的核心分工是什么？',
+      options: [
+        'Context 负责所有具体的算法计算；Strategy 负责在屏幕上渲染计算结果。',
+        'Strategy 负责封装具体的算法逻辑（‘怎么做’），提供统一的方法签名；Context 负责持有 Strategy 的引用并维护业务流程上下文（‘何时做，用什么数据做’），通过‘委托’机制调用 Strategy，自己对算法的具体实现细节一无所知。',
+        'DIP 规则禁止 Context 和 Strategy 进行任何交互。'
+      ],
+      answer: 1,
+      explain: 'Context 与 Strategy 的分工。Context 扮演的是统筹与协调者的角色（比如购物车 Cart 负责维护商品列表和总重），具体的算法逻辑（如普通、加急或海外运费计算）被完全封装进 Strategy 内部。这彻底贯彻了关注点分离的设计思想。'
+    },
+    {
+      q: '在 Python / JavaScript 等支持一等函数（First-class Functions）的动态语言中，实现策略模式有什么独特的优势？',
+      options: [
+        '可以完全不编写任何业务类，直接通过把‘策略函数’作为一等公民参数进行传递，避免了为了套用设计模式而强行编写繁多‘抽象接口类’与‘具体策略子类’的八股样板代码，使得代码极其扁平与 KISS。',
+        '动态语言能够将策略函数自动编译成汇编指令，提速 100 倍。',
+        '一等函数能免去编写测试替身的必要。'
+      ],
+      answer: 0,
+      explain: '一等函数与策略模式。在 C++/Java 中，哪怕是最简单的策略，也必须先定义一个 Interface 并在外部编写 concrete class。在支持高阶函数的语言中，任何满足参数特征的普通函数直接就可以充当策略传入，代码更加简洁和直白。'
+    },
+    {
+      q: '如果我们将‘注册表模式 (Registry Pattern)’与‘策略模式 (Strategy Pattern)’结合使用（如 Registry + Strategy），会带来什么额外的工程利益？',
+      options: [
+        '这消除了所有的内存调用开销。',
+        '这实现了策略的‘动态插拔与配置驱动’。策略实现类只需往全局注册表中 register(key, strategy)，上下文便可通过动态配置文件中的 key 字符串直接从注册表拉取并装配策略，上层服务完全实现了对第三方策略的黑盒热插拔扩展。',
+        '这将导致系统无法进行本地调试。'
+      ],
+      answer: 1,
+      explain: '注册表与策略的强强结合。这种模式（如 Registry + Strategy）是现代框架（如大模型路由网关、支付网关等）的常见架构基础。它将策略从直接的代码 new 中彻底解放出来，变成配置或插件化扩展。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
