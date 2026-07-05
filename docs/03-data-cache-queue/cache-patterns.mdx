@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M3L5 · 缓存模式
 
@@ -28,6 +29,27 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 你加了 Redis 缓存。问题来了：读时先查缓存还是数据库？缓存没有时谁去填？写时先写缓存还是数据库？这些"谁负责什么"的约定，就是<GlossaryTerm term="Cache Pattern" definition="缓存模式：缓存与底层数据库协作的标准方式，规定读写时各组件的职责与顺序。常见有 cache-aside、read-through、write-through、write-back。">缓存模式</GlossaryTerm>。
 
+```mermaid
+flowchart TD
+  subgraph CacheAside["Cache-Aside (旁路缓存 - 应用控制)"]
+    direction TB
+    App1["应用程序 (Application)"] -->|1. 读写| Cache1["缓存 (Redis)"]
+    App1 -->|2. 未命中回填 / 更新| DB1["数据库 (MySQL)"]
+  end
+
+  subgraph ThroughPatterns["Read/Write-Through (穿透缓存 - 缓存托管)"]
+    direction TB
+    App2["应用程序 (Application)"] -->|读写仅交互缓存| Cache2["缓存中间件 (Cache Provider)"]
+    Cache2 -->|自动回填 / 同步更新| DB2["数据库 (MySQL)"]
+  end
+
+  subgraph WriteBackPattern["Write-Back (写回 - 异步刷盘)"]
+    direction TB
+    App3["应用程序 (Application)"] -->|1. 写缓存即返回| Cache3["缓存 (Redis)"]
+    Cache3 -.->|2. 后台异步批量合并刷盘| DB3["数据库 (MySQL)"]
+  end
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：Cache-Aside（旁路缓存）
@@ -35,7 +57,38 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 最常用的模式，由**应用代码**负责协调：
 
 - **读**：先查缓存 → 命中就返回；未命中 → 查数据库 → 把结果填进缓存 → 返回。
-- **写**：写数据库 → 让对应缓存失效（删除）。
+- **写**：写数据库 → 让对应缓存进行 <GlossaryTerm term="Cache Eviction" definition="缓存逐出/失效：由于空间不足或底层数据变更，将特定缓存项从缓存介质（如 Redis）中主动删除或根据置换算法（LRU/LFU）清理的行为。">缓存失效 (Cache Eviction)</GlossaryTerm>。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor App as 应用程序 (Application)
+  participant Cache as 旁路缓存 (Redis Cache)
+  participant DB as 数据库 (MySQL DB)
+
+  Note over App,DB: 路径 1: 旁路读操作 (Read Path - Lazy Loading)
+  App->>Cache: 1. 查找 Key 'user_1'
+  activate Cache
+  alt 缓存命中 (Cache Hit)
+    Cache-->>App: 返回数据 'Ada'
+  else 缓存未命中 (Cache Miss)
+    Cache-->>App: 返回空 (Null / Miss)
+    deactivate Cache
+    App->>DB: 2. 查找数据库 SELECT ... WHERE id=1
+    activate DB
+    DB-->>App: 返回物理数据 'Ada'
+    deactivate DB
+    App->>Cache: 3. 回填缓存 SET 'user_1' = 'Ada'
+  end
+
+  Note over App,DB: 路径 2: 旁路写操作 (Write Path - Evict on Update)
+  App->>DB: 1. 更新数据库 UPDATE ... SET name='Ada_New'
+  activate DB
+  DB-->>App: 更新成功 (OK)
+  deactivate DB
+  App->>Cache: 2. 逐出/失效缓存 DEL 'user_1'
+  Note over App,Cache: 优点: 避免更新缓存发生的并发脏数据竞态!
+```
 
 <GlossaryTerm term="Cache-Aside" definition="旁路缓存：应用自己负责读时未命中则回填、写时让缓存失效。最常用、最灵活，但一致性要应用小心处理。">Cache-Aside</GlossaryTerm> 灵活、容错好（缓存挂了还能直接走库），是默认选择。
 
@@ -45,7 +98,37 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 - <GlossaryTerm term="Read-Through" definition="读穿透：未命中时由缓存层自己去加载数据库并回填，应用只跟缓存打交道。">Read-Through</GlossaryTerm>：未命中由缓存自己加载库。
 - <GlossaryTerm term="Write-Through" definition="写穿透：写时同步写缓存和数据库（都成功才算成功）。缓存始终最新，但写变慢。">Write-Through</GlossaryTerm>：写时同步写缓存 + 库。缓存总最新，但写慢。
-- <GlossaryTerm term="Write-Back" definition="写回/写behind：写时只写缓存、立即返回，异步批量刷到数据库。写极快，但缓存挂了可能丢未刷的数据。">Write-Back</GlossaryTerm>：只写缓存就返回，异步刷库。写极快，但有丢数据风险。
+- <GlossaryTerm term="Write-Back" definition="写回/写behind：写时只写缓存、立即返回，异步批量刷到数据库。写极快，但缓存挂了可能丢未刷的数据。">Write-Back</GlossaryTerm>：又称 <GlossaryTerm term="Write-Behind" definition="异步写回 (Write-Behind)：一种极速写优化缓存策略。写操作仅作用于缓存内存，并立即向客户端返回成功；后台工作协程以异步分批（Batching）形式将脏数据合并落盘写入数据库。">Write-Behind (异步写回)</GlossaryTerm>。只写缓存就返回，异步刷库。写极快，但有丢数据风险。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 客户端 (Client)
+  participant Cache as 内存缓存 (Redis / Memory Cache)
+  participant Queue as 脏数据队列/缓冲区 (Dirty Buffer Queue)
+  participant Worker as 异步写协程 (Batch Flusher Worker)
+  participant DB as 物理数据库 (MySQL DB)
+
+  Client->>Cache: 1. 更新数据 (Write Event)
+  activate Cache
+  Cache->>Queue: 2. 标记脏键并推入缓冲队列
+  Cache-->>Client: 3. 立即返回写入成功 (ACK - 5ms!)
+  deactivate Cache
+  Note over Client,Cache: 客户端无感知，写操作在内存中已经落定
+
+  Note over Queue,DB: 异步批刷过程 (Asynchronous Batching Pipeline)
+  loop 每隔 1 秒 或 积攒 1000 条
+    Worker->>Queue: 4. 批量拉取脏键
+    activate Worker
+    Queue-->>Worker: 返回批数据
+    Worker->>DB: 5. 批量写入/合并落盘 (Batch Insert / Bulk Update)
+    activate DB
+    DB-->>Worker: 刷盘成功
+    deactivate DB
+    deactivate Worker
+  end
+  Note over Queue,DB: 风险点: 若在第3步返回后、第5步刷盘前缓存服务器断电宕机，脏数据将物理丢失!
+```
 
 ### 深入（选学）：模式的本质是"职责放哪 + 风险放哪"
 
@@ -169,9 +252,46 @@ python labs/month03/m3l5_cache/test_cache.py
 
 ## 常见误解
 
-- **"加了缓存一定更快"**：命中率低时反而是负担。
-- **"写时更新缓存最直接"**：写时"删缓存"通常比"改缓存"更安全（下课）。
-- **"缓存就是 Redis"**：缓存是一套读写协议，Redis 只是实现之一。
+- **"系统加了缓存就一定能扛高并发，访问必然更快"**: 极其片面。如果系统读写比接近 1:1，或者请求访问的数据毫无聚集性（全部是随机只读一次的冷 Key），缓存命中率将接近于 0。此时系统不仅要浪费 CPU 去查找 Redis，还要额外承担网络开销和应用层 Cache Miss 回填代码开销，数据库该被击穿依然会被击穿。
+- **"更新数据库数据时，直接同步修改对应的 Redis 缓存是最快最直观的"**: 严重错误。如果存在两个写请求并发进行，由于网络延迟差异，更新缓存的操作极其容易发生“时序交错”，导致最新的修改被历史的旧值覆盖。写时直接“删除（失效）”缓存是防范脏数据竞态的事实标准。
+- **"缓存就是 Redis，有缓存的类库就行"**: 缓存是一个分布式系统中的“读写控制协议”。Redis、Memcached 仅仅是该协议的物理存储实现介质。如果不妥善设计其在应用层代码中的回填、失效、防穿透熔断等职责路径，单纯部署 Redis 服务器对高并发系统无济于事。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 Cache-Aside (旁路缓存) 模式下，更新数据的标准做法是‘更新数据库，然后删除缓存’，为什么不是‘更新数据库，然后更新缓存’？',
+      options: [
+        '因为更新缓存会导致 Redis 的内存直接溢出发生 OOM。',
+        '为了避免并发更新时的脏数据竞态。如果有两个写事务并发，更新缓存可能会因网络执行顺序颠倒导致缓存中留存历史脏数据；而直接删除缓存则可以让下一次读请求触发安全回填。此外，更新缓存存在写多读少场景下的多余计算浪费。',
+        '因为 Redis 数据库不支持任何 update 覆盖操作，只支持 delete。'
+      ],
+      answer: 1,
+      explain: '并发修改脏数据。如果两个事务并发，执行顺序为：事务A写库 -> 事务B写库 -> 事务B更新缓存 -> 事务A更新缓存。此时缓存是事务A的旧值，而数据库是事务B的新值，造成永久不一致。改为删除缓存可确保后续读取回填，物理上是安全的。'
+    },
+    {
+      q: 'Write-Back (写回/异步写) 模式是现代操作系统 Page Cache 及某些极高写并发系统（如 Redis 计数器异步落盘）的核心。它的最大取舍是什么？',
+      options: [
+        '极好的写延迟与写入吞吐量，但代价是缓存层宕机会丢失内存中尚未刷盘的脏数据，且最终一致性的延迟较大。',
+        '对读性能产生严重的拖累，每次读都需要进行多表扫描。',
+        '它会导致缓存命中率永久下降到零。'
+      ],
+      answer: 0,
+      explain: 'Write-Back 将同步写磁盘降级为异步刷盘。因此写延迟降到内存级别（极致吞吐）。代价是一旦缓存宕机且无持久化快照，未刷回主库的数据将永久丢失。常用于写密集且能接受少量数据丢失的场景。'
+    },
+    {
+      q: 'Read-Through / Write-Through 与 Cache-Aside 的最核心架构区别是什么？',
+      options: [
+        'Read-Through 必须在客户端机器中部署代理层，不允许直连。',
+        '在 Read-Through/Write-Through 模式下，应用代码不感知底层数据库，只与缓存抽象接口打交道，将‘读取回填/同步写入’的协调职责打包在缓存中间件内部；而 Cache-Aside 模式下，应用代码必须编写协调缓存和数据库的全部流程。',
+        '它们完全没有任何区别，只是针对不同的品牌叫法。'
+      ],
+      answer: 1,
+      explain: 'Responsibility allocation. 职责分担的区别。Through 模式隐藏了存储层实现，应用感知极简。但这也意味着缓存层需要集成底层数据库驱动和适配代码，开发与部署复杂度变高。Cache-Aside 则将这个灵活性交给了应用层。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
