@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M2L11 · 可靠性与容错设计
 
@@ -26,7 +27,38 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ## 一、一个依赖挂了，整个系统会跟着挂吗？
 
-你的下单依赖风控服务。某天风控变慢/挂了。如果你的设计是"必须等风控返回才能下单"，那风控一挂，下单全挂——一个非核心依赖拖垮了核心功能。**好的容错设计会让风控挂掉时，下单仍能（用降级策略）继续。** 这一课讲怎么做到。
+你的下单依赖风控服务。某天风控变慢/挂了。如果你的设计是"必须等风控返回才能下单"，那风控一挂，下单全挂——一个非核心依赖产生了 <GlossaryTerm term="Cascading Failure" definition="级联故障（雪崩效应）：分布式系统中，由于局部组件发生故障，导致其他依赖它的组件也相继发生资源耗尽或异常崩溃，最终雪崩式拖垮整个系统的现象。">级联故障（雪崩效应）</GlossaryTerm>，拖垮了整个核心功能。**好的容错设计会让风控挂掉时，下单仍能（用降级策略）继续。** 这一课讲怎么做到。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as 客户端 (Client)
+  participant Order as 下单服务 (Order Service)
+  participant Breaker as 风控熔断器 (Breaker)
+  participant Risk as 远程风控服务 (Risk Service)
+  participant DB as 数据库 (Database)
+
+  User->>Order: 1. 提交下单请求 (Order Request)
+  Order->>Breaker: 2. 尝试调用风控
+  
+  alt 熔断器 Closed 且远程风控超时变慢 (Fail Path)
+    Breaker->>Risk: 3a. 发起 RPC 请求 (风控计算)
+    activate Risk
+    Risk-->>Breaker: 3b. 持续超时无响应 (500ms)
+    deactivate Risk
+    Breaker-->>Order: 3c. 触发超时错误
+    Order->>Order: 3d. 执行优雅降级: 路由至本地风控 Fallback (如默认低额度放行)
+    Order->>DB: 3e. 写入订单表 (提交成功)
+    DB-->>Order: 3f. 写入 OK
+    Order-->>User: 3g. 返回下单成功 (带有提示: 处于临时风险管控)
+  else 熔断器 Open 状态 (跳闸期 - Rapid Fail Path)
+    Breaker-->>Order: 4a. 快速失败拒绝RPC (Rejected)
+    Order->>Order: 4b. 绕过远程, 立即执行本地风控 Fallback
+    Order->>DB: 4c. 写入订单表
+    DB-->>Order: 4d. 写入 OK
+    Order-->>User: 4e. 秒回下单成功 (保护下游, 不产生网络超时开销)
+  end
+```
 
 ## 二、三个核心概念（分层）
 
@@ -44,7 +76,43 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 - <GlossaryTerm term="Graceful Degradation" definition="优雅降级：依赖不可用时返回一个够用的结果（缓存旧值、默认值、精简功能），而不是整体报错。">优雅降级</GlossaryTerm>：风控挂了 → 走默认风险策略，而不是拒绝下单。
 - <GlossaryTerm term="Circuit Breaker" definition="熔断器：当某依赖连续失败到阈值就跳闸，一段时间内直接快速失败、不再调用它，给它喘息恢复的机会，之后半开试探。">熔断器</GlossaryTerm>：依赖连续失败就跳闸，停止调用、快速失败，防止 [重试风暴](../foundations/error-handling)。
+
+```mermaid
+flowchart LR
+  subgraph CircuitBreakerStates["熔断器三态状态机 (Circuit Breaker State Machine)"]
+    direction LR
+    Closed["🟢 Closed (闭合/正常)<br/>- 允许所有请求通过<br/>- 失败数达阈值时跳闸"]
+    Open["🔴 Open (开启/熔断)<br/>- 拒绝所有流量, 快速失败<br/>- 计时达到冷却时间后转半开"]
+    HalfOpen["🟡 Half-Open (半开/探测)<br/>- 尝试释放极少量请求探测<br/>- 成功则关闭, 失败再次熔断"]
+    
+    Closed -->|连续失败达阈值| Open
+    Open -->|冷却时间到| HalfOpen
+    HalfOpen -->|首次探测失败| Open
+    HalfOpen -->|首次探测成功| Closed
+  end
+```
+
 - <GlossaryTerm term="Bulkhead" definition="舱壁：像船的隔舱，把资源（线程池/连接池）按依赖隔离，一个依赖耗尽自己的资源也不会拖垮其它。">舱壁隔离</GlossaryTerm>：给每个依赖独立的资源池，一个挂了不吃光全局资源。
+
+```mermaid
+flowchart TD
+  subgraph BulkheadPattern["共享资源 vs 舱壁隔离 (Bulkhead Pattern)"]
+    direction TB
+    
+    subgraph BadShared["共享全局线程池 (Shared Resources - 发生雪崩)"]
+      Req_Pay["支付请求"] & Req_Rec["慢推荐请求"] --> SharedPool["共享全局线程池 (总大小=100)"]
+      SharedPool -->|"被占用 98 线程 (打满)"| RecSvc["慢推荐服务 (响应 10s)"]
+      SharedPool -.->|"没有多余线程分配 (挂起)"| PaySvc["核心支付服务 (响应 10ms)"]
+    end
+    
+    subgraph GoodIsolated["舱壁隔离线程池 (Bulkhead Isolation - 核心隔离)"]
+      Req_Pay2["支付请求"] --> PayPool["支付隔离线程池 (大小=20)"]
+      Req_Rec2["慢推荐请求"] --> RecPool["推荐隔离线程池 (大小=20 - 占满)"]
+      PayPool -->|"剩余 20 线程可用 (绿灯)"| PaySvc2["核心支付服务"]
+      RecPool -->|"20个全部堵塞 (红灯)"| RecSvc2["慢推荐服务"]
+    end
+  end
+```
 
 ### 深入（选学）：为失败而设计 + 主动制造失败
 
@@ -187,9 +255,47 @@ python labs/month02/m2l11_circuit_breaker/test_breaker.py
 
 ## 常见误解
 
-- **"高可靠 = 让它永不失败"**：不可能；目标是部分失败时仍能降级服务。
-- **"加了熔断就够了"**：熔断要配降级（跳闸时返回什么）才完整。
-- **"容错设计写了就有效"**：未经真实故障验证的容错等于没有（混沌工程）。
+- **"高可靠 = 让它永不失败"**: 只要规模足够大，软硬件物理故障是必然会以一定概率发生的。可靠性设计的本质是承认局部失败是必然的常态，确保单个零件的崩溃不会引起系统雪崩，从而能够保障核心交易的正常运行。
+- **"加了熔断就够了"**: 熔断器跳闸（Open）后只是简单地拦截流量。如果熔断不配降级（Fallback）策略（例如没有兜底缓存值或默认的风控逻辑），用户端依然只会看到冷冰冰的 500 报错，不可用时长没有任何改变。
+- **"容错设计只要写了代码就一定能起效"**: 未经受过真实生产故障检验的容错方案等于不存在。这也是为什么 Netflix 主张推广混沌工程，常态化在真实生产环境拔网线、宕机器，以便发现那些隐藏在配置文件和异常捕获代码里的隐形 bug。
+- **"级联故障（雪崩）只是网络慢而已"**: 级联故障最可怕的不是慢本身，而是由于下游依赖响应变慢，导致上游服务的请求积压（HTTP 连接池/线程池被吃光），进而让上游服务也跟着挂掉，最后像多米诺骨牌一样呈链状拖挂所有微服务。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在微服务分布式架构中，熔断器（Circuit Breaker）处于‘开启（Open）’状态时，其核心表现是什么？',
+      options: [
+        '它依然把每一个请求同步发给下游服务，但是不等待响应结果。',
+        '它拦截所有的调用请求，直接返回本地失败或执行优雅降级逻辑（快速失败 Rejected），绝不将请求发送到已经瘫痪的下游依赖，给它恢复的时间。',
+        '它强制停止整个应用集群的运行，等待运维人员物理重启服务器。'
+      ],
+      answer: 1,
+      explain: '熔断器的关键目的是保护下游和隔离雪崩。当状态为 Open 时，它充当‘门禁’，阻断一切流量回源，避免下游数据库或服务因为排队请求和重试风暴被彻底打挂。直到冷却期结束后进入 Half-Open 状态，才释放少量流量进行试探。'
+    },
+    {
+      q: '‘舱壁隔离（Bulkhead）’设计模式是从轮船防沉设计的‘水密隔舱’概念演变而来的。在微服务开发中，以下哪项是舱壁模式的经典落地手段？',
+      options: [
+        '在应用服务器上部署更强劲的 CPU 防硬件损坏。',
+        '为不同的下游依赖（如风控服务、支付服务、推荐服务）分配各自独立的线程池（Thread Pool）或连接池，使得某一个依赖变慢慢响应并占满对应线程池时，其他服务的线程池依然正常运行，避免整个 JVM 线程被吞噬殆尽。',
+        '对所有依赖采用完全共享的单一巨大全局阻塞线程池以提高线程复用度。'
+      ],
+      answer: 1,
+      explain: '隔离是高可用的核心手段。通过线程池/连接池舱壁隔离，即使下游推荐服务极其缓慢把推荐池占满，支付与下单服务的池子也是物理隔离的，从而防止了雪崩效应（Cascading Failure）拖垮整个系统。'
+    },
+    {
+      q: '关于‘混沌工程（Chaos Engineering）’的实践，以下哪个理解是正确的？',
+      options: [
+        '由于线上业务极度脆弱，绝对禁止在生产或准生产环境进行任何人为的故障注入与杀实例验证。',
+        '它的核心理念是‘为失败而设计’，通过在受控的类生产/生产环境中主动制造局部故障（如断网、杀节点），以此持续验证并优化系统的自愈、降级和容错逻辑，确保设计指标而非口头指标的可靠。',
+        '混沌工程主要是为了在年底考核时给程序员找故障指标，没有实际系统价值。'
+      ],
+      answer: 1,
+      explain: '高可用的架构若从未在真实灾难中演练过，其容错方案往往在发生事故时形同虚设。混沌工程（Chaos Engineering）提倡在受控范围内主动发现未知系统缺陷，防患于未然。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
