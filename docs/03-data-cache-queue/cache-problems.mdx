@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M3L7 · 缓存三大难题
 
@@ -28,6 +29,30 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 缓存命中率 99% 时数据库很轻松。但如果突然大量请求绕过缓存直达数据库，DB 瞬间过载（回扣 [L1 惊群](../foundations/programming-systems-primer)、[M2L4 串联可用性](../system-design-bridge/sla-slo-availability)）。三种典型成因：
 
+```mermaid
+flowchart TD
+  subgraph Penetration["1. 缓存穿透 (Cache Penetration)"]
+    direction TB
+    Req_Pen["客户端查询随机不存在 Key<br/>(如 user_-999)"] --> Cache_Pen["Redis 缓存 (查找无果 - Miss)"]
+    Cache_Pen --> DB_Pen["物理数据库 DB (回表空查 - Miss)"]
+    DB_Pen -.->|高频打入| DB_Pen_Over["后果: 数据库遭受空查打垮"]
+  end
+
+  subgraph Breakdown["2. 缓存击穿 (Cache Breakdown)"]
+    direction TB
+    Req_Break["并发海量请求查询超热 Key<br/>(如 user_hot_1)"] --> Cache_Break["Redis 缓存 (热Key刚好过期 - Miss)"]
+    Cache_Break -->|并发 N 路请求重建| DB_Break["物理数据库 DB (执行高负荷查询)"]
+    DB_Break -.->|瞬间流量爆满| DB_Break_Over["后果: 数据库被瞬间多路重建砸崩溃"]
+  end
+
+  subgraph Avalanche["3. 缓存雪崩 (Cache Avalanche)"]
+    direction TB
+    Req_Av["全局海量并发读请求"] --> Cache_Av["Redis 缓存 (大量 Key 集中过期 / Redis 宕机)"]
+    Cache_Av -->|雪崩倾泻流量| DB_Av["物理数据库 DB"]
+    DB_Av -.->|承接全站流量| DB_Av_Over["后果: 数据库瞬间洪峰压顶彻底瘫痪"]
+  end
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：三大难题的成因
@@ -40,13 +65,51 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 | 难题 | 成因 | 对策 |
 |---|---|---|
-| 穿透 | 查不存在的 key | **空值缓存**（缓存"不存在"）、**布隆过滤器** |
-| 击穿 | 热点 key 过期瞬间 | **互斥重建**（只让一个请求重建，single-flight）、逻辑过期 |
+| 穿透 | 查不存在的 key | **空值缓存**（缓存"不存在"）、<GlossaryTerm term="Bloom Filter" definition="布隆过滤器：一种空间效率极高的概率型数据结构，用于快速检索一个元素是否在一个集合中。具有 0% 的假阴性率（判定不存在则一定不存在）和少量的假阳性率（判定存在时可能实际不存在），常用来前置拦截无效的穿透查询。">布隆过滤器 (Bloom Filter)</GlossaryTerm> |
+| 击穿 | 热点 key 过期瞬间 | **互斥重建**（只让一个请求重建，single-flight）、<GlossaryTerm term="Logical Expiration" definition="逻辑过期：缓存项的物理 TTL 被设置为永不过期，但在其 BSON 数据包内部设置一个 logical_expire_time 字段。当读线程发现已逻辑过期时，返回旧数据并异步启动后台工作线程刷新数据。">逻辑过期 (Logical Expiration)</GlossaryTerm> |
 | 雪崩 | 大量 key 同时过期 | **TTL 加随机抖动**、多级缓存、缓存高可用 |
+
+```mermaid
+flowchart LR
+  Client["客户端请求 (Key)"] --> BloomCheck{"布隆过滤器 (Bloom Filter)<br/>哈希映射位图计算"}
+  BloomCheck -->|判定判定不存在<br/>(100% 绝对可靠)| Reject["直接拦截并返回 404 / 空值<br/>(拦截率 ~99%, 零打库)"]
+  BloomCheck -->|判定存在<br/>(有极小假阳性概率)| CacheCheck{"查找 Redis 缓存"}
+  
+  CacheCheck -->|Cache Hit| ReturnData["返回缓存数据"]
+  CacheCheck -->|Cache Miss| QueryDB["查询物理数据库 MySQL"]
+```
 
 ### 深入（选学）：single-flight / 请求合并
 
 击穿的本质是<GlossaryTerm term="Thundering Herd" definition="惊群：某资源（如刚过期的热点缓存）可用瞬间，大量等待者同时涌入争抢，瞬间过载。缓存击穿是它的典型。">惊群</GlossaryTerm>（回扣 [L1](../foundations/programming-systems-primer)）。最优雅的对策是 <GlossaryTerm term="Single-Flight" definition="单飞/请求合并：同一个 key 同时有很多请求要重建时，只让第一个真正去加载，其余请求等它的结果。把 N 次重建合并成 1 次。">single-flight（请求合并）</GlossaryTerm>：同一个 key 的并发重建只执行一次，其余请求复用这个结果。把"N 个请求打库"变成"1 个请求打库"。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor ThreadA as 线程 A (并发读1)
+  actor ThreadB as 线程 B (并发读2)
+  participant SF as Single-Flight 控制器 (单飞管理器)
+  participant DB as 物理数据库 MySQL
+
+  Note over ThreadA,ThreadB: 场景: 多个并发线程同时查询已过期的热点 Key 'hot_user'
+  ThreadA->>SF: 1. get('hot_user')
+  activate SF
+  SF->>SF: 发现暂无 inflight 任务，注册任务并获取锁许可
+  SF->>DB: 2. 独占查询数据库 (SQL Scan)
+  activate DB
+
+  ThreadB->>SF: 3. get('hot_user') (并发插队)
+  SF->>SF: 检测到已经有 'hot_user' 的 inflight 重建任务在跑
+  Note over ThreadB,SF: 线程 B 挂起挂起，不再去数据库查询，在内存管道中等待 A 的结果
+
+  DB-->>SF: 4. 返回物理值 'Bob_New'
+  deactivate DB
+  SF->>SF: 广播唤醒所有等待 'hot_user' 的订阅通道
+  SF-->>ThreadA: 5. 返回结果 'Bob_New'
+  SF-->>ThreadB: 6. 复用结果返回 'Bob_New'
+  deactivate SF
+  Note over ThreadA,ThreadB: 物理上只执行了 1 次数据库读，其余 N 个连接全部实现合并！
+```
 
 <ResearchNote
   title="惊群与缓存失效，超大规模缓存的真实战场"
@@ -173,9 +236,46 @@ python labs/month03/m3l7_cache_guard/test_guard.py
 
 ## 常见误解
 
-- **"加了缓存数据库就安全了"**：三大难题会让缓存瞬间失效、DB 被打垮。
-- **"穿透靠加缓存解决"**：不存在的 key 缓存不到，要负缓存/布隆过滤器。
-- **"统一 TTL 方便管理"**：会导致同时过期、雪崩，要加随机抖动。
+- **"既然有缓存穿透，那我对所有不存在的 key 统一设置空值缓存 (Negative Caching) 就能彻底免疫穿透了"**: 极其危险。如果是黑客利用随机生成的千万级 UUID 进行恶意的 DDoS 穿透扫表攻击，将不存在的 Key 缓存会导致 Redis 中塞满永远不会被二次命中的无效“空值缓存垃圾数据”。很快内存就会爆满触发驱逐或 OOM。对于这种恶意穿透，必须在前置网关配置高性能的布隆过滤器拦截大部分流量。
+- **"Single-Flight (请求合并) 重建方案完全没有缺点，可以对所有热点数据无脑配置"**: 并非如此。虽然 Single-Flight 守护了数据库的红线，但在并发数万的极高流量下，所有请求由于并发重建都被 Block 在单机的 Channel 或 Mutex 等锁资源上，会瞬间吃满服务器的活动协程/线程资源，导致接口的读尾延迟（Tail Latency）爆表。对于极热数据，更好的策略是“逻辑过期 + 异步后台刷新”或者多级缓存直接把热点稀释。
+- **"为了方便部署和缓存统计，所有 Key 统一配置相同的 TTL 是最佳实践"**: 这是典型的缓存定时炸弹。如果全部 Key 在同一时间上线并配置相同的 TTL，当时间跨过 TTL 的瞬间，这些 Key 会集体过期，导致全局缓存雪崩。TTL 必须根据数据新鲜度要求合理配置并增加 Jitter 随机抖动值进行流量错峰。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在应对缓存穿透 (Cache Penetration) 时，使用‘空值缓存 (Negative Caching)’与‘布隆过滤器 (Bloom Filter)’这两种策略各有什么优缺点？',
+      options: [
+        '布隆过滤器占内存大但没有误判率；空值缓存完全没有内存消耗。',
+        '空值缓存实现简单，适合不存在的 key 数量有限的场景，但如果攻击者随机生成海量垃圾 key 进行攻击，负缓存会导致 Redis 内存迅速耗尽；布隆过滤器空间利用率极高，能过滤大部分请求，但它有一定误判率（即假阳性），且不支持动态物理删除（除非使用带计数的布隆过滤器）。',
+        '布隆过滤器主要用来防雪崩，空值缓存用来防击穿。'
+      ],
+      answer: 1,
+      explain: '防穿透的取舍。空值缓存是应对偶尔的爬虫或简单不存在键的简易策略。但面对高强度恶意攻击（制造无限随机 Key），空值缓存会引起 Redis 发生 OOM，此时必须在网关层配置高性能的布隆过滤器过滤 99% 的无效 Key 访问。'
+    },
+    {
+      q: '以下关于缓存击穿 (Cache Breakdown) 中使用 Single-Flight (请求合并) 与逻辑过期 (Logical Expiration) 两种重建方案的取舍，哪项描述是准确的？',
+      options: [
+        '逻辑过期虽然有实现复杂度，但它可以通过后台异步重建确保客户端读取响应永远为零等待（零额外延迟）；而 Single-Flight 虽然保护了数据库，但在热点重建期间，除了抢到锁的第一个请求，其余并发请求都会被挂起（Block）等待其回填返回，从而增加了读尾延迟。',
+        'Single-Flight 绝不产生任何延迟，而逻辑过期会导致数据库陷入无限循环。',
+        '逻辑过期只在单机内存中有效，无法在多机分布式缓存中使用。'
+      ],
+      answer: 0,
+      explain: '击穿重建的延迟取舍。Single-Flight (或 Mutex 重建) 虽物理上守住了数据库的一线红线，但在并发数极高时，成百上千个被 Block 的连接会造成服务器的线程池/连接池饱和或延长接口的 Tail Latency。此时，逻辑过期利用异步更新，虽有短暂陈旧但保障了高可用和低延迟。'
+    },
+    {
+      q: '在防范缓存雪崩 (Cache Avalanche) 时，如何通过 TTL 随机抖动 (Jitter) 来降解数据库的瞬时崩溃压力？',
+      options: [
+        '在缓存过期时间的 base 上增加一个随机值（Base + random），使得原本集中在某一特定时刻过期的 Key 能够均匀地离散分布在不同的时间区间，避免物理过期事件的重合引起流量峰值。',
+        '直接废除 TTL，全部数据设为永久有效。',
+        '在 Redis 宕机时，抖动 TTL 会强制对所有库读请求返回 Null 响应。'
+      ],
+      answer: 0,
+      explain: 'TTL 抖动防雪崩原理。如果大量缓存设置了相同的 TTL，系统上线或批量预热后，会形成定时炸弹——在固定秒数后这些 key 同时失效。加入 Jitter 可以实现过期峰值的平滑过滤，让流量均匀释放。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
