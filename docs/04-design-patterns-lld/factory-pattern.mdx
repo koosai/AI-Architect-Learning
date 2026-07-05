@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M4L6 · 工厂模式
 
@@ -28,20 +29,114 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 你的代码里到处是 `if type == "pdf": return PdfExporter()  elif "csv": return CsvExporter() ...`。同样的判断在导出、预览、邮件三处各写一遍。加一种 `ExcelExporter`，你得找出所有这些地方一处处改——**创建逻辑重复（违反 [DRY](./change-driven-design)）、且每加一种类型就要改一片（违反开闭）。**
 
+```mermaid
+flowchart TD
+  subgraph DirectInstantiation["1. 直接硬编码实例化 (Scattered new - violates DRY/OCP)"]
+    direction TB
+    Client1["业务组件 A <br/>(Export Page)"] -->|直接硬编码 new| Pdf1["PdfExporter"]
+    Client2["业务组件 B <br/>(Preview Modal)"] -->|直接硬编码 new| Pdf1
+    Client3["业务组件 C <br/>(Email Service)"] -->|直接硬编码 new| Csv1["CsvExporter"]
+  end
+
+  subgraph FactoryDecoupling["2. 工厂模式集中创建 (Factory Decoupled - compliant)"]
+    direction TB
+    ClientA["业务组件 A"] -->|1. 请求创建 'pdf'| ExporterFactory["工厂 (ExporterFactory)"]
+    ClientB["业务组件 B"] -->|1. 请求创建 'pdf'| ExporterFactory
+    ClientC["业务组件 C"] -->|1. 请求创建 'csv'| ExporterFactory
+    
+    ExporterFactory -->|2. 统一实例化并返回| Interface["产品接口 (Exporter Interface)"]
+    Pdf2["PdfExporter"] -.->|继承实现| Interface
+    Csv2["CsvExporter"] -.->|继承实现| Interface
+  end
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：简单工厂——把创建集中到一处
 
-最朴素的做法：<GlossaryTerm term="Simple Factory" definition="简单工厂：用一个函数/方法集中负责“根据参数创建并返回合适的对象”，把散落各处的创建逻辑收拢到一处。严格说它不是 GoF 模式，但极常用、极实用。">简单工厂</GlossaryTerm>——写一个 `create_exporter(type)` 函数，把“该 new 哪个类”的判断收拢到这一个地方。其它代码只调它、拿到对象就用，不再关心具体类（[DIP](./solid-lsp-isp-dip)）。
+最朴素的做法：<GlossaryTerm term="Simple Factory" definition="简单工厂：用一个函数/方法集中负责“根据参数创建并返回合适的对象”，把散落各处的创建逻辑收拢到一处。严格说它不是 GoF 模式，但极常用、极实用。">简单工厂</GlossaryTerm>——写一个 `create_exporter(type)` 函数，把“该 new 哪个类”的判断收拢到这一个地方。其它代码只调它、拿到对象就用，不再关心具体类，它们都遵循同一个统一的 <GlossaryTerm term="Product Interface" definition="产品接口：工厂模式中定义的产品规范。所有由工厂实例化的对象都必须实现这一相同的接口（如 Exporter 具有 export() 方法），从而让客户端可以无差别地消费而无须感知具体的类。">产品接口 (Product Interface)</GlossaryTerm>（[DIP](./solid-lsp-isp-dip)）。
 
 ### 进阶：工厂方法与抽象工厂
 
 - <GlossaryTerm term="Factory Method" definition="工厂方法（GoF）：在父类里定义一个“创建对象”的方法，把“具体创建哪个子类”延迟到子类去决定。让框架定义流程、子类决定用什么对象。">工厂方法</GlossaryTerm>：父类定义“创建步骤”，**由子类决定创建哪个具体对象**——框架定流程、扩展者填实现。
 - <GlossaryTerm term="Abstract Factory" definition="抽象工厂（GoF）：提供一个创建“一族相关对象”的接口，让你能整套切换实现（如换一整套 UI 控件、换一整套数据库驱动），而不必逐个改。">抽象工厂</GlossaryTerm>：创建“一整族”相关对象（如一套 UI 控件、一套云厂商 SDK），让你能**整套替换**。
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 客户端 (UI Editor)
+  participant Manager as 主题管理器 (ThemeManager)
+  participant Factory as 抽象工厂接口 (UIFactory)
+  participant WinFactory as Windows工厂 (WindowsFactory)
+  participant Button as 按钮产品接口 (Button)
+  participant TextBox as 文本框产品接口 (TextBox)
+
+  Note over Client,Manager: 1. 运行时初始化整套 Windows 风格 UI
+  Client->>Manager: applyTheme("windows")
+  Manager->>WinFactory: 实例化 WindowsFactory (UIFactory)
+  Manager-->>Client: 装配 Windows 风格工厂成功
+
+  Note over Client,Button: 2. 统一批量渲染页面元素 (无感知整套替换)
+  Client->>WinFactory: createButton()
+  activate WinFactory
+  WinFactory->>Button: new WindowsButton()
+  activate Button
+  Button-->>WinFactory: 实例 WindowsButton
+  deactivate Button
+  WinFactory-->>Client: 实例 WindowsButton
+  deactivate WinFactory
+
+  Client->>WinFactory: createTextBox()
+  activate WinFactory
+  WinFactory->>TextBox: new WindowsTextBox()
+  activate TextBox
+  TextBox-->>WinFactory: 实例 WindowsTextBox
+  deactivate TextBox
+  WinFactory-->>Client: 实例 WindowsTextBox
+  deactivate WinFactory
+
+  Client->>Button: render() 渲染 Windows 风格按钮
+  Client->>TextBox: show() 渲染 Windows 风格文本框
+```
+
 ### 深入（选学）：工厂 + 注册表 = 开闭的创建
 
-简单工厂里如果还是 `if-elif`，加类型仍要改它。终极形态是**注册表式工厂**（回扣 [M4L1](./change-driven-design)）：每个类把自己**注册**进一张 `{type: 类}` 表，工厂只查表创建。这样加新类型 = 注册一行，工厂代码一个字不改——创建逻辑也做到了开闭。许多框架的“插件/驱动注册”就是这么干的。
+简单工厂里如果还是 `if-elif`，加类型仍要改它。终极形态是**注册表式工厂**（回扣 [M4L1](./change-driven-design)）：每个类把自己**注册**进一张作为 <GlossaryTerm term="Registry Map" definition="注册表字典 (Registry Map)：动态工厂的核心数据结构（通常是一个键值对哈希表）。通过在程序启动或扫描时，将产品 key（如 'pdf'）映射到对应的类构造函数（如 PdfExporter），彻底消除创建逻辑中的 if-else 判定分支。">注册表字典 (Registry Map)</GlossaryTerm> 的 `{type: 类}` 表中，工厂只查表创建。这样加新类型 = 注册一行，工厂代码一个字不改——创建逻辑也做到了开闭。许多框架的“插件/驱动注册”就是这么干的。
+
+```mermaid
+flowchart TD
+  subgraph RegistryLifecycle["注册表工厂插件扫描加载生命周期 (Plugin Scan & Factory Registry Lifecycle)"]
+    direction TB
+    
+    Start["1. 系统引导启动 <br/>(System Boot / Startup)"] --> Scan["2. 扫描 plugins/ 目录 <br/>(Scan Directory / Classpath)"]
+    
+    subgraph LoadPhase["3. 动态加载模块"]
+      LoadExcel["加载 excel_plugin.py"]
+      LoadPDF["加载 pdf_plugin.py"]
+    end
+    
+    Scan --> LoadPhase
+    
+    subgraph Registration["4. 自我注册阶段 (Auto Register)"]
+      Reg1["register('excel', ExcelExporter)"]
+      Reg2["register('pdf', PdfExporter)"]
+    end
+    
+    LoadExcel --> Reg1
+    LoadPDF --> Reg2
+    
+    subgraph RegistryDB["5. 内存注册表 (Registry Map)"]
+      MapTable["{<br/>&nbsp;&nbsp;'excel': ExcelExporter,<br/>&nbsp;&nbsp;'pdf': PdfExporter<br/>}"]
+    end
+    
+    Reg1 --> MapTable
+    Reg2 --> MapTable
+    
+    ClientCall["6. 运行时客户端请求 <br/>(Factory.create('excel'))"] --> MapTable
+    MapTable --> Instantiate["7. 反射/构造函数直接实例化 <br/>(return ExcelExporter())"]
+    Instantiate --> Done["8. 返回实例给客户端使用"]
+  end
+```
 
 <ResearchNote
   title="把“创建”从“使用”里分离出来"
@@ -175,9 +270,46 @@ python labs/month04/m4l6_factory/test_factory.py
 
 ## 常见误解
 
-- **“工厂就是个 if-elif 函数”**：那是简单工厂；要开闭得配注册表。
-- **“工厂越多越解耦”**：只在创建真的会变/散落时用，否则直接 new 更简单（YAGNI）。
-- **“抽象工厂高级所以要用”**：它很重，只为“整族替换”而生，别滥用。
+- **"简单工厂包含 if-elif 条件分支判定，不符合开闭原则（OCP），因此它不是一个正统的设计模式，在生产中不应该写"**: 极其教条的学院派思想。简单工厂虽然在新增类型时确实要修改工厂代码，但它成功将“对象创建”这个变化点收拢到了唯一的函数中，避免了 new 逻辑在全系统散射（DRY）。在类型稀少且变化极慢的业务场景，简单工厂是性价比最高、最容易被团队所有人理解的务实解法。
+- **"既然提倡面向接口，那我的系统里就不能出现任何 direct new 实例化代码，必须每一个类都配套编写一个 Factory"**: 属于走火入魔的过度设计偏执。我们之所以要把 new 隐藏起来，是因为具体类的“创建逻辑可能会频繁发生变化（如参数增加、子类选择复杂）”或者“我们需要在单元测试中注入 Mock 伪实现”。对于极其稳定、不可能发生多态改变的纯数据类（Data Class）、工具类或本地内聚组件，直接 new 是完全合理且符合 YAGNI 原则的。
+- **"抽象工厂和工厂方法听起来差不多，随便选哪一个实现都一样，没什么大区别"**: 概念混淆的典型表现。工厂方法（Factory Method）专注于“单一产品”的创建，主要通过类继承将该产品的具体实例化延迟到子类工厂去执行；而抽象工厂（Abstract Factory）专注于“一族相关或相互依赖的产品”的整套替换。二者设计维度完全不同：一个是单一产品的垂直延迟创建，一个是多产品生态的水平整套切换。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '简单工厂（Simple Factory）与工厂方法（Factory Method）的最核心本质区别是？',
+      options: [
+        '简单工厂是用 Python 写的，工厂方法是用 C++ 写的。',
+        '简单工厂通常采用一个包含条件分支或字典查表的中心函数，由它集中负责所有具体类的实例化；而工厂方法通过继承（Inheritance）将实例化的决定延迟到子类，父类只规定流程骨架（如 createExporter 抽象接口），由各子类工厂自行 new 具体产品。',
+        '简单工厂的性能是工厂方法的十倍。'
+      ],
+      answer: 1,
+      explain: '简单工厂与工厂方法的本质区别。简单工厂把创建堆在一起（往往包含 if/else 或 Registry），而工厂方法是经典的 GoF 创建型模式，使用多态派生让具体的子类工厂去负责对应的具体产品创建，实现了创建结构的再解耦。'
+    },
+    {
+      q: '在需要动态按配置整套替换外部服务商（如将整个云存储、云数据库、云推送的一族 SDK 从 AWS 切换至阿里云）时，应当首选哪种工厂模式？',
+      options: [
+        '简单工厂',
+        '抽象工厂（Abstract Factory），因为它能够定义一整套互相关联的抽象产品创建接口（如 createStorage(), createDB(), createPush()），允许我们通过注入不同的具体工厂实例（如 AWSFactory 或 AliyunFactory），实现一整套产品线的无缝替换。',
+        '脆弱基类工厂'
+      ],
+      answer: 1,
+      explain: '抽象工厂的应用场景。抽象工厂是专门为了‘一族相关或相互依赖的产品对象’而设计的。它不只创建单个对象，而是创建成套的生态，可以方便地通过多态整套重换系统底层基础设施。'
+    },
+    {
+      q: '将‘注册表模式 (Registry Map)’引入简单工厂中（即注册表式工厂）的核心价值是什么？',
+      options: [
+        '能够彻底消灭系统启动时的内存初始化开销。',
+        '通过‘自注册机制’将类对象的注册从工厂的硬编码 if-else 中剥离出来，加新类型时仅需向注册表 register 一行，工厂核心代码彻底符合开闭原则（OCP），极大地方便了插件化与包扫描式框架开发。',
+        '能够直接拦截所有的 SQL 查询行为。'
+      ],
+      answer: 1,
+      explain: '注册表工厂的实战工程价值。许多现代软件框架（如 Spring, Django, Docusaurus 的插件系统）的核心就是注册表工厂。开发者只需开发一个新类并标记注册，主框架不需要做任何修改即可加载并实例化该新产品。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
