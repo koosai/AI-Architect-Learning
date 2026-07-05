@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M3L8 · 项目：URL 短链系统
 
@@ -28,10 +29,53 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 用 [M2L1 方法](../system-design-bridge/design-methodology) 过一遍：
 
-1. **澄清**：长链→短码、短码→重定向。短码要短、唯一、（最好）不可枚举。
+1. **澄清**：长链→短码、短码→重定向。短码要短、唯一、（最好）不可枚举。重定向选择 <GlossaryTerm term="HTTP 301" definition="永久重定向：HTTP 状态码。表示该 URL 映射关系已永久改变，浏览器会将重定向关系缓存在本地内存中，下次点击直接由浏览器进行跳转，不打回源站。省带宽但无法统计点击量。">HTTP 301</GlossaryTerm> 还是 <GlossaryTerm term="HTTP 302" definition="临时重定向：HTTP 状态码。表示重定向关系仅当前有效，浏览器不会强缓存此跳转。每次点击短链都必须打回短链服务器解析，方便精确收集 PV/UV 点击分析。">HTTP 302</GlossaryTerm>。
 2. **估算**（[M2L3](../system-design-bridge/capacity-estimation)）：读远多于写（每个短链生成一次、被点很多次）→ **读多写少，重缓存**。
 3. **HLD**：客户端 → 网关 → 短链服务 → 缓存（热门短码）→ 数据库（code↔url 映射）。
+
+```mermaid
+flowchart LR
+  Client["客户端 (Client)"] -->|1. GET /21| GW["API 网关 / nginx"]
+  
+  subgraph ShortenerApp["短链服务集群 (URL Shortener Cluster)"]
+    direction TB
+    GW -->|2. 路由分发| SVC["短链业务层 (Go/Java Node)"]
+    SVC -->|3. 查找热 Key| Cache["Redis 缓存层<br/>(存储热门短码映射)"]
+    SVC -->|4. 申请号段 / 写入 / Miss读| DB["MySQL 存储层<br/>(主从读写分离)"]
+    SVC -->|5. 号段分发| RangeAlloc["号段分配器<br/>(分配 ID Range)"]
+  end
+```
+
 4. **深潜**：① 短码怎么生成（发号 + base62）② 重定向怎么极快（缓存 + CDN）。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 客户端 (Client/浏览器)
+  participant GW as API 网关 (nginx)
+  participant Cache as Redis 缓存
+  participant DB as MySQL 数据库
+
+  Client->>GW: 1. 请求 GET /21 (短码)
+  activate GW
+  GW->>Cache: 2. 查缓存 key 'code:21'
+  activate Cache
+  alt 缓存命中 (Cache Hit)
+    Cache-->>GW: 返回长 URL 'https://example.com'
+  else 缓存未命中 (Cache Miss)
+    Cache-->>GW: 返回空 (Null)
+    deactivate Cache
+    GW->>DB: 3. 查询数据库 SELECT url FROM mapping WHERE code='21'
+    activate DB
+    DB-->>GW: 返回长 URL 'https://example.com'
+    deactivate DB
+    GW->>Cache: 4. 回填缓存 SET 'code:21' = 'https://example.com' (带 TTL)
+  end
+  GW-->>Client: 5. 返回 HTTP 302 Found<br/>Location: https://example.com
+  deactivate GW
+  Note over Client,GW: 浏览器重定向至长 URL 目标页面
+```
+
 5. **取舍**：发号方式（自增/随机/哈希）、强一致 vs 最终一致。
 
 ## 二、三个核心概念（分层）
@@ -46,7 +90,30 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 深入（选学）：规模下的发号
 
-单机自增 ID 在分布式下会冲突。规模化发号有几条路：**号段（counter range）**——每台机器一次领一批 ID（如 1-1000）本地发，用完再领；或 <GlossaryTerm term="Snowflake" definition="Twitter 提出的分布式 ID 生成：用「时间戳 + 机器号 + 序列号」拼成一个全局唯一、大致有序的 64 位 ID，无需中心协调。">Snowflake</GlossaryTerm>（时间戳+机器号+序列）。**自增 ID 可枚举**（别人能猜下一个），要不可枚举就用随机/哈希，但要处理碰撞。
+单机自增 ID 在分布式下会冲突。规模化发号有几条路：**号段（counter range）**——每台机器一次领一批 ID（如 1-1000）本地发，用完再领；或 <GlossaryTerm term="Snowflake" definition="Twitter 提出的分布式 ID 生成：用「时间戳 + 机器号 + 序列号」拼成一个全局唯一、大致有序 of 64 位 ID，无需中心协调。">Snowflake</GlossaryTerm>（时间戳+机器号+序列）。**自增 ID 可枚举**（别人能猜下一个），若要安全防推测，可用 <GlossaryTerm term="Feistel Cipher" definition="Feistel密码混淆：一种对称分组加密结构。在短链生成中常用于将自增的 ID 进行可逆混淆加密成无规律的数字，这样既保留了自增 ID 绝对唯一的防碰撞优点，又使输出结果表现为离散随机，防范他人枚举窥探。">Feistel 密码 (Feistel Cipher)</GlossaryTerm> 对 ID 进行高位加密混淆，再进行 Base62 编码。如果是普通随机/哈希，则需要通过数据库查重以解决碰撞。
+
+```mermaid
+flowchart TD
+  subgraph ShortenWritePath["短链缩短写路径 (Shorten Write Path - 号段分配模型)"]
+    direction TB
+    InputURL["客户端输入长 URL<br/>(e.g., https://google.com)"] --> ReqShorten["请求 shorten(url)"]
+    ReqShorten --> CheckCacheExist{"1. 是否已存在缩短后的映射?<br/>(布隆/缓存查询)"}
+    
+    CheckCacheExist -->|Yes| ReturnOld["直接返回已有短码"]
+    CheckCacheExist -->|No| AcquireID["2. 本地号段发号器分配下一个 ID"]
+    
+    AcquireID --> Q_Range{"3. 本地缓存 ID 号段<br/>是否已经消耗完毕?"}
+    Q_Range -->|Yes| LoadRange["向中心节点 (MySQL/ZK)<br/>申请获取下一个号段范围<br/>(例如: 2001 - 3000)"]
+    LoadRange --> AllocNext["获取下一个唯一自增 ID n"]
+    Q_Range -->|No| AllocNext
+    
+    AllocNext --> EncryptFeistel["4. (可选) Feistel 密码加密混淆 n<br/>使得生成的 ID 离散不连续"]
+    EncryptFeistel --> EncodeBase62["5. 转换为 Base62 编码字符串<br/>(得到紧凑短码, 如 21)"]
+    
+    EncodeBase62 --> SyncDB["6. 异步/同步保存映射<br/>- 写入 MySQL 数据库<br/>- 写入 Redis 缓存 (带较长 TTL)"]
+    SyncDB --> ReturnShort["7. 向客户端返回短链"]
+  end
+```
 
 <ResearchNote
   title="短链是综合性的入门系统设计题"
@@ -176,9 +243,46 @@ python labs/month03/m3l8_url_shortener/test_shortener.py
 
 ## 常见误解
 
-- **"短链就是存个映射"**：难点在发号唯一性、读多写少的缓存、可枚举性。
-- **"用随机字符串最简单"**：要处理碰撞，且要够长才不易撞。
-- **"映射要强一致"**：短链生成后稍晚可用完全可接受（最终一致）。
+- **"短链服务只是简单存一个 Map，不需要考虑复杂的发号与架构，属于低级增删改查"**: 这是大错特错的面试陷阱。短链的核心难点在“如何无碰撞、防冲突地在分布式微服务下极速发号（分布式 ID 生成）”、“如何在极高的读写比下通过多级缓存与 HTTP 重定向选型降低服务器 QPS”，以及“如何通过混淆算法防范自增短码被他人遍历穷举攻击”。
+- **"短链直接使用 MD5 长链哈希值截取前 6 位，实现最为便捷，不需要发号器"**: 极高碰撞隐患。MD5 是哈希算法，截取前 6 位（Base62 表示）仅有不到 560 亿的取值空间。根据生日悖论（Birthday Paradox），当生成短链达到数万甚至十多万条时，哈希碰撞率就会飙升，被迫陷入高成本的“查库重哈希重试”死循环中，导致写入性能严重衰退。
+- **"重定向使用 301 永久重定向能减轻短链服务器的大部分压力，应该作为业界统一的标准规范"**: 这严重损害了商业决策。虽然 301 永久重定向可以将后续跳转直接缓存在浏览器中（零打回源站，延迟最低），但这也导致短链服务彻底丧失了统计该短链接后继点击频率、地理位置、用户画像分析（PV/UV/转化率）的核心数据权，使得商业分析无法开展。因此大多数商用短链强制使用 302 临时重定向。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '短链服务重定向时，HTTP 状态码应该选择 301 (Moved Permanently) 还是 302 (Found)？这两者在架构设计与业务分析上的核心权衡是什么？',
+      options: [
+        '301 是永久重定向，浏览器会本地强缓存该映射，减少短链服务的 QPS 压力，但会导致服务器失去精准收集每一次短链点击数据（PV/UV）的机会；302 是临时重定向，每次浏览器访问都会打回短链服务，便于收集点击分析指标，但放大了服务器负载。通常若需要流量统计，推荐选择 302。',
+        '301 会永久占用短链服务器端口；302 则是完全免费的协议。',
+        '由于缓存无法配合 301 工作，必须强制使用 302 进行分布式锁控制。'
+      ],
+      answer: 0,
+      explain: '301 vs 302。301 会被浏览器积极地缓存在本地（永不再次请求服务器），因此读性能最高，但会把统计权弄丢。302 则强制走短链服务重定向，使分析分析（例如统计点击地域、用户代理）最为精确，代价是请求全部落在服务层，必须依赖 Redis 拦截压力。'
+    },
+    {
+      q: '在分布式架构下，如果采用‘自增 ID + Base62’的发号策略，为了避免单点主键自增带来的数据库瓶颈与冲突，以下哪种是高并发工业级系统最常用的号段模式 (Range/Counter Segment Allocation) 解决方案？',
+      options: [
+        '每台机器随机猜测一个号段，撞上冲突后由共识算法进行回滚。',
+        '使用中心节点（如 MySQL 表或 ZooKeeper/Consul）统一分发号段，每台业务服务器每次向中心申请获取一个递增的 ID 范围（例如领用 [10001, 20000]），本地以内存锁极速发号。当本地号段快用完时，再次向中心领用下一段，避免了每一次发号都去读写数据库的强依赖。',
+        '强制让所有分布式节点共享同一个单机 Redis 进行 INCR 递增，不使用任何内存缓冲。'
+      ],
+      answer: 1,
+      explain: '号段分发方案。号段模式极大地减轻了数据库的并发写压力。通过将多次网络发号网络往返合并为单次“申请 range”动作，本地利用内存自增发号，单机 TPS 可以轻松过十万。即便中心节点短暂不可用，本地已申请的号段依然能够支撑运行一段时间。'
+    },
+    {
+      q: '如果业务上对短链的安全性有极高要求，必须防止恶意攻击者通过遍历自增 ID 穷举所有的有效短链。架构师应该如何修改短码生成机制？',
+      options: [
+        '将 Base62 的字符集彻底隐藏，不对任何外网暴露。',
+        '放弃自增发号，改用‘高位哈希散列’（如 MD5 截断）或者‘加密随机种子/Feistel 密码混淆算法’，将原本连续递增的 ID 进行可逆混淆加密成无规律的数字，再进行 Base62 编码。这样既保持了短链的短小唯一性，又彻底切断了短链的可枚举猜想特征。',
+        '直接放弃短链缩短功能，每次都只使用长 URL 进行路由。'
+      ],
+      answer: 1,
+      explain: '防止短码可枚举。直接使用自增 ID 会产生巨大的数据外泄风险（如猜出竞争对手的优惠码、泄露非公开文档短链）。对 ID 进行对称加密/混淆算法（如使用 Feistel 密码或 Skip32）可以将其可逆地打散为伪随机数字流，在不产生哈希冲突的前置下确保安全。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
