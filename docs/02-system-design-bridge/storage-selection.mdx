@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M2L8 · 数据存储选型
 
@@ -37,7 +38,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 | <GlossaryTerm term="Relational (SQL)" definition="关系型数据库：表 + 行 + 强 schema + 事务 + JOIN。擅长复杂查询和强一致。">关系型</GlossaryTerm> | 复杂查询、事务、强一致 | PostgreSQL, MySQL |
 | <GlossaryTerm term="Document DB" definition="文档数据库：以 JSON 文档为单位存取，schema 灵活。擅长整块读写、快速迭代。">文档型</GlossaryTerm> | 灵活 schema、整块读写 | MongoDB |
 | <GlossaryTerm term="Key-Value" definition="键值存储：按 key 极快读写，常用作缓存或会话。结构简单、延迟极低。">键值</GlossaryTerm> | 极快按 key 读写、缓存 | Redis |
-| <GlossaryTerm term="Wide-Column" definition="宽列存储：为海量写入和水平扩展设计的 NoSQL（如 Cassandra）。擅长超大写吞吐、按分区键查询。">宽列</GlossaryTerm> | 海量写、水平扩展 | Cassandra |
+| <GlossaryTerm term="Wide-Column" definition="宽列存储：为海量写入和水平扩展设计的 NoSQL（如 Cassandra）。擅长超大写吞吐、按分区键查询。">宽列</GlossaryTerm> | 海量写、水平扩展 | Cassandra (典型 <GlossaryTerm term="NoSQL" definition="非关系型数据库 (Not Only SQL)：一类不同于传统关系型数据库（RDBMS）的通用数据存储系统，它们通常放宽了 ACID 事务要求以换取水平扩展性、高并发吞吐和灵活的多变 Schema。">NoSQL</GlossaryTerm>) |
 | <GlossaryTerm term="Search Engine" definition="搜索引擎：为全文检索、相关性排序、聚合分析而生（倒排索引）。">搜索引擎</GlossaryTerm> | 全文搜索、相关性 | Elasticsearch |
 | <GlossaryTerm term="Object Storage" definition="对象存储：存大文件（图片/视频/备份）的廉价、海量、高可用存储，按 URL 取。">对象存储</GlossaryTerm> | 大文件（图片/视频） | S3 |
 | <GlossaryTerm term="Graph DB" definition="图数据库：为关系遍历（朋友的朋友、推荐路径）优化的存储。">图</GlossaryTerm> | 关系遍历 | Neo4j |
@@ -47,9 +48,78 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 回扣 [L7：先看查询模式，再定存储](../foundations/data-modeling)。问几个问题：要不要复杂事务？要不要全文搜索？是大文件吗？是关系遍历吗？是海量时间序列吗？**每个"是"都指向一个更合适的存储。**
 
+```mermaid
+flowchart TD
+  subgraph StorageDecisionTree["数据存储引擎选型决策树 (Storage Selection Decision Tree)"]
+    direction TB
+    Start["分析数据访问模式"] --> Q_Blob{"是大文件吗? (如图片/视频/包文件)"}
+    
+    Q_Blob -->|Yes| S3["对象存储 (Object Storage / S3)<br/>- 优势: 极廉价, 按 URL 极速分发<br/>- 典型: AWS S3, MinIO"]
+    Q_Blob -->|No| Q_Series{"是带时间戳的时序指标吗? (如监控/IoT数据)"}
+    
+    Q_Series -->|Yes| TSDB["时序数据库 (Time-Series DB)<br/>- 优势: 写入性能狂暴, 自动时间压缩与聚合查询<br/>- 典型: Prometheus, InfluxDB"]
+    Q_Series -->|No| Q_Relation{"是复杂的图关系网络吗? (如社交关系/推荐)"}
+    
+    Q_Relation -->|Yes| GraphDB["图数据库 (Graph DB)<br/>- 优势: 极速图路径遍历和朋友的社交搜索<br/>- 典型: Neo4j"]
+    Q_Relation -->|No| Q_Search{"需要全文检索与模糊搜索吗?"}
+    
+    Q_Search -->|Yes| ES["搜索引擎 (Search Engine)<br/>- 优势: 倒排索引, 相关性打分评分<br/>- 典型: Elasticsearch"]
+    Q_Search -->|No| Q_Tx{"有强 ACID 事务和复杂 JOIN 需求吗?"}
+    
+    Q_Tx -->|Yes| SQL["关系型数据库 (RDBMS / SQL)<br/>- 优势: 表结构严密, 二次分析方便<br/>- 典型: PostgreSQL, MySQL"]
+    Q_Tx -->|No| Q_Scale{"是海量超大规模写写入, 且 Schema 极易变动?"}
+    
+    Q_Scale -->|Yes| NoSQL["宽列/文档 NoSQL<br/>- 优势: 分区水平横向扩容, 键值/文档检索<br/>- 典型: Cassandra, MongoDB"]
+    Q_Scale -->|No| Redis["内存键值缓存 (KV Cache)<br/>- 典型: Redis"]
+  end
+```
+
 ### 深入（选学）：Polyglot Persistence——一个系统用多种存储
 
-现代大系统几乎不会只用一种存储，而是<GlossaryTerm term="Polyglot Persistence" definition="多语言持久化：在同一个系统里，针对不同数据的不同访问模式，分别选用最合适的存储（如关系库 + 缓存 + 搜索 + 对象存储并用）。">polyglot persistence</GlossaryTerm>：用户资料放关系库、会话放 Redis、搜索放 Elasticsearch、图片放 S3、监控放时序库。**代价是运维多套系统、数据要在它们之间同步**——这本身又是个架构难题（回扣 [M2L6 一致性](./cap-consistency)）。
+现代大系统几乎不会只用一种存储，而是<GlossaryTerm term="Polyglot Persistence" definition="多语言持久化：在同一个系统里，针对不同数据的不同访问模式，分别选用最合适的存储（如关系库 + 缓存 + 搜索 + 对象存储并用）。">polyglot persistence</GlossaryTerm>：用户资料放关系库、会话放 Redis、搜索放 Elasticsearch、图片放 S3、监控放时序库。**代价是运维多套系统、数据要在它们之间同步**——可以通过 <GlossaryTerm term="CDC" definition="变更数据捕获 (Change Data Capture)：一种监测并捕获数据库底层事务变更日志（如 MySQL binlog、PostgreSQL WAL），并将其近实时同步分发至其他目标存储系统（如 Elasticsearch、Redis）的集成技术。">CDC（变更数据捕获）</GlossaryTerm> 解决双写一致性，这本身又是个架构难题（回扣 [M2L6 一致性](./cap-consistency)）。
+
+```mermaid
+flowchart TD
+  subgraph PolyglotHub["多语言持久化数据中枢 (Polyglot Persistence Data Hub)"]
+    direction TB
+    Client["客户端/前端 (Client)"] --> LB["负载均衡 (LB)"]
+    LB --> App["业务网关/无状态应用服务 (App Servers)"]
+    
+    App -->|1. 会话/热点数据 (按 Key 读写)| Redis[("内存缓存 (Redis)<br/>- 优势: 亚毫秒延迟")]
+    App -->|2. 交易订单/核心账务 (强事务/ACID)| PG[("关系型数据库 (PostgreSQL)<br/>- 优势: 强一致性, 复杂关联")]
+    App -->|3. 多变商品分类/元数据 (灵活 Schema)| Mongo[("文档数据库 (MongoDB)<br/>- 优势: JSON 直存, 快速迭代")]
+    App -->|4. 图片/视频文件上传 (扁平海量大文件)| S3[("对象存储 (AWS S3)<br/>- 优势: 便宜, 高带宽分发")]
+    App -->|5. 站内全文检索 (倒排索引查询)| ES[("搜索引擎 (Elasticsearch)<br/>- 优势: 分词模糊匹配")]
+  end
+```
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as 客户端 (Client)
+  participant App as 应用服务 (App Server)
+  participant DB as 关系型主库 (MySQL / SSOT)
+  participant CDC as CDC 数据捕获器 (Debezium / Flink)
+  participant MQ as 消息队列 (Kafka)
+  participant Sync as 同步Worker (Consumer)
+  participant ES as 搜索引擎 (Elasticsearch)
+
+  User->>App: 发起订单创建/修改
+  App->>DB: 1. 执行 SQL 写入核心表 (强事务)
+  DB-->>App: 2. 事务成功提交并写入 Binlog 日志
+  App-->>User: 3. 返回 201 Created (核心交易完成)
+
+  Note over DB,ES: 异步 CDC 数据同步流水线 (最终一致性)
+  CDC->>DB: 4. 监听并捕获底层 Binlog 日志变更
+  activate CDC
+  CDC->>MQ: 5. 组装变更为 JSON/Avro 写入 Kafka topic
+  deactivate CDC
+  MQ->>Sync: 6. 消费者拉取数据变更流
+  activate Sync
+  Sync->>ES: 7. 转换数据并在 Elasticsearch 重建倒排索引
+  deactivate Sync
+  ES-->>User: 8. 后续站内搜索可见最新变更 (最终一致)
+```
 
 <ResearchNote
   title="数据模型与存储引擎，决定系统擅长什么"
@@ -174,9 +244,47 @@ python labs/month02/m2l8_storage/test_store.py
 
 ## 常见误解
 
-- **"一个数据库通吃所有"**：让数据库做不擅长的事会很痛；大系统都是多存储。
-- **"NoSQL 比 SQL 先进"**：各有所长；NoSQL 多为弱事务、换扩展性，不是"更高级"。
-- **"选型看流行度"**：要看访问模式，选错极难逆转。
+- **"一个数据库通吃所有"**: 让传统关系型数据库（MySQL/PG）去做不擅长的全文倒排搜索或时序数据汇聚，会导致表级物理锁盘、I/O 被占满，拖死整个核心业务。大流量系统的状态层一定是由多种存储并存的。
+- **"NoSQL 比 SQL 先进"**: SQL 保证了极高的强一致性与完美的事务逻辑；NoSQL 通常是在放宽 ACID 的前提下，通过牺牲事务来获取线性的水平扩展与超高写性能。两者是架构维度的取舍，并非替代升级关系。
+- **"选型看流行度"**: 不写下实际的**高频访问模式**而盲目跟风引入复杂数据库，会在后期产生不可逆的架构迁移灾难（例如将本该用图数据库的社交路径在 MySQL 中写了五层自关联 SQL 查询）。
+- **"数据同步采用应用层双写"**: 为了将数据同步至 ES 缓存，初学者会在业务代码里同步调用 `db.write()` 和 `es.write()`。这非常脆弱，一旦 ES 接口超时或网络闪断，就会导致两边数据永久不一致。最佳实践是利用 CDC 监听数据库底层变更日志进行非侵入式异步流式同步。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在面向高并发大流量的设计中，如果盲目强求‘一个数据库（如单体 MySQL）解决系统内的所有场景（全文检索、图片存放、监控、社交遍历）’，最可能会产生什么系统性瓶颈？',
+      options: [
+        '导致系统的前端 CSS 加载变慢。',
+        '导致数据库因为大文件占满 I/O、复杂 JOIN 撑爆 CPU、模糊 LIKE 查询引起全表扫描，从而拖挂整站的所有核心交易功能。',
+        'MySQL 语法会在编译时直接报语法错误。'
+      ],
+      answer: 1,
+      explain: '关系型数据库的设计目标是保证事务ACID和复杂关联查询，而不是承载大文件存取或做高并发倒排搜索。如果把不合适的数据和查询强塞给它，不仅单机性能极差，还会挤占核心事务处理资源，导致单点崩溃。'
+    },
+    {
+      q: '引入多语言持久化（Polyglot Persistence）能充分发挥每种数据库擅长的数据模型，但同时会带来什么核心的架构代价？',
+      options: [
+        '系统会被迫降级到只能离线运行。',
+        '运维成本极高（需要监控、备份、调优多套数据库），且由于多个存储系统之间的数据无法天然同步，必须引入类似 CDC/消息队列等数据同步机制，从而面临最终一致性与复杂的状态一致性难题。',
+        '系统的网络带宽会无条件变为零。'
+      ],
+      answer: 1,
+      explain: 'Polyglot Persistence 没有免费的午餐。架构的取舍（Tradeoff）在此非常明显：得到了极致的读写性能和模型表达，但付出了极高的数据同步复杂度与运维代价（如双写一致性、延迟同步、技术栈膨胀）。'
+    },
+    {
+      q: 'Change Data Capture（CDC，变更数据捕获）配合 Kafka 消费者在多语言持久化架构中通常扮演什么角色？',
+      options: [
+        '它作为前端反向代理拦截所有的 HTTP 请求。',
+        '它用于实时读取关系数据库的变更日志（如 MySQL binlog），并将数据同步投递到搜索引擎（如 Elasticsearch）或缓存（如 Redis），以此实现不同存储介质间近实时的状态同步，解决 Polyglot 架构下的数据割裂问题。',
+        '它用于对数据库的物理磁盘直接进行碎片整理。'
+      ],
+      answer: 1,
+      explain: '在多存储架构中，应用层直接‘双写’多个数据库非常脆弱。通常的最佳实践是：应用只写入作为真相源的 SQL，然后通过 CDC 监听数据库事务日志（Binlog/WAL），异步、非侵入式地通过消息队列将更新流式广播到其他辅助只读存储（ES/缓存），实现最终一致。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
