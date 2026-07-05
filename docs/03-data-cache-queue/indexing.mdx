@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M3L2 · 索引深入
 
@@ -28,19 +29,81 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 你给 `(country, city)` 建了复合索引。`WHERE country='US' AND city='NYC'` 飞快；但 `WHERE city='NYC'`（不带 country）却走了全表扫描——**索引没命中**。同时你发现写入变慢了。索引不是越多越好，关键是**建对**。
 
+```mermaid
+flowchart TD
+  subgraph PrimaryKeyIndex["聚集索引 (Clustered Index - 主键 B+Tree)"]
+    direction TB
+    Root1["Root Page (PrimaryKey: id)"] --> Leaf1_Data["Leaf Page (id: 1..100)<br/>[Contains Full Row Data:<br/>id | country | city | name]"]
+  end
+
+  subgraph SecondaryIndex["二级辅助索引 (Secondary Index - 非主键 B+Tree)"]
+    direction TB
+    Root2["Root Page (SecondaryKey: name)"] --> Leaf2_Index["Leaf Page (name: 'Ada'..'Bob')<br/>[Contains Key + PK Pointer:<br/>name | id (Primary Key Pointer)]"]
+  end
+
+  QuerySec["按 name 查找记录"] -->|1. 命中二级索引| Leaf2_Index
+  Leaf2_Index -->|2. 获取主键 id=5| Root1
+  Root1 -->|3. 回表 (Look-up Row)| Leaf1_Data
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：索引是什么、有什么代价
 
-<GlossaryTerm term="Index" definition="索引：一个额外的、有序的查找结构（多为 B-tree），让按某列查找从 O(n) 全表扫描降到 O(log n)。代价是每次写都要同步更新它、额外占空间。">索引</GlossaryTerm> 是一份"额外维护的有序查找表"。好处是查得快；代价是：**每次写都要同步更新索引（写放大，回扣 [M3L1](./storage-engines)）、额外占空间**。所以索引要为高频查询而加，不是越多越好。
+<GlossaryTerm term="Index" definition="索引：一个额外的、有序的查找结构（多为 B-tree），让按某列查找从 O(n) 全表扫描降到 O(log n)。代价是每次写都要同步更新它、额外占空间。">索引</GlossaryTerm> 是一份"额外维护的有序查找表"。好处是查得快，这通常通过主键上的 <GlossaryTerm term="Clustered Index" definition="聚集索引：索引结构中的叶子节点直接存放对应表行的实际物理数据。一个表只能有一个聚集索引（通常为主键）。">聚集索引</GlossaryTerm> 或非主键列上的 <GlossaryTerm term="Secondary Index" definition="二级索引：又称辅助索引。其叶子节点不存储实际行数据，而是存放索引键值与对应的聚集索引主键值。非主键查询必须通过二级索引找到主键，再到聚集索引回表查数据。">二级索引</GlossaryTerm> 来实现。代价是：**每次写都要同步更新索引（写放大，回扣 [M3L1](./storage-engines)）、额外占空间**。所以索引要为高频查询而加，不是越多越好。
 
 ### 进阶：复合索引的最左前缀规则
 
 <GlossaryTerm term="Composite Index" definition="复合索引：在多个列上按顺序建立的索引（如 (country, city)）。查询只能利用它的最左前缀——必须从第一列开始连续匹配。">复合索引</GlossaryTerm> `(country, city)` 像电话簿先按国家、再按城市排序。你能高效地查"某国"或"某国某市"，但**不能**只按"某市"高效查（因为没先定位国家）——这就是<GlossaryTerm term="Leftmost Prefix Rule" definition="最左前缀规则：复合索引只能被从最左列开始连续的查询条件利用。(a,b,c) 索引可服务 a、a+b、a+b+c，但不能服务 b 或 c 单独的查询。">最左前缀规则</GlossaryTerm>。索引列的顺序，直接决定哪些查询能加速。
 
+```mermaid
+flowchart TD
+  subgraph LeftmostRule["最左前缀匹配判定流 (Leftmost Prefix Validation Flow)"]
+    direction TB
+    Query["查询条件传入 (如 country, city)"] --> CheckLeft["1. 是否提供最左第一列 'country'?"]
+    
+    CheckLeft -->|No| ScanTable["全表扫描 (Table Scan / O(N))<br/>- 索引失效, 性能急剧下降"]
+    CheckLeft -->|Yes| RangeCountry["使用复合索引定位到 'country' 部分"]
+    
+    RangeCountry --> CheckSecond["2. 是否提供了第二列 'city'?"]
+    
+    CheckSecond -->|No| ScanRest["在匹配的 country 范围内扫描所有数据<br/>- 依然能利用到前半截索引"]
+    CheckSecond -->|Yes| FastIndex["完全精确匹配复合索引 (Index Lookup / O(log N))<br/>- 性能最佳"]
+    
+    NoteRule["最左原则本质:<br/>- 复合索引在物理上只按顺序整体排序<br/>- 排序序列为: country_A_city_A -> country_A_city_B -> country_B_city_A<br/>- 缺失左前缀则物理有序性完全无法用来快速检索!"]
+  end
+```
+
 ### 深入（选学）：覆盖索引避免回表
 
-普通索引命中后，还要拿主键**回表**去取其它列。如果索引本身就包含了查询要的所有列，就能<GlossaryTerm term="Covering Index" definition="覆盖索引：索引本身包含了查询所需的全部列，于是查到索引就能直接返回结果，无需回表读主数据。是高频查询的强力优化。">覆盖（covering）</GlossaryTerm>——直接从索引返回，不回表，快得多。代价是索引更大。
+普通索引在进行 <GlossaryTerm term="Index Scan" definition="索引扫描：数据库查询引擎遍历索引树结构查找匹配数据的过程。分为全索引扫描（扫描整棵索引树）与索引范围扫描（利用索引有序性进行边界查找）。">索引扫描</GlossaryTerm> 命中后，还要拿主键**回表**去取其它列。如果索引本身就包含了查询要的所有列，就能<GlossaryTerm term="Covering Index" definition="覆盖索引：索引本身包含了查询所需的全部列，于是查到索引就能直接返回结果，无需回表读主数据。是高频查询的强力优化。">覆盖（covering）</GlossaryTerm>——直接从索引返回，不回表，快得多。代价是索引更大。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor QueryEngine as 数据库优化器 (Query Engine)
+  participant SecIdx as 二级索引树 (Secondary Index B+Tree)
+  participant ClusIdx as 聚集索引树 (Clustered Index B+Tree)
+  participant Buffer as 数据页高速缓冲 (Buffer Pool)
+  participant Disk as 磁盘存储 (Disk Storage)
+
+  Note over QueryEngine,Disk: 场景 1: 普通二级索引查询 (需要回表 - 产生额外随机 I/O)
+  QueryEngine->>SecIdx: 扫描辅助索引 WHERE name='Ada'
+  SecIdx-->>QueryEngine: 返回 (Ada, PrimaryKey_ID: 12)
+  QueryEngine->>ClusIdx: 拿着主键 ID=12 查找聚集索引页
+  ClusIdx->>Buffer: 检查 Buffer Pool 是否缓存该物理页?
+  Buffer-->>ClusIdx: 未命中 (Cache Miss!)
+  ClusIdx->>Disk: 发起一次随机物理磁盘 I/O 读取行页
+  Disk-->>ClusIdx: 返回物理页行记录
+  ClusIdx-->>QueryEngine: 返回完整行记录 (包含 country, city, age)
+  Note over QueryEngine,Disk: 缺点: 发起二次磁盘读物理页, 高并发下随机 I/O 拖垮系统!
+
+  Note over QueryEngine,Disk: 场景 2: 覆盖索引优化 (无回表 - 极速内存/连续扫描)
+  QueryEngine->>SecIdx: 扫描覆盖索引 (name, age) WHERE name='Ada'
+  Note over SecIdx: 索引节点直接存储了所需字段 age
+  SecIdx-->>QueryEngine: 直接返回 (Ada, age: 28)
+  Note over QueryEngine: 无需进行主键二次查找, 彻底免去回表物理 I/O!
+```
 
 <ResearchNote
   title="B-tree：让磁盘上的有序查找高效"
@@ -169,9 +232,46 @@ python labs/month03/m3l2_index/test_index.py
 
 ## 常见误解
 
-- **"加了索引就一定快"**：列顺序不对就用不上（最左前缀）。
-- **"索引越多越好"**：每个索引都拖慢写、占空间。
-- **"索引只看查的那一列"**：复合索引的顺序和覆盖性同样关键。
+- **"加了索引就一定快"**: 索引只有在查询模式与其物理排序机制完全契合时才生效。如果建了 `(country, city)` 索引，却单独查询 `city`（违反最左前缀），或者在 `country` 上使用了 SQL 函数计算（如 `UPPER(country)`）或隐式类型转换，索引将完全失效，数据库依然要老老实实做全表扫描。
+- **"索引建得越多越好"**: 索引是经典的“空间与写延迟换读性能”的赌博。每次进行 `INSERT`/`UPDATE`/`DELETE`，数据库都需要以串行锁或页分裂的代价同步重构所有相关的索引树。如果索引太多，写放大将极其严重，极易产生磁盘 I/O 饱减导致整体瘫痪。
+- **"只要 SQL 查询能用上索引，怎么建都一样"**: 普通辅助索引（二级索引）在查询非索引列时，会产生极高成本的“回表”。在高并发场景下，应根据查询字段尽可能配置“覆盖索引”，直接在二级索引树的叶子节点返回数据，从而免去第二次物理磁盘随机寻址的瓶颈。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在创建了复合索引 (A, B, C) 后，以下哪个查询条件能够完全且最高效地匹配并利用该索引？',
+      options: [
+        'WHERE B = 10 AND C = \'US\'',
+        'WHERE A = 10 AND B > 5 AND C = \'US\' (只有 A 和 B 上的匹配会完全命中该索引的快速定位，由于 B 上是范围查询，C 上的精确查找将退化为过滤)',
+        'WHERE C = \'US\''
+      ],
+      answer: 1,
+      explain: '根据最左前缀规则，匹配必须从最左列 A 开始连续匹配。当遇到范围查询（如 >, <, LIKE）时，索引在此列之后的列 C 将无法用于二分快速定位（定位顺序断开），退化为线性扫描过滤。'
+    },
+    {
+      q: '‘回表’ (Look-up Table Row) 是数据库查询调优时经常力求避免的开销。关于回表的概念，以下哪个理解是正确的？',
+      options: [
+        '回表是指数据库在检测到死锁后，自动将事务回滚并重新加载表的动作。',
+        '回表是指通过二级索引（辅助索引）查找到对应记录的主键 ID 后，仍需使用该主键 ID 再次去聚集索引（主键索引）中检索该行其他所需列的数据的物理磁盘 I/O 过程。使用覆盖索引直接包含所有被查列可以免去这步开销。',
+        '回表是指在内存不足时，将磁盘上的临时表写回到内存的机制。'
+      ],
+      answer: 1,
+      explain: '二级索引叶子节点仅存储索引键和主键值。如果查询需要其他字段，就必须通过主键二次寻址聚集索引（回表）。在高并发读场景下，回表产生大量磁盘随机 I/O，是核心瓶颈之一。通过建立覆盖索引（Covering Index）可彻底规避回表。'
+    },
+    {
+      q: '既然索引能把查询速度从 O(N) 降到 O(log N)，为什么架构师不主张给数据库表的每一列都分别建立单列索引？',
+      options: [
+        '因为给所有列建索引会导致数据库完全丢失 ACID 事务保障。',
+        '① 索引是有物理存储成本的，多列索引会导致表空间暴增；② 每次写入、修改、删除操作（INSERT/UPDATE/DELETE）都需要同步更新与之相关的全部索引，带来巨大的写放大和性能滑坡；③ 数据库优化器在面对过多索引时，解析生成执行计划的开销也会急剧增加。',
+        '因为操作系统无法同时打开超过 3 个索引文件。'
+      ],
+      answer: 1,
+      explain: 'Index maintenance cost. 索引是读性能与写性能的博弈。盲目堆砌索引会导致写操作耗尽物理磁盘 I/O，造成服务整体瘫痪。应围绕高频查询模式进行精确的复合索引和覆盖索引设计。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
