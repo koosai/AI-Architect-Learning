@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M4L8 · 适配器与装饰器
 
@@ -29,6 +30,26 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - **接口对不上**：第三方支付 SDK 的方法叫 `make_payment(cents)`，但你系统里所有支付都走 `pay(amount)` 接口。你不想（也不能）改 SDK，怎么让它接进来？
 - **想加功能又不想改原类**：你有个 `DataSource.read()`，现在想给某些场景加“压缩”“加密”“缓存”，但不想把 `DataSource` 改成一个塞满开关的[上帝类](./solid-srp-ocp)，也不想为每种组合建子类（压缩+加密、加密+缓存……类爆炸）。
 
+```mermaid
+flowchart LR
+  subgraph AdapterPattern["适配器模式结构对比 (Adapter Pattern - Translate Interface)"]
+    direction LR
+    Client["客户端 (Client)"] -->|1. 期望调用 pay(amount:元)| TargetInterface["统一支付接口 (Target Interface)"]
+    
+    subgraph AdapterWrapper["适配器包装类 (Adapter)"]
+      PaymentAdapter["PaymentAdapter<br/>{ pay(amount) }"]
+    end
+    
+    TargetInterface -.->|接口继承| PaymentAdapter
+    
+    subgraph AdapteeModule["外部第三方服务 (Adaptee)"]
+      ThirdPartySDK["ThirdPartySDK<br/>{ make_payment(cents) }"]
+    end
+    
+    PaymentAdapter -->|2. 转换为 cents 并委托委托| ThirdPartySDK
+  end
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：适配器——包一层做“翻译”
@@ -37,7 +58,37 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 进阶：装饰器——包一层加“功能”
 
-<GlossaryTerm term="Decorator Pattern" definition="装饰器模式：把一个对象包进另一个实现了相同接口的包装对象里，在委托原对象前后“增强”行为（如加日志、缓存、压缩）。可层层嵌套叠加功能，且不改原类。">装饰器</GlossaryTerm>：包装类**实现和被包装对象相同的接口**，在调用原方法的前后做增强（压缩、加密、记日志），然后委托给里面那层。因为接口相同，**可以层层套娃**：`Cache(Encrypt(Compress(source)))`——任意叠加，且原类一行不改（开闭）。
+<GlossaryTerm term="Decorator Pattern" definition="装饰器模式：把一个对象包进另一个实现了相同接口的包装对象里，在委托原对象前后“增强”行为（如加日志、缓存、压缩）。可层层嵌套叠加功能，且不改原类。">装饰器</GlossaryTerm>：包装类**实现和被包装对象相同的接口**，在调用原方法的前后做增强（压缩、加密、记日志），然后委托给里面那层。因为接口相同，可以通过运行时动态组合代替 <GlossaryTerm term="Compile-time Inheritance" definition="编译期继承：在编译期或代码编写阶段通过 extends 声明的静态子类继承关系。若需叠加多种行为组合，编译期继承会导致类数量呈指数级暴增（类爆炸），极其僵硬。">编译期静态继承 (Compile-time Inheritance)</GlossaryTerm>，实现**层层套娃**：`Cache(Encrypt(Compress(source)))`——任意叠加，且原类一行不改（开闭）。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 客户端 (Client)
+  participant Enc as 加密装饰器 (Encrypted)
+  participant Comp as 压缩装饰器 (Compressed)
+  participant Plain as 核心基础源 (PlainSource)
+
+  Client->>Enc: read()
+  activate Enc
+  Note over Enc: [加密前置操作 - 无]
+  
+  Enc->>Comp: 委托内部: read()
+  activate Comp
+  Note over Comp: [压缩前置操作 - 无]
+  
+  Comp->>Plain: 委托内部: read()
+  activate Plain
+  Plain-->>Comp: 返回基础明文 "data"
+  deactivate Plain
+  
+  Note over Comp: [压缩后置操作] <br/> zip("data") -> "zip(data)"
+  Comp-->>Enc: 返回 "zip(data)"
+  deactivate Comp
+  
+  Note over Enc: [加密后置操作] <br/> enc("zip(data)") -> "enc(zip(data))"
+  Enc-->>Client: 返回最终数据 "enc(zip(data))"
+  deactivate Enc
+```
 
 ### 深入（选学）：两者的区别与“包装家族”
 
@@ -45,7 +96,19 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - **适配器**：接口**变了**（A 接口 → B 接口），目的是“能对接”，通常只包一层。
 - **装饰器**：接口**不变**（还是同一个接口），目的是“加功能”，可层层叠加。
 
-同属“包装家族”的还有<GlossaryTerm term="Proxy Pattern" definition="代理模式：用一个同接口的代理对象控制对真实对象的访问，可在访问前后插入权限校验、延迟加载、远程调用等控制逻辑。结构同样是“包装 + 委托”。">代理（Proxy）</GlossaryTerm>（控制访问：权限、懒加载、远程）和<GlossaryTerm term="Facade Pattern" definition="外观模式：给一组复杂的子系统提供一个简化的统一入口，让调用方不必直接面对内部的多个类。是“简化接口”的包装。">外观（Facade）</GlossaryTerm>（给复杂子系统一个简化入口）。**它们全是“组合 + 委托”的变体，差别只在意图。** 这再次印证 [M4L4](./composition-over-inheritance)：一大批模式都是同一招。
+同属“包装家族”即 <GlossaryTerm term="Wrapper" definition="包装器 (Wrapper)：一类结构型设计模式的统称。它们通过持有一个被包装对象的引用，并将外层的方法调用委托执行，从而在不修改原对象代码的基础上调整其接口长相、控制访问权限或叠加增强功能。">包装器 (Wrapper)</GlossaryTerm> 家族的还有<GlossaryTerm term="Proxy Pattern" definition="代理模式：用一个同接口的代理对象控制对真实对象的访问，可在访问前后插入权限校验、延迟加载、远程调用等控制逻辑。结构同样是“包装 + 委托”。">代理（Proxy）</GlossaryTerm>（控制访问：权限、懒加载、远程）和<GlossaryTerm term="Facade Pattern" definition="外观模式：给一组复杂的子系统提供一个简化的统一入口，让调用方不必直接面对内部的多个类。是“简化接口”的包装。">外观（Facade）</GlossaryTerm>（给复杂子系统一个简化入口）。**它们全是“组合 + 委托”的变体，差别只在意图。** 这再次印证 [M4L4](./composition-over-inheritance)：一大批模式都是同一招。
+
+```mermaid
+flowchart TD
+  subgraph WrapperFamilyComparison["包装器设计模式家族意图对比 (Wrapper Design Patterns Family)"]
+    direction TB
+    
+    Base["包装器家族核心内核: 组合 + 委托 (Composition & Delegation)"] --> Adapter["1. 适配器 (Adapter)<br/>意图: 改变接口签名 (A -> B)<br/>目标: 抹平不兼容，对接第三方"]
+    Base --> Decorator["2. 装饰器 (Decorator)<br/>意图: 接口不变，功能动态增强<br/>目标: 规避类爆炸，层层套娃装配"]
+    Base --> Proxy["3. 代理 (Proxy)<br/>意图: 接口不变，控制访问逻辑<br/>目标: 权限校验、延迟加载、RPC缓存"]
+    Base --> Facade["4. 外观 (Facade)<br/>意图: 简化一整套子系统入口<br/>目标: 降低客户端认知负载，提供统合面门"]
+  end
+```
 
 <ResearchNote
   title="包装：在不改原对象的前提下改变它的接口或能力"
@@ -183,9 +246,46 @@ python labs/month04/m4l8_wrappers/test_wrappers.py
 
 ## 常见误解
 
-- **“适配器和装饰器差不多”**：适配器改接口、只包一层；装饰器不改接口、可叠加。
-- **“加功能就该改原类或加子类”**：装饰器让你不改原类、避免子类爆炸。
-- **“Python 的 @decorator 才是装饰器”**：那是语法糖；装饰器模式是“同接口包装+委托”，更广。
+- **"既然适配器模式和装饰器模式底层实现都是‘持有一个对象且进行方法委托’，那么把它们当成同一种模式也无伤大雅"**: 属于只看结构忽略意图的粗糙理解。设计模式的判定必须是“结构 + 意图”的统合。适配器（Adapter）的意图是“改变接口形状”，目的是消除接口不兼容的障碍；而装饰器（Decorator）的意图是“在不改变接口形状的前提下动态增强功能”，并且由于其要求与被包装者实现相同的接口，因此天生支持“层层嵌套（套娃）”组合，这在适配器模式中是极少也极难见到的。
+- **"当我们需要为基础数据源叠加‘压缩、解密、缓存’等多种可选功能时，继承依然是最直接简单的办法，只要为每种组合派生一个子类即可"**: 典型的继承滥用，会导致灾难性的类爆炸（Class Explosion）。如果有 N 个独立可选的功能，用继承来实现所有组合，你需要派生出近乎 $2^N$ 个子类（如 CompressedPlainSource、EncryptedPlainSource、CompressedEncryptedPlainSource...）。而如果使用装饰器模式，我们只需编写 N 个独立的同接口包装类，在运行时像搭积木一样层层套娃装配（如 `src = Encrypted(Compressed(source))`），仅需 N 个类文件即可覆盖所有排列组合，且极其灵活易修改。
+- **"Python / JS 中的 @decorator 语法糖就是设计模式中的装饰器模式本身"**: 概念上的张冠李戴。语言级的 `@decorator` 语法糖本质上是一个“高阶函数函数接收器”，它可以在不修改原函数定义的前提下，对函数调用进行代理控制；而经典 GoF 设计模式中的“装饰器模式”指的是一种“基于类型系统和对象组合”的结构性模式——要求包装类与产品实现相同的基类/接口（Interface）。虽然它们在解决“横切关注点”的逻辑意图上很相似，但在实现维度上，设计模式更强调整体类型的透明对齐与运行时可替代性。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '适配器模式（Adapter）与装饰器模式（Decorator）的最本质结构区别与意图差异是？',
+      options: [
+        '适配器模式改变接口签名以解决兼容性问题，通常只包一层；而装饰器模式在保持原有接口签名完全不变的前提下，通过层层嵌套实现横切关注点的动态功能叠加与增强。',
+        '适配器通常使用继承，装饰器只允许使用组合。',
+        '适配器运行在客户端，装饰器运行在服务端。'
+      ],
+      answer: 0,
+      explain: '适配器与装饰器的异同点。两者骨架都是‘持有+委托’，但适配器的意图是‘翻译’，改变了接口的形状；装饰器的意图是‘增强’，必须实现与原组件一模一样的接口以支持‘套娃叠加’。'
+    },
+    {
+      q: '装饰器模式是如何有效解决‘类爆炸（Class Explosion）’问题的？',
+      options: [
+        '它通过在运行时动态层层嵌套不同的包装对象（如 Encrypted(Compressed(PlainSource))），避免了在编译期为了实现‘加密且压缩’、‘缓存且加密’等各种功能组合而被迫声明繁多且冗长的子类（如 EncryptedCompressedPlainSource 等）。',
+        '它把所有的子类代码都压缩在了一个单例模式类中。',
+        '它使用垃圾回收器直接自动销毁了不需要的类文件。'
+      ],
+      answer: 0,
+      explain: '类爆炸的成因与消除。如果我们用多重继承去实现功能的组合，每增加一个可选维度就会导致子类数量呈指数级增加。而装饰器将不同维度拆成独立的同接口包装器，在运行时按需拼装，保持了类数量的线性平稳。'
+    },
+    {
+      q: '代理模式（Proxy）与装饰器模式（Decorator）的结构极其相似，它们在‘意图’上的核心差异是什么？',
+      options: [
+        '代理只在 C++ 中有用，装饰器只在 Python 中有用。',
+        '装饰器的重心是‘动态增减或增强对象的功能’，通常由外部客户决定套几层；而代理模式的重心是‘控制对被代理对象的访问’（如延迟加载、安全校验、权限拦截），通常在代理内部直接初始化或隐藏被代理对象的细节，客户端并不感知发生了代理。',
+        '代理模式的性能是装饰器的一百倍。'
+      ],
+      answer: 1,
+      explain: '代理与装饰器的异同。虽然它们接口也不变，但代理扮演的是‘门禁控管或替身’角色，往往决定了被代理者是否能够被访问、何时加载等；装饰器则是单纯地为对象披上多层‘外套’来强化其能力。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
