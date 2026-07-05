@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M4L10 · LLD 实战：停车场
 
@@ -20,7 +21,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   howToUse="跟着“需求→实体→职责→选模式→编码”的流程走一遍，再做 lab 补全计费策略。"
 />
 
-:::tip LLD 面试考的不是“你会几个模式”，是“你怎么从需求推导出干净的设计”
+:::tip <GlossaryTerm term="LLD" definition="详细设计/低级设计 (LLD/Low Level Design)：面向对象设计与类层面的具体实现方案。重点包括面向对象分析与设计 (OOAD)、类职责划分、设计模式应用及代码级模块关联拓扑。">LLD (低级设计)</GlossaryTerm> 面试考的不是“你会几个模式”，是“你怎么从需求推导出干净的设计”
 “设计一个停车场”是经典面试题。面试官想看的是：你能不能问清需求、找出核心实体和职责、在该用模式的地方用对模式、不该用的地方保持简单。这一课把本月所学全部串起来实战。
 :::
 
@@ -36,6 +37,62 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ## 二、三步把需求变成设计
 
+```mermaid
+classDiagram
+  class ParkingLot {
+    -List~Level~ levels
+    -PricingStrategy pricingStrategy
+    -FindSpotStrategy findSpotStrategy
+    +park(Vehicle vehicle) Ticket
+    +leave(Ticket ticket) float
+  }
+
+  class Level {
+    -int floorNum
+    -List~ParkingSpot~ spots
+    +findAvailableSpot(Vehicle vehicle) ParkingSpot
+  }
+
+  class ParkingSpot {
+    -int id
+    -String size
+    -boolean taken
+    +occupy(Vehicle vehicle)
+    +release()
+  }
+
+  class Vehicle {
+    -String plate
+    -String size
+  }
+
+  class Ticket {
+    -String id
+    -Vehicle vehicle
+    -ParkingSpot spot
+    -DateTime inTime
+    -DateTime outTime
+  }
+
+  class PricingStrategy {
+    <<interface>>
+    +calculateFee(int hours) float
+  }
+  
+  class FindSpotStrategy {
+    <<interface>>
+    +findSpot(List~ParkingSpot~ spots, Vehicle vehicle) ParkingSpot
+  }
+
+  ParkingLot "1" *-- "many" Level
+  Level "1" *-- "many" ParkingSpot
+  ParkingSpot "1" --> "0..1" Vehicle
+  Ticket "1" --> "1" Vehicle
+  Ticket "1" --> "1" ParkingSpot
+  ParkingLot --> PricingStrategy : 注入使用
+  ParkingLot --> FindSpotStrategy : 注入使用
+```
+
 ### 基础：识别实体与职责（名词找类、动词找方法）
 
 从需求里抓名词当候选类、动词当候选行为（[回扣 M2L9](../system-design-bridge/lld-classes)）：
@@ -46,19 +103,69 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 ### 进阶：在“会变的地方”用模式
 
 - **车位分配怎么选**会变（最近优先？同层优先？）→ <GlossaryTerm term="Strategy Pattern" definition="策略模式：把可替换的算法封装成对象，运行时可换。这里用来封装“如何选空位”的不同策略。">策略模式</GlossaryTerm>封装“找空位策略”。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 客户端 (Client/Driver)
+  participant PL as 停车场总控 (ParkingLot)
+  participant Strategy as 寻位策略 (FindSpotStrategy)
+  participant Spot as 车位对象 (ParkingSpot)
+  participant Factory as 票据工厂 (TicketFactory)
+
+  Client->>PL: park(vehicle)
+  activate PL
+  
+  PL->>Strategy: find_spot(spots, vehicle)
+  activate Strategy
+  Strategy-->>PL: 返回可用车位 (ParkingSpotInstance)
+  deactivate Strategy
+  
+  alt 车位不存在 (None)
+    PL-->>Client: 抛出异常 ValueError ("无空位")
+  else 找到可用车位
+    PL->>Spot: occupy(vehicle)
+    activate Spot
+    Spot-->>PL: 状态置为 taken(True) 确认
+    deactivate Spot
+    
+    PL->>Factory: create_ticket(vehicle, spot, in_hour)
+    activate Factory
+    Factory-->>PL: 实例化返回 Ticket 对象
+    deactivate Factory
+    
+    PL-->>Client: 成功入场, 返回 Ticket 凭证
+  end
+  deactivate PL
+```
 - **计费规则**会变（按时/分段/会员/节假日）→ 策略模式封装“计费策略”。
 - **建票/建车**的创建逻辑 → <GlossaryTerm term="Factory Pattern" definition="工厂模式：集中封装对象的创建逻辑，使用方面向接口拿对象，不依赖具体类。这里用来按车型创建车辆/票据。">工厂</GlossaryTerm>。
 - **车位状态**（空/占用/预留）→ 简单的[状态](./state-machine-elevator)管理。
 
 ### 深入（选学）：别过度设计
 
-经典陷阱：把每个名词都做成接口 + 工厂 + 抽象基类，搞出几十个类（[违反 YAGNI](./change-driven-design)）。**架构师的判断**：只在真正会变的轴（计费、找位策略）上用模式，`Ticket`、`Vehicle` 这种稳定数据结构保持朴素即可。**好的 LLD = 恰当的简单 + 关键处的可扩展。**
+经典陷阱：把每个名词都做成接口 + 工厂 + 抽象基类，搞出几十个类（违反 <GlossaryTerm term="YAGNI" definition="YAGNI (You Aren't Gonna Need It)：‘你不会需要它’。极力提倡拒绝在当下为未来设想的‘潜在改变’做过度抽象设计，只为已知的变化轴保留多态扩展点。">YAGNI (拒绝过度设计)</GlossaryTerm> 原则）。**架构师的判断**：只在真正会变的轴（计费、找位策略）上用模式，`Ticket`、`Vehicle` 这种稳定数据结构保持朴素即可。**好的 LLD = 恰当的简单 + 关键处的可扩展。**
+
+```mermaid
+flowchart TD
+  subgraph LLDProcess["LLD 架构推导推演法 (Low Level Design Iterative Methodology)"]
+    direction TB
+    
+    Step1["1. 需求澄清与收集 <br/>(问清车型、车位类型、计费规则、并发需求)"] --> Step2["2. 领域名词/动词识别 <br/>(名词 -> ParkingLot, Level, Spot, Ticket, Vehicle<br/>动词 -> park, leave, pricing)"]
+    
+    Step2 --> Step3["3. 职责划分与分配 <br/>(应用 GRASP & SRP 原则，将计费、寻位、票据管理等分配给独立职责类)"]
+    
+    Step3 --> Step4["4. 隔离变化轴并应用模式 <br/>(计费规则经常变 -> PricingStrategy<br/>寻位规则可能变 -> FindSpotStrategy)"]
+    
+    Step4 --> Step5["5. 剔除过度设计 (YAGNI) <br/>(Ticket/Vehicle 属于稳定数据类，直接定义，拒绝强行配工厂和抽象层)"]
+  end
+```
 
 <ResearchNote
   title="LLD：从领域名词到对象职责"
   source="Booch / Larman, Applying UML and Patterns（GRASP 职责分配）；Martin, Clean Code"
   href="https://en.wikipedia.org/wiki/GRASP_(object-oriented_design)"
-  insight="面向对象设计的核心是“职责分配”（GRASP）：谁该拥有哪个数据、谁该负责哪个行为。停车场题考的正是这个——把找位、计费、发票、车位管理等职责，合理地分到内聚的类上，而不是堆进一个大类。"
+  insight="面向对象设计的核心是“职责分配”（<GlossaryTerm term='GRASP' definition='GRASP (General Responsibility Assignment Software Patterns)：通用职责分配软件模式。一组分配类职责（如信息专家、创造者、低耦合、高内聚、多态）的指导性设计准则。'>GRASP</GlossaryTerm>）：谁该拥有哪个数据、谁该负责哪个行为。停车场题考的正是这个——把找位、计费、发票、车位管理等职责，合理地分到内聚的类上，而不是堆进一个大类。"
   application="做任何 LLD：先抓名词/动词得到候选类与职责 → 按 SRP 分配职责、按高内聚低耦合调整 → 在会变的轴上用策略/工厂等模式 → 其余保持简单。这套流程对停车场、电梯、图书馆、电商购物车都通用。"
 />
 
@@ -197,9 +304,46 @@ python labs/month04/m4l10_parking/test_parking.py
 
 ## 常见误解
 
-- **“LLD 就是把模式都用上”**：恰恰相反，只在会变处用、其余保持简单才是高分。
-- **“先写代码再说”**：先问需求、定实体职责，再编码，否则返工。
-- **“停车场是简单题”**：它考职责分配和取舍判断，能看出设计功力深浅。
+- **"低级设计（LLD）的精髓在于使用尽可能多的设计模式，设计出的类图越复杂、套用的模式越花哨就说明水平越高"**: 典型的过度设计泥潭。LLD 考察的根本不是设计模式的堆砌数量，而是**合理的职责分配（GRASP/SRP）**和**恰当的复杂度控制**。如果给本来逻辑固定的实体（如 Ticket 凭证）强行制造泛型工厂和虚基类，除了增加成倍的样板代码、降低运行性能外毫无益处。优秀的架构师应当遵循 **YAGNI** 原则，只在真正的“变化轴”（如不同的计费计算、寻车位分配算法）上预留策略多态，其余结构一律保持最简明了。
+- **"停车场是一个经典的简单题，面试时直接闭着眼睛开始敲代码写类实现就行了"**: LLD 面试的第一大杀手。面试官给出一句模糊的“设计停车场”，真正考察的是你**澄清系统边界与搜集需求**的架构分析能力。如果你不先问清楚“有几种车位与车型”、“寻位是就近还是任意分配”、“计费策略需不需要支持会员或节假日折扣”，写出来的代码即便再漂亮也极大概率偏离了核心变化点。先澄清需求，划分出稳定部分与易变轴，再开始写类设计，才是合格的工程流程。
+- **"把所有业务逻辑（寻找空位、更新车位状态、票据生成、计费规则、日志记录）全部塞进一个 ParkingLot 大类里是最方便的，反正它叫总控类"**: 上帝类（God Class）的温床。这严重违背了 **单一职责原则 (SRP)**。当你的计费规则发生变化、或者寻位策略（从 First-Fit 升级到最邻近优先）需要调整时，你不得不频繁去修改 ParkingLot 这个核心类，从而导致其他稳定业务（如停车/离场流程）遭遇破坏。应当将计算费用委托给独立的 PricingStrategy，寻位委托给 FindSpotStrategy，让 ParkingLot 仅扮演业务流的“协调者（Coordinator）”，实现高内聚低耦合。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在进行低级设计（LLD/详细设计）时，我们应该如何依据 GRASP 原则对‘计算停车费用’这一行为分配职责？',
+      options: [
+        '直接写在 `Vehicle`（车辆）类里，因为车辆知道自己开进去了多久。',
+        '直接写在 `Ticket`（票据）类里，因为票据记录了进场和出场的时间。',
+        '应该将‘计费算法’抽离成独立的策略类接口（PricingStrategy），并由 ParkingLot 或 BillingSystem 持有。因为计费规则属于强变化轴（如按小时、 tiered 阶段费率、会员折扣、节假日），抽离可使核心业务实体免受业务规则变化频繁改动的骚扰，符合 SRP 和开闭原则。'
+      ],
+      answer: 2,
+      explain: '职责分配（GRASP/SRP）与扩展性的权衡。虽然票据拥有时间数据（信息专家），但计费规则变动非常剧烈，若直接耦合在 Ticket 内，会导致其不断被修改。将变化轴封装为独立的 PricingStrategy 是标准的 LLD 做法。'
+    },
+    {
+      q: '在 LLD 面试中，过度设计（Over-engineering）最常表现为哪种现象？我们该如何应用 YAGNI 原则进行权衡？',
+      options: [
+        '表现为没有写任何单元测试，直接把逻辑塞在 main 函数里。',
+        '表现为把每一个业务名词（如 Ticket, Vehicle）都强行套上 Interface、Abstract Class 并配置专属工厂类，创造了大量冗余类。应该只在真正的‘变化轴’（如计费、找车位策略）上预留策略多态，对数据稳定的类（如 Ticket 数据载体）保持最简结构，不为未来可能并不存在的变化写抽象。',
+        '表现为把整个系统的代码都写在同一个文件里。'
+      ],
+      answer: 1,
+      explain: '拒绝过度设计与 YAGNI。在 LLD 中，如果对没有任何变化预期的对象（如普通的票据属性）进行了层层抽象隔离，不仅增加了阅读和排错成本，也制造了不必要的样板代码。只有能被预见到的、驱动业务变化的轴，才值得引入设计模式。'
+    },
+    {
+      q: '在实现一个多入口、多通道的高并发停车场系统时，针对车位分配策略（find_spot）在高并发多线程请求下可能发生的‘重票/车位抢占’冲突，应该如何在 LLD 层面进行并发控制？',
+      options: [
+        '完全依赖前端 UI 界面控制，禁止并发点击。',
+        '在分配车位逻辑（如 find_spot 并执行 spot.occupy()）上使用临界区互斥锁（如线程互斥锁 Mutex 或对车位列表分配块加锁），或者在数据库层面利用 CAS/乐观锁/行锁保护車位 occupancy 标志的并发写安全性，保证‘找位-锁定’是原子的。',
+        '由于多入口停车场很大，车位很多，因此不需要任何锁，并发概率可以忽略不计。'
+      ],
+      answer: 1,
+      explain: '高并发环境下的车位竞争控制。多入口并发抢车位是真实系统中的经典问题。‘找空位’到‘锁定车位’如果是非原子的，就会导致两个入口同时把同一车位分给不同的车。引入原子加锁或悲观/乐观并发锁是确保 LLD 健壮性的关键。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
