@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M2L10 · 通信与解耦
 
@@ -28,12 +29,80 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 用户下单后，要：扣库存、加积分、更新推荐、发确认邮件、通知商家。如果下单服务**同步**地一个个调它们：① 总延迟 = 5 个之和（慢）；② 任何一个挂了，下单就失败（脆，回扣 [L4 级联](../foundations/error-handling)）；③ 每加一个新需求，都要改下单服务的代码（耦合）。**这是典型的"过度耦合"。**
 
+```mermaid
+flowchart LR
+  subgraph TightlyCoupled["同步强耦合 (Synchronous Coupling - 串行脆化)"]
+    direction LR
+    OrderSvc1["下单服务 (Order Service)"] -->|1. HTTP RPC| StockSvc["库存服务"]
+    OrderSvc1 -->|2. HTTP RPC| ScoreSvc["积分服务"]
+    OrderSvc1 -->|3. HTTP RPC| RecSvc["推荐服务"]
+    OrderSvc1 -->|4. HTTP RPC| MailSvc["邮件服务"]
+    OrderSvc1 -->|5. HTTP RPC| MerchantSvc["商家通知"]
+    Note1["缺点:<br/>- 任何一个服务挂掉或响应变慢，都会导致下单失败<br/>- 添加新消费渠道必须修改下单服务代码"]
+  end
+
+  subgraph DecoupledPubSub["异步发布订阅 (Pub/Sub Decoupling - 广播隔离)"]
+    direction LR
+    OrderSvc2["下单服务 (Order Service)"] -->|Publish Event| MQ["消息队列/事件总线<br/>(Kafka / RocketMQ)"]
+    MQ -.->|Subscribe| StockSvc2["库存服务"]
+    MQ -.->|Subscribe| ScoreSvc2["积分服务"]
+    MQ -.->|Subscribe| RecSvc2["推荐服务"]
+    MQ -.->|Subscribe| MailSvc2["邮件服务"]
+    MQ -.->|Subscribe| MerchantSvc2["商家通知"]
+    Note2["优点:<br/>- 下单服务只需写一次 MQ，物理耗时极低<br/>- 下游服务挂起不影响下单，具备高可用容灾能力<br/>- 增加下游消费者，下单服务无需更改任何代码"]
+  end
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：同步 vs 异步通信
 
 - <GlossaryTerm term="Synchronous Communication" definition="同步通信：调用方发请求后阻塞等待响应（如 HTTP/RPC 调用）。简单直接，但调用方被被调方的延迟和故障拖累。">同步通信</GlossaryTerm>：发请求等响应（HTTP/RPC）。直接，但被对方拖累。
-- <GlossaryTerm term="Asynchronous Communication" definition="异步通信：通过消息/事件传递，发送方不等待接收方处理（如消息队列、事件总线）。解耦、削峰，但增加了最终一致和调试复杂度。">异步通信</GlossaryTerm>：发消息就走，不等（消息队列/事件）。解耦、削峰（回扣 [L11](../foundations/sync-async-timeout)）。
+- <GlossaryTerm term="Asynchronous Communication" definition="异步通信：通过消息/事件传递，发送方不等待接收方处理（如消息队列、事件总线）。解耦、削峰，但增加了最终一致和调试复杂度。">异步通信</GlossaryTerm>：发消息就走，不等（通过 <GlossaryTerm term="Message Queue" definition="消息队列：分布式系统间的异步通信基础设施，使用队列缓冲消息，支持解耦、异步处理、流量削峰与重试容灾（如 Kafka、RabbitMQ）。">消息队列</GlossaryTerm>、事件总线）。解耦、削峰（回扣 [L11](../foundations/sync-async-timeout)）。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as 客户端 (Client)
+  participant Order as 下单服务 (Order Svc)
+  participant MQ as 消息队列 (Kafka Broker)
+  participant Mail as 邮件服务 (Mail Svc)
+
+  Note over User,Mail: 场景 1: 同步 RPC 调用遇下游超时 (雪崩崩溃)
+  User->>Order: 订单创建请求
+  activate Order
+  Order->>Mail: 同步 RPC 发送邮件通知
+  activate Mail
+  Note over Mail: 邮件代理服务器网关超时慢 (10s)
+  Mail-->>Order: 延迟超时 (Timeout Exception)
+  deactivate Mail
+  Order-->>User: HTTP 500 Internal Error (下单失败!)
+  deactivate Order
+  Note over User,Mail: 缺点: 非核心邮件服务拖挂核心下单!
+
+  Note over User,Mail: 场景 2: 异步消息队列通信 (高弹性/异步容灾)
+  User->>Order: 订单创建请求
+  activate Order
+  Order->>MQ: 异步投递事件 (OrderCreated)
+  activate MQ
+  MQ-->>Order: 投递成功 ACK (耗时 5ms)
+  deactivate MQ
+  Order-->>User: HTTP 201 Created (下单成功!)
+  deactivate Order
+  
+  Note over MQ,Mail: 异步投递自愈流水线
+  MQ->>Mail: 订阅推送事件
+  activate Mail
+  Note over Mail: 邮件服务暂时宕机或极慢
+  Mail-->>MQ: 暂时失败/无响应
+  deactivate Mail
+  Note over MQ: MQ 自动保存消息并定时指数重试
+  MQ->>Mail: 再次尝试投递
+  activate Mail
+  Mail-->>MQ: 处理成功 ACK
+  deactivate Mail
+  Note over User,Mail: 优点: 核心交易秒回, 邮件服务稍后达成最终一致性
+```
 
 ### 进阶：发布订阅与事件驱动
 
@@ -42,6 +111,26 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 ### 深入（选学）：日志是统一的抽象
 
 LinkedIn 的 Jay Kreps 提出一个深刻视角：**一条不可变的、追加写的"日志（log）"，是连接所有系统的统一抽象**。各消费者按自己的进度读这条日志、各自构建所需状态。这正是 Kafka 的核心思想，也是现代事件驱动/流处理的基础。
+
+```mermaid
+flowchart TD
+  subgraph LogAbstraction["Jay Kreps 追加写日志统一抽象 (Append-Only Log Abstraction)"]
+    direction TB
+    
+    subgraph LogQueue["顺序追加事件日志 (Commit Log - SSOT)"]
+      direction LR
+      Msg0["Order 1<br/>(offset: 0)"] --> Msg1["Order 2<br/>(offset: 1)"] --> Msg2["Order 3<br/>(offset: 2)"] --> Msg3["Order 4<br/>(offset: 3)"] --> Msg4["Order 5<br/>(offset: 4)"]
+    end
+    
+    Producers["订单服务/业务网关 (Producers)"] -->|不断顺序追加写入| Msg4
+    
+    Msg1 -.->|读取并消费| Cons_Stock["库存服务 (Consumer)<br/>- 进度 Offset: 1<br/>- 逐步消化扣减"]
+    Msg3 -.->|读取并消费| Cons_Cache["Redis 缓存服务 (Consumer)<br/>- 进度 Offset: 3<br/>- 高速缓存更新"]
+    Msg4 -.->|读取并消费| Cons_Warehouse["大数据分析 (Consumer)<br/>- 进度 Offset: 4<br/>- 历史归档"]
+    
+    NoteLog["核心特征:<br/>- 日志物理持久化, 不因消费而立即删除<br/>- 各消费者完全独立, 互不干扰, 分别维护私有的消费进度 Offset<br/>- 支持随时重置 Offset 重放历史数据进行状态修复"]
+  end
+```
 
 <ResearchNote
   title="日志：实时数据的统一抽象"
@@ -116,7 +205,7 @@ python labs/month02/m2l10_eventbus/test_event_bus.py
 
 ### 1. 解耦不是免费的：你用一致性和可调试性换它
 
-事件驱动让系统松耦合、易扩展，但代价真实：① 变成**最终一致**（库存可能在下单后几百毫秒才扣，回扣 [M2L6](./cap-consistency)）；② 调试变难（一个业务流程散落在多个异步消费者里，回扣 [L12 分布式追踪](../foundations/observability)）；③ 要处理重复投递（回扣 [L6 幂等](../foundations/idempotency)）。**别为了解耦而把所有同步调用都改成事件。**
+事件驱动让系统松耦合、易扩展，但代价真实：① 变成**最终一致**（库存可能在下单后几百毫秒才扣，回扣 [M2L6](./cap-consistency)）；② 调试变难（一个业务流程散落在多个异步消费者里，回扣 [L12 分布式追踪](../foundations/observability)）；③ 要处理重复投递（回扣 [L6 <GlossaryTerm term="Idempotence" definition="幂等性：无论对同一操作发起多少次请求，系统都会产生完全相同的影响与状态结果（如不会产生重复扣款、重复扣减库存）。">幂等</GlossaryTerm>](../foundations/idempotency)）。**别为了解耦而把所有同步调用都改成事件。**
 
 ### 2. 三种通信方式怎么选
 
@@ -164,9 +253,46 @@ python labs/month02/m2l10_eventbus/test_event_bus.py
 
 ## 常见误解
 
-- **"全改成异步事件最先进"**：会引入最终一致和调试难度，核心强一致链路仍该同步。
-- **"消息队列只是用来削峰"**：它更是解耦和可靠投递的手段。
-- **"发了事件就万事大吉"**：消费可能失败/重复，要配重试 + 幂等。
+- **"全改成异步事件最先进"**: 盲目推崇事件驱动会导致系统状态极度支离破碎。凡是需要即时拿到结果判定成败、或者要求分布式强一致事务的场景（例如扣款判定），同步调用依然是首选。不能为了解耦而牺牲核心事务体验。
+- **"消息队列只是用来在高并发时做流量削峰"**: 削峰只是附加作用。在日常微服务开发中，消息队列的核心使命是**解除微服务间的双向契约认知耦合**、提供异步重试保底以实现**最终一致性**和**系统弹性隔离**。
+- **"发了事件就万事大吉"**: 网络是不稳定的，消息可能因为超时引发重复投递或消费崩溃。所有异步消费者必须遵循**幂等设计**（如通过去重表或唯一业务流水号判定），且下游系统必须支持**幂等消费与错误重试**。
+
+## 五、章末自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在同步通信模式下，如果下单服务同步调用扣库存、加积分、更新推荐、发邮件等 5 个下游服务，会带来什么严重的系统性后果？',
+      options: [
+        '它会导致系统必须全部重构为纯 HTML 静态页面。',
+        '① 总延迟变为所有子服务处理时间的累加，导致用户等待极长；② 系统脆弱性剧增（级联故障），任何一个非核心服务（如邮件）超时或崩溃，都会导致下单核心流程失败；③ 极其耦合，每增加或调整一个下游需求都需要改下单服务的核心代码。',
+        '它的唯一代价是使得网关层带宽限制归零。'
+      ],
+      answer: 1,
+      explain: '同步调用（Tightly-Coupled Sync Calls）是雪崩效应的最主要诱因。非核心依赖的超时或宕机会反向阻塞上游线程，造成整个系统瞬间瘫痪。事件驱动 pub/sub 是解除这类强耦合的标准药方。'
+    },
+    {
+      q: '‘发布-订阅（Pub/Sub）’模式相较于点对点（P2P）消息队列，最根本的架构区别是什么？',
+      options: [
+        'Pub/Sub 只能在单机内存中运行，不支持分布式部署。',
+        '在 Pub/Sub 模式下，一条消息可以被广播并投递到多个不同的 Topic 订阅者/消费者，发布者无需知道有谁消费；而点对点队列中，一条消息只会被一个消费者拉取并处理一次。这使得 Pub/Sub 拥有完美的‘一对多’解耦分发能力。',
+        'Pub/Sub 必须使用数据库的触发器机制来实现。'
+      ],
+      answer: 1,
+      explain: 'Pub/Sub 的核心优势在于彻底实现‘一对多’的扇出（Fan-out）广播。它是构建事件驱动架构（EDA）的底座，极大降低了组件之间的知识性耦合。'
+    },
+    {
+      q: 'LinkedIn 的 Jay Kreps 提出‘日志（Log）是统一的分布式系统抽象’，关于这一架构哲学的理解，以下哪项是正确的？',
+      options: [
+        '日志仅用于记录报错的 stacktrace 信息供排查，与数据一致性无关。',
+        '日志是一条不可变、顺序追加的数据结构。各独立的异构系统（如 Redis 缓存、ES 检索、数据湖）可以作为一个个订阅者，根据自己维护的消费偏置（Offset）读取并重放同一份物理日志流，各自构建其所需的状态，从而实现高可扩展的异步最终一致性。',
+        '它主张把所有的 SQL 数据库都废弃，全部改用文本文件记录订单信息。'
+      ],
+      answer: 1,
+      explain: 'Log-centric architecture。以日志为中心的数据流水线（如 Kafka）是解决多持久化副本数据同步与实时状态重建的根基。追加写日志保证了顺序，可重放保障了容灾性。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
