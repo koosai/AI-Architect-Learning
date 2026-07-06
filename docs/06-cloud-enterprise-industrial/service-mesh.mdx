@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M6L8 · 服务网格
 
@@ -40,11 +41,68 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 <GlossaryTerm term="Sidecar Pattern" definition="边车模式：在每个服务实例旁部署一个伴随容器（sidecar），接管该服务的网络进出流量，处理与业务无关的横切能力（加密、重试、熔断、遥测），业务容器无感。" >sidecar（边车）模式</GlossaryTerm>：给每个服务实例旁边部署一个**代理容器**，接管它所有进出的网络流量。业务容器只管发请求，sidecar 在中间自动加上 mTLS、重试、熔断、超时、遥测——业务代码**一行不用改**，也不管用什么语言。这就是 [M4L8 代理模式](../design-patterns-lld/adapter-decorator) 在基础设施层的体现：透明地包一层。
 
+#### iptables 网络重定向与 Sidecar 双向 mTLS 加密时序
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant AppA as 业务容器 A
+    participant KernelA as 宿主机内核 A (iptables)
+    participant ProxyA as Sidecar 代理 A (Envoy)
+    participant ProxyB as Sidecar 代理 B (Envoy)
+    participant AppB as 业务容器 B
+
+    AppA->>KernelA: 1. TCP 发送数据包给服务 B (10.0.0.2:80)
+    Note over KernelA: iptables PREROUTING/OUTPUT 规则拦截<br/>强行将流量重定向至本地 15001 端口
+    KernelA->>ProxyA: 2. 流量被透明劫持到 Sidecar A
+    Note over ProxyA: Proxy A 确定路由策略、建立加密通道
+    ProxyA->>ProxyB: 3. 进行 mTLS 握手，建立加密的双向认证 TCP 链接
+    Note over ProxyB: Proxy B 校验客户端证书，解密网络包
+    ProxyB->>AppB: 4. 通过 localhost:80 发送明文请求给业务 B
+```
+
 ### 进阶：data plane 与 control plane
 
 <GlossaryTerm term="Service Mesh" definition="服务网格：管理服务间通信的专用基础设施层。由一组 sidecar 代理（数据面，处理实际流量）和一个控制面（下发路由/安全/策略配置）组成，把流量治理从业务代码中剥离。" >服务网格（service mesh）</GlossaryTerm>由两部分组成（[呼应 M6L2 的二分](./kubernetes-basics)）：
 - <GlossaryTerm term="Mesh Data Plane" definition="网格数据面：所有 sidecar 代理的集合，真正处理服务间的每一个请求（加密、路由、重试、熔断、采集遥测）。" >数据面（data plane）</GlossaryTerm>：所有 sidecar 代理，真正处理每一个服务间请求。
 - <GlossaryTerm term="Mesh Control Plane" definition="网格控制面：集中管理和下发配置（路由规则、安全策略、流量切分）给所有 sidecar 的组件。你改一处策略，它推给全网格。" >控制面（control plane）</GlossaryTerm>：集中下发配置（路由规则、mTLS 策略、灰度比例）给所有 sidecar。你在控制面改一处，全网格生效。
+
+#### API 网关与服务网格南北/东西向控制拓扑
+
+```mermaid
+graph TD
+    subgraph Control_Plane["控制面 (Control Plane - Istiod)"]
+        CP_Config["策略/配置规则 (YAML)"]
+        CP_CA["CA 证书管理 (证书轮换)"]
+        CP_Config -->|分发路由与安全配置 (xDS API)| SidecarA
+        CP_Config -->|分发路由与安全配置 (xDS API)| SidecarB
+        CP_CA -->|分发 mTLS 证书密钥| SidecarA
+        CP_CA -->|分发 mTLS 证书密钥| SidecarB
+    end
+
+    subgraph Data_Plane["数据面 (Data Plane - 东西向流量治理)"]
+        subgraph Pod_A["Pod A (服务 A)"]
+            AppA["业务容器 A<br>(Application A)"]
+            SidecarA["边车代理 A<br>(Envoy Sidecar)"]
+        end
+        
+        subgraph Pod_B["Pod B (服务 B)"]
+            AppB["业务容器 B<br>(Application B)"]
+            SidecarB["边车代理 B<br>(Envoy Sidecar)"]
+        end
+    end
+
+    Ingress["API 网关 (Ingress Gateway - 南北向入口)"] -->|1. 外部流量路由| SidecarA
+    AppA -->|2. 发送普通 HTTP 请求| SidecarA
+    SidecarA -->|3. 加密双向认证 (mTLS)| SidecarB
+    SidecarB -->|4. 解密后转发普通 HTTP 请求| AppB
+
+    style Control_Plane fill:#1e293b,stroke:#475569,stroke-width:1px,color:#fee2e2
+    style SidecarA fill:#0f766e,stroke:#0d9488,stroke-width:2px,color:#f0fdfa
+    style SidecarB fill:#0f766e,stroke:#0d9488,stroke-width:2px,color:#f0fdfa
+    style AppA fill:#0284c7,stroke:#0284c7,stroke-width:1px,color:#fff
+    style AppB fill:#0284c7,stroke:#0284c7,stroke-width:1px,color:#fff
+```
 
 ### 深入（选学）：网格能力、代价与取舍
 
@@ -52,7 +110,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - <GlossaryTerm term="mTLS" definition="双向 TLS：服务间通信双方都用证书互相验证身份并加密。服务网格可自动为所有服务间流量启用 mTLS，实现“零信任”网络而无需改业务代码。" >自动 mTLS</GlossaryTerm>（零信任网络，服务间全加密、互验身份）、统一的重试/熔断/超时、**流量切分**（金丝雀 [M6L4](./autoscaling-rollout) 按比例路由）、统一遥测（自动生成服务间 [RED 指标和链路 M6L7](./observability-advanced)）。
 - **代价**：每个 Pod 多一个 sidecar = 额外的 CPU/内存和**每跳多一点延迟**（请求要过两次代理）；整个网格的运维复杂度高；调试多了一层。
 - **取舍**：服务少时，网格的复杂度可能盖过收益——直接用库（[M5 的方式](../core-components/circuit-breaker)）更简单。服务多、多语言、需要统一安全/治理时，网格才划算。新趋势如**无 sidecar 网格（ambient mesh）**试图降低 sidecar 的开销。
-- 与网关的关系：[API 网关（M5L2）](../core-components/api-gateway) 管**南北向**（外部进来的流量），服务网格管**东西向**（内部服务之间的流量）。
+- 与网关的关系：[API 网关（M5L2）](../core-components/api-gateway) 管<GlossaryTerm term="North-South Traffic" definition="南北向流量：在云原生架构中，指从集群外部（如客户端、App 端、浏览器端）通过边缘网关、负载均衡器流向集群内部服务的流量。主要解决边缘路由、限流认证、SSL 卸载等南北向通信问题。">南北向（外部进来的流量）</GlossaryTerm>，服务网格管<GlossaryTerm term="East-West Traffic" definition="东西向流量：在微服务与容器网络中，指运行在集群内部不同微服务实例、容器 Pod 之间相互调用的网络通信流量。主要关注服务发现、动态负载均衡、安全加密 mTLS、熔断重试等东西向治理。">东西向（内部服务之间的流量）</GlossaryTerm>。
 
 <ResearchNote
   title="服务网格：把服务间通信的横切能力下沉到基础设施"
@@ -167,7 +225,34 @@ python labs/month06/m6l8_sidecar/test_sidecar.py
 
 ### 2. 服务网格是"横切关注点下沉"的极致
 
-回看这条主线：[M4L8 装饰器/中间件](../design-patterns-lld/adapter-decorator)（进程内横切）→ [M5L2 API 网关](../core-components/api-gateway)（入口横切）→ 服务网格（服务间横切下沉到基础设施）。**同一个思想——把"人人都要、与业务无关"的能力抽出来统一处理——在不断往下沉：从代码里的装饰器，到网关，到每个服务旁的 sidecar，最后到内核（eBPF）。** 架构师要判断：在你的规模和复杂度下，这个能力该落在哪一层最划算。不是越下沉越好——下沉换来一致性，但也带来开销和复杂度。
+回看这条主线：[M4L8 装饰器/中间件](../design-patterns-lld/adapter-decorator)（进程内横切）→ [M5L2 API 网关](../core-components/api-gateway)（入口横切）→ 服务网格（服务间横切下沉到基础设施）。**同一个思想——把"人人都要、与业务无关"的能力抽出来统一处理——在不断往下沉：从代码里的装饰器，到网关，到每个服务旁的 sidecar，最后到内核（<GlossaryTerm term="eBPF" definition="eBPF (Extended Berkeley Packet Filter)：Linux 内核的一项革命性技术。它允许在 Linux 内核沙盒中安全、动态地运行沙盒程序，无需修改内核源码或加载内核模块。在服务网格中（如 Ambient Mesh），eBPF 可在内核套接字层直接重定向数据包，彻底免去 Sidecar 代理在用户态与内核态之间频繁上下文切换的性能损耗。">eBPF</GlossaryTerm>）。** 架构师要判断：在你的规模 and 复杂度下，这个能力该落在哪一层最划算。不是越下沉越好——下沉换来一致性，但也带来开销和复杂度。
+
+#### 流量治理与横切关注点下沉演进关系
+
+```mermaid
+flowchart TD
+    subgraph Era1["阶段 1: 应用程序库 (App Libraries)"]
+        App1[Java / Go 业务代码] <--> Lib["内置治理库<br>(Hystrix / SDK)"]
+        note1["多语言不一致 / 强依赖升级代价高"]
+    end
+
+    subgraph Era2["阶段 2: 容器边车代理 (Sidecar Proxy)"]
+        App2[Java / Go 业务代码] <-->|本地回环 localhost| Proxy["Envoy Sidecar 边车代理<br>(透明网络拦截)"]
+        note2["与语言解耦 / CPU与内存占用多 / 多一跳延迟"]
+    end
+
+    subgraph Era3["阶段 3: 操作系统内核 (OS Kernel eBPF)"]
+        App3[Java / Go 业务代码] <-->|内核套接字重定向| eBPF["Linux 内核 eBPF 层<br>(Ambient Mesh)"]
+        note3["零容器边车开销 / 极高性能 / 零代码改动"]
+    end
+
+    Era1 -->|从业务剥离，下沉至基础设施| Era2
+    Era2 -->|降低 Proxy 开销，下沉至系统内核| Era3
+
+    style note1 fill:#7f1d1d,stroke:#b91c1c,color:#fee2e2
+    style note2 fill:#b45309,stroke:#d97706,color:#fffdfa
+    style note3 fill:#0f766e,stroke:#0d9488,color:#f0fdfa
+```
 
 ### 3. 真实案例：网格解决"微服务治理"的规模痛点
 
@@ -188,9 +273,46 @@ python labs/month06/m6l8_sidecar/test_sidecar.py
 
 ## 常见误解
 
-- **"服务网格能取代 API 网关"**：网格管东西向（服务间），网关管南北向（外部入口），互补。
-- **"上了网格就更好"**：sidecar 有延迟和资源开销、运维复杂；小规模可能得不偿失。
-- **"网格是新功能"**：它把 M5 的弹性 + mTLS + 可观测下沉到基础设施，能力不新、位置变了。
+- **"既然我们已经上网格治理东西向流量，那么微服务架构中就不再需要部署边缘 API 网关了，二者能力重合且服务网格能全包"**：这是对通信边界划分的严重混淆。API 网关与服务网格处于不同的控制平面，分工明确：**API 网关负责“南北向流量”**（客户端到集群的入口），主要处理外部协议适配、流量计费、单端限流、OAuth2 外部安全认证、SSL/TLS 卸载以及防 DDoC 恶意攻击；而**服务网格则接管“东西向流量”**（集群内部服务到服务的互调），侧重于内部零信任双向认证（mTLS）、灰度放量路由、分布式链路追踪关联。网关无法细粒度穿透到内部每个 Pod，网格也不适合直接暴露到公网处理外网连接。
+- **"上了服务网格，依靠 Envoy 的高性能反向代理，我们系统的网络性能和并发处理速度会得到整体提升"**：恰恰相反。服务网格是用**性能与资源成本去换取业务研发效率与多语言一致的治理能力**。网络流量从原先的“App A ──(网络)──> App B”变成了“App A ──> Sidecar A ──(网络/mTLS)──> Sidecar B ──> App B”。每次请求都多出了两次完整的用户态与内核态套接字拷贝，以及数据包的序列化与反序列化，必然会给每次调用增加 1ms 到数毫秒的**每跳附加延迟**，并且每个 Pod 中运行的 Envoy 容器都会消耗 50MB - 1GB 不等的 CPU 和内存。小规模集群上网格会导致得不偿失的性能倒退。
+- **"Sidecar 边车代理之所以能够自动完成重试、熔断和 RED 指标收集，是因为它在 K8s 中可以直接读取并监控业务应用容器的代码内存状态"**：这是对容器网络边界的根本性认知偏差。Sidecar 代理在逻辑上是**与业务完全隔离的独立用户态进程**，它绝不可能也没有权限去读取业务进程的内存空间。它是通过修改 Pod 所在 Network Namespace 中的 Linux 内核 **iptables 规则**，强行把进出业务容器网络接口的 TCP/UDP 网络套接字流量“劫持”重定向给 Sidecar 监听的端口。它治理由且仅由网络数据包的内容（L4 字节流或 L7 HTTP 协议内容）决定，对业务内部的代码执行状态完全透明。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 Kubernetes 环境中运行的服务网格（如 Istio），Sidecar 边车代理（Envoy）究竟是如何在业务代码“不改动一行、不知道代理存在”的前提下，做到透明拦截进出网络流量的？',
+      options: [
+        'Sidecar 代理利用操作系统的调试接口（ptrace）实时劫持并注入业务进程的内存，修改其 socket 系统调用。',
+        '在 Pod 初始化阶段，通过 initContainer 执行特权命令，修改 Pod 内部 Network Namespace 的 Linux 内核 iptables 规则。所有进出该 Pod 的 TCP 流量都会被内核拦截并强制重定向到 Sidecar 代理所监听的本地端口（如 15001/15006），实现数据包在套接字层的透明转接。',
+        '业务服务代码必须在编译期引入 Envoy SDK，显式把网络发送函数替换为 Envoy 专用的通信协议。'
+      ],
+      answer: 1,
+      explain: '服务网格数据面透明劫持的底层技术是 iptables 规则链配置。在 Pod 启动前，K8s 调度 initContainer 注入一系列封包转发规则，使内核在处理 TCP 发送和接收时自动重定向到 sidecar 的端口。业务程序因此可以像平时一样读写常规的 TCP/HTTP 连接，无需引入任何特殊的网格专用 SDK。'
+    },
+    {
+      q: '随着微服务架构的演进，系统开发中的“横切关注点（mTLS、熔断、可观测遥测等）”呈现出不断“下沉”的技术趋势。关于下沉到不同层级的取舍，以下哪项叙述是正确的？',
+      options: [
+        '横切关注点应当尽可能保留在业务代码库中，这样可以获得最高的可复制性与多语言支持。',
+        '下沉到 Sidecar 容器中是一劳永逸的最佳方案，不需要任何物理和网络开销。',
+        '横切关注点从代码层（Java/Go SDK）下沉到基础设施容器层（Envoy Sidecar）解决了多语言配置的一致性，但带来了每跳网络延迟和 per-pod 的内存资源消耗。最新的趋势是进一步下沉到 Linux 操作系统内核层（利用 eBPF 技术，如 Ambient Mesh），实现零 per-pod Sidecar 代理的高性能无侵入治理。'
+      ],
+      answer: 2,
+      explain: '“横切关注点下沉”的演进脉络。从软件设计模式的 Decorator（代码内横切）到 Sidecar（容器基础设施层横切），再到最新的内核层 eBPF 技术（网络内核层横切）。下沉的深度越深，业务代码的纯粹度和语言一致性就越高，但需要在延迟、CPU开销与技术成熟度（运维成本）之间进行折中。'
+    },
+    {
+      q: '在现代云原生架构设计中，API 网关（API Gateway）与服务网格（Service Mesh）分别扮演什么角色？应该如何协调分工？',
+      options: [
+        'API 网关与服务网格分别处理南北向（外部入口）流量与东西向（内部互调）流量。API 网关工作在集群边界，主要处理安全组、限流计费、SSL 卸载以及多端路由适配；服务网格工作在集群内部服务之间，依靠 sidecar 进行双向 mTLS 加密、微服务熔断恢复及精细的灰度流量切分。二者各司其职，相辅相成。',
+        '服务网格可以完全取代 API 网关，只需要直接把网格的 Ingress Gateway 暴露给所有终端用户，不需要任何 API 网关功能。',
+        'API 网关既管外部流量，也可以直接替代服务网格在集群内部对每一个 Pod 间进行 mTLS 证书的分发与加密拦截。'
+      ],
+      answer: 0,
+      explain: 'API网关（管南北向）与服务网格（管东西向）是分工协作关系。如果把内部网格复杂的动态路由策略和 mTLS 身份校验直接暴露给公网，会极度增加系统边缘的攻击面并降低响应速度；反之，在内部成百上千个微服务 Pod 间如果全部通过庞大的 API 网关进行中转调用，会造成网关的性能吞吐瓶颈。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
