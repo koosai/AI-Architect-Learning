@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M4L12 · Capstone：可扩展通知系统
 
@@ -37,6 +38,57 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ## 二、为每个变化轴选模式
 
+```mermaid
+classDiagram
+  class NotificationCenter {
+    -Map~String, List~NotificationSender~~ subs
+    +subscribe(String event, NotificationSender sender)
+    +emit(String event, String msg) List~String~
+  }
+
+  class NotificationSender {
+    <<interface>>
+    +send(String msg) String
+  }
+
+  class EmailSender {
+    +send(String msg) String
+  }
+
+  class SMSSender {
+    +send(String msg) String
+  }
+
+  class PushSenderAdapter {
+    -ThirdPartyPushSDK sdk
+    +send(String msg) String
+  }
+
+  class SenderDecorator {
+    <<abstract>>
+    -NotificationSender inner
+    +send(String msg) String
+  }
+
+  class WithRetry {
+    -int times
+    +send(String msg) String
+  }
+
+  class WithMask {
+    +send(String msg) String
+  }
+
+  NotificationCenter "1" o-- "many" NotificationSender : 观察者模式 (按事件分发通知)
+  EmailSender ..|> NotificationSender : 策略模式 (物理渠道)
+  SMSSender ..|> NotificationSender : 策略模式 (物理渠道)
+  PushSenderAdapter ..|> NotificationSender : 适配器模式 (对接第三方接口)
+  SenderDecorator ..|> NotificationSender : 装饰器基础类
+  SenderDecorator "1" o-- "1" NotificationSender : 组合包裹
+  WithRetry --|> SenderDecorator : 装饰器具体类 (重试增强)
+  WithMask --|> SenderDecorator : 装饰器具体类 (脱敏增强)
+```
+
 ### 基础：渠道 → 策略 + 工厂；事件 → 观察者
 
 - **渠道（怎么发）** = 一族可替换算法 → <GlossaryTerm term="Strategy Pattern" definition="策略模式：把“通过哪种渠道发送”封装成可替换的策略对象，统一 send 接口，加渠道不改核心。">策略</GlossaryTerm>（每个渠道一个 sender，统一 `send(msg)`），再用[工厂](./factory-pattern)按名字创建/选渠道。
@@ -45,11 +97,68 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 ### 进阶：横切处理 → 装饰器；创建 → 工厂
 
 - **限流/重试/脱敏/日志**这些[横切关注点](./adapter-decorator) = 不改原 sender 地叠加 → <GlossaryTerm term="Decorator Pattern" definition="装饰器模式：用同 send 接口的包装层给某个渠道叠加限流/重试/脱敏等能力，可层层组合，原 sender 不改。">装饰器</GlossaryTerm>（`RateLimited(Retrying(EmailSender()))`）。
-- **对接第三方 SDK**（各家 push 服务接口不一） → [适配器](./adapter-decorator)统一成 `send` 接口。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 触发客户端 (Client)
+  participant Center as 通知中心 (NotificationCenter)
+  
+  subgraph DecoratorChain["装饰器套娃调用链 (WithRetry -> WithMask -> EmailSender)"]
+    participant Retry as 重试装饰器 (WithRetry)
+    participant Mask as 脱敏装饰器 (WithMask)
+    participant Email as 邮件发送器 (EmailSender)
+  end
+
+  Client->>Center: emit("order", "密码123")
+  activate Center
+  
+  Note over Center: 遍历 "order" 订阅者列表
+  
+  Center->>Retry: send("密码123")
+  activate Retry
+  
+  Retry->>Mask: 递归委托: send("密码123")
+  activate Mask
+  
+  Note over Mask: [脱敏前置处理]<br/>"密码123" -> "***123"
+  
+  Mask->>Email: 递归委托: send("***123")
+  activate Email
+  Email-->>Mask: 返回 "EMAIL: ***123"
+  deactivate Email
+  
+  Mask-->>Retry: 返回 "EMAIL: ***123"
+  deactivate Mask
+  
+  Note over Retry: [重试后置处理]<br/>如果失败可重试，成功则加上重试头标记
+  
+  Retry-->>Center: 返回 "[retry x2] EMAIL: ***123"
+  deactivate Retry
+  
+  Center-->>Client: 返回所有订阅通道的发送结果
+  deactivate Center
+```
+- **对接第三方 SDK**（各家 push 服务接口不一） → <GlossaryTerm term="Adapter Pattern" definition="适配器模式：在一个接口不兼容的对象外面包一层，把它的接口“翻译”成调用方期望的接口。让原本对不上的两个东西能协作，而不改动任何一方。">适配器 (Adapter Pattern)</GlossaryTerm>统一成 `send` 接口。
 
 ### 深入（选学）：用 SOLID 把它们粘好
 
-整套设计的骨架是 SOLID：每个 sender [单一职责](./solid-srp-ocp)、核心 [依赖 sender 抽象](./solid-lsp-isp-dip)（DIP，便于测试时注入假渠道）、加渠道/规则[对扩展开放](./change-driven-design)。**关键提醒**：别因为“能用模式”就处处用——稳定的部分（消息数据结构、用户偏好）保持朴素（[YAGNI](./change-driven-design)）。Capstone 考的就是这种**判断力**：哪里该灵活、哪里该简单。
+整套设计的骨架是 SOLID：每个 sender [单一职责](./solid-srp-ocp)、核心依赖 sender 抽象（<GlossaryTerm term="Dependency Inversion Principle" definition="依赖倒置原则 (DIP)：高层模块不应该依赖低层模块，二者都应该依赖其抽象；抽象不应该依赖细节，细节应该依赖抽象。这里通知核心只依赖统一的 Sender 接口，不依赖具体的 Email/SMS 等物理实现。">DIP (依赖倒置原则)</GlossaryTerm>，便于测试时注入假渠道）、加渠道/规则[对扩展开放](./change-driven-design)。**关键提醒**：别因为“能用模式”就处处用——稳定的部分（消息数据结构、用户偏好）保持朴素（[YAGNI](./change-driven-design)）。Capstone 考的就是这种**判断力**：哪里该灵活、哪里该简单。
+
+```mermaid
+flowchart TD
+  subgraph ChangeAxes["可扩展通知系统的 4 大变化轴与设计模式映射"]
+    direction TB
+    
+    Axis1["变化轴 1: 物理发送渠道频繁变动/扩充 <br/>(Email / SMS / Webhook)"] -->|选用模式| Pattern1["策略模式 (Strategy Pattern) <br/>+ 简单工厂 (Simple Factory)"]
+    
+    Axis2["变化轴 2: 订阅通知的系统事件不断追加 <br/>(下单 / 发货 / 风控告警)"] -->|选用模式| Pattern2["观察者模式 (Observer Pattern) <br/>(NotificationCenter 扮演 EventBus)"]
+    
+    Axis3["变化轴 3: 渠道之上需要灵活叠加横切功能 <br/>(限流 / 自动重试 / 脱敏)"] -->|选用模式| Pattern3["装饰器模式 (Decorator Pattern) <br/>(递归套娃包装，对客户端透明)"]
+    
+    Axis4["变化轴 4: 异构第三方推送通道接口各异 <br/>(如阿里云 SMS SDK 与系统 send 方法签名冲突)"] -->|选用模式| Pattern4["适配器模式 (Adapter Pattern) <br/>(抹平接口签名差异)"]
+  end
+```
 
 <ResearchNote
   title="组合多个模式构建可演进系统"
@@ -160,7 +269,7 @@ python labs/month04/m4l12_notification/test_notification.py
       whenToUse: '中小系统、单服务内的通知。'
     },
     {
-      name: '独立通知平台（队列驱动）',
+      name: '独立<GlossaryTerm term="Notification Platform" definition="通知平台 (Notification Platform)：一种集中的、高可靠性的微服务架构系统。通常由外部消息队列驱动，提供模板渲染、渠道路由、排队重试、并发控制、多维度限流及全局送达审计等能力的综合通信中枢。">通知平台 (Notification Platform)</GlossaryTerm>（队列驱动）',
       scores: [5, 5, 5, 2, 5],
       note: '事件进队列、消费者按渠道发、带重试/DLQ/限流/模板中心。可靠、异步、可独立扩展。',
       whenToUse: '大规模、多业务线共用、要可靠异步时。'
@@ -191,9 +300,46 @@ python labs/month04/m4l12_notification/test_notification.py
 
 ## 常见误解
 
-- **“模式用得越多越好”**：只为真实变化轴用；稳定处保持简单才是高水平。
-- **“通知系统很简单”**：它的每一处都会变，是综合考验设计判断力的好题。
-- **“学完模式就够了”**：能从变化推导出模式、并知道何时不用，才算真正掌握。
+- **"既然我们学习了这么多强大的模式，为了体现架构师的设计水平，我们应该把所有的实体对象都封装得极其抽象，把所有模式（装饰器、策略、观察者、适配器）不分场合地通通套用上去"**: 典型的过度设计灾难。软件设计的核心是**权衡（Trade-off）**与控制复杂度。对于业务中完全不具备易变性诉求的稳定模块（例如基本的消息属性数据结构、接收者的偏好模型），强行引入工厂和代理除了大幅降低运行速度、增加数倍冗余代码外没有任何收益。应该坚决奉行 **YAGNI** 原则，只在真正的“变化轴”上配置扩展点。
+- **"通知系统实在太简单了，不就是拼接一下字符串、直接调个邮件或者短信 SDK 发送吗？进程内直接写一万个 `send_email` 才是最省事高效的"**: 缺乏长期维护视角的典型思维。对于个人小 Demo 或极其临时的一次性脚本，这确实最快。但对于企业级系统，随着渠道增加（如飞书、钉钉、App Push）、安全合规横切策略插入（对手机号脱敏、全局防刷限流、超时重试），如果依然使用面向过程的堆砌代码，你将面临极其恐怖的**霰弹式修改（Shotgun Surgery）**。通过策略与装饰器对渠道和横切做多态隔离，是高内聚低耦合的工程刚需。
+- **"我已经彻底精通了这门 Capstone 通知系统中的设计模式组合，只要把它们原封不动地照搬进我们公司大流量的微服务架构中，就能够解决一切通知的可靠投递问题了"**: 忽视了运行环境从“进程内”向“分布式”演进时的核心架构裂变。在单进程中，利用简单的 lambda 装饰和 map 字典足以应付；但在分布式高并发场景下，直接同步调用各大服务渠道会瞬间拖垮核心交易链路。我们必须打破同步，转而引入**事件驱动架构 (EDA)**，利用分布式消息队列（Message Queue）做削峰填谷与异步消费，并引入全局幂等分布式去重、死信队列（DLQ）补偿来规避消息丢失与重发冲突。这需要分布式架构设计能力的加持。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在这个 Capstone 通知系统设计中，如何巧妙地利用装饰器模式（Decorator）与策略模式（Strategy）相互配合，实现既能支持多种物理渠道发送，又能灵活叠加‘限流/重试/审计’等多维度特性的高内聚设计？',
+      options: [
+        '每一个渠道类内部硬编码写死所有的限流和重试逻辑，通过布尔标志位开关来决定是否启用。',
+        '核心发送接口定义为统一的 `send(msg)` 抽象策略。具体的物理发送端（如 EmailSender, SMSSender）实现该策略接口。同时，横切业务增强组件（如 WithRetry, WithRateLimit）同样实现该 `send(msg)` 接口并包装另一个 Sender 策略实例，从而利用‘同接口委托’在运行时灵活套娃装配，满足开闭原则。',
+        '把物理发送端全部定义为 WithRetry 的子类，通过多重继承合并功能。'
+      ],
+      answer: 1,
+      explain: '策略与装饰器的黄金配合。策略模式提供了通道的‘横向替换多态’，而装饰器模式提供了‘纵向行为叠加能力’。两者接口保持对齐，通过运行时对象组合（Composition），无需任何修改就能叠加如重试、限流等横切关注点，是高度解耦的最佳实践。'
+    },
+    {
+      q: '从‘进程内同步通知系统’演进到分布式大规模的‘消息通知平台（Notification Platform）’时，我们需要进行哪些核心架构变迁以应对超大并发和高可靠性挑战？',
+      options: [
+        '直接将进程内的 `NotificationCenter` 设置为单例模式（Singleton）即可应对百万级并发。',
+        '利用物理内存扩容服务器到 2TB，以防止内存溢出。',
+        '必须打破进程内的同步调用，在发布者和发送引擎之间引入分布式消息队列（如 Kafka/RabbitMQ）进行削峰填谷，并在下游建立独立的发送微服务集群，配合分布式死信队列（DLQ）与幂等去重校验实现失败重试与消息可靠达。'
+      ],
+      answer: 2,
+      explain: '进程内通知与分布式平台演进。进程内的观察者/发布订阅是同步阻塞的，在海量通知下会因为调用慢接口被拖垮。引入消息队列（EDA）进行异步解耦，配合数据库去重与死信重投机制，是从代码模式走向分布式高可用架构的必由之路。'
+    },
+    {
+      q: '如果某个第三方短信通道供应商（例如阿里云短信）的发送方法需要传入特定的字典参数，且不支持统一的 `send(message: str)` 签名，我们该如何在不破坏通知系统主干代码兼容性的前提下把它接入系统？',
+      options: [
+        '直接修改 `NotificationCenter` 内部的逻辑，专门为阿里云短信写一个 `if-else` 分支判断判断。',
+        '应用适配器模式（Adapter Pattern），创建一个实现了系统统一 `send(msg)` 接口的 `AliyunSmsAdapter` 类，在其内部持有阿里云 SDK 的客户端实例，将入参的 message 转换为阿里云要求的特定参数格式，并执行实际发送，以此抹平接口不兼容。',
+        '强制要求阿里云短信修改其 SDK 的方法签名。'
+      ],
+      answer: 1,
+      explain: '适配器模式的经典应用。当第三方库或遗留系统的接口与我们自己系统的标准抽象对不上时，切忌直接在业务主干上写特例 if，这会严重污染架构。编写一个 Adapter 进行接口的‘翻译’与‘委派’，符合面向抽象的依赖倒置原则。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
