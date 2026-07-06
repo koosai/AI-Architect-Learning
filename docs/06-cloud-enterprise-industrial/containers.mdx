@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M6L1 · 容器化
 
@@ -32,15 +33,102 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 基础：容器是什么、和虚拟机的区别
 
+```mermaid
+flowchart TD
+  subgraph VMStack["配置 1: 虚拟机架构 (Virtual Machine - 重量级隔离)"]
+    direction TB
+    AppA["💻 App A (业务程序)"] --> LibsA["📚 依赖库 (Libs/Deps)"]
+    AppB["💻 App B (业务程序)"] --> LibsB["📚 依赖库 (Libs/Deps)"]
+    
+    LibsA --> GuestOS1["💿 Guest OS 1 (子系统内核)"]
+    LibsB --> GuestOS2["💿 Guest OS 2 (子系统内核)"]
+    
+    GuestOS1 & GuestOS2 --> Hypervisor["⚙️ Hypervisor (硬件虚拟化层)"]
+    Hypervisor --> HostOS_VM["💿 Host OS (宿主系统)"]
+    HostOS_VM --> HW_VM["🔌 Server Hardware (物理硬件)"]
+    
+    noteVM["💥 痛点：每个虚拟机都要自带一个完整的 Guest OS 系统内核，内存开销大（GB级），且启动时需要经历整套操作系统的引导引导，耗时数秒到数分钟。"]
+    GuestOS1 & GuestOS2 -.-> noteVM
+  end
+
+  subgraph ContainerStack["配置 2: 容器架构 (Container - 轻量级进程隔离)"]
+    direction TB
+    AppC["💻 App C (业务程序)"] --> LibsC["📚 依赖库 (Libs/Deps)"]
+    AppD["💻 App D (业务程序)"] --> LibsD["📚 依赖库 (Libs/Deps)"]
+    
+    LibsC & LibsD --> Engine["🐳 容器引擎 (containerd / Docker)"]
+    Engine --> SharedKernel["💿 Shared Host OS Kernel (共享宿主系统内核)"]
+    SharedKernel --> HW_C["🔌 Server Hardware (物理硬件)"]
+    
+    noteC["✅ 优势：所有容器共享同一个宿主机的系统内核，只隔离进程视图，无内核引导开销，内存消耗极低（MB级），能在毫秒到秒级内瞬间启动！"]
+    SharedKernel -.-> noteC
+  end
+```
+
 <GlossaryTerm term="Container" definition="容器：把应用及其依赖打包、并与宿主机其它进程隔离运行的轻量单元。它共享宿主机内核，靠命名空间和 cgroups 实现隔离，比虚拟机轻得多、启动快得多。" >容器（Container）</GlossaryTerm>是一个被隔离的进程，自带它需要的依赖。它和<GlossaryTerm term="Virtual Machine" definition="虚拟机：通过 hypervisor 虚拟出完整硬件、运行独立操作系统内核。隔离更强但更重（每台带一个完整 OS），启动慢、占资源多。" >虚拟机（VM）</GlossaryTerm>的关键区别：VM 虚拟出整套硬件 + 跑一个完整操作系统（重、慢、强隔离）；容器**共享宿主机内核**，只隔离进程视图（轻、秒级启动、隔离稍弱）。所以一台机器能跑几十上百个容器，而 VM 只能跑几个。
 
 ### 进阶：靠什么隔离——命名空间与 cgroups
+
+```mermaid
+flowchart TD
+  subgraph ContainerProcess["🐳 隔离后的容器进程 (Container Process)"]
+    Proc["App 业务主进程 (PID 1)"]
+  end
+
+  subgraph Namespaces["🛡️ Linux Namespace (限制『能看到什么』 - 视图隔离)"]
+    direction TB
+    PID_NS["PID Namespace <br/>(仅可见自己容器的进程树)"]
+    NET_NS["NET Namespace <br/>(独立的网卡 eth0, 独立 IP 和端口)"]
+    MNT_NS["MNT Namespace <br/>(专属的只读镜像根挂载点 rootfs)"]
+    IPC_NS["IPC Namespace <br/>(隔离共享内存、消息队列)"]
+  end
+
+  subgraph cgroups["📊 Linux cgroups (限制『能用多少』 - 资源额度限流)"]
+    direction TB
+    CPU_Limit["CPU Limit <br/>(限制最高使用 2 个 CPU 核)"]
+    Mem_Limit["Memory Limit <br/>(限制最大内存 512MB, 溢出触发 OOM)"]
+    IO_Limit["I/O Rate Limit <br/>(限制磁盘读写速率)"]
+  end
+
+  Namespaces -.->|约束| ContainerProcess
+  cgroups -.->|塑形| ContainerProcess
+```
 
 容器的"隔离"不是魔法，是 Linux 内核的两个机制：
 - <GlossaryTerm term="Namespace" definition="命名空间：Linux 内核机制，让进程看到的资源（进程树、网络、挂载点、主机名、用户）被隔离。容器里 ps 只看到自己的进程、有自己的网络栈，就是命名空间的效果。" >命名空间（namespace）</GlossaryTerm>：隔离**视图**——容器里看到的进程、网络、文件系统挂载、主机名都是自己的一套，看不到宿主机和其它容器。
 - <GlossaryTerm term="cgroups" definition="控制组（control groups）：Linux 内核机制，限制和统计一组进程能用的 CPU、内存、IO 等资源。容器靠它做到“最多用 2 核 4G”，防止一个容器吃光宿主机资源。" >cgroups（控制组）</GlossaryTerm>：限制**资源**——这个容器最多用 2 核、4G 内存，防止它吃光宿主机（这正是 [M5L8 舱壁](../core-components/bulkhead-isolation) 在操作系统层的体现）。
 
 ### 深入（选学）：镜像分层与不可变性
+
+```mermaid
+flowchart TD
+  subgraph ImageLayers["只读分层镜像堆叠 (Image Layers - 类似 Git 提交链)"]
+    direction BT
+    Layer1["Layer 1: Base OS <br/>(alpine:3.18) <br/>[Fingerprint: sha256_aaa]"]
+    
+    Layer2["Layer 2: Run Dependencies <br/>(apk add python3) <br/>[Fingerprint: sha256_bbb]"]
+    
+    Layer3["Layer 3: App requirements <br/>(pip install -r requirements.txt) <br/>[Fingerprint: sha256_ccc]"]
+    
+    Layer4["Layer 4: Copy source code <br/>(COPY . .) <br/>[Fingerprint: sha256_ddd]"]
+
+    Layer2 --> Layer1
+    Layer3 --> Layer2
+    Layer4 --> Layer3
+  end
+
+  subgraph CachePolicy["缓存失效向上传播法则 (Dockerfile Build Caching)"]
+    direction TB
+    Trigger["业务代码修改并触发构建"] --> MatchBase{"1. Base OS 变更？"}
+    MatchBase -->|否: 命中缓存| MatchDeps{"2. requirements.txt 变更？"}
+    MatchBase -->|是: Cache Miss| RebuildAll["💥 重新执行 Layer 1~4 全量构建"]
+    
+    MatchDeps -->|否: 命中缓存| MatchCode{"3. 仅业务源码变动？"}
+    MatchDeps -->|是: Cache Miss| RebuildFromDeps["🔥 重新执行 Layer 3 依赖下载<br/>+ Layer 4 源码构建"]
+    
+    MatchCode -->|是: 仅 Layer 4 未命中| RebuildCode["✅ Layer 1~3 全部秒级命中缓存<br/>仅重建最顶层 Layer 4"]
+  end
+```
 
 <GlossaryTerm term="Container Image" definition="容器镜像：一个只读的、分层的应用打包产物，包含运行应用所需的文件系统和元数据。容器是镜像运行起来的实例。镜像不可变、可版本化、可分发。" >镜像（image）</GlossaryTerm>是容器的"模板"，它最精妙的设计是<GlossaryTerm term="Layered Image" definition="镜像分层：镜像由一叠只读层组成（如基础 OS 层、依赖层、应用代码层）。层可被多个镜像共享和缓存；只改动的层需要重建/传输，未变的层直接复用。" >分层（layers）</GlossaryTerm>：
 - 镜像由一叠**只读层**堆成：基础 OS 层 → 依赖层 → 应用代码层。
@@ -50,9 +138,9 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 <ResearchNote
   title="容器：把“环境”变成可版本化的产物"
-  source="Merkel (2014), Docker: Lightweight Linux Containers；Linux namespaces & cgroups；OCI 镜像规范"
+  source="Merkel (2014), Docker: Lightweight Linux Containers；Linux namespaces & cgroups；<GlossaryTerm term='OCI' definition='OCI (Open Container Initiative): 开放容器计划，是一个致力于建立容器格式和运行时的开放工业标准的 Linux 基金会项目，确保了不同容器引擎（如 Docker、containerd、Podman）之间的镜像和运行时规范的通用与互操作性。'>OCI</GlossaryTerm> 镜像规范"
   href="https://opencontainers.org/"
-  insight="容器并非新内核技术，而是把 Linux 早已存在的 namespaces（隔离视图）和 cgroups（限制资源）封装成易用的打包/分发体验。Docker 的关键创新是分层镜像 + 镜像仓库，让“构建一次、处处运行”和高效分发成为现实。OCI 把镜像和运行时标准化。"
+  insight="容器并非新内核技术，而是把 Linux 早已存在的 namespaces（隔离视图）和 cgroups（限制资源）封装成易用的打包/分发体验。Docker 的关键创新是分层镜像 + 镜像仓库，让“构建一次、处处运行”和高效分发成为现实。<GlossaryTerm term='OCI' definition='OCI (Open Container Initiative): 开放容器计划，是一个致力于建立容器格式和运行时的开放工业标准的 Linux 基金会项目，确保了不同容器引擎（如 Docker、containerd、Podman）之间的镜像和运行时规范的通用与互操作性。'>OCI</GlossaryTerm> 把镜像和运行时标准化。"
   application="把应用容器化是云原生的第一步：依赖随镜像走、环境一致、秒级启动、可版本回滚。设计 Dockerfile 时按“变化频率”排层（依赖在下、代码在上）以最大化缓存命中。容器要无状态（[L5](../foundations/state-and-storage)），状态外移。"
 />
 
@@ -177,9 +265,46 @@ python labs/month06/m6l1_image_layers/test_layers.py
 
 ## 常见误解
 
-- **"容器就是轻量虚拟机"**：容器共享宿主内核、隔离机制完全不同，不是小 VM。
-- **"容器化就是写个 Dockerfile"**：还要关注分层顺序、镜像大小、无状态、安全基线。
-- **"容器隔离和 VM 一样安全"**：共享内核使其隔离弱于 VM，多租户不可信场景要更强隔离。
+- **"容器（Container）本质上就是一种运行速度更快、体积极度精简的‘轻量级虚拟机（VM）’"**: 这是对底层操作系统原理的重大误解。虚拟机拥有独立的操作系统内核并虚拟出完整的物理硬件，其隔离是在硬件虚拟化层实现的。而容器本质上只是宿主机上的一个 **普通受限进程**，没有自己独立的内核，直接共享宿主机的操作系统内核，其隔离完全是在内核层面利用 Namespaces 隔离视图、用 cgroups 限制资源实现的。它绝非虚拟机。
+- **"要对应用进行容器化，我的工作就仅仅是写一个能跑起来的 Dockerfile、打包镜像发布即可"**: 肤浅的开发思维。高性能的容器化改造需要深厚的架构眼光：第一，必须合理设计 Dockerfile 的指令顺序，将不易变的步骤（如基础 OS 安装、系统依赖）放在上方，常变的源码 COPY 放在最下方，以最大化利用 **层缓存机制**；第二，容器必须保持 **无状态（Stateless）**，任何本地写入的文件在容器销毁后都会丢失，状态必须外移至对象存储或分布式数据库；第三，要控制镜像体积（使用 alpine 或 distroless 基础镜像）以降低网络分发开销，并关闭 root 权限等安全漏洞。
+- **"容器直接共享宿主机内核，因此其隔离安全性与虚拟机完全一样，可以放心地在多租户环境运行不可信的用户代码"**: 极其危险的安全隐患。由于所有容器都直接向同一个宿主机内核发送系统调用（Syscalls），一旦某个容器内的恶意进程发现了宿主机 Linux 内核的安全漏洞（Kernel Vulnerability），它就可以轻易突破 Namespaces 限制，实施 **容器逃逸（Container Escape）** 直接劫持宿主机或物理机器。在需要运行不可信代码的多租户云原生平台中，必须引入如 Google gVisor（进程级沙箱内核）或 Kata Containers（微型硬件级安全隔离虚拟机）进行加固。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 Linux 容器化底层技术中，命名空间（Namespaces）和控制组（cgroups）分别扮演什么角色？',
+      options: [
+        '命名空间负责限制容器可消耗的物理硬件资源，控制组负责提供虚拟网络驱动。',
+        '命名空间负责视图隔离（决定进程能‘看到’什么资源，如独立的 PID 树、网卡等）；控制组（cgroups）负责资源配额限制（决定进程组能‘使用’多少物理资源，如 CPU 核数、内存配额、磁盘 I/O 等）。',
+        '命名空间负责对镜像文件进行多层叠加，控制组负责对镜像指纹进行 SHA256 签名校验。'
+      ],
+      answer: 1,
+      explain: 'Linux 进程虚拟化的两大底座。命名空间（Namespace）解决‘看’的问题，如隔离进程、网络、挂载点；控制组（cgroups）解决‘用’的问题，设定资源上限，防止单进程吃光宿主机（舱壁隔离在内核的体现）。'
+    },
+    {
+      q: '在设计 Dockerfile 构建高性能应用镜像时，为什么极力提倡‘将不常变动的系统依赖安装指令（如 apt-get/npm install）排在频繁变动的应用源码复制指令（如 COPY . .）之前’？',
+      options: [
+        '因为排在后面会导致镜像加载进内存时顺序颠倒，造成程序无法正常启动。',
+        '这是为了最大化利用 Docker 的分层缓存（Layer Caching）机制。一旦某一层的内容发生变更导致缓存未命中（Cache Miss），该层及其之上的所有后续镜像层都将被迫重新构建。若将常变源码 COPY 放于依赖安装前，每次修改代码都会导致依赖缓存全部失效，从而引发重复下载依赖，导致构建时间暴增几倍。',
+        '因为 Docker 规范强制规定源码文件不能作为镜像的中间层。'
+      ],
+      answer: 1,
+      explain: 'Dockerfile 分层构建的经典守则。层缓存失效会向上方强力传播。为了极致的 CI/CD 构建吞吐率，应该按照‘修改频率由低到高’的顺序自底向上排列指令。'
+    },
+    {
+      q: '容器与虚拟机（Virtual Machines）最根本的物理架构区别是什么？这对高并发微服务扩容速度有何影响？',
+      options: [
+        '虚拟机不需要硬件支持即可运行，而容器需要昂贵的物理加速卡。',
+        '虚拟机拥有独立的操作系统内核并虚拟出完整的硬件层，启动时需要经历完整的 OS 引导过程（数分钟，重度）；容器直接共享宿主机的操作系统内核，本质上只是宿主机上的一个受限隔离进程，不需要引导内核，可以在毫秒到秒级内瞬间启动。这使得容器极度适合高并发微服务的快速弹性伸缩。',
+        '容器在物理上不能读写磁盘，所有临时文件都必须保存在远程对象存储中。'
+      ],
+      answer: 1,
+      explain: '微服务的秒级扩容底座。容器因为砍掉了 Guest OS 这层沉重的负担，直接共享宿主机内核，所以资源开销极小，启动极快。这是实现秒级水平自动伸缩（HPA）的基石。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
