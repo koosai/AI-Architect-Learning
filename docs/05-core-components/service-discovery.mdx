@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M5L3 · 服务发现与注册
 
@@ -40,15 +41,92 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 进阶：客户端发现 vs 服务端发现
 
+```mermaid
+flowchart TD
+  subgraph ClientDiscovery["1. 客户端发现模式 (Client-side Discovery)"]
+    direction TB
+    ClientA["服务调用方 (Client) <br/>(运行发现 SDK)"] -->|1. 查询服务实例列表| RegistryA["注册中心 (Registry)"]
+    ClientA -->|2. 本地二分/一致性哈希负载均衡| TargetA["选定物理节点"]
+    ClientA -->|3. 直连通信 (低延迟少一跳)| TargetA
+    
+    subgraph InstancesA["服务后端集群"]
+      NodeA1["实例 A-1 (10.0.0.1:80)"]
+      NodeA2["实例 A-2 (10.0.0.2:80)"]
+    end
+    TargetA --> NodeA1
+    TargetA --> NodeA2
+  end
+
+  subgraph ServerDiscovery["2. 服务端发现模式 (Server-side Discovery)"]
+    direction TB
+    ClientB["服务调用方 (Client) <br/>(仅认识固定地址)"] -->|1. 发送 HTTP 请求| LBB["物理负载均衡器/K8s Service <br/>(VIP: 1.2.3.4)"]
+    LBB -->|2. 查表获取实例 IP| RegistryB["注册中心 (Registry)"]
+    LBB -->|3. 代为分发路由| TargetB["选定后端物理节点"]
+    
+    subgraph InstancesB["服务后端集群"]
+      NodeB1["实例 B-1 (10.0.1.1:80)"]
+      NodeB2["实例 B-2 (10.0.1.2:80)"]
+    end
+    TargetB --> NodeB1
+    TargetB --> NodeB2
+  end
+```
+
 - <GlossaryTerm term="Client-side Discovery" definition="客户端发现：调用方直接查注册中心拿到实例列表，自己做负载均衡选一个调。少一跳、更灵活，但每个客户端要内置发现逻辑。">客户端发现</GlossaryTerm>：调用方自己查注册中心 + 自己负载均衡。少一跳，但客户端要内置逻辑（各语言都要 SDK）。
 - <GlossaryTerm term="Server-side Discovery" definition="服务端发现：调用方只管把请求发给一个固定的负载均衡器/网关，由它查注册中心并转发。客户端简单，但多一跳、LB 要高可用。">服务端发现</GlossaryTerm>：调用方只发给一个固定 LB/网关，由它查注册中心并转发。客户端简单，但多一跳。Kubernetes Service 就是服务端发现。
 
 ### 深入（选学）：健康检查与注册中心自身的 CAP 取舍
 
 发现的正确性取决于**健康检查**：
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant ServA as 服务实例 A (Healthy Instance)
+  participant ServB as 服务实例 B (Failing Instance)
+  participant Registry as 注册中心 (Registry - TTL=2.0s)
+  participant Client as 客户端 (Client/Caller)
+
+  loop 周期性健康维护 (Heartbeat Lease Loop)
+    ServA->>Registry: register / heartbeat (t=100.0)
+    ServB->>Registry: register / heartbeat (t=100.0)
+    Note over Registry: 更新心跳账本:<br/>A: 100.0, B: 100.0
+    
+    ServA->>Registry: heartbeat 续约 (t=101.5)
+    Note over ServB: ServB 发生故障宕机 / 挂掉
+    
+    Note over Registry: 达到检查窗口 (t=102.5)<br/>检测发现 B 已失联 2.5s (已超 TTL=2.0s)<br/>自动将 B 从健康列表摘除
+  end
+
+  Client->>Registry: healthy_instances("product")
+  Registry-->>Client: 仅返回健康实例 A 的 IP (10.0.0.5)
+```
 - **主动探活**：注册中心定期 ping 实例的 `/health`。
 - **心跳续约**：实例主动上报，超时即摘（Eureka 模式）。
-- 关键难题：**误判**。网络抖动让健康实例被误摘（可用性受损），或挂了的实例没及时摘除（请求被打到死实例）。这就是 [CAP（M2L6）](../system-design-bridge/cap-consistency) 在注册中心的体现——Eureka 选 AP（宁可返回可能过期的实例表也要可用），ZooKeeper/etcd 选 CP（强一致但分区时可能不可写）。架构师要根据"宁可多打几个死实例、还是宁可少服务"来选。
+- 关键难题：**误判**。网络抖动让健康实例被误摘（可用性受损），或挂了的实例没及时摘除（请求被打到死实例）。这就是 [CAP（M2L6）](../system-design-bridge/cap-consistency) 在注册中心的体现——Eureka 选 <GlossaryTerm term="AP Registry" definition="AP 注册中心：指强调高可用性 (Availability) 与分区容错性 (Partition Tolerance) 的服务目录系统（如 Netflix Eureka）。当网络出现故障分裂时，Eureka 会开启自我保护机制，允许短暂的数据不一致，宁可返回过期的实例表，也不拒绝读写请求。">AP 模式</GlossaryTerm>，ZooKeeper/etcd 选 <GlossaryTerm term="CP Registry" definition="CP 注册中心：指强调强一致性 (Consistency) 与分区容错性 (Partition Tolerance) 的服务目录系统（如 Consul、etcd）。网络分区发生时，如果节点群失去半数以上的多数派 Quorum 投票，将直接拒绝新的服务注册与写入，保证已存读取的实例列表绝对精确无脏读。">CP 模式</GlossaryTerm>。架构师要根据"宁可多打几个死实例、还是宁可少服务"来选。
+
+```mermaid
+flowchart TD
+  subgraph NetworkPartition["网络发生故障裂脑分区 (Network Partition Splits Node Groups)"]
+    ClusterLeft["多数派分区 (Majority Quorum Group) <br/>具有 3 个节点中的 2 个"]
+    ClusterRight["少数派分区 (Minority Group) <br/>具有 3 个节点中的 1 个"]
+  end
+
+  subgraph APMode["AP 注册中心 (如 Eureka 模式)"]
+    direction TB
+    AP_Left["多数派: 正常提供注册和读取"]
+    AP_Right["少数派: 允许新服务注册, 触发自我保护<br/>保留所有旧数据不清理<br/>(牺牲一致性: 客户端可能读到挂掉的死实例)"]
+  end
+
+  subgraph CPMode["CP 注册中心 (如 Consul / etcd / ZK)"]
+    direction TB
+    CP_Left["多数派: 维持 Quorum, 正常提供一致读写"]
+    CP_Right["少数派: 无法形成 Quorum 共识机制<br/>直接拒绝写入和服务注册操作!<br/>(牺牲可用性: 确保任何读客户端绝不返回脏数据)"]
+  end
+
+  NetworkPartition -->|选 AP| APMode
+  NetworkPartition -->|选 CP| CPMode
+```
 
 <ResearchNote
   title="服务发现：在动态实例集合上维护可用目录"
@@ -95,7 +173,7 @@ print("3 秒后健康实例:", r.healthy_instances("product", t))   # 只剩 .6
 print("过期实例被摘除")`}
 />
 
-实例靠心跳续约，超过 TTL 未续约就被自动摘除——调用方永远只拿到"当前还活着"的实例。**试试**：让 `.5` 在 t=101 补一次心跳，看它是否重新出现在健康列表；调小 `ttl` 体会"摘得快但误判风险高"的取舍。
+实例靠心跳续约，超过 <GlossaryTerm term="Time to Live" definition="生存时间 (TTL - Time to Live)：指数据记录或心跳在被认定失效前可以存活的秒数。在服务注册中心里，TTL 决定了一个实例失联多久会被自动摘除剔除，是平衡‘探测实时性’与‘抖动防误摘’的核心常数。">TTL (生存时间)</GlossaryTerm> 未续约就被自动摘除——调用方永远只拿到"当前还活着"的实例。**试试**：让 `.5` 在 t=101 补一次心跳，看它是否重新出现在健康列表；调小 `ttl` 体会"摘得快但误判风险高"的取舍。
 
 ## 四、动手 Lab（必做）
 
@@ -183,9 +261,46 @@ Netflix 用 Eureka（客户端发现 + AP）支撑大规模微服务；Kubernete
 
 ## 常见误解
 
-- **"配置里写 IP 就行"**：动态环境下实例地址常变，必须动态发现。
-- **"注册了就一定健康"**：要靠心跳/探活摘除失联实例，且有误判窗口。
-- **"服务发现是强一致的"**：很多用 AP（如 Eureka），实例表可能短暂过期。
+- **"在配置文件（如 application.yml 或 Nginx config）里直接写死物理 IP 就行了，反正我们的后端服务器基本上不重启，重启了再去手动改配置也可以"**: 极其脆弱且落后的反模式。在现代云原生与容器化时代，微服务实例由于自动扩缩容、节点抢占式调度、Kubernetes 声明式调和等机制，随时处于“流动”与生命期短暂的演进中。任何试图静态化 IP 端口的行为都会在机器挂掉或扩容新实例时瞬间导致流量黑洞。必须通过注册中心实现“流量自动跟随”的动态解析。
+- **"一个实例只要成功完成注册登记，就说明它在接下来的整个生命周期内都是健康的，可以直接安心调用"**: 典型的静止视角误区。服务注册仅代表节点启动时的瞬间“报到”，不代表它不会在后续运行中发生死锁、OOM 内存溢出、文件句柄耗尽或网络假死。如果缺乏**健康探活机制（Active Probe / Heartbeat Lease）**，网关和客户端将继续向实质已死的僵尸节点疯狂打入流量。健康检查 TTL 的动态驱逐是服务发现高可用不可或缺的防线。
+- **"既然服务注册中心代表了全站服务拓扑的目录库，那么为了防脏读，我们应该全面引入强一致性（CP 模式）的注册中心并保证数据绝对实时精确"**: 忽略了 CAP 取舍的代价。在超大规模高频通信的微服务群中，服务实例表的短期瞬时延迟并不致命（客户端重试可以规避）。如果是偏 CP 强一致的注册中心（如 Consul/etcd），一旦遭遇网络分区抖动、少数派节点群共识判定瘫痪，就会直接拒绝所有新服务的上线注册。在大规模微服务系统中，许多架构师更倾向于选择偏 **AP 模式（如 Eureka）**，进入自我保护，哪怕读到老脏实例数据（由客户端熔断和重试处理），也要保证入口可用。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在客户端服务发现（Client-side Discovery）与服务端服务发现（Server-side Discovery）的架构设计中，以下关于两者的核心权衡，哪项是正确的？',
+      options: [
+        '客户端发现必须将所有后端服务地址都硬编码在 APP 包里。',
+        '客户端发现少了一跳（调用方直接直连服务实例），延迟最低，且可以在客户端做极其灵活定制的负载均衡策略；但缺点是需要每个开发语言都编写并集成专属发现 SDK，增加了客户端代码复杂度。服务端发现对客户端完全透明，但多了一跳，且负载均衡器本身面临高可用和单点性能瓶颈。',
+        '服务端发现完全不需要注册中心的存在。'
+      ],
+      answer: 1,
+      explain: '服务发现的客户端与服务端路线权衡。客户端发现（如 Eureka SDK）是典型的进程内解析路由，去中心化强，但存在客户端 SDK 跨语言维护成本；服务端发现（如 K8s Service + CoreDNS）是完全的中间代理模式，解耦了语言，但多一层网络转发延迟。'
+    },
+    {
+      q: '微服务注册中心在发生“网络分区（Network Partition）”故障时，AP 模式（如 Eureka）与 CP 模式（如 Consul/etcd）的选择会导致何种不同的业务表现？',
+      options: [
+        'AP 模式的注册中心会立即清空所有注册数据，导致全网瘫痪。',
+        'CP 模式注册中心无法在网络分区下对外提供读取解析服务。',
+        'AP 模式的注册中心强调可用性，网络分区时会进入自我保护，继续返回可能已经挂掉的过期实例列表（允许短暂不一致，宁可误打不通也不能少给实例）；而 CP 模式注册中心强求一致性，一旦失去过半数（Quorum）共识判定，将直接拒绝新服务写入或注册，确保读写数据的绝对精确防脏读。'
+      ],
+      answer: 2,
+      explain: '注册中心的 CAP 权衡。AP 模式的 Eureka 宁愿相信挂掉的实例还活着，也要保证调用方有节点可用，利用重试来容错；CP 模式的 ZooKeeper/Consul 则绝不容忍脏数据，哪怕写不可用，也要保证全网视图的强一致性。'
+    },
+    {
+      q: '在服务发现系统的健康检查中，‘主动探活（Active Probe）’与‘被动心跳（Passive Heartbeat）’各自的实现特点和挑战是什么？',
+      options: [
+        '主动探活不需要占用任何网络带宽。',
+        '主动探活由注册中心定时轮询发起 ping/http 检测，能够精准控制检测节奏，但当物理节点达数万时，注册中心发出的探针流量会发生剧烈的‘探针风暴’压垮网卡；被动心跳由实例定时上报（续约），压力分摊到各实例，但如果实例假死（进程僵死但心跳线程仍由定时任务发送），可能会造成假活漏判。',
+        '被动心跳因为是实例发起，所以不需要设置任何超时失效时间 TTL。'
+      ],
+      answer: 1,
+      explain: '探活与心跳的工程痛点。探针风暴和假活漏判是真实微服务架构中的经典问题。大规模集群一般使用轻量的被动心跳或分布式 gossip 协议来分摊主动探针的 I/O 载荷，防止注册中心自身过载崩溃。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
