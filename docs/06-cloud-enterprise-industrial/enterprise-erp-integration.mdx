@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M6L10 · 企业应用与 ERP 集成
 
@@ -42,16 +43,97 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - <GlossaryTerm term="Enterprise Service Bus" definition="企业服务总线（ESB）：传统企业集成的中枢，所有系统接到总线上，由它做路由、协议转换、编排。解决点对点爆炸，但本身可能成为重型瓶颈。">ESB（企业服务总线）</GlossaryTerm>：所有系统接到一条总线，由它路由/转换。解决 N² 问题，但总线本身可能成重型瓶颈。
 - **事件驱动 / API + 消息**：现代做法——系统通过 [API 和事件（M2L10）](../system-design-bridge/communication-decoupling) 解耦集成，更轻、更松耦合（[呼应 outbox/CDC M3L11](../data-cache-queue/consistency-patterns)）。
 
+#### 企业系统集成模式拓扑对比
+
+```mermaid
+graph TD
+    subgraph P2P["1. 点对点直连 (Spaghetti Connect)"]
+        A1((Sys A)) <--> B1((Sys B))
+        A1 <--> C1((Sys C))
+        B1 <--> C1
+        A1 <--> D1((Sys D))
+        B1 <--> D1
+        C1 <--> D1
+        Note1["连接数 N*(N-1)/2 呈平方爆炸"]
+    end
+
+    subgraph Hub_ESB["2. 企业服务总线 (ESB Hub)"]
+        A2((Sys A)) --- ESB{{"ESB<br>(总线中枢)"}}
+        B2((Sys B)) --- ESB
+        C2((Sys C)) --- ESB
+        D2((Sys D)) --- ESB
+        Note2["星型解耦，但总线过重易成单点瓶颈"]
+    end
+
+    subgraph Event_Driven["3. 事件驱动 / 消息队列 (Pub-Sub)"]
+        A3((Sys A)) -->|发布事件| Broker[["消息队列 / Event Broker"]]
+        Broker -->|异步分发| B3((Sys B))
+        Broker -->|订阅消费| C3((Sys C))
+        Broker -->|订阅消费| D3((Sys D))
+        Note3["极简异步解耦，高吞吐可伸缩"]
+    end
+
+    style ESB fill:#b45309,stroke:#d97706,color:#fff
+    style Broker fill:#0f766e,stroke:#0d9488,color:#f0fdfa
+    style Note1 fill:#7f1d1d,stroke:#b91c1c,color:#fee2e2
+    style Note2 fill:#b45309,stroke:#d97706,color:#fffdfa
+    style Note3 fill:#0f766e,stroke:#0d9488,color:#f0fdfa
+```
+
 ### 进阶：主数据管理与幂等集成
 
 - <GlossaryTerm term="Master Data Management" definition="主数据管理（MDM）：对企业关键实体（客户、产品、供应商、员工）建立单一、权威、一致的数据来源，解决同一实体在多个系统里数据不一致、重复的问题。">主数据管理（MDM）</GlossaryTerm>：同一个“客户”在 CRM、ERP、财务里各有一份，信息还不一致——MDM 建立单一权威来源，解决“谁才是对的”。
 - **幂等集成**：系统对接靠消息/批量同步，网络会重发、批量会重跑——所以每条集成消息的处理必须[幂等（L6）](../foundations/idempotency)：同一笔订单同步两次，不能产生两条。靠业务键去重（订单号、外部 ID）。
 
+#### MDM 实体解析与黄金记录流转
+
+```mermaid
+flowchart TD
+    In_CRM["CRM 系统<br>{ID: 101, 姓名: '张三', 电话: 138..}"] --> Resolution{"MDM 实体解析引擎<br>(Entity Resolution)"}
+    In_ERP["ERP 财务系统<br>{ID: E-99, 名称: '张小三', 电话: 138..}"] --> Resolution
+    In_Supply["客服系统<br>{ID: C-22, 邮箱: 'zs@qq.com', 电话: 138..}"] --> Resolution
+
+    Resolution --> Match{"1. 属性匹配判定<br>(基于电话/名称相似度等规则)"}
+    Match -->|判定为同一物理实体| Deduplicate["2. 记录合并与冲突解决<br>(非空字段补全 / 规则权重覆盖)"]
+    
+    Deduplicate --> Golden["3. 生成黄金记录 (Golden Record)<br>{G-ID: 8888, 姓名: '张小三', 电话: 138.., 邮箱: 'zs@qq.com'}"]
+    
+    Golden --> SyncBack["4. 反向同步绑定<br>(将统一黄金 ID 写入 CRM/ERP/客服系统)"]
+
+    style Resolution fill:#b45309,stroke:#d97706,color:#fffdfa
+    style Golden fill:#0f766e,stroke:#0d9488,color:#f0fdfa
+    style SyncBack fill:#0284c7,stroke:#0284c7,color:#fff
+```
+
 ### 深入（选学）：企业集成的现实约束
 
-- **数据一致性是最终一致**：跨这么多系统，没有全局事务（[M3L11](../data-cache-queue/consistency-patterns)）——用事件 + 幂等 + 对账（reconciliation）达成最终一致，并定期跑对账发现并修复漂移。
-- **防腐层（ACL）**：对接老旧/外部系统时，用一个<GlossaryTerm term="Anti-Corruption Layer" definition="防腐层（ACL）：在你的系统和外部/遗留系统之间加一层翻译，把对方混乱或过时的数据模型隔离在外，保护你的领域模型不被污染。本质是适配器（M4L8）。">防腐层</GlossaryTerm>（本质是[适配器 M4L8](../design-patterns-lld/adapter-decorator)）把对方混乱的数据模型翻译成你干净的模型，别让老系统的烂模型渗进你的核心。
-- **审计与权限要内建**：企业系统的权限（RBAC/ABAC）和审计日志不是附加功能，是一等需求——AI 系统接入时必须尊重既有权限边界（不能让 AI 绕过权限读到不该读的数据）和留下审计痕迹。
+- **数据一致性是最终一致**：跨这么多系统，没有全局事务（[M3L11](../data-cache-queue/consistency-patterns)）——用事件 + 幂等 + 对账（reconciliation）达成<GlossaryTerm term="Eventual Consistency" definition="最终一致性：分布式系统中的一种弱一致性模型。它不保证在任何时刻所有节点的数据都完全相同，但保证在没有新的更新操作前提下，系统数据最终会达到一致状态。在跨系统的企业级集成中，由于缺乏全局事务锁，通常依靠事件异步通知、对账补件等机制达成最终一致。">最终一致性</GlossaryTerm>，并定期跑对账发现并修复漂移。
+- **防腐层（ACL）**：对接老旧/外部系统时，用一个<GlossaryTerm term="Anti-Corruption Layer" definition="防腐层（ACL）：在你的系统 and 外部/遗留系统之间加一层翻译，把对方混乱或过时的数据模型隔离在外，保护你的领域模型不被污染。本质是适配器（M4L8）。">防腐层</GlossaryTerm>（本质是[适配器 M4L8](../design-patterns-lld/adapter-decorator)）把对方混乱的数据模型翻译成你干净的模型，别让老系统的烂模型渗进你的核心。
+
+#### 防腐层 (ACL) 屏蔽遗留系统污染架构
+
+```mermaid
+graph LR
+    subgraph Modern_System["现代核心系统 (Modern Domain)"]
+        DomainModel["微服务领域模型<br>(干净、一致的模型: JSON)"]
+    end
+
+    subgraph ACL["防腐层 (Anti-Corruption Layer)"]
+        Adapter["适配器 (Adapter)<br>适配业务接口"] <--> Translator["翻译器 (Translator)<br>数据模型双向映射"]
+    end
+
+    subgraph Legacy_System["遗留老系统 (Legacy ERP System)"]
+        LegacyModel["老旧数据模型<br>(混乱、混杂模型: XML/COBOL)"]
+    end
+
+    DomainModel <--> Adapter
+    Translator <--> LegacyModel
+
+    style DomainModel fill:#0f766e,stroke:#0d9488,color:#f0fdfa
+    style ACL fill:#b45309,stroke:#d97706,color:#fffdfa
+    style LegacyModel fill:#7f1d1d,stroke:#b91c1c,color:#fee2e2
+```
+- **审计与权限要内建**：企业系统的权限（<GlossaryTerm term="RBAC" definition="基于角色的访问控制 (Role-Based Access Control)：根据用户在组织中所处的角色来分配数据和操作权限。是企业应用中最基础、最普遍采用的安全控制模型。">RBAC</GlossaryTerm>/<GlossaryTerm term="ABAC" definition="基于属性的访问控制 (Attribute-Based Access Control)：一种更高级、细粒度的权限控制模型。根据用户属性、资源属性、环境属性（如IP、时间）等多元条件组合，动态决定是否授予操作权限。">ABAC</GlossaryTerm>）和审计日志不是附加功能，是一等需求——AI 系统接入时必须尊重既有权限边界（不能让 AI 绕过权限读到不该读的数据）和留下审计痕迹。
 - **企业 AI 的落点**：AI 通常作为“嵌入既有流程的增强”（如在 ERP 里做智能补货建议、在 CRM 里做客户洞察），而非推倒重来——它要接受人工确认、可审计、可解释，尤其涉及钱和合规时。
 
 <ResearchNote
@@ -177,9 +259,46 @@ python labs/month06/m6l10_integration/test_integration.py
 
 ## 常见误解
 
-- **"企业系统落后没技术含量"**：它的强约束（权限/审计/合规/一致性）往往比互联网产品更难。
-- **"集成就是调个 API"**：通道会重发，处理必须幂等去重；多系统一致性靠事件 + 对账。
-- **"企业 AI 难在模型"**：更难的是集成、权限、审计、主数据这些工程和约束问题。
+- **"企业级应用系统（如 ERP、CRM）技术栈老旧落后，相比互联网高并发高容灾架构，这些企业软件没有任何技术含量"**：这是极度浅薄的偏见。互联网架构的核心痛点是“高并发与海量吞吐（Scale-out）”，其业务逻辑通常相对单一；而企业软件的痛点是“极高维度的业务模型复杂度（Domain Complexity）与数据强一致刚性约束”。企业系统处理的是财务账目、库存配额、复杂的跨部门工作流授权，对数据的错误零容忍（不能接受像互联网社交产品那样的局部最终一致性导致短时间错乱）。同时，企业软件在长达数十年的生命周期中，必须承受权限细化到行列级、合规审计追踪（Traceability）、遗留系统兼容集成等极具挑战的“工程脏活与硬核约束”。
+- **"当跨系统同步订单数据时，我们只需要让接收端对接收到的消息 ID 进行唯一性去重，就可以完美解决重发导致的重复入账问题"**：这是极易在生产环境造成财务灾难的误区。消息 ID（Message ID）是由消息发送端或消息中间件临时生成的，它只代表“这次传输通道的标识”。如果在网络抖动时，发送端由于未收到确认而执行了“应用层重试（Sender Retry）”，它可能会使用一个全新生成的 Message ID 再次发送同一笔业务订单。如果接收端仅仅依赖 Message ID 去重，就会将该请求视作新请求处理，导致重复入账。正确的**幂等处理必须使用“业务键（Business Key）”**，如订单号（Order No）、外部交易流水号等能唯一标识该业务实体的字段去重。
+- **"既然我们公司引进了先进的 AI 智能分析系统，那应该将其部署为一个具有超级管理员权限的独立机器人，这样它就可以无障碍地读取 ERP 和 CRM 的全部数据，给出全局最优方案"**：这是导致企业最高安全级别数据泄漏（如财务内幕、未公开员工薪资、核心客户机密）的灾难性做法。企业应用系统具有极其严密的组织边界和权限（RBAC/ABAC）。AI 大模型本身并不具备权限甄别能力，一旦以“超级管理员”权限运行并提供公共查询接口，低权限员工就可以直接通过提示词工程绕过现有系统的控制，诱导 AI 吐出他不应接触的敏感数据。企业 AI 必须在既有的**用户身份上下文中被调用，严格遵循该用户的既有权限规则，且 AI 做的每一项写入决策都必须记录不可篡改的审计日志**。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在领域驱动设计（DDD）中，当我们要将一个新建的现代微服务系统与一个存在了十几年的老旧遗留 ERP 系统进行数据对接时，为什么要设计“防腐层（ACL - Anti-Corruption Layer）”？它的核心职责是什么？',
+      options: [
+        '防腐层是为了防止遗留 ERP 系统的网络请求中携带恶意软件或木马程序，充当应用防火墙的作用。',
+        '老旧系统的业务模型、命名规范及协议（如复杂的 COBOL 字段或庞大的 XML）通常混乱不堪。防腐层在现代系统和老系统之间架起一道双向“翻译器”与“适配器”，将老系统的泥潭模型翻译成现代系统干净的领域模型（JSON/清晰概念），从而保护新系统的核心业务逻辑和代码结构不被老系统的陈旧设计所“污染”。',
+        '防腐层是一个定期清理老系统数据库冗余记录的垃圾回收后台程序。'
+      ],
+      answer: 1,
+      explain: '防腐层是 DDD 处理遗留系统集成的核心模式。老系统的糟糕设计就像传染病，直接调用的代码会使新系统也充斥着 legacy 的命名与逻辑。ACL 通过适配器和模型转换器把污染隔绝在外。'
+    },
+    {
+      q: '在可靠的企业级系统集成中，为什么说对“消息传输重发”的去重处理不能仅仅依赖消息 ID（Message ID），而必须依赖业务实体键（Business Key）？',
+      options: [
+        '因为 Message ID 长度太长，保存在 Redis 中进行布隆过滤器去重会耗费太多内存成本。',
+        '因为发送端在遇到网络超时等故障进行重试时，通常会由发送端重构一个包含相同业务内容的请求，并生成一个全新的 Message ID。如果接收端只按 Message ID 去重，就会漏掉这种“同业务订单不同消息 ID”的重试，导致重复入账。因此必须使用订单号（Order No）、支付单号等业务唯一实体键来做全局去重。',
+        '因为在不同的云厂商中，Message ID 的格式不统一，无法在多云部署中通用。'
+      ],
+      answer: 1,
+      explain: '这是幂等集成的经典坑。网络层或客户端重试时，Message ID 大多会变化；而订单号、用户ID等 Business Key 代表客观世界的业务实体，无论重试几次都保持不变。使用业务键做幂等键是金融和企业集成的金科玉律。'
+    },
+    {
+      q: '主数据管理（MDM - Master Data Management）的核心任务是为企业关键实体生成“黄金记录（Golden Record）”。在多系统集成的实体解析过程中，当不同系统的数据发生冲突时（例如 ERP 中的地址与 CRM 中的地址不一致），MDM 通常如何处理？',
+      options: [
+        '由 MDM 引擎随机选择一个地址，并将其他系统的地址自动删除以求一致。',
+        '直接报错中断同步，要求企业各部门管理员召开线下联席会议手动修改。',
+        'MDM 引擎通过实体解析，利用配置的“数据源可信度权重与规则策略”（例如：合同和法律名称以 ERP 系统为准；联系电话和市场归属以 CRM 系统为准）进行冲突解决与去重合并，融合成一份跨系统权威一致的黄金记录，并反向更新到各源系统中。'
+      ],
+      answer: 2,
+      explain: 'MDM 的实体解析引擎会配置丰富的数据源权威度规则（Survivorship Rules）。不同系统对属性的掌控度不同，MDM 按照“规则优先、非空覆盖、时效优先”等方式自动提取各个源头最正确的字段，形成一份权威记录分发全局。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
