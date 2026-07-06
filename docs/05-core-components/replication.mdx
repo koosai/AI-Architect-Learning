@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M5L9 · 复制
 
@@ -41,14 +42,139 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 进阶：同步 vs 异步复制、复制延迟
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 客户端 (Client)
+  participant Leader as 主副本 (Leader)
+  participant Follower1 as 从副本 1 (Sync Follower)
+  participant Follower2 as 从副本 2 (Async Follower)
+
+  rect rgb(240, 240, 240)
+    Note over Client, Follower2: 1. 同步复制数据流 (数据安全，写延迟高)
+    Client->>Leader: 发起写请求 (Write X=1)
+    activate Leader
+    Leader->>Leader: 本地写入 X=1
+    Leader->>Follower1: 强同步变更日志
+    activate Follower1
+    Follower1->>Follower1: 写入本地并确信
+    Follower1-->>Leader: 返回 ACK 确认
+    deactivate Follower1
+    Leader-->>Client: 确认写成功 (同步 ACK 到手)
+    deactivate Leader
+  end
+
+  rect rgb(220, 240, 220)
+    Note over Client, Follower2: 2. 异步复制数据流 (低延迟，主挂可能丢数据)
+    Client->>Leader: 发起写请求 (Write Y=2)
+    activate Leader
+    Leader->>Leader: 本地写入 Y=2
+    Leader-->>Client: 立即返回写成功 (响应快!)
+    deactivate Leader
+    
+    Note over Leader, Follower2: 异步同步延迟期间 (Replication Lag)
+    Leader->>Follower2: 异步复制变更日志
+    activate Follower2
+    Follower2->>Follower2: 写入本地并追平
+    Follower2-->>Leader: 确认 ACK
+    deactivate Follower2
+  end
+```
+
 - <GlossaryTerm term="Synchronous Replication" definition="同步复制：主必须等从确认收到变更后才向客户端返回成功。不丢数据（从有最新），但写延迟高、从挂了会拖住主。" >同步复制</GlossaryTerm>：主等从确认才返回。不丢数据，但写慢、从故障会拖主。
 - <GlossaryTerm term="Asynchronous Replication" definition="异步复制：主写完本地就返回，变更稍后才传给从。写快、主不被从拖累，但主崩溃时尚未同步的写会丢失，从也可能读到旧数据。" >异步复制</GlossaryTerm>：主写完就返回，稍后再同步给从。写快，但主崩溃可能丢未同步的写。
-- 由此产生<GlossaryTerm term="Replication Lag" definition="复制延迟：从副本落后于主副本的时间差。异步复制下从可能读到旧数据，导致“读己之写”（刚写完读自己却读到旧值）等异常。" >复制延迟（replication lag）</GlossaryTerm>：从落后于主。典型 bug：用户改完资料（写主），刷新页面（读从）却看到旧值——**读己之写（read-your-writes）**问题。解法如"自己的写后一段时间读主"。
+- 由此产生<GlossaryTerm term="Replication Lag" definition="复制延迟：从副本落后于主副本的时间差。异步复制下从可能读到旧数据，导致“读己之写”（刚写完读自己却读到旧值）等异常。" >复制延迟（replication lag）</GlossaryTerm>：从落后于主。典型 bug：用户改完资料（写主），刷新页面（读从）却看到旧值——**<GlossaryTerm term="Read-Your-Writes Consistency" definition="读己之写一致性 (Read-Your-Writes Consistency)：亦称‘写后读一致性’。指系统必须保证，当某个用户发起数据写操作成功后，该用户后续发起的所有读取操作，都必须能读到自己刚刚写入的最新值，而绝不能读到过期的旧版本。">读己之写（read-your-writes）</GlossaryTerm>**问题。解法如"自己的写后一段时间读主"。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as 用户 (User)
+  participant Client as 客户端 (Client UI)
+  participant Leader as 主数据库 (Leader DB)
+  participant Follower as 从数据库 (Lagging Follower)
+
+  rect rgb(255, 230, 230)
+    Note over User, Follower: 异常场景: 遭遇复制延迟导致数据不一致
+    User->>Client: 更改头像
+    Client->>Leader: 写请求 (Update avatar='new_avatar.png')
+    activate Leader
+    Leader-->>Client: 200 OK (写入主库成功)
+    deactivate Leader
+
+    Note over Leader, Follower: 此时正在网络传输复制日志 (存在 2 秒复制延迟)
+    
+    User->>Client: 立即刷新页面重新加载
+    Client->>Follower: 读请求 (Get avatar)
+    activate Follower
+    Note over Follower: 尚未追上主库日志，仍保存 'old_avatar.png'
+    Follower-->>Client: 返回 'old_avatar.png' (旧数据!)
+    deactivate Follower
+    Client-->>User: 页面显示老头像 (用户困惑: 我不是改成功了吗?)
+  end
+
+  rect rgb(230, 245, 230)
+    Note over User, Follower: 解决方案: 智能路由保证“读己之写一致性”
+    User->>Client: 再次更改头像
+    Client->>Leader: 写请求 (Update avatar='new_avatar.png')
+    activate Leader
+    Leader-->>Client: 200 OK
+    deactivate Leader
+
+    Client->>Client: 在本地标记/Cookie 记录: 'write_timestamp = now'
+    
+    User->>Client: 立即刷新页面
+    Client->>Client: 判断: 写发生后的 5 秒安全期内? -> 是的，强制路由读主库!
+    Client->>Leader: 读请求 (Get avatar - 路由至主库)
+    activate Leader
+    Leader-->>Client: 返回 'new_avatar.png' (最新数据)
+    deactivate Leader
+    Client-->>User: 页面显示新头像 (符合预期)
+  end
+```
 
 ### 深入（选学）：多主、无主与法定人数
 
 - <GlossaryTerm term="Multi-Leader Replication" definition="多主复制：多个副本都能接收写（如多数据中心各有一个主），再互相同步。写延迟低、可跨区域写，但会产生写冲突，需要冲突解决策略。" >多主（multi-leader）</GlossaryTerm>：多个副本都能写（如跨数据中心），互相同步。可就近写、抗区域故障，但会有**写冲突**，需冲突解决（last-write-wins、CRDT 等）。
 - <GlossaryTerm term="Leaderless Replication" definition="无主复制：没有固定主，客户端直接向多个副本读写，用法定人数（quorum）保证一致性（Dynamo 风格）。高可用、抗故障，但一致性较弱，需读修复等机制。" >无主（leaderless，Dynamo 风格）</GlossaryTerm>：没有固定主，客户端直接向多个副本读写，靠<GlossaryTerm term="Quorum" definition="法定人数：N 个副本中，写要至少 W 个确认、读要至少 R 个响应。当 W + R > N 时，读集合与写集合必有交集，从而读到最新写——这是无主复制的一致性保证。" >法定人数（quorum）</GlossaryTerm>保证一致：N 个副本，写需 W 个确认、读需 R 个响应，只要 **W + R > N**，读写集合必有交集，就能读到最新写。调 W/R 即在一致性、延迟、可用性间滑动——这正是 [CAP/PACELC](../system-design-bridge/cap-consistency) 的工程旋钮。
+
+```mermaid
+flowchart TD
+  subgraph StrongQuorum["配置 1: 强一致性 (Strong Quorum: W + R > N) <br/>N=3, W=2, R=2 (W + R = 4 > 3)"]
+    direction TB
+    subgraph NodesStrong["副本节点"]
+      NodeA_S[("节点 A <br/>(新数据 X=v2)")]
+      NodeB_S[("节点 B <br/>(新数据 X=v2)")]
+      NodeC_S[("节点 C <br/>(旧数据 X=v1)")]
+      style NodeA_S fill:#dfd,stroke:#333
+      style NodeB_S fill:#dfd,stroke:#333
+      style NodeC_S fill:#fdd,stroke:#333
+    end
+    
+    WriteSet_S["写集合 (W=2) <br/>[A, B]"] -.-> NodeA_S & NodeB_S
+    ReadSet_S["读集合 (R=2) <br/>[B, C]"] -.-> NodeB_S & NodeC_S
+    
+    noteS["✅ 重叠交叉点: 节点 B <br/>读请求可以通过比对版本号，直接用 B 的 v2 盖掉 C 的 v1，保证强一致性！"]
+    NodeB_S -.-> noteS
+  end
+
+  subgraph WeakQuorum["配置 2: 弱一致性 (Weak Quorum: W + R <= N) <br/>N=3, W=1, R=2 (W + R = 3 <= 3)"]
+    direction TB
+    subgraph NodesWeak["副本节点"]
+      NodeA_W[("节点 A <br/>(新数据 Y=v2)")]
+      NodeB_W[("节点 B <br/>(旧数据 Y=v1)")]
+      NodeC_W[("节点 C <br/>(旧数据 Y=v1)")]
+      style NodeA_W fill:#dfd,stroke:#333
+      style NodeB_W fill:#fdd,stroke:#333
+      style NodeC_W fill:#fdd,stroke:#333
+    end
+    
+    WriteSet_W["写集合 (W=1) <br/>[A]"] -.-> NodeA_W
+    ReadSet_W["读集合 (R=2) <br/>[B, C]"] -.-> NodeB_W & NodeC_W
+    
+    noteW["❌ 无重叠点! <br/>读请求只查到了 [B, C]，返回的都是旧版本 Y=v1。写入的数据被脏读遗漏。"]
+    NodeB_W & NodeC_W -.-> noteW
+  end
+```
 
 <ResearchNote
   title="复制：从主从到无主仲裁"
@@ -187,9 +313,46 @@ python labs/month05/m5l9_quorum/test_quorum.py
 
 ## 常见误解
 
-- **"有从库就高可用了"**：异步复制下主崩溃会丢未同步的写，且故障转移有窗口。
-- **"读从库总能读到最新"**：复制延迟会让从库读到旧数据。
-- **"quorum 任意配都一致"**：必须 W+R>N 才保证读写集合相交。
+- **"给数据库配置了主从副本（Followers）后，系统就彻底告别数据丢失、实现绝对的写高可用了"**: 极其乐观的幻想。如果配置的是 **异步复制**，主库在本地写完便立刻返回给客户端响应，在日志尚未传输到从库前主库宕机，这部分最新数据就会发生 **永久丢失**。如果配置的是 **强同步复制**，只要任意一台从副本因为网络阻塞挂起，主库的写就会被强行卡死，这不仅没有提升可用性，反而使得写的可用性降低了。
+- **"Quorum 机制下只要设定了 W+R > N，客户端读写就不需要任何版本号或冲突协商，天然就能直接拿到最新值"**: 逻辑不严密。Quorum $W+R>N$ 仅从数学上保证了“读请求查询的节点集合”与“写确认的节点集合”**必然存在至少一个重叠节点**。但客户端查出的 R 个响应中，可能既有包含最新值（来自重叠节点）的，也有包含落后旧值的。系统必须在读路径上依靠 **最新版本号或高精度时间戳** 进行比对，筛选出最新的那条数据，甚至触发 **读修复（Read Repair）** 将新值写回旧节点，强一致性才算成立。
+- **"主从模式下主库如果挂了，故障转移（Failover）是毫无代价且瞬间完成的，对业务没有任何影响"**: 忽略了主从切换的多重代价。第一是 **脑裂（Split-Brain）** 风险，原主库可能只是网络慢抖动，若此时又选出新主库，两台主库同时接收写操作将彻底污染数据。第二是 **数据丢失**（异步复制下未同步的脏数据会被新主库强制抛弃覆盖）。第三是 **选举耗时**，在发现故障、共识达成、重新路由期间，全网写服务将至少中断数秒甚至数分钟。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在异步主从复制拓扑中，客户端更新个人资料（写主库）后立即刷新页面，却发现页面上显示的依然是老数据。这种异常在分布式系统里被称为什么？架构上通常如何解决？',
+      options: [
+        '这被称为‘读己之写’（Read-Your-Writes）不一致。可以通过‘在写操作发生后的限定时间内，该用户的读请求强制路由至主库’，或者‘读取时附带最新变更的版本戳/时间戳，若从库落后则强制拉取最新数据’来解决。',
+        '这被称为‘多写冲突’。必须使用 CRDT 算法在客户端浏览器内进行数据合并。',
+        '这属于硬件磁盘损坏导致的数据丢失。只能通过回融主库的 binlog 日志到前一天来修复。'
+      ],
+      answer: 1,
+      explain: '读己之写（Read-Your-Writes）是一致性保障的经典挑战。用户对自己的更新最敏感，如果写完立刻读到旧值会觉得系统坏了。强制路由写后短时读主库是成本最低、效果最好的工程解法。'
+    },
+    {
+      q: '在 Dynamo 风格的无主复制系统中，设定总副本数 N=3，写成功人数 W=2，读响应人数 R=2。这种配置为什么能实现‘强一致性（Strong Consistency）’？',
+      options: [
+        '因为 W + R = 4 > N(3)，根据抽屉原理（鸽巢原理），读请求查询的 2 个副本集合与写成功确认的 2 个副本集合在物理上必定存在至少 1 个重合的副本。读操作通过比对该重合副本上最新的版本号，即可保证获取最新写数据。',
+        '因为系统会自动锁定这 3 个副本，禁止在读取期间发生任何并发写入。',
+        '因为无主复制下，R=2 会触发系统自动将数据持久化到本地内存，所以读取速度极快。'
+      ],
+      answer: 1,
+      explain: 'Quorum Legal Quorum (W + R > N) 的数学基石。只要读写集合有交集，就能通过最新版本号/时间戳盖掉旧数据。这是 Dynamo / Cassandra 等无主系统调和读写吞吐与一致性的核心筹码。'
+    },
+    {
+      q: '在主从复制中，同步复制（Synchronous Replication）虽然保证了‘数据零丢失’，但在实际工业生产的大规模高并发写场景中极少被作为默认配置，其最根本的瓶颈是什么？',
+      options: [
+        '同步复制无法提供读扩展性，从库无法分担读流量。',
+        '它的写延迟取决于最慢的那台从库；而且一旦任意一台从库挂起或网络阻塞，都会直接将主库的写操作挂起卡死，导致整个系统的写入不可用。这严重牺牲了写吞吐和可用性。',
+        '同步复制会使得磁盘的物理写入次数翻倍，极易把从库的固态硬盘磨损死。'
+      ],
+      answer: 1,
+      explain: '同步复制的吞吐与可用性妥协。在现实分布式系统中，我们很少使用纯全同步复制。通常采用‘异步复制’，或‘半同步复制’（只要有一台从副本确认即返回），以在数据可靠性与网络写延迟之间取得折中。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
