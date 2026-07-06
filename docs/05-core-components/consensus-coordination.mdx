@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M5L11 · 共识与协调
 
@@ -37,9 +38,65 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 基础：共识与多数派
 
+```mermaid
+flowchart TD
+  subgraph Cluster["5 节点 Raft 集群被网络分区隔离 (N=5)"]
+    direction LR
+    
+    subgraph Part1["分区 1 (少数派 - Read Only / 挂起)"]
+      NodeA[("节点 A <br/>(Candidate)")]
+      NodeB[("节点 B <br/>(Follower)")]
+      NodeA <--> NodeB
+      style NodeA fill:#fdd,stroke:#333
+      style NodeB fill:#eee,stroke:#333
+    end
+
+    PartitionLine["⚡ 网络断开 (Network Partition) ⚡"]
+
+    subgraph Part2["分区 2 (多数派 - 正常选出 Leader)"]
+      NodeC[("节点 C <br/>(Candidate)")]
+      NodeD[("节点 D <br/>(Follower)")]
+      NodeE[("节点 E <br/>(Follower)")]
+      NodeC <--> NodeD & NodeE
+      NodeD <--> NodeE
+      style NodeC fill:#dfd,stroke:#333
+      style NodeD fill:#eee,stroke:#333
+      style NodeE fill:#eee,stroke:#333
+    end
+  end
+
+  noteA["1. 节点 A 发起拉票请求。 <br/>2. 仅能收到 A、B 选票 (总数 2)。 <br/>3. 判断: 2 票 <= N/2 (2.5) ❌。 <br/>4. 结果: 少数派区域凑不够票数，绝不会选出 Leader，杜绝脑裂。"]
+  Part1 -.-> noteA
+
+  noteC["1. 节点 C 发起拉票请求。 <br/>2. 能够收到 C、D、E 选票 (总数 3)。 <br/>3. 判断: 3 票 > N/2 (2.5) ✅。 <br/>4. 结果: 多数派区域成功选出 C 为唯一合法 Leader，保障全系统一致性。"]
+  Part2 -.-> noteC
+```
+
 <GlossaryTerm term="Consensus" definition="共识：让分布式系统中的多个节点对某个值（如谁是主、日志的下一条是什么）达成一致，即使部分节点失败或网络延迟，也保证所有正常节点最终认同同一个不矛盾的结果。" >共识（consensus）</GlossaryTerm>要保证：即使部分节点崩溃、网络延迟，所有正常节点最终认同**同一个**值，且**不会出现两个矛盾的结果**。核心机制是<GlossaryTerm term="Quorum/Majority" definition="多数派：N 个节点中超过半数（N/2+1）。任何两个多数派必然有交集，所以“需多数派同意”能保证不会同时存在两个互相矛盾的决议——这是共识避免脑裂的关键。" >多数派（majority，N/2+1）</GlossaryTerm>：任何决定都要**超过半数**节点同意才生效。因为任意两个多数派必然相交，所以不可能同时存在两个矛盾的多数派决议——这从根上杜绝了脑裂。这也是为什么共识集群通常是**奇数个**（3、5）节点。
 
 ### 进阶：Raft 的领导者选举与复制日志
+
+```mermaid
+stateDiagram-v2
+  [*] --> Follower : 初始状态 (Follower)
+  
+  Follower --> Candidate : 1. 发现心跳超时 (Election Timeout)<br/>自增任期 Term, 开始选举
+  
+  state Candidate {
+    [*] --> StartElection : 向所有节点广播 RequestVote RPC
+    StartElection --> CollectVotes : 收集选票 (每个节点每 Term 限投一票)
+  }
+  
+  Candidate --> Leader : 2. 收集到超过半数选票 (Majority Votes ACK)<br/>当选成功，开始统治
+  
+  state Leader {
+    [*] --> SendHeartbeats : 定时广播空 AppendEntries (心跳)
+    SendHeartbeats --> ReplicateLog : 接收客户端写请求并向多数派同步日志
+  }
+  
+  Candidate --> Follower : 3. 收到新 Leader 的心跳或更高 Term 响应
+  Leader --> Follower : 4. 发现更高 Term 的节点响应 (例如网络分区恢复后发现新 Leader)
+```
 
 <GlossaryTerm term="Raft" definition="Raft：一种为可理解性设计的共识算法。把共识分解为领导者选举、日志复制、安全性三部分。系统选出一个 leader 统一接收写并复制日志给多数派，term（任期）+ 多数派投票保证任意时刻最多一个有效 leader。" >Raft</GlossaryTerm>把共识拆成几块，比 Paxos 易懂：
 
@@ -53,7 +110,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - 用共识管"**少量但关键的元数据**"：谁是主、集群成员、配置、分布式锁、[分片映射](./partitioning-sharding)——这正是 <GlossaryTerm term="Coordination Service" definition="协调服务：如 ZooKeeper、etcd、Consul，内部用共识算法（ZAB/Raft）维护少量关键元数据（leader、配置、锁、成员），为其它系统提供可靠的选主、配置、服务发现能力。" >ZooKeeper / etcd</GlossaryTerm> 的职责。
 - 业务数据量大，用[复制 + quorum（M5L9）](./replication)或弱一致，而非全程共识。
 - Kafka 选 controller、Kubernetes 存集群状态（etcd）、数据库选主，背后都是"用一个共识服务管关键决定，其余走更轻的复制"。这是性能与一致的务实分层。
-- FLP 不可能定理告诉我们：纯异步网络下共识无法同时保证安全和活性——Raft 用超时（随机选举超时）在工程上规避，代价是分区时可能短暂无 leader（[CAP 的 CP 取舍](../system-design-bridge/cap-consistency)）。
+- FLP 不可能定理告诉我们：纯异步网络下共识无法同时保证安全和活性——Raft 用超时（<GlossaryTerm term="Randomized Election Timeout" definition="随机选举超时 (Randomized Election Timeout)：Raft 算法用来保障活性的一项核心设计。将每个节点的选举超时时间设为随机范围内的非固定值（例如 150ms ~ 300ms）。这样，当旧 leader 宕机时，几乎必然有一个节点最先超时并率先升为候选人发起投票，从而避免了多台机器齐步走发起选举、均分选票（Split Votes）而导致选举死锁。">随机选举超时</GlossaryTerm>）在工程上规避，代价是分区时可能短暂无 leader（[CAP 的 CP 取舍](../system-design-bridge/cap-consistency)）。
 
 <ResearchNote
   title="Raft：让共识变得可理解"
@@ -64,6 +121,45 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 />
 
 ## 三、跟我做一遍：Raft 领导者选举（多数派投票）
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 客户端 (Client)
+  participant Leader as 领导者 (Leader)
+  participant Follower1 as 从节点 1 (Follower 1)
+  participant Follower2 as 从节点 2 (Follower 2)
+
+  Client->>Leader: 写请求 (Set X=100)
+  activate Leader
+  Leader->>Leader: 本地追加未提交日志条目 (X=100)
+  
+  par 广播 AppendEntries (日志复制)
+    Leader->>Follower1: AppendEntries (Entry: X=100, Term=1)
+    activate Follower1
+    Leader->>Follower2: AppendEntries (Entry: X=100, Term=1)
+    activate Follower2
+    
+    Follower1->>Follower1: 验证前置条目并追加本地
+    Follower1-->>Leader: ACK 成功 (Term=1)
+    deactivate Follower1
+
+    Note over Follower2: 此时 Follower 2 网络出现延迟卡死...
+  end
+
+  Note over Leader: 统计确认数量: <br/>自身 (1) + Follower 1 (1) = 2 <br/>2 > N/2 (1.5) 达到多数派!
+  
+  Leader->>Leader: 提交该日志条目 (Commit X=100)
+  Leader->>Leader: 应用到本地状态机 (X=100 生效)
+  Leader-->>Client: 返回写成功！(200 OK)
+  deactivate Leader
+
+  Note over Leader, Follower2: 稍后 Follower 2 恢复网络，通过下一次心跳异步追平日志
+  Leader->>Follower2: AppendEntries (CommitIndex=1)
+  Follower2->>Follower2: 追加并提交 X=100
+  Follower2-->>Leader: ACK 成功
+  deactivate Follower2
+```
 
 <PyRunner
   rows={34}
@@ -189,9 +285,46 @@ Kubernetes 用 etcd 存整个集群状态（Pod、Service、配置）；Kafka �
 
 ## 常见误解
 
-- **"共识能让所有数据强一致"**：共识慢，只用于关键元数据；海量数据走复制 + quorum。
-- **"两节点也能高可用共识"**：两节点的多数派是 2，挂一个就瘫；要奇数(≥3)。
-- **"我应该自己实现 Raft"**：极易出错，用 etcd/ZooKeeper；你的任务是理解和正确使用。
+- **"强共识算法（如 Raft/Paxos）是完美的分布式解决方案，我们应当将业务中的用户数据、订单明细等全部写入 Raft 强一致集群"**: 严重背离性能常识。共识算法为了确保绝对一致和防脑裂，引入了多轮网络 RPC 交互、多数派写盘确信、串行化投决等极重度的开销。其整体写吞吐量（QPS）往往只有几千级别，远远无法承载海量高并发业务写入。正确的分布式架构是：**共识仅用于管控面元数据（选主、锁、元数据路由），而实际的数据面业务数据则采用主从复制加 Quorum 仲裁**。
+- **"我们可以部署一个 2 节点的 Raft 集群来节约服务器成本，同时获得高可用能力"**: 逻辑常识破产。Raft 的核心基石是多数派（Quorum）机制。由 $N=2$ 个节点组成的集群，其多数派数量为 $2/2 + 1 = 2$。也就是说，一旦其中任意 1 个节点发生宕机，剩余的 1 个节点将永远无法凑齐 2 票赞成（小于多数派），整个集群将瞬间陷入不可用状态。2 节点集群相比单机，高可用性不仅没有提升，反而因为双节点出故障概率翻倍而降低了。**共识集群的节点数必须是奇数且最小为 3**。
+- **"我是一名高级后端工程师，为了展示自己的技术实力，我应当在生产系统中自己手写一套 Raft 算法实现"**: 灾难级别的工程自傲。分布式共识协议中存在海量难以穷尽的网络延迟边缘状态、单点崩溃日志对齐、成员动态变更死锁等设计巨坑。强如 etcd、ZooKeeper 的官方实现，也是经过全行业数年高强度压测和无数次线上故障才逐渐被打磨稳定。**在工业级生产中，不要自己实现共识，必须使用 etcd/etcd-raft 等现成的工业库，业务的核心挑战在于“正确配置、防范分区、合理建模”。**
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 Raft 共识算法中，为什么说‘多数派（Majority, N/2+1）投票机制’能够彻底杜绝‘脑裂（Split-Brain）’异常？',
+      options: [
+        '因为多数派机制会通过物理切断非领导者节点的电源来防止其写入数据。',
+        '根据抽屉原理（鸽巢原理），任意两个多数派集合必定在物理上重合至少一个节点。因此在同一个任期（Term）内，任何节点由于一票制（每人每任期限投一票），两个相互独立的候选人绝不可能同时集齐超过半数的赞成票，这从数学上排除了同时选出两个有效 Leader 的可能性。',
+        '因为 Raft 在发生分区时会自动转换成主从复制模式，主库负责解决投票冲突。'
+      ],
+      answer: 1,
+      explain: '多数派不相交定理是共识的基石。在 N=5 的集群中，任何多数派都必须包含至少 3 个节点，因此两个大小为 3 的集合必定有交集。这保证了同一时刻决议的唯一性。'
+    },
+    {
+      q: 'FLP 不可能定理（FLP Impossibility Theorem）在理论上限制了分布式共识，Raft 算法在工程实践上是如何规避这一限制以保障‘活性（Liveness）’的？',
+      options: [
+        'Raft 通过引入‘随机选举超时（Randomized Election Timeout）’来打散节点发起选举的时间，避免候选人持续瓜分选票（Split Votes）而导致选举陷入无限僵局，从而在极大概率下确保了选举能够迅速收敛出唯一 Leader。',
+        'Raft 抛弃了网络通信，全部改用物理共享内存来实现状态一致。',
+        'Raft 强制要求集群中所有的服务器时钟必须实现 100% 绝对纳秒级同步。'
+      ],
+      answer: 1,
+      explain: '随机选举超时的巧妙设计。FLP 定理指出，在纯异步网络中，哪怕只有一个节点可能失效，也不存在能百分百保证一致性且可终结的确定性共识算法。Raft 用随机超时这一非确定性机制打破了选票被均分的无限循环，是工程落地上的神来之笔。'
+    },
+    {
+      q: '在生产高可用系统架构中，为什么我们几乎从不使用 Raft 或 Paxos 这类强共识算法来直接同步海量的用户订单或业务数据，而是通常用它存储哪些数据？',
+      options: [
+        '因为强共识算法代码实现非常简单，无法体现核心业务数据的复杂性。',
+        '因为共识算法需要多轮网络 RTT 交互和多数派强同步，写吞吐非常低（通常在几千 QPS 级别），无法应对海量业务写。因此架构上通常将共识用于存储‘少量且关键的元数据’（如 ZooKeeper/etcd 中的配置、分布式锁、成员列表、分片路由表），而海量业务数据则采用主从异步复制或更轻量的 Quorum 读写方案。',
+        '强共识服务只支持存储字符串，不支持存储 JSON 或二进制对象。'
+      ],
+      answer: 1,
+      explain: '共识分层与务实取舍。共识服务是高可用架构的‘大脑’或‘仲裁者’。用 etcd 决定谁是写入主节点，再由该主节点用高性能的主从复制同步业务订单数据，是业界公认的高性能一致性分层设计模式。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
