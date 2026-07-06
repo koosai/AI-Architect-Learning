@@ -1,7 +1,7 @@
 ---
 sidebar_position: 9
 title: M5L7 - 重试、退避与超时
-description: 重试能救系统，也能压垮系统。超时设上限、指数退避 + 抖动避免重试风暴、重试预算控总量、配幂等防重复。
+description: 重试能救系统，也能压垮系统。超时设上限、指数退避 + 抖动避免<GlossaryTerm term="Retry Storm" definition="重试风暴 (Retry Storm)：当系统下游发生过载或网络慢抖动时，大量上游客户端同时发起高频重试调用，导致全网请求流量呈倍数甚至指数级暴增，直接将脆弱的下游系统彻底打死崩溃的雪崩灾难。">重试风暴</GlossaryTerm>、重试预算控总量、配幂等防重复。
 ---
 
 import GlossaryTerm from '@site/src/components/GlossaryTerm';
@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M5L7 · 重试、退避与超时
 
@@ -32,9 +33,58 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 基础：超时是一切的前提
 
+```mermaid
+flowchart TD
+  subgraph SingleRequest["1. 外界发起 1 个正常调用"]
+    Request["外部业务请求"]
+  end
+
+  subgraph RetryAmplify["每一层无脑重试 3 次时的流量放大 (Retry Explosion)"]
+    direction TB
+    Request -->|第 1 层调用| ServiceA["微服务 A (工作线程卡死)"]
+    
+    ServiceA -->|重试 1| ServiceB["微服务 B"]
+    ServiceA -->|重试 2| ServiceB
+    ServiceA -->|重试 3| ServiceB
+    
+    ServiceB -->|每次调用重试 3 次| ServiceC["微服务 C"]
+    ServiceC -->|每次调用重试 3 次| DB["数据库 (Slow DB Overloaded)"]
+  end
+
+  noteAmplify["💥 流量风暴乘积放大: <br/>1 个入口请求 -> 3 (A对B) -> 9 (B对C) -> 27 个并发数据库查询连接！<br/>当数据库超载时，这种叠加重试等同于对其进行 DDoS 攻击，彻底打死系统！"]
+  DB -.-> noteAmplify
+```
+
 没有<GlossaryTerm term="Timeout" definition="超时：给一次调用设定最长等待时间，超过就主动放弃。没有超时，慢依赖会无限占住调用方的线程/连接，是级联失败的根源。" >超时（timeout）</GlossaryTerm>，重试无从谈起——你得先能判定"这次失败了"才能重试。永远不要无限等待：给每次远程调用设一个合理超时（参考依赖的 [p99 延迟](../foundations/performance-and-latency)，留点余量）。超时太长则慢依赖拖死你；太短则正常请求被误杀。超时也是[熔断（M5L6）](./circuit-breaker)能识别"慢=失败"的前提。
 
 ### 进阶：指数退避 + 抖动
+
+```mermaid
+flowchart TD
+  subgraph FixedDelay["1. 固定延迟重试 (Fixed Delay: 瞬间碰撞)"]
+    direction LR
+    t0_F["t=0 (1万客户端失败)"] -->|立刻重试| t1_F["t=1s (全部同时冲击)"]
+    t1_F -->|立刻重试| t2_F["t=2s (再次齐步撞车)"]
+    noteF["后果：服务端承受周期性剧烈流量海啸，毫无喘息恢复的机会。"]
+  end
+
+  subgraph ExpBackoff["2. 纯指数退避 (Exponential Backoff: 分段撞车)"]
+    direction LR
+    t0_E["t=0 (失败)"] -->|等待 1s| t1_E["t=1s"]
+    t1_E -->|等待 2s| t3_E["t=3s"]
+    t3_E -->|等待 4s| t7_E["t=7s"]
+    noteE["后果：重试间隔拉开了，但由于‘步调一致’，重连恢复瞬间仍会在固定时刻产生尖峰撞车。"]
+  end
+
+  subgraph JitteredBackoff["3. 指数退避 + 随机抖动 (Jittered Backoff: 完全打散)"]
+    direction LR
+    t0_J["t=0 (失败)"] -->|random 0~1s| t_rand1["t=0.4s"]
+    t0_J -->|random 0~1s| t_rand2["t=0.8s"]
+    t_rand1 -->|random 0~2s| t_rand3["t=1.8s"]
+    t_rand2 -->|random 0~2s| t_rand4["t=2.6s"]
+    noteJ["✅ 优势：重试流量在时间轴上被完全熨平分散，消除流量尖峰，服务端体验温和。"]
+  end
+```
 
 - <GlossaryTerm term="Exponential Backoff" definition="指数退避：每次重试的等待间隔成倍增长（如 1s、2s、4s、8s），给故障的依赖越来越多的喘息时间，而不是密集冲击。" >指数退避</GlossaryTerm>：重试间隔逐次翻倍（1s→2s→4s），给依赖喘息，而不是密集冲击。
 - <GlossaryTerm term="Jitter" definition="抖动：在退避间隔上加入随机扰动，打散原本会同时重试的客户端，避免“重试惊群”（所有客户端在同一时刻一起重试）。" >抖动（jitter）</GlossaryTerm>：在退避时间上加随机量。**为什么关键**：如果一万个客户端同时失败、又用相同的退避，它们会在同一时刻一起重试（惊群），制造周期性流量尖峰。抖动把它们打散开。
@@ -42,7 +92,49 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 ### 深入（选学）：重试预算、幂等与"该不该重试"
 
 - <GlossaryTerm term="Retry Budget" definition="重试预算：限制重试流量占总流量的比例（如重试不超过正常请求的 10%）。一旦故障导致重试激增触顶，就停止重试，防止重试本身把系统压垮。" >重试预算</GlossaryTerm>：限制重试占总流量的比例（如 ≤10%）。单纯"最多重试 3 次"在大故障时仍可能让总流量翻倍；预算从**全局**封顶重试量，触顶就不再重试。
-- **只对幂等操作重试**（[L6](../foundations/idempotency)）：重试一个"扣款"请求可能扣两次！读操作天然可重试；写操作必须配 [idempotency key](../foundations/idempotency) 才能安全重试。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as 客户端 (Client)
+  participant GW as API 网关 (Gateway)
+  participant Budget as 预算计数器 (Retry Budget Bucket)
+  participant Serv as 下游依赖 (Downstream Service)
+
+  Note over GW, Budget: 假设设定预算比例为 10% (总请求 100，重试上限 10 次)
+  
+  User->>GW: 正常请求发出
+  activate GW
+  GW->>Budget: 累加正常请求计数 (+1)
+  GW->>Serv: 调用下游
+  activate Serv
+  Serv-->>GW: 返回 503 临时不可用
+  deactivate Serv
+  
+  GW->>Budget: 检查重试水箱: 还可以重试吗?
+  Budget-->>GW: 可以重试 (当前重试率 < 10%)
+  GW->>Budget: 累加重试请求计数 (+1)
+  GW->>Serv: 触发第 1 次重试
+  activate Serv
+  Serv-->>GW: 返回 200 OK
+  deactivate Serv
+  GW-->>User: 响应成功
+  deactivate GW
+
+  Note over GW, Budget: 此时下游突发崩溃，触发大量失败，重试计数达到 10% 警戒上限
+  
+  User->>GW: 下一个新请求
+  activate GW
+  GW->>Serv: 调用下游
+  activate Serv
+  Serv-->>GW: 返回 503 失败
+  deactivate Serv
+  GW->>Budget: 检查重试水箱: 还可以重试吗?
+  Budget-->>GW: 禁止重试! (重试预算已用尽: 已达 10% 上限)
+  GW-->>User: 直接返回 503 Service Unavailable (放弃重试，安全止血)
+  deactivate GW
+```
+- **只对<GlossaryTerm term="Idempotency" definition="幂等性 (Idempotency)：一个操作不论被执行多少次，其产生的副作用与执行一次都是完全相同的。在重试场景下，只有具备幂等性的写接口或天然只读查询，才能安全发起多次请求而不会引起数据污染或重复扣款。">幂等</GlossaryTerm>操作重试**（[L6](../foundations/idempotency)）：重试一个"扣款"请求可能扣两次！读操作天然可重试；写操作必须配 [idempotency key](../foundations/idempotency) 才能安全重试。
 - **区分可重试错误**：超时、503、连接失败 → 可重试（瞬时）；400 参数错、401 鉴权失败 → 重试无意义（确定性错误），别浪费。
 - **别让重试在每一层叠加**：A→B→C 每层各重试 3 次，最底层会被放大 3×3=9 倍。通常**只在最接近用户的一层重试**，或用预算全局控制。
 
@@ -178,9 +270,46 @@ python labs/month05/m5l7_retry/test_retry.py
 
 ## 常见误解
 
-- **"失败就多试几次总会成"**：故障时无纪律重试会放大故障、雪崩。
-- **"指数退避就够了"**：没有抖动会惊群，必须加随机。
-- **"所有失败都该重试"**：确定性错误（400/401）重试无用；写操作没幂等不能重试。
+- **"既然系统发生了偶发错误，那就多试几次总能成，重试次数设得越多越保险"**: 极其致命的想当然。如果下游服务是因为突发大流量超载变慢，无脑重试等同于在上游以 $3 \times 3 \times 3$ 的指数乘积疯狂对它进行分布式 DDoS 攻击。未设防的重试是非理性放大故障、摧毁全站可用性的第一帮凶。
+- **"指数退避（Exponential Backoff）每次重试时间都翻倍了，所以绝对可以完美规避所有重试请求在同一时刻碰撞的问题"**: 忽略了惊群的时钟对齐效应。如果一万个客户端因为同一次网络抖动在 t=0 齐步失败，由于使用了完全相同的指数退避算法（如 $1\times 2^n$），那么它们依然会在接下来的第 1s、第 2s、第 4s、第 8s 这些完全同步的时间节点上密集撞车，产生周期性的流量洪峰。唯有引入 **随机抖动（Jitter）** 才能彻底打散请求。
+- **"不管是什么网络或接口错误，只要失败了，直接无脑重试就对了"**: 极大的工程隐患。第一，任何**写操作接口**（如扣款、创建订单、发货）在没有接入 **幂等性机制（Idempotency）** 保证之前，绝对禁止重试，否则会产生重复扣款等严重生产事故。第二，对于确定性的错误（如 400 校验错、401 鉴权失效、403 无权限），重试一万次依然会是确定性报错，除了白白耗费 CPU 算力之外没有任何正向价值，应立即放弃。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在多层微服务调用链路中（例如 A -> B -> C -> DB），如果每一层都简单配置‘重试 3 次’，当数据库发生短暂拥堵时会产生什么致命后果？优秀的架构该如何防范？',
+      options: [
+        '数据库的硬盘空间会因为大量的日志记录而迅速满溢崩溃。',
+        '产生严重的‘重试雪崩放大效应’。因为底层的重试次数会在链路中发生指数乘积放大（3x3x3=27倍），瞬间用海量重复请求将本就负荷过重的数据库彻底击垮。防范措施为：通常只在最接近客户端的一层发起重试，且必须结合熔断和‘全局重试预算（Retry Budget）’限制重试比例。',
+        '服务 C 会因为多次重试而自动升级数据库的物理硬件配置。'
+      ],
+      answer: 1,
+      explain: '重试乘积放大风暴。在多级调用链中，无脑重试是级联崩溃的加速器。只在最外层（最懂业务的一层，如 BFF/App）做重试，可以极大程度约束重复流量。'
+    },
+    {
+      q: '指数退避（Exponential Backoff）虽然拉长了重试间隔，但如果不引入‘随机抖动（Jitter）’，在遭遇大范围网络瞬断后仍会产生什么工程隐患？',
+      options: [
+        '客户端的定时器会发生严重的内存泄露。',
+        '会导致所有重试请求由于‘时钟同步’在同一秒内密集撞车，产生‘重试惊群与周期性流量洪峰’。加入完全随机的抖动（Jitter）可以把重试时刻均匀散开在时间轴上，将尖峰流量削平为温和的低矮流量，保护服务端平稳过渡。',
+        '指数退避必须与 TCP 拥塞控制中的慢启动机制完全合并才能生效。'
+      ],
+      answer: 1,
+      explain: '惊群与流量周期的消除。如果没有随机化抖动，同步退避的机器将像拔河一样齐步走重试，在服务端制造周期性的惊人尖峰。Jitter 是流量平滑的核心秘诀。'
+    },
+    {
+      q: '重试预算（Retry Budget）的全局防卫机制是如何工作的？它与传统的‘限制单次请求重试 3 次’有什么本质区别？',
+      options: [
+        '重试预算只限制向免费接口重试，对收费接口不限制。',
+        '‘限制重试 3 次’是针对单个请求的，在大大规模服务故障时仍可能放任全网重试流量翻倍；而‘重试预算’是从全局维度（例如规定重试请求占比不得超过总请求的 10%）进行封顶。当故障引起大范围重试、总预算额度耗尽时，系统将断开后续请求的所有重试并快速失败，从而绝对避免了重试将故障无限放大的雪崩效应。',
+        '重试预算是专门用来控制用户 API 调用费用的结算机制。'
+      ],
+      answer: 1,
+      explain: '全局重试预算的防御价值。重试预算（如 Linkerd/Finagle 中的实现）是在并发洪峰下的顶级防御。一旦检测到全网重试洪流超标，立刻关闸，拒绝重试，是云原生高可用设计的精髓之一。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
