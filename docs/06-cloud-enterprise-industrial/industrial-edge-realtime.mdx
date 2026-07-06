@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M6L11 · 工业软件与边缘实时
 
@@ -37,19 +38,94 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 ### 基础：OT/IT 融合与工业协议
 
 - <GlossaryTerm term="OT/IT" definition="OT（运营技术）指控制物理设备的系统（PLC、SCADA、传感器）；IT 指传统信息系统（服务器、数据库、云）。工业数字化的核心挑战之一是让两者安全融合而不互相危害。">OT vs IT</GlossaryTerm>：OT（运营技术）是控制物理设备的系统（<GlossaryTerm term="PLC" definition="可编程逻辑控制器（Programmable Logic Controller）：工业现场控制机器和生产线的专用计算机，强实时、高可靠，是 OT 的核心执行单元。">PLC</GlossaryTerm>、<GlossaryTerm term="SCADA" definition="数据采集与监控系统（Supervisory Control and Data Acquisition）：监控和控制工业过程的系统，汇集现场 PLC/传感器数据、供操作员监视和下发控制。">SCADA</GlossaryTerm>、传感器），IT 是传统信息系统。工业数字化的核心就是让两者**安全融合**——让 IT/云能拿到 OT 数据做分析，又绝不让 IT 侧的问题危及 OT 控制。
-- 工业系统有自己的协议栈（如 OPC UA、MQTT、Modbus），为可靠遥测和设备互操作设计。
+- 工业系统有自己的协议栈（如 <GlossaryTerm term="OPC UA" definition="OPC 统一架构 (OPC Unified Architecture)：一种面向跨平台、服务导向（SOA）的工业通信标准协议。它提供了信息模型和机器对机器（M2M）通信规范，使得从现场 PLC/传感器直至云端系统的异构设备之间能够进行安全、语义一致的数据交互。">OPC UA</GlossaryTerm>、MQTT、Modbus），为可靠遥测和设备互操作设计。
+为了在网络融合时保护物理设备的安全，工业架构设计通常遵循著名的 <GlossaryTerm term="Purdue Model" definition="普渡模型 (Purdue Model)：由普渡大学学者提出、已被采纳为 ISA-95 标准的企业系统分层参考模型。它将工业企业网络结构从下到上划分为 Level 0（物理过程）至 Level 5（企业网络）共 6 层，各层网络通过严密的防火墙及隔离区进行安全边界划分，严防外网安全风险渗透到现场控制设备。">Purdue 模型</GlossaryTerm> 来划分网络分层和安全隔离。
+
+#### 普渡模型下 OT/IT 安全隔离网络分层架构
+
+```mermaid
+graph TD
+    subgraph IT_Zone["企业 IT 网络 (IT Zone - Level 4/5)"]
+        ERP["企业 ERP / 供应链"]
+        Cloud_Analytics["云端 AI / 长期大数据归档"]
+    end
+
+    subgraph DMZ["工业隔离区 (DMZ - Security Barrier)"]
+        Firewall["网闸 / 双向防火墙 (安全隔离)"]
+    end
+
+    subgraph OT_Zone["车间 OT 网络 (OT Zone - Level 0-3)"]
+        subgraph Level3["运营与监控 (Level 3 - SCADA/MES)"]
+            SCADA_Server["SCADA 服务器"]
+            MES["制造执行系统 (MES)"]
+        end
+          
+        subgraph Level1_2["边缘控制层 (Level 1/2 - Controllers)"]
+            Edge_Gateway["边缘网关 (Edge Gateway)"]
+            PLC_Unit["PLC 控制器 (硬实时)"]
+            HMI["触摸屏仪表 (HMI)"]
+        end
+
+        subgraph Level0["现场物理设备 (Level 0 - Process)"]
+            Sensors["现场传感器 (采样采集)"]
+            Actuators["马达 / 阀门 (执行机构)"]
+        end
+    end
+
+    IT_Zone <==>|数据汇聚与分析| DMZ
+    DMZ <==>|隔离的协议转换与映射| Level3
+      
+    SCADA_Server <-->|OPC UA 协议| Edge_Gateway
+    Edge_Gateway <-->|Modbus/工业以太网| PLC_Unit
+    PLC_Unit <-->|IO 物理链路| Sensors
+    PLC_Unit <-->|IO 物理信号| Actuators
+    PLC_Unit <-->|运行交互| HMI
+
+    style DMZ fill:#7f1d1d,stroke:#b91c1c,color:#fee2e2
+    style PLC_Unit fill:#b45309,stroke:#d97706,color:#fff
+    style Sensors fill:#0f766e,stroke:#0d9488,color:#f0fdfa
+    style Actuators fill:#0f766e,stroke:#0d9488,color:#f0fdfa
+```
 
 ### 进阶：边缘计算与缓冲
 
 - <GlossaryTerm term="Edge Computing" definition="边缘计算：在靠近设备的本地节点（边缘网关）就近处理数据，而不是全送到云。降低延迟、减少带宽、在断网时仍能本地决策。">边缘计算</GlossaryTerm>：在靠近设备的**边缘网关**就地处理——实时控制、过滤聚合数据、断网时本地决策，只把必要数据上云。解决"实时"和"带宽"。
 - <GlossaryTerm term="Store-and-Forward" definition="存储转发：设备/边缘在网络中断时把数据先存在本地缓冲，待网络恢复后再按序补发，保证断网期间的数据不丢失。">存储转发（store-and-forward）</GlossaryTerm>：网络断了，边缘**先把数据缓存在本地**，等恢复了再补发——保证断网期间数据不丢。这正是 [M5L4 边缘](../core-components/reverse-proxy-cdn) 和 [M3L9 队列](../data-cache-queue/message-queues) 思想在工业场景的应用（WhatsApp 的 store-and-forward 也是同一招）。
 
+#### 存储转发与背压缓冲控制流转
+
+```mermaid
+flowchart TD
+    Read([传感器采集高频数据]) --> CheckNet{边缘网关在线状态?}
+    
+    CheckNet -->|在线 (Online)| SendCloud[1. 直接推送上云]
+    
+    CheckNet -->|离线 (Offline)| CheckCap{"2. 本地环形缓冲区<br>(Buffer) 是否已满?"}
+    CheckCap -->|未满| StoreLocal[3. 写入本地缓存]
+    CheckCap -->|已满| Backpressure{"4. 触发背压策略"}
+    
+    Backpressure -->|丢弃最旧数据| DropOld[丢弃 Buffer 头部数据]
+    Backpressure -->|关键告警优先| KeepAlert[降采样普通遥测，锁存关键告警]
+    
+    DropOld --> StoreLocal
+    KeepAlert --> StoreLocal
+
+    StoreLocal --> Wait[等待网络连接恢复]
+    Wait --> Reconnect([网络重新连接])
+    Reconnect --> Playback["5. 补发缓冲数据<br>(按设备时间戳顺序推送)"]
+    Playback --> ClearLocal[6. 清空本地缓冲区]
+
+    style CheckCap fill:#b45309,stroke:#d97706,color:#fff
+    style DropOld fill:#7f1d1d,stroke:#b91c1c,color:#fee2e2
+    style Playback fill:#0f766e,stroke:#0d9488,color:#f0fdfa
+```
+
 ### 深入（选学）：实时、乱序与安全的硬约束
 
 - **实时性分级**：硬实时（错过 deadline = 失败/危险，如急停）必须在边缘/PLC 本地保证，绝不依赖云往返；软实时（仪表盘、分析）可以容忍延迟、上云处理。架构师要分清哪些回路是硬实时的。
 - **乱序与时间戳**：高频多设备数据会乱序到达——要按**设备侧时间戳**而非到达顺序处理，用窗口聚合容忍迟到数据（[呼应流处理思想](../data-cache-queue/feed-fanout)）。
 - **安全是物理安全**：OT 入侵的后果是物理的（停产、设备损毁、人身危险）。所以 OT 网络严格隔离（网闸/单向网关）、最小权限、且任何"AI 自动控制物理设备"都必须有**人工确认 + 安全联锁 + 可审计**——AI 给建议可以，直接控制重型设备要极其谨慎。
-- **缓冲要有界**：本地缓冲不能无限（设备存储有限），满了要有策略（丢最旧、降采样、优先级保留关键数据）——[呼应 L11 背压](../foundations/sync-async-timeout)。
+- **缓冲要有界**：本地缓冲不能无限（设备存储有限），满了要有策略（丢最旧、降采样、优先级保留关键数据）——[呼应 L11 背压](../foundations/sync-async-timeout) 与有界<GlossaryTerm term="Backpressure" definition="背压 (Backpressure)：在流处理或消息传输中，当消费端处理速度慢于生产端发送速度时，接收端反向向发送端施加压力以减缓其生产速率的机制。在边缘计算中，当网络离线且本地环形缓冲区写满时，背压策略决定了是直接丢弃最旧数据，还是锁定关键告警以防系统崩溃。">背压</GlossaryTerm>。
 
 <ResearchNote
   title="工业系统按信息物理系统设计：实时、可靠、安全、人机协作"
@@ -169,6 +245,31 @@ python labs/month06/m6l11_edge_buffer/test_edge_buffer.py
 
 工业 AI 落地的铁律：**AI 做"建议/预测/监督"相对安全，AI 直接"控制物理设备"必须极其谨慎。** 预测性维护（提前预警设备故障）、质量检测（视觉识别缺陷）、能耗优化建议——这些 AI 给出结果、人或既有安全系统把关，风险可控。但让 AI 直接调节重型机械、电网、化工流程，一旦出错后果是物理的、不可逆的——必须有[人工确认 + 安全联锁 + 完整审计 + 可回退]。这呼应 [M6L10 企业 AI](./enterprise-erp-integration) 和后续 [AI 平台治理（Month 11）](../production-ai-platform/overview)：**越接近物理世界和金钱，AI 的自主权就要越受约束。**
 
+#### 工业 AI 闭环直接控制 vs 人机协同监督
+
+```mermaid
+flowchart TD
+    subgraph Advisory["方式 1: 人机协同建议 (Advisory Mode - 安全风险低)"]
+        AI_Predict1[AI 模型推理分析] --> Alert[报警提示与优化建议]
+        Alert --> Operator[操作员人工复核确认]
+        Operator -->|控制指令下发| Controller1[现场控制器]
+        Controller1 -->|操作执行| Machine1[重型工业机械]
+    end
+
+    subgraph Closed_Loop["方式 2: 闭环直接控制 (Closed-Loop Mode - 高风险边界)"]
+        AI_Predict2[AI 模型决策输出] --> Safety_Logic{"硬接线安全联锁校验<br>(Hardware Interlock / Safety PLC)"}
+        Safety_Logic -->|校验通过| Controller2[现场控制器]
+        Safety_Logic -->|异常中断/越界| Emergency_Stop([紧急制动保护])
+        Controller2 -->|直接驱动| Machine2[重型工业机械]
+    end
+
+    style Operator fill:#0284c7,stroke:#0284c7,color:#fff
+    style Safety_Logic fill:#7f1d1d,stroke:#b91c1c,color:#fee2e2
+    style Emergency_Stop fill:#7f1d1d,stroke:#b91c1c,color:#fee2e2
+    style Machine1 fill:#1e293b,stroke:#475569,color:#fffdfa
+    style Machine2 fill:#1e293b,stroke:#475569,color:#fffdfa
+```
+
 ### 4. 架构师深问（给自己 30 分钟）
 
 - 你的工业场景里，哪些是硬实时回路（必须边缘/本地）、哪些可以上云？分界线在哪？
@@ -184,9 +285,46 @@ python labs/month06/m6l11_edge_buffer/test_edge_buffer.py
 
 ## 常见误解
 
-- **"工业系统就是 IoT 设备发数据上云"**：还要处理断网、乱序、硬实时、OT/IT 隔离和物理安全。
-- **"实时计算都放云端"**：硬实时控制必须放边缘/现场，云往返太慢太不可靠。
-- **"工业 AI 越自动越好"**：直接控制物理设备风险极高，必须人工确认 + 安全联锁。
+- **"工业互联网项目只要通过部署传感器代理，利用高性能的 WebSockets 保持与公有云的长连接，把数据源源不断地发上云进行实时分析即可完成"**：这是忽略工厂恶劣网络和本地自治需求的典型互联网思维。工业现场的网络断连、抖动、高频磁场干扰、网线断开是家常便饭，绝不可能依赖“随时在线的长连接”。在网络断开的一瞬间，系统如果没有**边缘侧 Store-and-Forward 本地独立存储缓冲**，数据就会瞬间丢失；同时，如果将几万台设备每秒几百次的高频采样直接无脑推向公有云，会带来极其庞大的广域网带宽账单。正确的做法是边缘过滤合并，本地闭环决策，按需上云。
+- **"既然强化学习和深度学习模型能比经验丰富的工程师更好地优化机械臂路径和锅炉温度，我们就应当直接让 AI 闭环控制核心执行阀门，实现全自动化车间"**：这是极度危险的冒险行为。软件层面的 AI 推理存在固有的不确定性，且在大模型时代容易发生“幻觉”；即使是小型的强化学习控制，在边缘遇到传感器损坏、网络抖动等输入脏数据时，也可能输出导致物理设备损毁甚至人身伤亡的极端异常指令。**AI 在涉及物理安全的场景中绝不能拥有完全独立的无监督终极控制权**，必须在其下层通过独立的“安全仪表系统（SIS）”或由硬接线继电器组成的“安全联锁（Interlock）”来进行强制数据限幅和紧急制动阻断。
+- **"硬实时（Hard Real-time）控制问题只要升级到 5G 工业专网，或者采用 10Gbps 的高带宽光纤网络，就可以把 PLC 控制回路搬到私有云或边缘服务器中运行"**：彻底混淆了“网络高吞吐量/无线低延迟”与“操作系统确定性调度延迟（Determinism）”。高吞吐量网络能够支持大数据传输，但无法保证网卡串行化、广域网多跳路由排队等带来的**延迟上限确定性保证（Deterministic Deadline）**。此外，网络物理性中断的风险永远无法降到 0。硬实时控制回路（如电机伺服闭环、安全阀门急停）的 Deadline 往往在毫秒甚至微秒级，必须在最现场的硬实时控制器（PLC/微控制器）中直接闭环，不能涉及任何广域网网路栈。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在工业信息化与 OT/IT 安全隔离的业界规范中，著名的普渡模型（Purdue Model / ISA-95）对网络拓扑是如何规定的？为什么 Level 0-2 的 PLC 与传感器绝对不能直接与 Level 4/5 的企业云相连？',
+      options: [
+        '因为 PLC 的计算能力太弱，不支持运行 HTTP/HTTPS 协议，所以在网络物理层面上无法与云服务器直接握手。',
+        '普渡模型将工业系统划分为严格的层级，并在 IT 网络（ERP/云分析，Level 4/5）与 OT 控制网络（Level 0-3）之间设置工业 DMZ 隔离防火墙和网闸。这是因为一旦允许云端网络直接穿透访问 Level 1/2 的 PLC 控制器，来自外网的网络攻击、木马或云端软件漏洞，就可以直接物理操纵车间设备（如电机过载、阀门过压），造成停产、设备损毁甚至人身伤亡等不可挽回的物理后果。',
+        '这是为了节省广域网 IP 地址，通过局域网进行网络转换（NAT）的省钱设计。'
+      ],
+      answer: 1,
+      explain: 'IT 与 OT 隔离是信息物理系统（CPS）的最硬安全边界。IT 入侵只丢数据，OT 被攻破会导致设备物理损坏甚至生命危险。普渡模型通过 DMZ 网闸将 IT 和 OT 严密隔开，数据只能单向异步同步或在 DMZ 中转，禁止任何云端外网流量直接控制底层 PLC。'
+    },
+    {
+      q: '在不可靠的边缘网络现场，存储转发（Store-and-Forward）机制能够防止数据断网丢失。但如果现场发生长达数十天的持续断网，导致边缘网关的本地“有界环形缓冲区（Bounded Buffer）”写满时，架构师应该设计怎样的背压（Backpressure）溢出策略以保证系统安全？',
+      options: [
+        '本地缓冲写满时，直接阻塞物理传感器的 IO 采集线程，直至网络恢复再继续采样。',
+        '一旦写满，立即清空整个缓冲区并触发设备重启，防止内存溢出。',
+        '本地存储不可能无限。写满时应触发有界背压机制：最基础的做法是“丢弃最旧数据，存入最新数据”；在关键工业生产中，应采取“按优先级锁存”策略，停止缓存非核心的普通温度/压力遥测数据，甚至在边缘进行降采样（如 100Hz 降到 1Hz），但 100% 优先保留和锁存设备异常警报、故障停机事件等关键告警数据。'
+      ],
+      answer: 2,
+      explain: '本地存储不是无限的，必须保证缓冲区有界以防 OOM。在写满时不能阻塞采集（这会导致设备彻底失控），也不能随便丢光。应当分级处理，降采样或优先保留告警/事件等高优先级数据，丢弃低价值的普通遥测。'
+    },
+    {
+      q: '工业实时控制中，硬实时（Hard Real-time）与软实时（Soft Real-time）的本质区别是什么？对我们设计“云-边-端”三层协同的架构有何指导意义？',
+      options: [
+        '硬实时是指控制指令必须由金属网线（硬线）传输，软实时是指可以通过无线 Wi-Fi 传输。',
+        '硬实时的 Deadline 是绝对刚性的，错过一次 deadline 就会导致灾难性后果（如汽车气囊没弹出、急停失效导致机件相撞），因此这类控制逻辑必须下沉在 Level 1/2 的本地 PLC/端侧硬实时系统，绝对不能依赖云端；软实时（如分析大屏更新、长期维护预测）错过 deadline 只会影响用户体验，不会造成危险，因此可以部署在边缘服务器或云端，以获取更强的算力。',
+        '硬实时计算使用的计算公式更复杂，需要使用浮点数；软实时计算只计算简单的整数加减法。'
+      ],
+      answer: 1,
+      explain: '硬实时与软实时的分水岭在于“错过截止时间的物理后果”。凡是涉及安全、物理碰撞等硬实时决策，绝对不能过网（过 WAN 上云），必须在最现场就地闭环（几毫秒内执行完毕）；而无害的报表统计、故障分析和建议，则可以上云慢处理。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
