@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M6L6 · CI/CD 流水线
 
@@ -41,11 +42,79 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - <GlossaryTerm term="Fail Fast" definition="快速失败：把最快、最便宜的检查放在流水线前面，一旦失败立即停止、不再跑后面昂贵的阶段，尽早给开发者反馈。" >fail-fast</GlossaryTerm>：便宜快的检查（编译、单测）放前面，一失败立刻停，不浪费时间跑后面昂贵的阶段。
 - <GlossaryTerm term="Quality Gate" definition="质量门禁：流水线中必须通过才能进入下一阶段的检查（如测试全过、覆盖率达标、无高危漏洞、需人工审批）。不达标就阻断发布。" >质量门禁（quality gate）</GlossaryTerm>：每个阶段是个关卡——测试全过、覆盖率达标、无高危漏洞、（生产前）人工审批，不达标就**阻断**，绝不放行。
 
+#### CI/CD 典型阶段与质量门禁流转
+
+```mermaid
+flowchart TD
+    Commit([代码提交 / PR]) --> Build[构建与编译<br>Build]
+    Build --> Unit["单元测试 & 覆盖率门禁<br>Unit Test & Coverage"]
+    Unit --> Security["静态安全扫描 (SAST)<br>Security Scan"]
+    Security --> Package["生成制品 (Docker 镜像)<br>Package Image"]
+    Package --> Staging["部署测试环境<br>Deploy Staging"]
+    Staging --> E2E["端到端 & 冒烟测试<br>E2E & Smoke Test"]
+    E2E --> Approval{"生产人工审批门禁?<br>Manual Gate"}
+    Approval -->|Yes| Prod["部署生产环境 (金丝雀/滚动)<br>Deploy Production"]
+    
+    subgraph Quality_Gates["流水线快速失败质量门禁 (Fail Fast Quality Gates)"]
+        UnitGate{{"门禁: 0 失败 & 覆盖率 >= 80%"}}
+        SecGate{{"门禁: 0 高危安全漏洞"}}
+        E2EGate{{"门禁: 0 E2E 报错阻断"}}
+    end
+
+    Unit -.->|阻断并发送通知| UnitGate
+    Security -.->|阻断并发送通知| SecGate
+    E2E -.->|阻断并发送通知| E2EGate
+
+    style Quality_Gates fill:#1e293b,stroke:#475569,stroke-width:1px,color:#fee2e2
+    style Prod fill:#0f766e,stroke:#0d9488,stroke-width:2px,color:#f0fdfa
+    style Commit fill:#1e293b,stroke:#475569,stroke-width:1px,color:#e2e8f0
+```
+
 ### 深入（选学）：制品晋级、流水线即代码与安全左移
 
-- <GlossaryTerm term="Build Once, Promote" definition="一次构建、逐级晋级：只在 CI 阶段构建一次不可变制品（镜像），然后让同一个制品依次晋级到 dev/staging/prod，而不是每个环境各自重新构建——保证各环境跑的是同一个二进制。" >一次构建、逐级晋级</GlossaryTerm>：只构建一次[不可变镜像（M6L1）](./containers)，让**同一个制品**依次晋级 dev→staging→prod。绝不每个环境各自重新构建（否则各环境跑的不是同一个东西，又回到漂移）。
+- <GlossaryTerm term="Build Once, Promote" definition="一次构建、逐级晋级：只在 CI 阶段构建一次不可变制品（镜像），然后让同一个制品依次晋级到 dev/staging/prod，而不是每个环境各自重新构建——保证各环境跑的是同一个二进制。" >一次构建、逐级晋级</GlossaryTerm>：只构建一次不可变<GlossaryTerm term="Software Artifact" definition="软件制品 (Software Artifact)：在软件开发生命周期中，由编译、构建等构建过程所产生的可部署二进制包、归档文件或容器镜像。它是一个特定版本代码编译出的不可变输出产物。">制品（镜像）</GlossaryTerm>，让**同一个制品**依次晋级 dev→staging→prod。绝不每个环境各自重新构建（否则各环境跑的不是同一个东西，又回到漂移）。
+
+#### "一次构建，逐级晋级"防漂移镜像晋级对比
+
+```mermaid
+flowchart TD
+    subgraph Wrong_Mutable_Path["错误做法：每个环境分别构建 (环境漂移风险)"]
+        W_Code[Git 代码] -->|构建| W_Dev[开发版镜像] --> Dev_Env[(开发环境 Dev)]
+        W_Code -->|构建| W_Stg[测试版镜像] --> Stg_Env[(测试环境 Staging)]
+        W_Code -->|构建| W_Prod[生产版镜像] --> Prod_Env[(生产环境 Production)]
+        note1["配置、打包工具版本微小差异<br>导致各环境运行包可能存在不一致"]
+    end
+
+    subgraph Correct_Immutable_Path["正确做法：一次构建，逐级晋级 (Immutable Artifact)"]
+        C_Code[Git 代码] -->|CI 仅构建一次| C_Image[不可变镜像 app:sha-123]
+        C_Image --> Dev_Env2[(开发环境 Dev)]
+        Dev_Env2 -->|测试通过| Stg_Env2[(测试环境 Staging)]
+        Stg_Env2 -->|验证通过 / 制品晋级| Prod_Env2[(生产环境 Production)]
+        note2["相同的二进制镜像包依次推进<br>运行配置通过环境变量动态挂载注入"]
+    end
+
+    style note1 fill:#7f1d1d,stroke:#b91c1c,color:#fee2e2
+    style note2 fill:#0f766e,stroke:#0d9488,color:#f0fdfa
+```
+
 - **流水线即代码**：流水线定义本身也是代码（`.gitlab-ci.yml` 等），版本化、可评审——和 [IaC（M6L5）](./infrastructure-as-code) 同理。
 - <GlossaryTerm term="Shift Left" definition="安全/质量左移：把测试、安全扫描、合规检查尽量提前到流水线早期（甚至开发者本地），问题越早发现修复越便宜，而不是等上线前才检查。" >安全左移（shift left）</GlossaryTerm>：把测试、安全/依赖扫描、合规检查尽量前移，越早发现越便宜（[呼应 L13 缺陷成本曲线](../foundations/testing-and-tdd)）。
+
+#### 安全与质量左移缺陷修复成本指数曲线
+
+```mermaid
+flowchart TD
+    subgraph Shift_Left["安全与质量左移 (Shift Left: 越早修复成本越低)"]
+        S1[1. 本地开发阶段<br>Linter / 本地单测] -->|修复成本: $1| S2[2. 代码提交 / PR 阶段<br>CI 编译 / 覆盖率门禁]
+        S2 -->|修复成本: $10| S3[3. 集成测试阶段<br>E2E 测试 / 动态安全扫描]
+        S3 -->|修复成本: $100| S4[4. Staging 预发布阶段<br>性能压测 / 人工审核]
+        S4 -->|修复成本: $1,000| S5["5. 生产上线阶段 (灾难)<br>系统崩溃 / 漏洞泄露"]
+    end
+
+    style S1 fill:#0f766e,stroke:#0d9488,stroke-width:2px,color:#f0fdfa
+    style S5 fill:#7f1d1d,stroke:#b91c1c,stroke-width:2px,color:#fee2e2
+```
+
 - 部署阶段对接 [M6L4 的发布策略](./autoscaling-rollout)：CD 不是粗暴替换，而是滚动/金丝雀 + 失败自动回滚。
 
 <ResearchNote
@@ -53,7 +122,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   source="Humble & Farley, Continuous Delivery；DORA / Accelerate（四大关键指标）"
   href="https://dora.dev/"
   insight="《Continuous Delivery》确立了流水线、一次构建逐级晋级、自动化测试门禁等实践。DORA 研究用四大指标（部署频率、变更前置时间、变更失败率、恢复时间）证明：高频、小批量、自动化的交付反而更稳定——速度与稳定性正相关，而非取舍。"
-  application="建流水线：阶段化 + fail-fast + 质量门禁 + 一次构建逐级晋级 + 安全左移 + 自动回滚。用 DORA 四指标度量交付效能。流水线本身用代码管理。让“发布”从高风险事件变成日常无感操作。"
+  application="建流水线：阶段化 + fail-fast + 质量门禁 + 一次构建逐级晋级 + 安全左移 + 自动回滚。用 <GlossaryTerm term='DORA Metrics' definition='DORA 指标 (DevOps Research and Assessment Metrics)：DevOps 领域公认用于衡量软件交付效能的四个关键指标，包括：部署频率 (Deployment Frequency)、变更前置时间 (Lead Time for Changes)、服务恢复时间 (Time to Restore Service) 以及变更失败率 (Change Failure Rate)。前两个衡量速度，后两个衡量稳定性。'>DORA</GlossaryTerm> 四指标度量交付效能。流水线本身用代码管理。让“发布”从高风险事件变成日常无感操作。"
 />
 
 ## 三、跟我做一遍：流水线编排（fail-fast + 门禁）
@@ -180,9 +249,46 @@ python labs/month06/m6l6_pipeline/test_pipeline.py
 
 ## 常见误解
 
-- **"CI/CD 就是自动部署"**：CI 是自动构建+测试，CD 是自动交付/部署，门禁和回滚同样关键。
-- **"发得快就容易出事"**：DORA 证明高频小批量 + 自动化反而更稳定。
-- **"每个环境各自构建没事"**：那会导致环境不一致；要一次构建、逐级晋级同一制品。
+- **"搭建了 GitLab CI 或 Jenkins 脚本自动执行 `kubectl apply`，这就代表我们团队已经完全落地了 CI/CD 的工程标准"**：这是用“工具链”代替“工程规范”的典型误区。CI/CD 的精髓绝不在于写了几行流水线脚本，而在于**软件工程的纪律性与反馈速度**。真正的持续集成（CI）要求开发者每天将代码多次合并入主干，并且每次合并都必须在几分钟内给出构建和测试反馈；如果团队依然在跑“长命分支（Long-lived Branches）”且半个月才合并一次，或者流水线挂了无人理会、测试报错就直接用注释绕过，那么即便搭建了最先进的工具链，也根本没有落地 CI。
+- **"由于测试环境、预发环境和生产环境的配置文件（如数据库连接、API Endpoint）各不相同，我们应当在流水线的不同环境中，分别使用各自的配置文件重新编译、构建镜像包"**：这是极具破坏性的**反模式（Anti-pattern）**，直接打破了“制品单一性”的铁律。如果在测试环境验证通过后，在发布生产环境时又重新构建了一次镜像，就根本无法保证新构建的包没有因为依赖解析升级、编译器差异或临时网络变更带入新的 Bug。正确的做法是：**应用镜像应当是 100% 环境无关（Environment-agnostic）的**，一次编译终身受用，不同环境的数据库密码、外部地址必须在运行时以环境变量或 K8s ConfigMap/Secret 的形式注入。
+- **"持续部署（Continuous Deployment）倡导自动化，因此流水线末端绝对不应该存在‘人工点击审批’或者‘人工测试门槛’，否则就是反自动化的退步"**：混淆了持续交付（Continuous Delivery）与持续部署（Continuous Deployment）的定义界限。在许多受监管约束的企业（如金融、医疗）或具有严格合规要求的场景中，保留一个“人工点击审批”按钮或引入特定的手动预演评估是完全符合持续交付标准的。只要流水线在“从代码到生产发布前”的所有构建、测试、安全门禁全部自动化，应用保持随时可一键上线的就绪状态，就已经是极高水平的 CI/CD 落地。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在持续部署（CD）的最佳实践中，为什么极力反对“在部署到 Staging 环境和 Production 环境时，分别使用该环境的分支或不同的 Dockerfile 重新进行镜像构建”？',
+      options: [
+        '因为这样会导致多次编译耗费不必要的云资源，纯粹是为了省钱和提高流水线速度。',
+        '因为多次构建无法保证产物的绝对一致性。例如第三方依赖包版本变化、编译器小版本升级或临时环境变量差异，都会导致在测试环境通过验证的包与生产环境的包出现偏差（环境漂移）。正确做法是“一次构建，逐级晋级”，同一镜像通过不同环境的环境变量挂载运行。',
+        '因为 K8s 无法拉取同一个 Docker 镜像，只支持按环境名称命名的镜像名称。'
+      ],
+      answer: 1,
+      explain: '“一次构建，逐级晋级（Build Once, Promote）”是持续交付的底层法则。只有确保开发、测试和生产跑的是 100% 同一个二进制镜像包，测试环境的质量验证才对生产有绝对的保障作用。环境差异应当完全外置，由环境变量注入，而不要打包到镜像内部。'
+    },
+    {
+      q: 'DevOps 研究与评估组织（DORA）提出的度量软件交付效能的四个核心指标（DORA Metrics）分别是什么？根据 DORA 报告，交付“速度”与系统“稳定性”之间是何种关系？',
+      options: [
+        '四大指标是：代码行数、Bug 数量、工时数、会议频率。报告证明，发版越快 Bug 越多，二者是相互冲突需要折中取舍的关系。',
+        '四大指标是：部署频率、变更前置时间、服务恢复时间、变更失败率。研究表明交付速度与稳定性“正相关”——高效能团队不仅发布频率极高、前置时间极短，同时失败率极低且恢复极快，因为小批量发布和自动化流水线同时提升了二者。',
+        '四大指标是：CPU 利用率、QPS、网络吞吐、内存占比。报告表明发版越慢系统越稳定。'
+      ],
+      answer: 1,
+      explain: 'DORA Metrics 的四个核心指标分为速度维度（部署频率、变更前置时间）与稳定性维度（服务恢复时间、变更失败率）。DORA 报告彻底打破了“快就容易出错”的传统直觉，证明高效能团队利用自动化流水线、质量门禁与小步快跑，能够做到速度与稳定性兼得。'
+    },
+    {
+      q: '在设计 CI/CD 流水线的“快速失败（Fail Fast）”与“质量门禁（Quality Gate）”时，以下哪种阶段和检查顺序的设计是最科学、最高效的？',
+      options: [
+        '先进行耗时最长的生产环境端到端（E2E）集成测试，通过后再执行单机编译与代码静态审查。',
+        '应该将最快、最便宜的检查（如 Linter 静态扫描、单元测试与覆盖率门禁）放在流水线的最前列，一旦失败立即终止；然后才执行 Docker 镜像打包，并在部署 Staging 环境后跑耗时较长的集成与 E2E 测试。',
+        '为了缩短流水线执行时间，应当不设中间任何拦截门禁，将所有构建和测试并行跑完，最后统一生成一份 PDF 报告由人工看。'
+      ],
+      answer: 1,
+      explain: '快速失败（Fail-fast）原则。越便宜、越快的验证越要放前面。如果编译或基础单测没过，就完全没有必要去执行漫长且消耗昂贵算力的 Docker 构建或云端集成测试，这样可以以最快的速度将反馈提供给提交代码的开发者，节省计算资源和等待时间。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
