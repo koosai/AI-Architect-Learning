@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M6L12 · Capstone：云原生交付一个服务
 
@@ -30,6 +31,40 @@ M5 你设计了短链/高可用服务（负载均衡 + 限流 + 熔断 + 复制 
 
 ## 二、组装完整交付链
 
+#### 端到端云原生交付流水线生命周期
+
+```mermaid
+graph TD
+    subgraph Developer_Zone["开发与代码管理"]
+        Git_Repo["应用代码 Git 仓库"] -->|Git Push / PR 合并| CI_Trigger([CI 流水线触发])
+    end
+
+    subgraph CI_Pipeline["持续集成 (CI Pipeline - M6L6)"]
+        CI_Trigger --> Lint["代码 Lint & 安全漏洞扫描"]
+        Lint --> Unit_Tests["单元测试与集成测试"]
+        Unit_Tests --> Build_Image["Docker 镜像多阶段构建 (M6L1)"]
+        Build_Image --> Push_Registry["推送镜像至私有制品库 (Registry)"]
+    end
+
+    subgraph GitOps_Zone["声明式持续交付 (CD - ArgoCD/GitOps)"]
+        Push_Registry -->|自动更新版本 Sha| GitOps_Repo["GitOps 环境声明仓库"]
+        GitOps_Repo -->|Webhook 触发 / 定时拉取| GitOps_Engine["GitOps 同步引擎 (ArgoCD)"]
+        GitOps_Engine -->|1. 比较 Actual vs Desired| Reconcile_Loop["K8s / Cloud Provider (调和)"]
+    end
+
+    subgraph Cluster_Deploy["生产运行时环境 (K8s)"]
+        Reconcile_Loop -->|2. 金丝雀部署 (Canary Rollout)| Canary_Pods["Canary 实例 (10% 流量)"]
+        Reconcile_Loop -->|3. HPA 自动缩伸| Stable_Pods["Stable 实例 (90% 流量)"]
+        Canary_Pods -->|遥测指标汇报| Prometheus["可观测系统 (Prometheus / SLO 告警)"]
+        Prometheus -->|SLO 校验通过 -> 全量上线| Reconcile_Loop
+        Prometheus -->|SLO 恶化 -> 自动回滚| Reconcile_Loop
+    end
+
+    style GitOps_Zone fill:#1e293b,stroke:#475569,color:#fff
+    style CI_Pipeline fill:#0f766e,stroke:#0d9488,color:#f0fdfa
+    style Cluster_Deploy fill:#b45309,stroke:#d97706,color:#fff
+```
+
 ### 基础：打包与部署
 
 - **容器化（[M6L1](./containers)）**：服务打成不可变镜像，依赖随镜像走，分层优化构建。
@@ -39,18 +74,74 @@ M5 你设计了短链/高可用服务（负载均衡 + 限流 + 熔断 + 复制 
 
 - **IaC（[M6L5](./infrastructure-as-code)）**：用代码声明集群、数据库、网络——一条命令建出和生产一致的环境，可复制可回滚。
 - **CI/CD（[M6L6](./cicd-pipelines)）**：提交 → 构建镜像 → 测试/安全门禁 → 一次构建逐级晋级 → [金丝雀发布（M6L4）](./autoscaling-rollout) + 失败自动回滚。
-- **弹性（[M6L4](./autoscaling-rollout)）**：HPA 按指标自动伸缩副本。
+
+#### 金丝雀发布流量分配与自动回退决策流转
+
+```mermaid
+flowchart TD
+    Start([开始部署 V2 版本]) --> DeployCanary[1. 部署 Canary Pods <br>并将 10% 流量切入 Canary]
+    DeployCanary --> WaitEval[2. 等待评估时间窗口 <br>监控 Canary 指标]
+    WaitEval --> CheckSLI{3. 校验 Canary SLI <br>(错误率 < 1% 且 延迟正常?)}
+    
+    CheckSLI -->|指标恶化 (SLO 违背)| Rollback["4. 自动回滚 (Rollback)<br>流量 100% 切回 V1<br>销毁 Canary Pods"]
+    Rollback --> Alert([触发 Slack / 告警中心通知])
+    
+    CheckSLI -->|正常 (OK)| ScaleCanary[5. 流量放大至 50% <br>继续评估]
+    ScaleCanary --> CheckSLI2{6. 再次校验 SLI?}
+    
+    CheckSLI2 -->|指标恶化 (SLO 违背)| Rollback
+    CheckSLI2 -->|正常 (OK)| Promotion["7. 全量上线 (Full Rollout)<br>流量 100% 切入 V2<br>V1 Pods 逐渐下线销毁"]
+    Promotion --> Success([V2 部署成功])
+
+    style CheckSLI fill:#7f1d1d,stroke:#b91c1c,color:#fee2e2
+    style CheckSLI2 fill:#7f1d1d,stroke:#b91c1c,color:#fee2e2
+    style Rollback fill:#7f1d1d,stroke:#b91c1c,color:#fee2e2
+    style Promotion fill:#0f766e,stroke:#0d9488,color:#f0fdfa
+```
+
+- **弹性（[M6L4](./autoscaling-rollout)）**：<GlossaryTerm term="HPA" definition="水平轴自动伸缩 (Horizontal Pod Autoscaler)：Kubernetes 的内置自动控制器，它能够根据实际观测到的 CPU/内存利用率或自定义指标，动态调整 ReplicationController/Deployment 控制的 Pod 副本数量。">HPA</GlossaryTerm> 按指标自动伸缩副本。
 
 ### 深入（选学）：看得见、治得住、可演进
 
 - **可观测（[M6L7](./observability-advanced)）**：RED/USE 指标 + 结构化日志 + 链路追踪 + 基于 [SLO 燃尽率](./observability-advanced) 的告警——出问题分钟级定位。
 - **服务网格（[M6L8](./service-mesh)，可选）**：服务多了，把 mTLS/重试/熔断/遥测下沉到 sidecar，统一治理。
-- **一条主线贯穿全月**：[声明式 + 调和（M6L2/L5）](./kubernetes-basics)——K8s 声明副本、IaC 声明资源、GitOps 声明环境，全是"声明期望、自动逼近"。理解它，整条交付链就是一个统一心智模型，而非一堆零散工具。
+- **一条主线贯穿全月**：[声明式 + <GlossaryTerm term="Reconciliation Loop" definition="调和循环 (Reconciliation Loop)：一种在控制系统和云原生引擎中广泛应用的控制回路算法。它不断观察系统的当前实际状态（Actual State），与声明的期望状态（Desired State）进行比较，如果发现不一致，则触发纠偏或变更操作，最终逼近期望状态。">调和</GlossaryTerm>（M6L2/L5）](./kubernetes-basics)——K8s 声明副本、IaC 声明资源、<GlossaryTerm term="GitOps" definition="GitOps：一种持续交付软件的运作模型。它将 Git 仓库作为基础设施与应用部署声明（Desired State）的唯一事实来源，并通过自动化的同步引擎（如 ArgoCD）监测运行环境（Actual State），当两者发生漂移时自动进行调和逼近。">GitOps</GlossaryTerm> 声明环境，全是"声明期望、自动逼近"。理解它，整条交付链就是一个统一心智模型，而非一堆零散工具。
+
+#### 声明式规范与调和循环范式
+
+```mermaid
+graph LR
+    subgraph Spec["期望状态声明 (Desired State)"]
+        YAML["YAML 配置 / Git 提交<br>(e.g., replicas: 3, port: 8080)"]
+    end
+
+    subgraph Reconciler["调和回路 (Reconciliation Loop)"]
+        Compare{"对比状态 (Compare)"}
+        Observe["观察当前状态 (Observe / Actual State)"]
+        Act["执行收敛操作 (Act / Take Action)"]
+    end
+
+    subgraph Runtime["物理运行环境 (Actual State)"]
+        Actual_Env["运行容器 / 负载均衡 / 云资源"]
+    end
+
+    YAML -->|1. 声明并写入| Compare
+    Observe -->|2. 采集当前指标/状态| Compare
+    Compare -->|3. 存在状态差异 (Actual != Desired)| Act
+    Compare -->|4. 状态一致| Loop_End([无须操作])
+    Act -->|5. 触发创建/销毁/修改动作| Actual_Env
+    Actual_Env -.->|不断循环| Observe
+
+    style Spec fill:#0f766e,stroke:#0d9488,color:#f0fdfa
+    style Reconciler fill:#b45309,stroke:#d97706,color:#fff
+    style Compare fill:#7f1d1d,stroke:#b91c1c,color:#fee2e2
+```
+
 - **GitOps 终态**：Git 是唯一事实来源，合并即部署、回滚即 revert——把交付变成"改声明 + 自动调和"。
 
 <ResearchNote
   title="云原生交付：把设计变成可靠、可演进的运行系统"
-  source="CNCF Cloud Native 定义；Google SRE；DORA / Accelerate；The Twelve-Factor App"
+  source="CNCF Cloud Native 定义；Google SRE；<GlossaryTerm term='DORA' definition='DORA 度量 (DevOps Research and Assessment)：Google DevOps 研究团队制定的一套旨在科学度量交付团队工程效能的核心评估标准。主要包含部署频率（Deployment Frequency）、变更前置时间（Lead Time for Changes）、服务恢复时间（Time to Restore Service）和变更失败率（Change Failure Rate）四个黄金指标。'>DORA</GlossaryTerm> / Accelerate；The Twelve-Factor App"
   href="https://github.com/cncf/toc/blob/main/DEFINITION.md"
   insight="CNCF 定义云原生为：用容器、不可变基础设施、声明式 API、自动化运维构建“可弹性伸缩、可恢复、可频繁低风险变更”的系统。其底层统一范式是声明式 + 调和；其效能由 DORA 四指标度量。交付链各环节（容器/K8s/IaC/CICD/可观测）协同，缺一则有短板。"
   application="交付一个服务：容器化 → 声明式部署（K8s）→ IaC 建环境 → CI/CD 自动化（含金丝雀+回滚）→ 可观测兜底。用 GitOps 把声明集中到 Git。用 DORA 四指标度量整条链的效能，找最弱环节优化。"
@@ -167,7 +258,7 @@ python labs/month06/m6l12_delivery/test_delivery.py
 
 ### 2. 整条链只有一条主线：声明式 + 调和
 
-回看整个 Month 6：[容器](./containers)（不可变、声明镜像内容）、[K8s](./kubernetes-basics)（声明副本/配置，调和维持）、[IaC](./infrastructure-as-code)（声明资源，plan/apply 调和）、GitOps（Git 声明环境，自动同步）——**全部是"声明你要的最终状态，让系统持续、幂等地逼近它"**。一旦你用这个统一心智模型看待运维，从一个容器到整个生产环境都通了。这也是它和 [M4L1 封装变化](../design-patterns-lld/change-driven-design)、[M5 自愈](../core-components/service-discovery) 一脉相承的深层原因：**声明意图、隐藏过程、让系统自我维持。**
+回看整个 Month 6：[容器](./containers)（不可变、声明镜像内容）、[K8s](./kubernetes-basics)（声明副本/配置，调和维持）、[IaC](./infrastructure-as-code)（声明资源，plan/apply 调和）、GitOps（Git 声明环境，自动同步）——**全部是基于 <GlossaryTerm term="Declarative API" definition="声明式 API (Declarative API)：指用户通过代码描述系统应该达到的‘期望状态（Desired State）’而不是执行的‘操作过程’，由后台控制器或引擎进行调和收敛。">声明式 API</GlossaryTerm> 来表达你期望的最终状态，让系统持续、幂等地逼近它**。一旦你用这个统一心智模型看待运维，从一个容器到整个生产环境都通了。这也是它和 [M4L1 封装变化](../design-patterns-lld/change-driven-design)、[M5 自愈](../core-components/service-discovery) 一脉相承的深层原因：**声明意图、隐藏过程、让系统自我维持。**
 
 ### 3. 真实案例：交付能力本身就是竞争力
 
@@ -188,9 +279,46 @@ DORA 多年研究证明：交付效能（部署频率、前置时间、变更失
 
 ## 常见误解
 
-- **"设计好就行了，部署是运维的事"**：交付链决定设计能否可靠落地和快速演进，是架构师的核心关注。
-- **"上了 K8s 就云原生了"**：还要 IaC、CI/CD、可观测、合理发布策略协同，缺一是短板。
-- **"交付效能和稳定性要二选一"**：DORA 证明高频自动化交付同时更快更稳。
+- **"架构师只要在 PPT 里把高可用、熔断、多副本复制的设计图画好就行了，具体的部署、环境搭建和流水线配置那是运维与 SRE 的琐碎事情"**：这是典型的“设计与交付割裂”误区。在现代云原生架构中，交付链的效能直接决定了系统架构的演进上限。如果环境不能通过 IaC 幂等且一致地建出来，如果应用镜像是手动拼凑而非标准化分层构建，如果发布流程依赖人肉操作且无可观测 SLO 监控兜底，那么再完美的高可用设计也会在频繁的生产变更中因“人为因素”彻底崩溃。**交付能力与稳定性是不可分割的整体，是架构师的首要职责之一。**
+- **"我们的服务已经打成 Docker 镜像，并且成功部署在 Kubernetes 集群中了，我们已经实现了彻底的云原生化"**：大错特错。Kubernetes 仅仅是解决了容器的运行时编排和调和自愈，它只是云原生大版图中的冰山一角。如果底层云资源（如数据库、SLB、安全组）依然靠运维人肉在控制台点击创建（缺乏 IaC），如果代码发布依然通过 Jenkins 粗暴执行 shell 脚本（缺乏声明式 GitOps 与金丝雀网关），如果系统故障了依然靠人肉看日志而非 SLO 燃尽率告警（缺乏可观测），那这只是把“传统虚拟机应用强行套了个容器壳”，根本没有享受到云原生的弹性、一致性与自愈红利。
+- **"频繁发布一定会降低系统的稳定性，为了保证高可用，成熟组织应当减少部署频率（如从每日发布改为每季度大版本发布）"**：这是被 DORA 科学调查彻底推翻的陈旧思维。大版本、低频的手动“大片式部署（Big Bang Deployment）”因为堆积了数月的大量变更，其单次发布的破坏半径极大，且由于各模块变更互相耦合，故障定位极其困难。相反，小步快跑的高频自动化交付，单次变更范围极其微小，且能够通过全自动的金丝雀验证与指标监控在毫秒级触发自动回滚，其**系统稳定性和变更失败率指标显著优于低频大版本发布**。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: 'Month 6 的核心主线是“声明式 + 调和（Declarative + Reconciliation）”，这一范式是如何统一容器、Kubernetes、IaC 和 GitOps 的？',
+      options: [
+        '它们都要求必须使用 YAML 文件进行手写配置，并且都使用同一种底层技术栈来编译和运行。',
+        '它们都抛弃了传统“按步骤执行”的命令式脚本，转而采用声明式描述期望的终态（Desired State）：容器声明文件副本；K8s 声明副本数与网络入口；IaC 声明资源拓扑；GitOps 声明环境版本。各系统的控制器（Reconciler）不断循环对比当前实际状态（Actual State）与期望状态，发现漂移则自动执行纠偏，最终实现系统自愈与收敛。',
+        '它们只是工具链上的名字，实际上底层依然是由各种命令式的 Shell 和 Python 脚本以单线程阻塞方式在后台串行跑出来的。'
+      ],
+      answer: 1,
+      explain: '声明式 + 调和是云原生的心智内核。架构师不再指示系统“如何做（How）”，而是直接告诉系统“想要什么（What）”，然后由控制器的调和回路（Reconciliation Loop）自动且幂等地逼近该终态，从而极大提升了系统的自愈性与一致性。'
+    },
+    {
+      q: '为什么在云原生 CD（持续交付）设计中，基于拉取（Pull-based）的 GitOps 模式（如 ArgoCD）相比传统基于推送（Push-based）的 Jenkins/CI 脚本部署，在保障高可用方面具有压倒性的优势？',
+      options: [
+        '因为拉取模式可以在构建 Docker 镜像时减少网络带宽，从而提高流水线的执行速度。',
+        '传统 Push 脚本（如 kubectl apply）属于“一次性执行”，执行完后就失去了对环境的控制，无法感知手动修改或外部入侵造成的配置漂移；而 Pull 模式的 GitOps 引擎运行在集群内部，以极高频率持续拉取 Git 仓库（唯一事实源）的声明并与集群实际状态对比，一旦有人在终端手动修改了 K8s 资源，GitOps 引擎会在数秒内检测到这一“配置漂移”并强行将其覆盖调和回 Git 声明的终态，杜绝了环境雪崩。',
+        '因为拉取模式可以使用更少的密码和凭证，不需要与 Git 仓库进行复杂的 SSH 私钥绑定。'
+      ],
+      answer: 1,
+      explain: 'GitOps 的核心魅力在于其天然防范了“配置漂移（Configuration Drift）”。Git 库是唯一的黄金事实源，集群内部的 Controller 不断拉取同步，能自动修复环境中的手动改动、误操作或漂移，这对于生产环境的一致性和灾备重建至关重要。'
+    },
+    {
+      q: '在设计一个全自动金丝雀（Canary）发布流水线时，我们是如何利用 SLO（服务水平目标）指标来保障发布安全的？',
+      options: [
+        '在 CI 阶段通过编写复杂的单元测试，确保代码覆盖率达到 100% 后再发布。',
+        '将新版本的 V2 Pod 部署并导入极小比例的流量（如 10%），由流水线或网关控制器在评估窗口内实时采集 Canary 实例的 SLI（如错误率、延迟、SLO 燃尽率）。一旦指标恶化超出预设 SLO 门限，立即触发原子性的自动回滚（Rollback），将流量 100% 切回旧版本 V1 并销毁 V2，实现对用户无感知的爆破半径控制。评估通过后，方可逐步放大流量直至全量部署。',
+        '依靠运维操作员在发布后盯着监控大屏半小时，如果感觉系统没有报警，就手动确认完成全量升级。'
+      ],
+      answer: 1,
+      explain: '金丝雀发布的安全精髓在于“指标驱动的自动闭环”。通过评估局部 Canary 流量的实时 SLI 是否违背 SLO，流水线能快速做 Fail-fast 自动决策。这把“人肉盯着大屏战战兢兢点确认”的发布，变成了“由可观测指标闭环决策”的确定性工程。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
