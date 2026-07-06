@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M5L12 · Capstone：设计高可用服务
 
@@ -36,6 +37,37 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ## 二、逐层组装：每个构件挡一种故障
 
+```mermaid
+flowchart TD
+  Client["👤 客户端 (Client)"] -->|1. DNS 路由| LB["⚖️ 多活负载均衡器 (LB/健康检查)"]
+  
+  subgraph GatewayLayer["入口网关层 (API Gateway - 限流防护)"]
+    LB -->|2. 反向代理| GW["🛡️ 网关 (限流熔断防护)"]
+    TokenBucket["Token Bucket <br/>(令牌桶防过载)"] <--> GW
+  end
+  
+  subgraph AppLayer["业务应用层 (无状态 App 集群 - 故障隔离)"]
+    GW -->|3. 点查路由| App1["💻 App 实例 1"]
+    GW -->|3. 点查路由| App2["💻 App 实例 2"]
+    
+    App1 & App2 -.->|超时/退避重试/熔断保护| DB_Conn["🔌 舱壁隔离通道"]
+  end
+
+  subgraph CacheLayer["高速缓存层 (Redis Cluster - 读扩展)"]
+    App1 & App2 -->|4. 读缓存 (99%)| Redis[("⚡ 读缓存组 (Consistent Hash)")]
+  end
+
+  subgraph DBLayer["分片数据层 (Sharded DB - 写扩展/强一致)"]
+    DB_Conn -->|5. 缓存 Miss 写路由| Master1[("🗄️ Shard 1 主库 (Write)")]
+    DB_Conn -->|5. 缓存 Miss 写路由| Master2[("🗄️ Shard 2 主库 (Write)")]
+    
+    Master1 ====>|强同步/半同步复制| Follower1[("🗄️ Shard 1 从库 (Read)")]
+    Master2 ====>|强同步/半同步复制| Follower2[("🗄️ Shard 2 从库 (Read)")]
+    
+    etcd[("🌐 etcd 共识集群 <br/>(选主与分片元数据)")] <--> Master1 & Master2
+  end
+```
+
 ### 基础：流量入口与读扩展
 
 - **入口**：[DNS → 负载均衡器（M5L1）](./load-balancing) 把流量分到一组无状态 API 实例；LB 本身多活、配[健康检查 + 服务发现（M5L3）](./service-discovery) 自动摘除坏实例。
@@ -46,13 +78,39 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 - **分片（M5L10）**：短码空间按 [一致性哈希/固定虚拟分片](./partitioning-sharding) 分到多个库，突破单库容量和写吞吐。
 - **复制（M5L9）**：每个分片再做[主从复制](./replication)，主写从读 + 故障转移；选主用[共识/etcd（M5L11）](./consensus-coordination) 避免脑裂。
-- **可靠调用**：服务间调用全套 [超时 + 退避重试（M5L7）](./retry-backoff-timeout) + [熔断 + 降级（M5L6）](./circuit-breaker) + [舱壁隔离（M5L8）](./bulkhead-isolation)。
+- **可靠调用**：服务间调用配置全套的<GlossaryTerm term="Resilience" definition="系统韧性 (Resilience)：系统在面临局部故障（硬件损坏、网络断连、流量超载）时，能够自我防御、阻断故障级联扩散，保障核心业务依然基本可用的自愈和防御能力。">系统韧性</GlossaryTerm>构件——包含 [超时与退避重试（M5L7）](./retry-backoff-timeout) + [熔断与降级（M5L6）](./circuit-breaker) + [舱壁隔离（M5L8）](./bulkhead-isolation)。
 
 ### 深入（选学）：用数字证明它扛得住
 
+```mermaid
+flowchart TD
+  subgraph MetricsLayer["数据观测层 (SLIs - 量化关键指标)"]
+    SLI_Success["SLI 1: 请求成功率 <br/>(成功请求数 / 总请求数)"]
+    SLI_Latency["SLI 2: 页面响应延迟 <br/>(p99 延迟值)"]
+  end
+
+  subgraph ObjectiveLayer["服务目标层 (SLOs - 可靠性对赌契约)"]
+    SLO_Success["SLO 1: 30天内成功率 >= 99.95%"]
+    SLO_Latency["SLO 2: 30天内读 p99 < 50ms"]
+    
+    SLI_Success -->|对齐并限定| SLO_Success
+    SLI_Latency -->|对齐并限定| SLO_Latency
+  end
+
+  subgraph BudgetLayer["错误预算层 (Error Budget - 允许的失败余量)"]
+    Budget["每月可用错误预算: 0.05% <br/>(折合可用性故障停机约 22 分钟)"]
+    SLO_Success -->|100% - SLO =| Budget
+  end
+
+  subgraph Actions["运维控制环 (SRE 自动响应)"]
+    Budget -->|预算充足 (Error Budget > 0)| FastTrack["✅ 加速业务新功能研发与部署上线"]
+    Budget -->|预算耗尽 (Error Budget <= 0)| StabilityFreeze["🚨 立即执行部署冻结，全员主攻系统稳定性"]
+  end
+```
+
 设计不能只画框，要量化（[回扣 M2L3 容量估算](../system-design-bridge/capacity-estimation)、[L15 延迟](../foundations/performance-and-latency)）：
-- **容量**：1 亿日活、读写 100:1 → 估算 QPS 峰值 → 倒推需要几个缓存节点、几个分片、几个副本（带余量）。
-- **SLO 与错误预算**：<GlossaryTerm term="SLO" definition="服务等级目标（Service Level Objective）：对某项 SLI（如成功率、p99 延迟）设定的目标值，如“30 天内 99.95% 请求成功”。它把“高可用”变成可度量、可对赌的具体数字。" >SLO</GlossaryTerm> = 99.95% 成功 + 读 p99 < 50ms；<GlossaryTerm term="Error Budget" definition="错误预算：1 减去 SLO 得到的允许失败额度（如 99.95% 对应每月约 0.05% ≈ 22 分钟）。用完了就冻结上线、专注稳定性，是平衡迭代速度与可靠性的机制。" >错误预算</GlossaryTerm> ≈ 每月 22 分钟，用它平衡迭代和稳定。
+- **容量**：1 亿日活、读写 100:1 → 基于<GlossaryTerm term="Capacity Estimation" definition="容量估算 (Capacity Estimation)：根据业务量指标（日活、写比例、存储保留期等）运用粗略物理估算推算出系统所需的带宽、每秒查询率(QPS)、内存量及磁盘存储空间的量化过程，是决定系统分片数、机器规模的依据。">容量估算</GlossaryTerm>推导 QPS 峰值 → 倒推需要几个缓存节点、几个分片、几个副本（带余量）。
+- **SLO 与错误预算**：<GlossaryTerm term="SLO" definition="服务等级目标（Service Level Objective）：对某项 SLI（如成功率、p99 延迟）设定的目标值，如“30 天内 99.95% 请求成功”。它把“高可用”变成可度量、可对赌的具体数字。" >SLO</GlossaryTerm> = 99.95% 成功 + 读 p99 < 50ms；它建立在 <GlossaryTerm term="SLI" definition="服务等级指标 (Service Level Indicator, SLI)：系统运行状况的关键量化指标，例如请求成功率、响应时间百分位数等，是设定 SLO 的底层观测指标。">SLI</GlossaryTerm> 之上；而 <GlossaryTerm term="Error Budget" definition="错误预算：1 减去 SLO 得到的允许失败额度（如 99.95% 对应每月约 0.05% ≈ 22 分钟）。用完了就冻结上线、专注稳定性，是平衡迭代速度与可靠性的机制。" >错误预算</GlossaryTerm> ≈ 每月 22 分钟，用它平衡迭代和稳定。
 - **故障演练**：逐个问"挂了会怎样"——挂一个 API 实例（LB 摘除，无感）、挂一个缓存节点（一致性哈希只丢 1/N 命中、回源压力可控吗）、挂一个分片主库（故障转移多久、丢多少写）、挂一个可用区（跨区副本顶上吗）。这就是 [混沌工程（M2L11）](../system-design-bridge/reliability-fault-tolerance) 的思路。
 
 <ResearchNote
@@ -64,6 +122,66 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 />
 
 ## 三、跟我做一遍：组合可靠性构件保护一次调用
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 👤 客户端 (Client)
+  participant GW as 🛡️ API 网关 (Gateway)
+  participant Cache as ⚡ Redis 缓存 (Cache)
+  participant Breaker as 🔌 熔断器/舱壁 (Breaker)
+  participant DB as 🗄️ 数据库 (Database)
+
+  Client->>GW: 访问短链接 (Get /xyz)
+  activate GW
+  
+  Note over GW: 1. 令牌桶限流校验 (Rate Limiting)
+  alt 令牌不足 (过载)
+    GW-->>Client: 返回 429 Too Many Requests (限流)
+  else 令牌充足
+    GW->>Cache: 2. 查询缓存 (Cache Lookup)
+    activate Cache
+    alt 缓存命中 (Fast Path)
+      Cache-->>GW: 返回原网址 (example.com)
+      GW-->>Client: 200 OK (直接返回，耗时 2ms)
+    else 缓存未企及 (Slow Path)
+      Cache-->>GW: Cache Miss
+      deactivate Cache
+      
+      Note over GW: 3. 经过熔断保护打 DB (Circuit Breaker)
+      alt 熔断器已敞开 (Circuit Open)
+        GW->>GW: 执行降级策略 (Fallback)
+        GW-->>Client: 503 Service Unavailable / 友好提示 (耗时 1ms)
+      else 熔断器关闭 (Circuit Closed)
+        GW->>Breaker: 尝试获取舱壁并发槽位 (Bulkhead Slot)
+        activate Breaker
+        alt 并发槽位已满
+          Breaker-->>GW: 拒绝获取
+          GW->>GW: 执行降级策略 (Fallback)
+          GW-->>Client: 503 舱壁限流降级
+        else 成功获得槽位
+          Breaker->>DB: 4. 查询数据库 (DB Query)
+          activate DB
+          alt 数据库响应超时/崩溃 (DB Hangs/Fails)
+            DB-->>Breaker: Timeout / Connection Refused
+            deactivate DB
+            Breaker-->>GW: 抛出异常 (Exception)
+            Note over Breaker: 连续失败数达阈值，熔断器打开！
+            deactivate Breaker
+            GW->>GW: 5. 捕获异常，执行降级 (Fallback)
+            GW-->>Client: 503 暂不可用，请稍后 (降级兜底)
+          else 数据库查询成功
+            DB-->>Breaker: 返回网址数据
+            Breaker-->>GW: 成功返回
+            GW->>GW: 写入缓存以备下次查询
+            GW-->>Client: 200 OK (返回网址)
+          end
+        end
+      end
+    end
+  end
+  deactivate GW
+```
 
 <PyRunner
   rows={36}
@@ -197,9 +315,46 @@ python labs/month05/m5l12_resilient/test_resilient.py
 
 ## 常见误解
 
-- **"加了这些组件就高可用了"**：要逐个单点验证有冗余、并做故障演练，否则纸上谈兵。
-- **"可靠性越高越好"**：99.99% 比 99.9% 贵几个量级；按业务定 SLO，用错误预算平衡迭代。
-- **"韧性模式各管各的"**：它们是组合拳，要分层布防、互相配合。
+- **"高可用就是把限流、熔断、降级、分片、复制这些本月学过的构件全部无脑堆叠到系统里，系统自然就能防范一切故障了"**: 极其肤浅。高可用是体系化工程，构件之间会互相制约甚至起反作用。例如，不当的重试机制与错误的熔断阈值结合会形成“重试风暴”，直接把刚恢复的数据库瞬间压瘫。如果不经过体系化的 **故障演练（Chaos Engineering）** 与数字量化，盲目堆砌组件只会带来极高的系统复杂性与更多的未知故障隐患。
+- **"可用性（Availability）和 SLO 越趋近 100% 越完美，架构师的目标就是做全网 99.999% 永不宕机系统"**: 典型的工程师思维黑洞。99.999% 的可用性（每年故障停机小于 5 分钟）需要极度昂贵的多活多区域强同步架构、海量冗余机器和难以想象的运维复杂性，其成本呈指数级飙升。如果你的业务只是个日活几万的普通短链系统，99% 成功率就足够了，把资源浪费在不必要的稳定性上，不如留给业务的敏捷开发。**必须根据业务实际价值，利用错误预算（Error Budget）平衡稳定与迭代效率。**
+- **"网关处的限流器和应用层内部的熔断器是完全独立工作的，它们各管各的就行，不需要联动配合"**: 缺乏全局架构视野。它们是防御链条上的组合拳。如果网关限流器判定流量超载并拦截（429），这部分被成功拦截的流量根本不该进入下游应用实例，更不该计入下游熔断器的错误率计数中。如果限流流量导致下游熔断器误判为服务故障而 trips open，就会错误地大范围封杀正常用户的合法请求，导致整个降级范围被无端放大。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在高可用短链接服务设计中，当数据库（MySQL）的单机写性能和磁盘容量达到极限，且读流量也极高时，最佳的系统架构组合设计是什么？',
+      options: [
+        '直接将所有读写流量全部路由给单个 etcd 节点，依靠 etcd 的强一致性抗写压力。',
+        '入口层通过 API 网关进行请求限流；读路径引入 Redis 缓存挡掉 99% 的读流量；数据层采用固定数量虚拟分片（Pre-sharding）将短码打散到多个物理分片以分担写压力；各分片内部采用主从复制高可用，利用 etcd 协调服务保障自动选主。',
+        '放弃数据库，全部数据存储在应用服务器本地内存中并使用同步机制。'
+      ],
+      answer: 1,
+      explain: '高可用架构的经典拼图。限流挡过载、缓存抗并发读、分片抗写并发与容量限制、副本防丢失、共识做管控，多层构件各司其职，联合保障整个系统的高可用性。'
+    },
+    {
+      q: '为什么在架构设计中要将‘熔断器（Circuit Breaker）’的保护范围局限在‘打数据库的慢路径’上，而不是包住整个服务解析函数？',
+      options: [
+        '因为熔断器放在缓存路径上会导致 Redis 内存溢出。',
+        '为了实现‘有损服务/降级容灾’。如果包住整个函数，一旦数据库发生短暂故障引发熔断器打开，所有的请求（包括原本可以通过缓存成功返回的 99% 的读请求）都将被一刀切拦截降级。正确的做法是仅在缓存未命中打 DB 失败时触发熔断，保障已命中的缓存快速返回，使故障影响最小化。',
+        '因为熔断器不支持在多级组件中嵌套使用。'
+      ],
+      answer: 1,
+      explain: '故障隔离（Fault Isolation）的最核心实践。熔断是为了切断慢依赖（如挂起的数据库查询），保障快依赖（如内存缓存）和本地状态能够继续服务，这也是微服务容灾的核心。'
+    },
+    {
+      q: '如果你的服务 SLO 成功率目标设定为 99.95%，当你的错误预算（Error Budget）被近期频繁的线上故障完全耗尽时，团队在 SRE 规范下应当采取什么行动？',
+      options: [
+        '继续加速研发并上线新功能，寄希望于新功能能够掩盖旧系统的稳定性缺陷。',
+        '团队必须立即‘冻结（Freeze）’一切非紧急的新功能部署，将研发重心全面转向系统架构加固、故障排查治理、增加监控告警和自动化降级容灾等稳定性专项，直到服务质量回升并积累了新的错误预算。',
+        '直接将 SLO 指标手动降低至 99.5%，以避免被绩效扣分。'
+      ],
+      answer: 1,
+      explain: '错误预算（Error Budget）的科学指挥棒作用。它不再是空洞的指标，而是客观约束：当预算充裕时，团队可以大胆试错推进迭代；预算用光时，研发和运维必须停手主攻稳定性，实现业务敏捷度与高可用之间的平衡。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
