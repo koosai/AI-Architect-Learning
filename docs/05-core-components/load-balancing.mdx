@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M5L1 · 负载均衡
 
@@ -32,6 +33,25 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 基础：L4 vs L7 负载均衡
 
+```mermaid
+flowchart TD
+  subgraph L4Routing["四层 (L4) 负载均衡 (工作在 TCP/UDP 传输层)"]
+    direction TB
+    Client4["客户端请求 (SYN) <br/>IP: 1.2.3.4 -> VIP: 5.6.7.8:80"] --> LB4["L4 负载均衡器 <br/>(如 LVS / F5)"]
+    LB4 -->|仅解析 IP + 端口<br/>包级快速 NAT 转发| Backend4_1["后端 Server A <br/>IP: 10.0.0.1:80"]
+    LB4 -->|不与客户端进行 TCP 三次握手<br/>保持原有 TCP 流| Backend4_2["后端 Server B <br/>IP: 10.0.0.2:80"]
+  end
+
+  subgraph L7Routing["七层 (L7) 负载均衡 (工作在 HTTP/HTTPS 应用层)"]
+    direction TB
+    Client7["客户端请求 (HTTPS) <br/>VIP: 5.6.7.8/api/v1/users"] --> LB7["L7 负载均衡器 <br/>(如 Nginx / Envoy)"]
+    LB7 -->|1. 终止 TLS 并进行 TCP 握手| LB7
+    LB7 -->|2. 解析 HTTP 报文内容| LB7
+    LB7 -->|路由路径匹配 /api/v1| PoolA["API 服务集群 (10.0.1.x)"]
+    LB7 -->|路由路径匹配 /static| PoolB["静态资源服务集群 (10.0.2.x)"]
+  end
+```
+
 <GlossaryTerm term="Load Balancer" definition="负载均衡器：对外暴露一个地址，把进入的请求按某种算法分发到后端的一组实例上，并跳过不健康的实例。是水平扩展的入口。">负载均衡器</GlossaryTerm>工作在两个层次：
 
 - <GlossaryTerm term="L4 Load Balancing" definition="四层（传输层）负载均衡：只看 TCP/UDP 的 IP 和端口来转发，不解析应用内容。快、开销小，但不能按 URL/Header 做路由。">L4（传输层）</GlossaryTerm>：只看 IP + 端口转发，不懂 HTTP。极快、开销小，但不能按 URL/Cookie 路由。
@@ -45,6 +65,25 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - <GlossaryTerm term="Consistent Hashing" definition="一致性哈希：把实例和键都映射到一个哈希环上，键归属顺时针最近的实例。增删一台实例时，只有环上一小段的键需要迁移，而不是几乎全部重映射。" >一致性哈希</GlossaryTerm>：按 key（如用户 ID）哈希到固定实例——适合需要"同一 key 总到同一台"（会话粘性、缓存命中）的场景。
 
 ### 深入（选学）：为什么扩缩容必须用一致性哈希
+
+```mermaid
+flowchart TD
+  subgraph RingView["32位一致性哈希环 (Consistent Hash Ring 0 -> 2^32-1)"]
+    direction TB
+    NodeA["物理节点 A <br/>(及虚拟节点 A-1, A-2)"] -->|顺时针映射| RingArc1["哈希值区间 [A, B)"]
+    NodeB["物理节点 B <br/>(及虚拟节点 B-1, B-2)"] -->|顺时针映射| RingArc2["哈希值区间 [B, C)"]
+    NodeC["物理节点 C <br/>(及虚拟节点 C-1, C-2)"] -->|顺时针映射| RingArc3["哈希值区间 [C, A)"]
+    
+    Key1["数据 Key 1 <br/>(hash=1000)"] -->|顺时针寻节点| NodeB
+    Key2["数据 Key 2 <br/>(hash=5000)"] -->|顺时针寻节点| NodeC
+  end
+
+  subgraph ScalingView["新增节点 D (扩容场景对比)"]
+    direction TB
+    OldHash["1. 传统 hash % N: <br/>N 从 3 变为 4 <br/>(几乎 100% 数据归属变动, 缓存瞬时雪崩)"]
+    NewHash["2. 一致性哈希: <br/>D 映射到 B 和 C 之间 <br/>(仅影响 [B, D) 间少量数据迁移至 D, 其余 A/C 节点数据纹丝不动)"]
+  end
+```
 
 朴素哈希 `hash(key) % N` 有个致命问题：**机器数 N 一变（扩容/某台挂了），几乎所有 key 的归属都变了**——缓存全部失效、会话全部漂移，瞬间雪崩。一致性哈希把实例和 key 都放到一个环上，key 归属顺时针最近的实例；**增删一台只影响环上相邻的一小段 key**（约 1/N），其余不动。再配<GlossaryTerm term="Virtual Nodes" definition="虚拟节点：让每个物理实例在哈希环上对应多个虚拟点，使键分布更均匀，避免少数实例承担过多键（数据倾斜）。">虚拟节点</GlossaryTerm>让分布更均匀。这是 [Dynamo（M3）](../data-cache-queue/sql-vs-nosql)、缓存集群、分片路由的共同基石。
 
@@ -165,6 +204,38 @@ python labs/month05/m5l1_consistent_hash/test_ring.py
 
 ### 2. 负载均衡器自己也不能是单点
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Client as 客户端 (Client)
+  participant LB as 负载均衡器 (LoadBalancer)
+  participant ServA as 服务实例 A (Active Server)
+  participant ServB as 服务实例 B (Failing Server)
+
+  loop 周期性健康检查 (Health Check Probe Loop)
+    LB->>ServA: 发送 HTTP GET /health 探针
+    activate ServA
+    ServA-->>LB: 返回 200 OK (Healthy)
+    deactivate ServA
+    
+    LB->>ServB: 发送 HTTP GET /health 探针
+    activate ServB
+    ServB-->>LB: 连接超时/返回 500 (Unhealthy)
+    deactivate ServB
+    
+    Note over LB: 自动更新路由表：<br/>从可用节点列表剔除 ServB
+  end
+
+  Client->>LB: 发起业务请求
+  activate LB
+  LB->>ServA: 仅向健康节点 ServA 转发流量
+  activate ServA
+  ServA-->>LB: 返回业务响应
+  deactivate ServA
+  LB-->>Client: 返回成功结果
+  deactivate LB
+```
+
 负载均衡器是流量入口，它一挂全完。所以生产里它本身也要高可用：DNS 轮询 + 多个 LB、或云厂商的托管 LB（本身是分布式的）、再配 [健康检查](./service-discovery) 自动摘除坏实例、配 [VIP/keepalived 故障转移]。**入口的高可用是整个系统高可用的前提**——这呼应 [M2L11 消除单点](../system-design-bridge/reliability-fault-tolerance)。
 
 ### 3. 真实案例：从 DNS 到全球流量调度
@@ -186,9 +257,46 @@ python labs/month05/m5l1_consistent_hash/test_ring.py
 
 ## 常见误解
 
-- **"负载均衡就是轮询"**：还有最少连接、一致性哈希等，按场景选。
-- **"用 hash%N 分片就行"**：扩缩容时几乎全量重映射，必须用一致性哈希。
-- **"有了 LB 就高可用了"**：LB 自己也是单点，要让它本身冗余。
+- **"负载均衡只有‘轮询（Round Robin）’这一种简单算法，别无他选"**: 经典的新手盲区。轮询仅仅是后端节点完全同质、且各请求处理时长大致均等时的简化默认算法。在实际生产中，针对计算长连接或耗时极不均衡的请求，强行用轮询会导致某些实例瞬间排队阻塞而另一些闲置。我们应该针对场景选用**最少连接（Least Connections）**将请求分发给当前最闲的物理节点；或者使用**一致性哈希**确保会话粘性与本地缓存的高命中率。
+- **"在进行分布式缓存分片或有状态会话路由设计时，直接用最简单的 hash(key) % N 来对 N 台节点取模分发就可以了，没必要折腾一致性哈希"**: 扩缩容灾难的根源。在单机或节点数绝对静止的玩具系统中，取模确实最直接。但一旦集群发生节点故障被剔除，或者为了应对流量高峰进行动态扩容，机器数 N 变动会直接导致**环上几乎 100% 的 Key 被重映射到其他节点**，导致缓存瞬间全网雪崩打挂数据库。必须采用一致性哈希，使得每次节点变更的变动范围被完美约束在约 1/N 的极小区间内。
+- **"因为我们在后端集群前面架设了一台高性能负载均衡器，所以我们就可以高枕无忧，整个系统就绝对实现高可用了"**: 忽视了负载均衡器自身的单点隐患（SPOF）。负载均衡器本身作为流量总入口，承受着最密集的流量压力。如果它本身没有冗余，一旦发生物理机柜掉电或流量击穿，整条业务链依然瞬间全挂。在架构实践中，必须通过 DNS 轮询到多个公网 LB、或者在 LB 层面配置虚拟 IP (VIP) 与 Keepalived 故障转移心跳机制来保障流量入口的冗余高可用。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在分布式架构中，四层（L4）负载均衡与七层（L7）负载均衡最根本的区别和各自的典型使用场景是什么？',
+      options: [
+        'L4 运行在操作系统内核空间而 L7 运行在用户空间。',
+        'L4 在网络传输层（TCP/UDP）工作，仅依据源/目的 IP 和端口进行包级快速路由分发，吞吐量极高；L7 在应用层工作，能够终止 TLS 握手并深度解析 HTTP 报文，依据 URL 路径、Header 或 Cookie 进行精细路由分发，但会引入较高的 CPU 性能损耗。',
+        'L4 只能用于内网，L7 只能用于公网。'
+      ],
+      answer: 1,
+      explain: '四层与七层负载均衡的物理和协议层差异。L4 不需要与客户端进行 TCP 三次握手和 TLS 握手，仅仅做 IP 数据包的中转 NAT，性能卓越，常作为大集群最前端的流量入口；L7 需要建立连接并读取具体业务数据，提供了路径灰度、会话粘性等高级路由能力，是网关层的首选。'
+    },
+    {
+      q: '在缓存分片或有状态会话的水平扩展场景下，为什么必须采用一致性哈希（Consistent Hashing）而不是简单的哈希取模算法（hash % N）？',
+      options: [
+        '因为哈希取模算法会导致数据在磁盘上的存放顺序完全乱掉。',
+        '因为简单哈希取模在后端节点数 N 发生变动（机器扩容或宕机）时，会导致几乎所有缓存键的哈希归属节点发生剧烈漂移，造成全网缓存大面积失效雪崩；而一致性哈希在节点变更时仅影响环上相邻的一小部分键（约为 1/N ），从而实现平滑无缝伸缩。',
+        '因为一致性哈希的算法执行速度比 %N 运算快很多倍。'
+      ],
+      answer: 1,
+      explain: '一致性哈希的核心价值。它通过将节点与数据键映射到同一环形虚拟哈希空间，解决了传统哈希取模在 N 变化时造成的数据归属大漂移痛点，是将缓存雪崩与会话断开概率控制在最小范围（1/N）的分布式神器。'
+    },
+    {
+      q: '一致性哈希算法中的‘虚拟节点（Virtual Nodes）’最核心的作用是解决什么问题？其背后的权衡是什么？',
+      options: [
+        '解决物理节点太多导致的网络延迟过大问题。',
+        '为了多台服务器共用同一个物理 IP 地址以节省公网带宽。',
+        '解决物理节点较少或分布不均时容易发生的数据/流量倾斜（热点机器）问题。虚拟节点通过将每个物理节点散列为环上的多个虚拟点来均匀分摊哈希空间；但虚拟节点过多会增大哈希环的存储尺寸，从而略微增加查找归属时的 CPU 开销。'
+      ],
+      answer: 2,
+      explain: '虚拟节点的功用与代价。当物理服务器节点较少时，随机哈希很容易发生不均匀分布，导致某些服务器承载超负荷的键（流量倾斜）。通过引入大量虚拟节点可以利用大数定律抹平偏差，但代价是查找节点时的内存开销和二分查找的时间复杂度会有微弱增长。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
