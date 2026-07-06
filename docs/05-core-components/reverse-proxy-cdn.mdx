@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M5L4 · 反向代理与 CDN
 
@@ -36,12 +37,56 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 基础：正向代理 vs 反向代理
 
+```mermaid
+flowchart TD
+  subgraph ForwardProxy["1. 正向代理模式 (Forward Proxy)"]
+    direction LR
+    Client1["内网客户端 A"] -->|私有请求| Proxy1["正向代理服务器 <br/>(代表客户端, 隐藏客户端 IP)"]
+    Client2["内网客户端 B"] -->|私有请求| Proxy1
+    Proxy1 -->|出公网访问| TargetWeb["外部目标网站 (Server)"]
+    
+    noteFP["代表客户端：目标网站只知道代理 IP，不知道到底是谁在访问他。"]
+  end
+
+  subgraph ReverseProxy["2. 反向代理模式 (Reverse Proxy)"]
+    direction LR
+    ClientA["公网客户端 X"] -->|访问统一 VIP| Proxy2["反向代理服务器 (Nginx)<br/>(代表服务端, 隐藏后端 IP)"]
+    ClientB["公网客户端 Y"] -->|访问统一 VIP| Proxy2
+    Proxy2 -->|内网分发路由| RealSrv1["后端业务服务器 1"]
+    Proxy2 -->|内网分发路由| RealSrv2["后端业务服务器 2"]
+    
+    noteRP["代表服务端：客户端只认代理网关 IP，根本不知道后端到底有多少台服务器在提供服务。"]
+  end
+```
+
 - <GlossaryTerm term="Forward Proxy" definition="正向代理：代表客户端去访问外部，隐藏的是客户端（如公司上网代理、翻墙代理）。服务端看到的是代理的地址。">正向代理</GlossaryTerm>：替**客户端**出去访问（公司上网代理）。隐藏客户端。
 - <GlossaryTerm term="Reverse Proxy" definition="反向代理：代表服务端接收请求再转发给后端，隐藏的是后端服务器。客户端以为在跟它对话。常做 TLS 终止、缓存、负载均衡、压缩。">反向代理</GlossaryTerm>：替**服务端**接收请求再转发给后端（Nginx）。隐藏后端，顺带做 TLS 终止、缓存、压缩、[负载均衡](./load-balancing)。[API 网关](./api-gateway)本质就是一种功能丰富的反向代理。
 
 ### 进阶：CDN = 遍布全球的边缘缓存
 
 <GlossaryTerm term="CDN" definition="内容分发网络（Content Delivery Network）：在全球各地部署边缘节点，把静态内容缓存在离用户最近的节点。用户就近获取，既降延迟又减源站压力。" >CDN</GlossaryTerm>是把反向代理 + 缓存**部署到全球几百个边缘节点（PoP）**：
+
+```mermaid
+flowchart TD
+  UserTokyo["东京客户端 (User in Tokyo)"] -->|1. 请求获取 /logo.png| DNS["CDN Anycast DNS 解析"]
+  DNS -->|2. 智能解析到最近PoP节点| TokyoPoP["东京边缘 PoP 缓存节点 <br/>(Tokyo PoP Edge Node)"]
+  
+  subgraph EdgeCheck["边缘节点判断"]
+    TokyoPoP -->|3. 查询本地 KV 缓存| CheckCache{是否命中?}
+    CheckCache -->|3a. 命中 HIT| ReturnHit["直接返回 cached 静态内容 <br/>(网络延迟 < 10ms!)"]
+    CheckCache -->|3b. 未命中 MISS| PullOrigin["发起跨洲回源拉取"]
+  end
+  
+  ReturnHit --> UserTokyo
+  
+  subgraph OriginVirginia["美国弗吉尼亚源站 (Origin Server)"]
+    Origin["弗吉尼亚应用主机 (Virginia Origin)"]
+  end
+  
+  PullOrigin -->|4. 跨洋网络往返 (RTT ~150ms)| Origin
+  Origin -->|5. 返回源站最新图片资源| TokyoPoP
+  TokyoPoP -->|6. 写入东京本地缓存库 (带 TTL)| ReturnHit
+```
 
 - 用户请求被 [DNS/Anycast](./load-balancing) 导到**最近的边缘节点**（解决距离）。
 - 边缘节点缓存了静态内容，**命中就直接返回**，不回源（解决源站压力）。
@@ -52,6 +97,34 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 CDN 的难点和 [M3 缓存](../data-cache-queue/cache-patterns) 一脉相承：
 - **可缓存性**：静态资源（图片/JS/视频）天然可缓存；动态/个性化内容默认不缓存，但可用 `Cache-Control`、ESI、边缘计算细化。
 - **TTL 与失效**：靠 `Cache-Control`/`max-age` 控制缓存时长；内容更新用<GlossaryTerm term="Cache Purge" definition="缓存清除/刷新：内容更新后主动让 CDN 边缘节点的旧副本失效。常配合内容指纹（文件名带哈希）实现“改了就换 URL”，从根上避免脏缓存。">主动 purge</GlossaryTerm> 或<GlossaryTerm term="Content Hashing" definition="内容指纹：把文件内容的哈希写进文件名（如 app.3f9c.js）。内容一变文件名就变，URL 即新资源，天然绕开旧缓存，无需 purge。">内容指纹文件名</GlossaryTerm>（`app.3f9c.js`，改了就换 URL）。后者是前端构建的标准做法——从根上避免脏缓存（[回扣 M3L6 失效](../data-cache-queue/cache-invalidation)）。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as 客户端 (Client)
+  participant PoP as CDN 边缘节点 (PoP Cache)
+  participant Origin as 源站 (Origin Server)
+
+  rect rgb(240, 240, 240)
+    Note over User, Origin: 场景 1: 传统 Purge 刷新机制 (易面临脑裂传播延迟)
+    User->>PoP: 获取 /app.js
+    PoP-->>User: 返回旧版本 v1 (缓存期未满)
+    Note over Origin: 管理员上传 app.js (v2)<br/>向 CDN 触发 Purge("/app.js")
+    Note over PoP: 接收 Purge 广播广播 (同步有 1s-60s 延迟)
+    User->>PoP: 延迟窗口内请求 /app.js
+    PoP-->>User: 仍返回旧版 v1 (脑裂脏缓存)
+  end
+
+  rect rgb(220, 240, 220)
+    Note over User, Origin: 场景 2: 现代文件名指纹 (Content Hashing - 100% 精准无缝)
+    Note over Origin: 编译生成 app.7a3b.js (v2)<br/>写入 HTML 页面的引用连接
+    User->>PoP: 获取 /app.7a3b.js (新 Key)
+    Note over PoP: 本地无此 Key 缓存 -> MISS
+    PoP->>Origin: 回源拉取 app.7a3b.js
+    Origin-->>PoP: 返回 v2 文件数据
+    PoP-->>User: 瞬间获得新版本 v2 (旧 v1 缓存自然废弃，无脑安全)
+  end
+```
 - **回源保护**：大量同时 miss 会一起回源打爆源站（[缓存击穿/惊群，M3L7](../data-cache-queue/cache-problems)）——CDN 用请求合并（collapsed forwarding）应对。
 
 <ResearchNote
@@ -183,9 +256,46 @@ YouTube/Netflix 的视频、电商的商品图、几乎所有网站的前端资�
 
 ## 常见误解
 
-- **"反向代理就是负载均衡"**：反向代理是收口入口（含缓存/TLS/压缩），负载均衡是其能力之一。
-- **"CDN 只能放静态文件"**：现代 CDN 支持边缘计算、动态加速、可缓存的动态内容。
-- **"更新内容靠 purge 就行"**：purge 有延迟和成本；内容指纹文件名更彻底。
+- **"反向代理（Reverse Proxy）仅仅就是负载均衡器的另外一个代名词，它们是一回事"**: 概念混淆。反向代理是一个更为宏大的“最外层网关/收口入口”架构概念。它的职责包括但远远不限于流量负载均衡（分发负载）。典型的反向代理（如 Nginx、Envoy）还会处理统一的 SSL/TLS 终止卸载（避免证书分发到所有后端主机）、Gzip/Brotli 响应内容压缩、公共静态资源本地缓存、甚至是基本的 IP 防火墙过滤。
+- **"CDN 只能用来分发和存放静态图片、CSS 和视频文件，任何与动态请求或需要鉴权的个性化页面都无法享受 CDN 的红利"**: 认知滞后。现代边缘分发网络（CDN）早已演进出“动态网络加速（Dynamic Route Optimization）”，通过边缘 PoP 节点与源站间建立的常驻 TCP 连接池及 Anycast 最优路由避开公网拥堵；同时，利用“边缘计算（Edge Serverless，如 Cloudflare Workers）”，可以在边缘直接校验 JWT、根据 Cookie 判定进行页面局部渲染，从而实现部分动态逻辑的边缘分开与就近秒开。
+- **"我们在部署生产环境的大版本发布更新时，如果代码有改动，只需要对旧的 index.js 发起一次全网 Purge 缓存刷新操作就足够安全了"**: 存在严重的可用性脑裂隐患。Purge 清除指令广播到全球成千上万个 PoP 节点需要一个不可控的时间同步差（从几秒到几分钟不等）。在此期间，用户访问网站可能会拉取到新版的 HTML 却加载了尚未被 purge 完成的旧版 JS/CSS（或反之），直接导致页面报错白屏。采用 **内容指纹文件名（Content Hashing，文件名带 Hash 值）** 重新生成全新 URL 才是从根本上根治脏缓存的现代工业标准做法。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '正向代理（Forward Proxy）与反向代理（Reverse Proxy）最本质的防线和保护目标有什么不同？',
+      options: [
+        '正向代理只能用在内网，反向代理只能用在云端。',
+        '正向代理‘代表客户端’发起请求，隐藏并保护客户端身份，常用于内网出网控制或科学上网；反向代理‘代表服务端’接收外部请求，隐藏并保护后端真实的物理服务器集群，常用于流量分发、统一 TLS 终止与内容缓存。',
+        '正向代理使用 HTTP 协议，反向代理使用 HTTPS 协议。'
+      ],
+      answer: 1,
+      explain: '正向与反向代理的根本角色定位差异。代理总是位于通信双方之间，区分它们只需看‘它在为谁服务’：为客户端代言隐藏客户端即正向；为服务端代言隐藏后端拓扑即反向。'
+    },
+    {
+      q: '为什么说前端工程化构建中普遍采用的‘内容指纹文件名（如 app.7a3b.js）’，在 CDN 缓存失效管理上要比传统的主动刷新（Purge）缓存操作更为优雅且安全？',
+      options: [
+        '因为内容指纹可以减少文件的传输尺寸。',
+        '因为 Purge 操作需要向全球成百上千个 PoP 边缘节点下发清除广播，存在几秒至几分钟的扩散延迟窗口，此期间用户会读到脏数据；而内容指纹由于一改内容文件名即变（URL 变动），对 CDN 而言这属于请求全新的未缓存资源，能实现瞬间 100% 的精准无缝更新，且完美避开脏缓存。',
+        '因为指纹文件名哈希算法执行速度比 purge 清理速度快数百倍。'
+      ],
+      answer: 1,
+      explain: 'CDN 缓存失效与内容指纹。URL 是 CDN 查找缓存的唯一 Key。修改文件名指纹（Content Hashing）就是修改 Key，这能确保新旧请求在物理上完全分离，完全规避了 purge 广播同步过程中的脑裂窗口，是现代前端发布的标准动作。'
+    },
+    {
+      q: '在遭遇高并发大促销活动时，如果某款爆品页面的 CDN 缓存正好过期，可能产生何种致命的系统崩溃隐患？CDN 层面该如何防御？',
+      options: [
+        '会导致 CDN 节点的磁盘损坏空间溢出。',
+        '由于大流量在极短时间内穿透已过期的边缘缓存节点，大量并发连接同时打向源站拉取数据，产生‘缓存击穿与惊群效应（Collapsed Forwarding Storm）’，瞬间击垮源站服务器。CDN 边缘节点可以通过‘请求合并（Collapsed Forwarding）’，仅让首个抢占请求回源，其余并发请求排队等待该请求结果，以此保护源站。',
+        '会导致用户的浏览器缓存直接被彻底清空。'
+      ],
+      answer: 1,
+      explain: '缓存击穿防线。当极高并发下的缓存 Key 过期时，如果不对回源操作加锁合并，瞬间产生的海量回源请求会发生雪崩式打垮源站（惊群）。CDN 边缘反向代理的 Collapsed Forwarding （请求合并/单锁回源）是极其核心的源站保护屏障。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
