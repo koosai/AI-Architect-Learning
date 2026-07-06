@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M5L2 · API 网关
 
@@ -26,11 +27,38 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ## 一、每个服务都在重复做同样的事
 
-你有订单、商品、用户、支付十几个服务。结果发现：每个服务都自己写了一遍 JWT 校验、每个都自己接了限流、每个都自己配 CORS 和日志格式……**这些"横切关注点"（[M4L8](../design-patterns-lld/adapter-decorator)）在十几处重复**，改一个鉴权规则要动十几个服务。还有：客户端要调十几个不同地址、各服务协议还不一样。需要一个统一入口收口这些。
+你有订单、商品、用户、支付十几个服务。结果发现：每个服务都自己写了一遍 <GlossaryTerm term="JSON Web Token" definition="JSON Web Token (JWT)：一种开放标准 (RFC 7519)，用于在各方之间以 JSON 对象安全地传输信息。常用于微服务无状态分布式认证，网关校验签名后将用户 ID 等明文以 Header 传给下游服务。">JWT 校验</GlossaryTerm>、每个都自己接了限流、每个都自己配 CORS 和日志格式……**这些“<GlossaryTerm term='Cross-cutting Concern' definition='横切关注点 (Cross-cutting Concern)：指在软件系统中普遍存在且散落在多个业务模块中的公共功能（如安全性校验、日志监控、统一限流、事务处理）。如果不做抽取，它们会导致代码重复和高耦合度。'>横切关注点</GlossaryTerm>”（[M4L8](../design-patterns-lld/adapter-decorator)）在十几处重复**，改一个鉴权规则要动十几个服务。还有：客户端要调十几个不同地址、各服务协议还不一样。需要一个统一入口收口这些。
 
 ## 二、三个核心概念（分层）
 
 ### 基础：网关的职责 = 横切能力
+
+```mermaid
+flowchart TD
+  subgraph NoGateway["1. 无网关直连模式 (各服务严重冗余横切关注点)"]
+    direction LR
+    ClientA["客户端 (Web/App)"] -->|1. JWT校验 & 限流| SrvUser["用户服务 (User Service)"]
+    ClientA -->|2. JWT校验 & 限流| SrvOrder["订单服务 (Order Service)"]
+    ClientA -->|3. JWT校验 & 限流| SrvPay["支付服务 (Payment Service)"]
+    
+    noteA["痛点：每个微服务都要独立重复实现 JWT 校验、限流、CORS、可观测等代码，维护极其痛苦！"]
+  end
+
+  subgraph HasGateway["2. 有网关解耦模式 (收口横切关注点，只发干净请求)"]
+    direction LR
+    ClientB["客户端 (Web/App)"] -->|统一入口 (单 VIP)| Gateway["API 网关 (API Gateway)"]
+    
+    subgraph GatewayInside["网关内部处理 (统一处理)"]
+      AuthMW["JWT 鉴权校验"] --> LimitMW["防刷限流"]
+      LimitMW --> LogMW["统一 Trace/监控"]
+    end
+    
+    Gateway --> GatewayInside
+    GatewayInside -->|L7 路径转发| SrvUserB["用户服务 (User Service)"]
+    GatewayInside -->|L7 路径转发| SrvOrderB["订单服务 (Order Service)"]
+    GatewayInside -->|L7 路径转发| SrvPayB["支付服务 (Payment Service)"]
+  end
+```
 
 <GlossaryTerm term="API Gateway" definition="API 网关：位于客户端与后端服务之间的统一入口，集中处理认证、路由、限流、日志、协议转换、聚合等横切能力，让后端服务专注业务。" >API 网关</GlossaryTerm>把这些**与具体业务无关、却人人都要**的能力收口到一处：
 
@@ -43,11 +71,99 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 ### 进阶：网关 vs 负载均衡 vs BFF
 
 - **负载均衡**关注"分到哪台"（[M5L1](./load-balancing)）；**网关**关注"做哪些横切处理 + 路由到哪个服务"。生产中网关常自带 L7 负载均衡。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 客户端 (Client)
+  participant GW as API 网关入口 (Gateway Engine)
+  
+  subgraph MiddlewareChain["网关责任链/中间件管道 (Middleware Pipeline)"]
+    participant Trace as 可观测中间件 (TraceMiddleware)
+    participant Auth as 鉴权中间件 (AuthMiddleware)
+    participant Limit as 限流中间件 (RateLimitMiddleware)
+  end
+
+  participant Serv as 后端产品服务 (Product Service)
+
+  Client->>GW: 发起请求 (带 token)
+  activate GW
+  
+  GW->>Trace: 1. 进入管道: req
+  activate Trace
+  Note over Trace: 统一生成/植入 trace_id
+  
+  Trace->>Auth: 2. 传递 req (带 trace_id)
+  activate Auth
+  Note over Auth: 校验 JWT 签名并解析<br/>向 Header 植入 user_id
+  
+  Auth->>Limit: 3. 传递 req (已鉴权)
+  activate Limit
+  
+  alt 超限 (Count > 3)
+    Note over Limit: 阻断并提前返回
+    Limit-->>Auth: 4a. 返回 429 Rate Limited
+    Auth-->>Trace: 返回 429
+    Trace-->>GW: 返回 429
+    GW-->>Client: 提前响应 429
+  else 正常未超限
+    Limit->>Serv: 4b. 转发至后端具体微服务
+    activate Serv
+    Serv-->>Limit: 返回 200 OK & 业务数据
+    deactivate Serv
+    Limit-->>Auth: 返回 200 OK & 业务数据
+  end
+  
+  deactivate Limit
+  Auth-->>Trace: 返回 200 OK
+  deactivate Auth
+  Trace-->>GW: 返回 200 OK
+  deactivate Trace
+  
+  GW-->>Client: 返回成功响应体
+  deactivate GW
+```
 - <GlossaryTerm term="BFF" definition="Backend for Frontend：为特定前端（Web/iOS/Android）量身定制的网关层，按该端需求聚合/裁剪后端数据，避免一个通用 API 迁就所有端。">BFF（Backend for Frontend）</GlossaryTerm>：给不同前端（Web/App）各配一个量身定制的网关，按该端需要聚合、裁剪数据，避免一个通用 API 迁就所有端。
+
+```mermaid
+flowchart TD
+  subgraph ClientClients["多样化客户端类型 (Clients)"]
+    WebClient["Web 浏览器网页 <br/>(宽带宽、大屏幕、需合并渲染)"]
+    MobileClient["iOS/Android 手机端 <br/>(弱网、省电省流量、裁剪展示)"]
+    ThirdParty["第三方合作开发者 <br/>(安全认证、限额统计、高频调用)"]
+  end
+
+  subgraph GatewayBFF["BFF 入口层 (Backend For Frontend Gateways)"]
+    WebBFF["Web BFF 网关 <br/>(处理 Session、大而全的 JSON)"]
+    MobileBFF["移动端 BFF 网关 <br/>(按屏数据聚合、极简裁剪 JSON)"]
+    PublicAPI["第三方 OpenAPI 网关 <br/>(严格流量审计与配额防刷)"]
+  end
+
+  subgraph Microservices["核心微服务群 (Internal Private Microservices)"]
+    SrvUser["用户服务 (User Service)"]
+    SrvProduct["商品服务 (Product Service)"]
+    SrvOrder["订单服务 (Order Service)"]
+  end
+
+  WebClient --> WebBFF
+  MobileClient --> MobileBFF
+  ThirdParty --> PublicAPI
+
+  WebBFF --> SrvUser
+  WebBFF --> SrvProduct
+  WebBFF --> SrvOrder
+
+  MobileBFF --> SrvUser
+  MobileBFF --> SrvProduct
+  MobileBFF --> SrvOrder
+
+  PublicAPI --> SrvUser
+  PublicAPI --> SrvProduct
+```
 
 ### 深入（选学）：网关的反模式——别让它变成巨石
 
-网关最大的陷阱是**职责蔓延**：今天加点订单逻辑、明天塞点优惠计算，慢慢它就成了一个"什么都懂"的[上帝服务](../design-patterns-lld/solid-srp-ocp)，所有团队改它都要排队、它一挂全站崩。守则：**网关只做与业务无关的横切能力；任何"懂某个业务"的逻辑都该在对应服务里。** 网关内部用[中间件/装饰器链](../design-patterns-lld/adapter-decorator)（鉴权→限流→日志→路由）保持每个关注点独立、可插拔——这正是 M4L8 装饰器的工业应用。
+网关最大的陷阱是**职责蔓延**：今天加点订单逻辑、明天塞点优惠计算，慢慢它就成了一个"什么都懂"的[上帝服务](../design-patterns-lld/solid-srp-ocp)，所有团队改它都要排队、它一挂就会演变成致命的“<GlossaryTerm term="Single Point of Failure" definition="单点故障 (SPOF - Single Point of Failure)：系统中的某一个组件或节点，一旦失效会导致整个系统完全停止运转。统一的 API 网关极易因为臃肿或配置失误变成全站的 SPOF，因此需要保持轻量化、去业务化及做冗余部署。">单点故障 (SPOF)</GlossaryTerm>”全站崩。守则：**网关只做与业务无关的横切能力；任何"懂某个业务"的逻辑都该在对应服务里。** 网关内部用[中间件/装饰器链](../design-patterns-lld/adapter-decorator)（鉴权→限流→日志→路由）保持每个关注点独立、可插拔——这正是 M4L8 装饰器的工业应用。
 
 <ResearchNote
   title="网关：把横切关注点收口到入口"
@@ -189,9 +305,46 @@ Netflix 早期用 Zuul 做统一边缘网关处理路由/弹性；随规模增�
 
 ## 常见误解
 
-- **"网关 = 负载均衡"**：负载均衡分流量，网关做横切 + 路由，常合体但概念不同。
-- **"把公共逻辑都放网关"**：只放真横切；业务逻辑放服务，否则网关变巨石。
-- **"一个网关走天下"**：前端差异大时用 BFF，超大规模配 sidecar/mesh。
+- **"API 网关本质上也就是另外一种称呼的四层/七层负载均衡器，直接用 Nginx 转发一下就足够了，没有必要单独设计一层网关"**: 模糊了职责定位。负载均衡器（Load Balancer）主要关注的是底层流量的分发与网络包路由（L4/L7 转发，关注 IP/端口及 HTTP 基本头部）；而 API 网关（API Gateway）作为**入口横切能力收口层**，承载了大量的应用层业务无关关注点，如 JWT 签名安全校验、OAuth 统一鉴权、多级弹性限流、跨域（CORS）头注入、以及协议转换。它们分属不同的架构职责，尽管现代网关常内置 LB 能力。
+- **"既然网关是提取公共代码的好地方，那我们应该把‘计算订单折扣优惠’、‘校验商品库存’等全站微服务都要调用的业务逻辑统统塞进网关，减少代码重复"**: 灾难性的上帝网关反模式。这直接把 API 网关变成了耦合全站所有微服务业务的“新单体巨石”。当业务变动时，网关团队成为全站发布的最大瓶颈；任何一处业务 Bug 甚至内存泄露，都可能直接拖垮整个入口，沦为致命的 **单点故障 (SPOF)**。网关必须保持“绝对瘦且不含任何特定业务的决策”，业务逻辑必须下沉到具体微服务。
+- **"我们在公司里用一个统一的超级大网关就足够应对网页端、App 手机端和外部开放 API 接口的所有需求了"**: 忽视了多端流量在带宽、屏幕展现及协议诉求上的剧烈分歧。一个大网关包揽一切会导致接口字段为了妥协手机弱网进行无意义的数据裁剪，或者为了 Web 端返回巨大的冗余 JSON 浪费手机带宽。在多终端高并发微服务场景下，更佳实践是引入 **BFF (Backend for Frontend)** 模式，针对不同前端各配置一个定制网关，在网关内进行按屏接口聚合和裁剪，提升客户端响应效率。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在微服务架构设计中，为什么强烈反对在 API 网关中编写‘优惠券折扣计算’、‘订单状态校验’等业务逻辑？',
+      options: [
+        '因为网关没有数据库连接权限，无法直接读取业务表。',
+        '这会破坏网关作为‘横切关注点收口层’的单一职责定位，导致网关演变成一个耦合了全站所有微服务逻辑的、膨胀的中心化单点巨石（Monolithic Gateway），使得各微服务团队失去发布自治权，且任何业务代码 Bug 都可能导致网关崩溃全站瘫痪。',
+        '因为网关是用 Nginx 写的，无法运行任何计算代码。'
+      ],
+      answer: 1,
+      explain: '防范网关职责蔓延的反模式。网关的初衷是抽取公共横切面（鉴权、路由、限流）。一旦塞入业务，网关的变更频率就会和全站发布对齐，开发团队在网关处遭遇排队，违背了微服务去中心化的核心初衷。'
+    },
+    {
+      q: '网关中间件链（Middleware Pipeline）在处理请求时，为什么将‘限流’与‘鉴权’中间件的执行顺序颠倒会带来截然不同的安全与性能表现？',
+      options: [
+        '因为鉴权中间件不需要消耗 CPU，所以放在哪里都一样。',
+        '如果将限流放在鉴权之后，恶意攻击者可以通过并发打爆没有 Token 的伪造请求，从而在未鉴权拦截前耗尽鉴权微服务/外部 Redis 的查询算力；而将粗粒度的 IP 限流放在最外层，可以优先拦截恶意大流量，保护内层的高开销鉴权和业务处理器。',
+        '限流放在后面是因为这样可以针对不同用户的 VIP 等级做更精准的限流，必须先拿到用户信息。因此，在没有大流量攻击防刷防护时，直接无脑放后面是唯一的正确做法。'
+      ],
+      answer: 1,
+      explain: '中间件管道顺序的架构权衡。安全防刷（IP限流/漏桶）应该尽量靠外，以阻断无效的高并发流量打爆后端的计算与鉴权库；而基于用户级别（User Quota）的精细限流则必须在提取身份（Auth）后执行。在实际高安全网关中，通常会做两层限流配合。'
+    },
+    {
+      q: 'BFF（Backend for Frontend，服务于前端的后端）网关模式的核心解决痛点和价值是什么？',
+      options: [
+        '为了让前端开发人员直接编写数据库 SQL 语句进行前端渲染。',
+        '由于不同终端（如 App、Web、小程序）在屏幕展示面积、网络带宽、甚至接口格式上诉求截然不同。BFF 作为专属网关，按特定端的要求将后端微服务的多个细粒度接口进行‘数据裁剪’和‘接口聚合’，避免客户端发起多次网络往返（RTT），同时解耦了前端展示与后端核心微服务的业务演进。',
+        '主要是为了在前端和网关之间增加一层负载均衡器以提升并发量。'
+      ],
+      answer: 1,
+      explain: 'BFF 模式的真实应用场景。在移动端等弱网环境下，一个页面如果需要调 10 个微服务才能渲染，网络往返延迟是灾难性的。BFF 在内网低延迟环境下进行聚合，并裁剪掉冗余的 JSON 字段，能极大地优化客户端体验。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
