@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M5L10 · 分区与分片
 
@@ -32,6 +33,41 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 基础：哈希分片 vs 范围分片
 
+```mermaid
+flowchart TD
+  subgraph RangeSharding["配置 1: 范围分片 (Range Partitioning - 利于扫描，易产热点)"]
+    direction TB
+    KeysR["数据键 (分区键: 订单创建时间) <br/>[2026-07-01] ... [2026-08-31]"]
+    RouterR{"根据时间区间路由"}
+    
+    Shard1_R[("Shard 1 <br/>[7月数据]")]
+    Shard2_R[("Shard 2 <br/>[8月数据]")]
+    
+    KeysR --> RouterR
+    RouterR -->|'2026-07-15'| Shard1_R
+    RouterR -->|'2026-08-20'| Shard2_R
+    
+    noteR["💥 热点风险：当时间来到 8 月，所有的写请求将 100% 倒灌冲击 Shard 2，导致 Shard 1 空载闲置。 <br/>✅ 查询优势：执行『查询8月5日到8月10日订单』只需扫描 Shard 2，速度极快。"]
+    Shard2_R -.-> noteR
+  end
+
+  subgraph HashSharding["配置 2: 哈希分片 (Hash Partitioning - 写入均匀，不利扫描)"]
+    direction TB
+    KeysH["数据键 (分区键: User_UUID) <br/>[usr_abc01] ... [usr_xyz99]"]
+    RouterH{"hash(UUID) % 2"}
+    
+    Shard1_H[("Shard 1 <br/>(存储 50% 记录)")]
+    Shard2_H[("Shard 2 <br/>(存储 50% 记录)")]
+    
+    KeysH --> RouterH
+    RouterH -->|结果 = 0| Shard1_H
+    RouterH -->|结果 = 1| Shard2_H
+    
+    noteH["✅ 负载均衡：写请求被哈希运算完全打散，数据和写入负荷均匀分布。 <br/>💥 查询劣势：执行『查询年龄在20~30岁的用户』，必须广播扫描所有 Shard 节点，网络 Scatter-Gather 开销高。"]
+    Shard1_H & Shard2_H -.-> noteH
+  end
+```
+
 <GlossaryTerm term="Sharding" definition="分片/分区：把一个大数据集按某个分区键切成多个子集（shard），分布到不同节点。每个节点只存一部分数据、处理一部分负载，从而突破单机容量和吞吐上限。" >分片（sharding）</GlossaryTerm>的两种基本切法：
 
 - <GlossaryTerm term="Hash Partitioning" definition="哈希分片：对分区键做哈希再决定归属节点，数据分布均匀、不易热点。但范围查询要扫所有分片（数据被打散）。" >哈希分片</GlossaryTerm>：对 key 哈希决定归属。**分布均匀、不易热点**，但相邻 key 被打散——**范围查询要扫所有分片**。
@@ -39,13 +75,81 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 进阶：热点、数据倾斜与一致性哈希再平衡
 
-- <GlossaryTerm term="Hotspot" definition="热点：某个分片承担了远超其它分片的负载（如某个大V、某个爆款商品、最新时间段），成为瓶颈，抵消了分片的好处。" >热点（hotspot）</GlossaryTerm>/数据倾斜：某片特别热（大V、爆款、最新时段），成为瓶颈。对策：更细的分区键、给热 key 加随机后缀打散、热点单独处理。
+```mermaid
+flowchart TD
+  subgraph SimpleHash["方案 A: 简单取模 hash(key) % N (扩容大地震)"]
+    direction TB
+    KeysA["旧节点数 N=3 时分配示例: <br/>key1->0, key2->1, key3->2, key4->0"]
+    MigrateA{"节点数变为 N=4 (扩容)"}
+    KeysA --> MigrateA
+    MigrateA -->|"重新计算取模 hash(key) % 4"| ResultA["💥 结果: (3-1)/3 = 66% 以上的数据哈希路由改变！<br/>几乎全表数据都必须跨机器进行物理迁移，造成网络和磁盘彻底瘫痪！"]
+  end
+
+  subgraph PreSharding["方案 B: 固定虚拟分片/预分片 (Pre-sharding - 平滑再平衡)"]
+    direction TB
+    KeysB["数据键 (固定映射)"] -->|hash(key) % 1024| Slots["1024 个虚拟分片 (Slots 0~1023) <br/>映射关系永恒不变"]
+    
+    subgraph Allocation["路由拓扑分配与迁移"]
+      Slots -->|0~340| Node1["节点 1 (扩容前)"]
+      Slots -->|341~680| Node2["节点 2 (扩容前)"]
+      Slots -->|681~1023| Node3["节点 3 (扩容前)"]
+      
+      NewNode["新节点 4 (扩容后)"]
+      Node1 & Node2 & Node3 -.->|仅抽调部分 Slots 并搬迁其数据| NewNode
+    end
+    
+    noteB["✅ 优势：每个键归属的 Slot 绝不漂移。扩容时，仅在后台迁移受影响的局部 Slots (如从各节点搬 85 个 Slot 到节点 4)。未搬迁的 75% 槽位读写正常，无需全量重排。"]
+    NewNode -.-> noteB
+  end
+```
+
+- <GlossaryTerm term="Hotspot" definition="热点：某个分片承担了远超其它分片的负载（如某个大V、某个爆款商品、最新时间段），成为瓶颈，抵消了分片的好处。" >热点（hotspot）</GlossaryTerm>/<GlossaryTerm term="Data Skew" definition="数据倾斜 (Data Skew)：在分布式系统分片存储中，由于 Shard Key 选择不佳，导致海量数据极度不均匀地囤积在极少数节点上，导致某些节点存储空间和 CPU 压力暴增，而其他节点却处于闲置状态，违背了分布式扩展的初衷。">数据倾斜</GlossaryTerm>：某片特别热（大V、爆款、最新时段），成为瓶颈。对策：更细的分区键、给热 key 加随机后缀打散、热点单独处理。
 - **再平衡（rebalancing）**：加机器时怎么搬数据？朴素 `hash%N` 会让几乎所有数据重新分布（[M5L1 已证](./load-balancing)）。用<GlossaryTerm term="Consistent Hashing" definition="一致性哈希：把节点和键映射到哈希环，增删节点只迁移相邻一小段数据（~1/N），是分片平滑再平衡的基础（详见 M5L1）。" >一致性哈希</GlossaryTerm>（[M5L1](./load-balancing)）则只搬 ~1/N。生产系统还常用**固定数量的虚拟分片**（如预分 1024 个 partition，再把 partition 映射到物理节点），扩容时只迁移整个 partition、不重算哈希。
 
 ### 深入（选学）：分片把"简单操作"变难
 
 分片的代价是查询和事务变复杂：
 - **跨分片查询/聚合**：`SELECT ... ORDER BY` 跨所有分片要"分散-聚合"（scatter-gather），慢且放大[尾延迟](../foundations/performance-and-latency)。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Client as 客户端 (Client)
+  participant Proxy as 路由中间件 (Router / Proxy)
+  participant Shard1 as 分片 1 (Shard 1 - Fast)
+  participant Shard2 as 分片 2 (Shard 2 - Slow GC)
+  participant Shard3 as 分片 3 (Shard 3 - Normal)
+
+  Client->>Proxy: 查询年龄在 20~30 岁用户 (按 ID 分片，未带 Shard Key)
+  activate Proxy
+  Note over Proxy: 无法确定数据归属，必须执行 Scatter (广播)
+  
+  par 广播给所有分片 (Scatter)
+    Proxy->>Shard1: 查询 age 20~30
+    activate Shard1
+    Proxy->>Shard2: 查询 age 20~30
+    activate Shard2
+    Proxy->>Shard3: 查询 age 20~30
+    activate Shard3
+  
+    Shard1-->>Proxy: 返回 50 条记录 (耗时 10ms)
+    deactivate Shard1
+  
+    Shard3-->>Proxy: 返回 40 条记录 (耗时 25ms)
+    deactivate Shard3
+  
+    Note over Shard2: 此时该节点不幸触发 JVM GC 停顿 (慢响应!)
+    Shard2-->>Proxy: 返回 60 条记录 (耗时 350ms)
+    deactivate Shard2
+  end
+
+  Note over Proxy: 收到全部节点响应后进行 Gather (内存合并排序)
+  Proxy->>Proxy: 合并 150 条记录并按 age 排序
+  Proxy-->>Client: 返回结果 (总耗时 = 350ms!)
+  deactivate Proxy
+
+  Note over Client, Shard3: ⚠️ 尾延迟放大效应: 总耗时取决于最卡的分片 2，单个木桶短板拖慢全网！
+```
 - **跨分片事务**：单分片内可用本地事务，跨分片需分布式事务/[Saga（M3L11）](../data-cache-queue/consistency-patterns)，代价高——所以**分区键的选择极关键**：尽量让常一起访问的数据落在同一分片（如同一用户的所有订单同片）。
 - **二级索引**：按非分区键查询很难，需要全局二级索引或按分区键反范式（[回扣 M3L2 索引](../data-cache-queue/indexing)）。
 - **路由层**：客户端/代理要知道"key 在哪片"——靠分片映射表或一致性哈希计算。
@@ -186,9 +290,46 @@ python labs/month05/m5l10_sharding/test_sharding.py
 
 ## 常见误解
 
-- **"分片就是 hash%N"**：扩缩容会几乎全量迁移，要用一致性哈希/固定虚拟分片。
-- **"分片后查询照旧"**：跨分片查询要 scatter-gather、跨分片事务很贵。
-- **"哈希分片一定均匀"**：大 key（大V/爆款）仍会造成热点，要单独处理。
+- **"数据库分片路由很简单，直接在业务层代码使用 hash(key) % N 取模路由即可，不需要搞复杂的一致性哈希"**: 严重低估了生产环境下扩容/缩容（Rebalancing）的灾难性代价。使用简单取模时，一旦节点数 $N$ 发生变化，全网哈希映射将大范围错乱漂移，导致高达 $(N-1)/N$（如 3 变 4 时为 75%）的已有数据必须跨节点迁移。这不仅吞噬集群网络带宽，更可能引发数据库大面积宕机。因此生产分片系统必须使用 **一致性哈希** 或 **固定数量的预分片（Pre-sharding）** 技术实现平滑再平衡。
+- **"数据库分片（Sharding）是完全透明的，分片之后我们的 SQL 查询和事务操作可以照旧写，不用管分区键是什么"**: 盲目乐观。分片后，如果你的 SQL 查询没有带上分区键（Shard Key），路由中间件就无法定位数据所在的分片，只能被迫向全网所有物理节点广播该查询（Scatter-Gather），性能暴跌且极度放大尾延迟。此外，跨分片的事务需要昂贵的 **分布式事务（如两阶段提交 2PC）** 或 Saga 补偿机制，其写入吞吐会跌落几个数量级。分区键的设计决定了分片系统的成败。
+- **"既然哈希分片可以将数据打散，那么只要我们用了哈希分片，就绝对不可能再出现任何热点（Hotspot）与数据倾斜"**: 忽略了应用层“大 key”或“单点集中度”的客观事实。哈希分片虽然能保证不同的 Key 均匀分布在不同分片，但如果系统内存在极个别超高流量的单点 Key（例如微博上的热点大 V 用户、爆款抢购商品），该 Key 的所有读写依旧会被 100% 路由到同一个物理分片上，从而把那台机器瞬间打挂。**大 Key 热点必须在应用层打散（如拼随机后缀）或单独缓存处理**。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在分片数据库设计中，范围分片（Range Partitioning）与哈希分片（Hash Partitioning）对‘范围查询（Range Query）’和‘写热点控制（Hotspot Prevention）’的权衡关系是什么？',
+      options: [
+        '范围分片会导致全局所有节点发生死锁，而哈希分片性能在任何查询下都比范围分片好。',
+        '范围分片利于范围查询（相邻数据落在同一个分片内，只需扫描一片），但易产生写热点（如按自增 ID 或时间写入，最新数据全挤在末尾分片）；哈希分片能将写请求均匀分散到各个节点防范热点，但由于相邻键被打散，范围查询必须扫描所有分片（分散-聚集），代价昂贵。',
+        '范围分片不支持添加二级索引，而哈希分片天然支持分布式事务。'
+      ],
+      answer: 1,
+      explain: '分布式分片的经典取舍。没有完美的物理分区方式，选择 Shard Key 实质是在‘读的集中度’（Scatter-Gather 开销）与‘写的分散度’（防止热点）之间做平衡。'
+    },
+    {
+      q: '当分片集群需要扩容添加新物理节点时，为什么在生产中极力避免使用最简单的 hash(key) % N 路由算法？应当如何优化？',
+      options: [
+        '因为哈希模 N 运算在 CPU 上的计算开销太大，会导致节点死机。',
+        '因为当 N 从 3 变为 4 时，几乎所有既有数据的哈希路由地址都会发生漂移，触发全网大范围（高达 (N-1)/N = 75%）的数据大搬迁，导致网络和磁盘 I/O 瞬间过载崩溃。应当引入‘一致性哈希’或使用‘固定数量虚拟分片（Pre-sharding）’，只搬迁相邻一小段（~1/N）的数据。',
+        '模 N 路由无法支持跨地域的多机房冗余备份部署。'
+      ],
+      answer: 1,
+      explain: '再平衡（Rebalancing）的物理代价。大厂数据库扩容时，全量搬迁数据意味着长时间服务中断。虚拟分片（如 ElasticSearch 的 primary shards 映射，Redis Cluster 的 16384 插槽）或一致性哈希是平滑扩容的黄金基石。'
+    },
+    {
+      q: '在分片架构中，什么是‘分散-聚集（Scatter-Gather）’查询？它对系统性能有何隐患？',
+      options: [
+        'Scatter-Gather 指客户端先下载全表，然后在本地浏览器内使用 JavaScript 进行数据聚合的低效过程。',
+        '当查询过滤条件没有包含分区键（Shard Key）时，路由代理无法确定数据具体在哪个分片，只能被迫将请求广播发送给全部物理分片执行（Scatter），然后再将各片结果收集合并（Gather）。这种查询极度消耗集群算力，且查询的总延迟由响应最慢的那台‘慢节点’决定，严重放大尾延迟（Tail Latency）。',
+        'Scatter-Gather 是专门用来修复发生损坏的分片数据库一致性的一种工具。'
+      ],
+      answer: 1,
+      explain: 'Scatter-Gather 的尾延迟放大效应。木桶理论在分布式查询中的体现：广播查询的耗时由最卡的那台机器决定（比如恰好碰上 GC 暂停的那台），且广播严重破坏了分片水平扩展的初衷。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
