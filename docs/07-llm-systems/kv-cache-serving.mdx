@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M7L7 · KV cache 与推理服务
 
@@ -28,6 +30,23 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 回忆 [M7L1](./transformer-autoregression)：生成是逐 token 的，每步都要基于"目前全部 token"算注意力。朴素实现下，生成长度 N 的序列，第 k 步要处理 k 个 token 的注意力——总计算量随 N **平方级**增长，而且**前面 token 的计算被一遍遍重复**。对一个要生成几百上千 token 的回答，这是巨大的浪费。推理服务的核心优化，就是消除这种重复、并把昂贵的 GPU 喂满。
 
+```mermaid
+graph LR
+    subgraph Naive["1. 朴素自回归模式 (No Cache)"]
+        direction TB
+        N1["Step 1: 处理 Token 1<br/>(计算 Token 1 注意力)"] --> N2["Step 2: 生成 Token 2<br/>(重新计算 Token 1+2 注意力)"]
+        N2 --> N3["Step 3: 生成 Token 3<br/>(重新计算 Token 1+2+3 注意力)"]
+        NoteNaive["计算开销随序列长度 N 呈平方级 (O(N^2)) 增长"]
+    end
+    
+    subgraph KVCacheMode["2. KV Cache 缓存模式 (With Cache)"]
+        direction TB
+        K1["Step 1: Prefill 阶段<br/>(计算 Token 1 并存入 KV Cache)"] --> K2["Step 2: Decode 阶段<br/>(读取 Cache，仅计算新 Token 2 注意力)"]
+        K2 --> K3["Step 3: Decode 阶段<br/>(追加 Cache，仅计算新 Token 3 注意力)"]
+        NoteKV["每步计算复杂度降为 O(1)，但显存占用随长度线性上升"]
+    end
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：KV cache
@@ -38,15 +57,54 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 LLM 推理分两个阶段（[呼应 M7L5 的两段延迟](./llm-api-cost-latency)）：
 - <GlossaryTerm term="Prefill" definition="预填充阶段：一次性处理整个输入 prompt，计算并填充它的 KV cache。计算密集、可高度并行，决定首 token 延迟（TTFT）。">prefill（预填充）</GlossaryTerm>：一次性处理整个输入 prompt、建好它的 KV cache。计算密集、可并行，决定 [TTFT](./llm-api-cost-latency)。
-- <GlossaryTerm term="Decode" definition="解码阶段：逐 token 生成输出，每步复用 KV cache 只算一个新 token。受显存带宽限制、难并行，决定每 token 时延（TPOT）。">decode（解码）</GlossaryTerm>：逐 token 生成输出，每步复用 KV cache。受显存带宽限制、本质串行，决定 [TPOT](./llm-api-cost-latency)。
+- <GlossaryTerm term="Decode" definition="解码阶段：逐 token 生成输出，每步复用 KV cache 只算一个新 token。受显存带宽限制、难并行，决定每 token时延（TPOT）。">decode（解码）</GlossaryTerm>：逐 token 生成输出，每步复用 KV cache。受<GlossaryTerm term="Memory Bandwidth" definition="显存带宽 (Memory Bandwidth)：GPU 芯片从显存中读取或写入数据的速度。在 Decode（解码）阶段，频繁读取已保存的 KV cache 使得显存带宽成为推理吞吐的最大性能瓶颈。">显存带宽</GlossaryTerm>限制、本质串行，决定 [TPOT](./llm-api-cost-latency)。
 - 两阶段特性不同（prefill 算力密集、decode 带宽密集），这是推理服务调度优化的基础。
 
 ### 深入（选学）：连续批处理与前缀复用
 
 把昂贵的 GPU 喂满、把缓存用足，是推理服务的两大杠杆：
-- <GlossaryTerm term="Continuous Batching" definition="连续批处理：推理服务动态地把多个请求的生成步骤打包到一起喂给 GPU，且请求可随时加入/完成，而非等一整批同时开始结束。大幅提升 GPU 利用率和吞吐。">连续批处理（continuous batching）</GlossaryTerm>：GPU 一次能并行算很多 token，所以把多个请求的生成步骤**动态打包**一起算，且请求可随时进出（不必等一整批同步）——大幅提升 GPU 利用率和吞吐。这是 LLM 服务能扛高并发的关键。
+- <GlossaryTerm term="Continuous Batching" definition="连续批处理：推理服务动态地把多个请求的生成步骤打包到一起喂给 GPU，且请求可随时加入/完成，而非等一整批同时开始结束。大幅提升 GPU 利用率和吞吐。">连续批处理（continuous batching）</GlossaryTerm>：GPU 一次能并行算很多 token，所以把多个请求的生成步骤**动态打包**一起算，且请求可随时进出（不必等一整批同步）——大幅提升 GPU 利用率 and 吞吐。这是 LLM 服务能扛高并发的关键。
 - <GlossaryTerm term="Prefix Caching" definition="前缀缓存：多个请求若共享相同的前缀（如相同的 system prompt），可复用该前缀已算好的 KV cache，跳过重复的 prefill，节省算力和首 token 延迟。">前缀缓存（prefix caching）</GlossaryTerm>：很多请求共享相同前缀（如同一个长 system prompt、同一段少样本示例）——把这段前缀的 KV cache 复用，跳过重复 prefill，省算力、降 TTFT。这就是为什么"固定的 system prompt 放前面、变化的内容放后面"能更省（[呼应 M6L1 镜像分层](../cloud-enterprise-industrial/containers) 把不变的放下面同理）。
-- <GlossaryTerm term="PagedAttention" definition="PagedAttention：像操作系统分页管理内存那样管理 KV cache 显存，按需分配小块、减少碎片和浪费，让同样显存能服务更多并发请求（vLLM 提出）。">PagedAttention</GlossaryTerm>：像 OS 分页那样管理 KV cache 显存，减少碎片、提升并发（vLLM 的关键创新）。
+
+```mermaid
+graph TD
+    Request["新请求到达: System Prompt + 用户提问"] --> Hash["1. 计算 System Prompt 哈希值"]
+    Hash --> CheckCache{"2. 检测 GPU 前缀缓存哈希表"}
+    
+    CheckCache -->|哈希命中 (Hit)| Hit["3. 直接复用已有 KV Cache"]
+    CheckCache -->|哈希未命中 (Miss)| Miss["3. 对 System Prompt 运行完整 Prefill 计算"]
+    
+    Hit --> PrefillUser["4. 仅对新增的『用户提问』进行 Prefill (TTFT 暴降)"]
+    Miss --> CacheNew["4. 缓存该 System Prompt 的 KV 并标记哈希"]
+    
+    PrefillUser --> Decode["5. 进入 Decode 阶段流式输出"]
+    CacheNew --> Decode
+```
+
+- <GlossaryTerm term="PagedAttention" definition="PagedAttention：像操作系统分页管理内存那样管理 KV cache 显存，按需分配小块、减少碎片和浪费，让同样显存能服务更多并发请求（vLLM 提出）。">PagedAttention</GlossaryTerm>：像 OS 分页那样管理 KV cache 显存，减少碎片、提升并发（<GlossaryTerm term="vLLM" definition="vLLM：一款高性能开源大模型推理引擎，通过提出 PagedAttention 显存物理分页分配机制，极大地消存在显存碎片，大幅拉高了系统的并发吞吐量。">vLLM</GlossaryTerm> 提出）。
+
+```mermaid
+graph TD
+    subgraph Logical["逻辑 Token 序列 (以 Block 为单位)"]
+        LBlock0["Logical Block 0: [Token 0-3]"]
+        LBlock1["Logical Block 1: [Token 4-7]"]
+    end
+    
+    subgraph Table["vLLM Block Table (块表映射)"]
+        Map0["LBlock 0 --> Physical Frame 7"]
+        Map1["LBlock 1 --> Physical Frame 12"]
+    end
+    
+    subgraph Physical["GPU 物理显存 (Paged Frames)"]
+        Frame7["Physical Frame 7 (存放 Token 0-3 的 KV)"]
+        Frame12["Physical Frame 12 (存放 Token 4-7 的 KV)"]
+        FrameEmpty["Physical Frame 9 (空闲，按需动态分配)"]
+    end
+    
+    Logical --> Table
+    Table --> Physical
+```
+
 - 这些优化共同决定了推理服务的**吞吐、并发数、单 token 成本**——也解释了 [ChatGPT 架构案例](../atlas/chatgpt) 里"服务架构"那条线。作为应用架构师，你不必自己实现，但要理解它们，才能正确选型推理方案、估算成本、优化 prompt 结构。
 
 <ResearchNote
@@ -58,6 +116,33 @@ LLM 推理分两个阶段（[呼应 M7L5 的两段延迟](./llm-api-cost-latency
 />
 
 ## 三、跟我做一遍：KV cache 前缀复用
+
+为了让大家更直观地体验前缀缓存（Prefix Caching）在工程实践中如何通过复用 KV Cache 来优化首包时延，下面是一个交互式步骤演示：
+
+<StepFlow
+  steps={[
+    {
+      title: '步骤 1: 共享前缀注入与初次 Prefill',
+      desc: '系统配置了一段长达 1000 Tokens 的客服知识库作为 System Prompt。当第一个用户发起提问时，推理引擎对该 Prompt 运行完整的 Prefill 运算，并将生成的 KV Cache 存入显存，标记其哈希。'
+    },
+    {
+      title: '步骤 2: 第二个用户提问到达',
+      desc: '用户 B 提问“退货地址是什么”。该请求同样携带了前面那段 1000 Tokens 的 System Prompt，以及 20 Tokens 的新增提问。'
+    },
+    {
+      title: '步骤 3: 前缀缓存哈希检索命中',
+      desc: 'vLLM 推理网关接收到请求，对前 1000 Tokens 计算哈希值，并在显存哈希表中检索，成功命中步骤 1 缓存好的物理页面。'
+    },
+    {
+      title: '步骤 4: 跳过重复 Prefill，直接加载缓存',
+      desc: '引擎直接将 1000 Tokens 的 KV Cache 指针映射给当前请求。GPU 仅需对新增的 20 Tokens 的提问进行矩阵计算。首包延迟（TTFT）从原先的 600ms 直接缩短为 15ms。'
+    },
+    {
+      title: '步骤 5: 自回归增量 Decode 输出',
+      desc: '进入 Decode 阶段，自回归逐字生成。每步生成 1 个 Token（TPOT = 15ms）并将新生成的 KV 动态写入物理显存页，整个过程相比无缓存状态省下了巨大算力。'
+    }
+  ]}
+/>
 
 <PyRunner
   rows={34}
@@ -180,6 +265,44 @@ LLM 推理的 GPU 成本极高，推理效率直接决定 AI 产品能不能赚�
 - **"模型生成每个字成本一样"**：朴素下随前文增长；KV cache 后才线性。显存随上下文/并发涨。
 - **"推理就是跑一次模型"**：分 prefill（算输入）和 decode（逐 token 生成）两阶段，特性不同。
 - **"单 token 成本是固定的"**：取决于推理方案、批处理、前缀缓存和你的使用方式。
+- **"KV Cache 纯粹是一个底层硬件或推理引擎的运维优化，对上层应用开发者的代码或 Prompt 结构没有任何要求"**：大错特错。懂原理的架构师在应用层可以做出极具性价比的决策。例如：(1) **固化 System Prompt 和 Prompt 模板头部**：前缀缓存（Prefix Caching）是按字符和哈希进行完全前置匹配的。如果你把变动的参数（如“当前时间”、“用户提问”）放在 Prompt 最前面，而把固定的系统规则和 Sample 放在最后，那么由于头部哈希每次都变，前缀缓存将彻底失效。必须遵循“不变的放最前，变动的塞最后”的黄金法则。(2) **控制上下文膨胀**：由于 KV Cache 的空间开销与并发和长度成正比，过长的历史消息会迅速榨干 GPU 显存，导致连续批处理（Continuous Batching）能容纳的并发 QPS 呈断崖式下跌。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '为什么随着对话上下文长度的增长和大并发调用，大模型推理服务的性能瓶颈会由“算力（FLOPS）受限”转变为“显存/带宽（Memory）受限”？',
+      options: [
+        '因为计算注意力矩阵在任何时候都不消耗 GPU 算力。',
+        '...因为在 Decode（解码）阶段，GPU 必须自回归地逐字生成。为了生成下一个字，它不需要做大量并行的矩阵乘法，但必须从显存中读取之前缓存的、随着上下文长度线性膨胀的全部 KV Cache 数据，这导致 GPU 的大部分时钟步都在等待显存读写完成。',
+        '因为大模型的权重文件实在太大了，显存里塞不下，必须频繁和主板内存进行 swapping。'
+      ],
+      answer: 1,
+      explain: '自回归 Decode 是典型的 memory-bound 任务。每一次 Token 的串行迭代都需要将庞大的 KV Cache 重新从 GPU 显存搬运到 SRAM 寄存器中，搬运速度（显存带宽）决定了生成速度。'
+    },
+    {
+      q: 'vLLM 引擎提出的 PagedAttention 机制，核心解决了传统推理引擎在显存管理上的什么痛点？',
+      options: [
+        '解决了 Transformer 无法在多张 GPU 卡上进行张量并行计算的局限。',
+        '解决了由于预先静态分配最大上下文显存而产生的巨大显存碎片与过度预留浪费。它像操作系统内存分页一样，将 KV Cache 拆成固定大小 of 物理页并按需映射，让同一块 GPU 能处理比原先多出数倍的并发请求。',
+        '解决了 CPU 内存到 GPU 显存之间 PCIe 数据传输带宽严重不足的问题。'
+      ],
+      answer: 1,
+      explain: 'PagedAttention 通过虚拟内存的思想，动态分配非连续的物理页面，彻底根治了静态预分配导致高达 60%-80% 显存空置碎片的顽疾，极大拉高了推理服务的并发上限。'
+    },
+    {
+      q: '为了能最大化利用云服务商或自托管 vLLM 引擎的“前缀缓存 (Prefix Caching)”优化，架构师应该如何设计 Prompt 模板？',
+      options: [
+        '将经常变动的信息（如当前时间、随机 Session ID）置于 Prompt 最前部，固定不变的 System Prompt 置于尾部。',
+        '在每次请求中随机打乱 Prompt 的字段排布，使大模型获得新鲜感。',
+        '将绝对固定的长 System Prompt 和少样本 Few-shot 示例等内容放置在 Prompt 的最前部，并保持字符串完全一致；把用户每次不同的提问放在 Prompt 最末尾，确保前缀哈希能稳定命中。'
+      ],
+      answer: 2,
+      explain: '前缀缓存是基于严格前缀字符串哈希匹配的。只要前缀发生一丁点字符变动，后面的缓存就全部失效。因此必须遵循“不变的在前，变动的在后”的设计规范。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
