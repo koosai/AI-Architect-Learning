@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M7L2 · 分词与上下文窗口
 
@@ -28,6 +30,15 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 你可能以为模型按字符或单词处理文本，其实都不是。模型用一套固定的<GlossaryTerm term="Tokenizer" definition="分词器：把文本切成 token 序列（再映射成数字 ID）的组件。常用子词算法（如 BPE），常见词是一个 token，生僻词被拆成多个，英文一个 token 约 4 个字符，中文常一字一或多 token。">分词器（tokenizer）</GlossaryTerm>把文本切成 token。规律：常见词往往是一个 token，生僻词/长词被拆成几个 token，标点和空格也算。粗略地说，**英文约 4 个字符 ≈ 1 个 token，中文常常 1 个字 ≈ 1～2 个 token**。所以"按 token 计费"比按字符或按词更贴近模型真实的计算量。
 
+```mermaid
+graph LR
+    Input["输入文本: 'unhelpful'"] --> Tokenizer["BPE 分词器 (词表检索与切分)"]
+    Tokenizer --> Tokens["切分为 Tokens: ['un', 'help', 'ful']"]
+    Tokens --> Mapper["词表映射 (Vocab Lookup)"]
+    Mapper --> IDs["数字 IDs: [1203, 401, 882]"]
+    IDs --> Model["输入给大模型"]
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：分词（tokenization）
@@ -38,13 +49,43 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 <GlossaryTerm term="Context Window" definition="上下文窗口：模型一次推理能接收的最大 token 数（输入 + 输出共享或分别计）。它是模型的“工作记忆”上限，超出部分必须靠截断、摘要或检索来取舍。">上下文窗口（context window）</GlossaryTerm>是模型一次能"看到"的 token 总量上限。它不是无限记忆——**所有要给模型的内容必须塞进这个窗口**：system prompt + 历史 + 检索资料 + 用户问题 + 预留给输出的空间。窗口满了，就得做取舍（截断旧对话、摘要、只放最相关的资料）。现代模型窗口越来越大（几十万 token），但"大"不等于"该塞满"——见深入。
 
+```mermaid
+graph TD
+    subgraph BudgetAllocation["上下文窗口 (X 个 Tokens 额度竞争)"]
+        direction TB
+        Output["1. 预留输出 Token (最高优先级 - 决定模型能否完整作答)"]
+        System["2. System Prompt (核心逻辑 - 决定模型的人设与行为规范)"]
+        UserQ["3. 用户当前提问 (核心输入 - 决定本次任务主题)"]
+        Docs["4. RAG 检索文档 (辅助支撑 - 提供外部事实依据)"]
+        History["5. 历史对话 (低优先级 - 提供上下文背景记忆)"]
+    end
+    
+    BudgetExceeded["总 Tokens 竞争超预算?"]
+    BudgetExceeded -->|是| Truncate["按优先级自底向上淘汰 (先剔除/截断历史对话, 甚至精简检索文档)"]
+    BudgetExceeded -->|否| Pass["直接发送请求给 API"]
+```
+
 ### 深入（选学）：token 预算与"大窗口不等于随便塞"
 
 把上下文当成一个有限预算来管理：
 - <GlossaryTerm term="Token Budget" definition="token 预算：为一次调用分配的 token 上限，需在 system prompt、历史、检索内容、用户输入、输出预留之间分配。超预算要靠截断、摘要、检索筛选来取舍。">token 预算</GlossaryTerm>：明确给各部分分配额度，留足输出空间，超了按优先级裁剪（如先砍最旧对话）。
 - **大窗口的三个代价**：(1) **更贵**——按 token 收费，塞满几十万 token 一次调用很烧钱；(2) **更慢**——注意力随长度增长（[M7L1](./transformer-autoregression)）；(3) <GlossaryTerm term="Lost in the Middle" definition="“迷失在中间”：研究发现模型对超长上下文里中间位置的信息利用较差，开头和结尾的信息更容易被用上。所以塞太多无关内容反而稀释了关键信息。">迷失在中间</GlossaryTerm>——塞太多无关内容会稀释关键信息、模型反而抓不住重点。
-- 所以正解不是"窗口够大就把所有文档塞进去"，而是**只放与当前任务最相关的内容**——这正是 [RAG（Month 8）](../rag/overview) 的核心价值：把"所有材料"变成"最相关的证据"。
+- 所以正解不是"窗口够大就把所有文档塞进去"，而是**只放与当前任务最相关的内容**——这正是 <GlossaryTerm term="RAG" definition="检索增强生成 (Retrieval-Augmented Generation, RAG)：通过检索外部知识库获取与问题相关的证据片段，再将其作为前文塞入 LLM 上下文窗口以指导生成。">RAG（Month 8）</GlossaryTerm> 的核心价值：把"所有材料"变成"最相关的证据"。
 - 输出长度也吃预算且最贵（[输出 token 串行生成 M7L1](./transformer-autoregression)）——能让模型只输出必要结果就别让它长篇大论。
+
+```mermaid
+graph TD
+    subgraph LostInMiddle["迷失在中间 (Lost in the Middle) 检索准确率变化示意"]
+        direction TB
+        StartPos["上下文最前部 (开头: System Prompt / 最新提问)"]
+        MidPos["上下文中间部 (中间: 被稀释的检索文档 / 长篇历史)"]
+        EndPos["上下文最后部 (结尾: 临近问题的关键线索)"]
+        
+        StartPos ==>|"检索召回/利用准确率: ~95% (极高)"| Active1[高效提取]
+        MidPos -->|"检索召回/利用准确率: ~40% (突降/迷失)"| Active2[信息稀释与忽略]
+        EndPos ==>|"检索召回/利用准确率: ~90% (极高)"| Active3[高效提取]
+    end
+```
 
 <ResearchNote
   title="分词与上下文：LLM 工程的容量与成本基础"
@@ -55,6 +96,33 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 />
 
 ## 三、跟我做一遍：token 预算下的上下文拼装
+
+为了让大家更直观地体验 token 预算下的上下文裁剪逻辑，下面是一个交互式步骤演示：
+
+<StepFlow
+  steps={[
+    {
+      title: '步骤 1: 预算初始化与预留',
+      desc: '总上下文窗口限制为 100 Token。首先为模型输出保留 20 Token 额度。此时输入可用预算还剩 80 Token。'
+    },
+    {
+      title: '步骤 2: 拼装最高优先级内容',
+      desc: '载入 system 提示词（15 Tokens）和 user_question 当前问题（25 Tokens）。已占用 40 Tokens，剩余预算：40 Tokens。'
+    },
+    {
+      title: '步骤 3: 拼装中等优先级内容',
+      desc: '载入检索到的文档 retrieved_doc（30 Tokens）。已占用 70 Tokens，剩余预算：10 Tokens。'
+    },
+    {
+      title: '步骤 4: 评估并淘汰低优先级内容',
+      desc: '尝试载入历史对话 old_history（需 50 Tokens）。由于剩余预算仅剩 10 Tokens，无法完整装下。上下文组装器执行淘汰策略，截断或放弃老旧历史。'
+    },
+    {
+      title: '步骤 5: 生成最终拼装上下文',
+      desc: '拼装完成，最终向 API 发送 system + user_question + retrieved_doc，总大小为 70 Tokens，完美运行在安全预算内。'
+    }
+  ]}
+/>
 
 <PyRunner
   rows={34}
@@ -179,6 +247,44 @@ python labs/month07/m7l2_token_budget/test_budget.py
 - **"token 就是单词"**：是子词单位，常见词一个 token、生僻词拆多个，中文/代码更耗 token。
 - **"上下文窗口 = 无限记忆"**：是硬上限，超了必须截断/摘要/检索取舍。
 - **"窗口大就把所有资料塞进去"**：又贵又慢还会迷失在中间，应只放最相关内容。
+- **"既然模型厂商把上下文窗口做到了 100 万 (1M) token，说明 RAG（检索增强生成）技术已经过时了，我们不需要再做知识库检索"**：错。100 万 token 确实能装下多本长篇小说，但大窗口并不意味着你应该装满它。首先，输入 100 万 token 产生的 API 成本极其高昂，且单次请求的 TTFT（首包延迟）和计算时长会变得无法忍受。其次，根据“迷失在中间”现象，模型在海量上下文中极难精准捕捉中间位置的某一条关键线索。RAG 的本质是**信息过滤与精选**，即使在大窗口时代，RAG 也是保证高响应速度、低成本、高利用精度的核心手段。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '为什么同样的中文文本在分词后产生的 Token 数量往往明显多于等长度的英文文本？',
+      options: [
+        '因为中文每个字包含的笔画比英文英文字母多，导致计算机处理时的字符占用大。',
+        '输入中文由于词汇密度高、且在词表中的覆盖率相对较低，常常需要将 1 个汉字拆分为 1 到 2 个 Token，甚至生僻汉字需要拆分为多个 Token，导致中文的“Token 乘数”更高。',
+        '因为大模型的 API 计费系统故意调高了中文的 Token 算法以进行商业限制。'
+      ],
+      answer: 1,
+      explain: '这与分词器的词表（Vocabulary）设计有关。BPE 词表中英文单词覆盖全，而中文往往需要被切成单字或偏旁部首组合，因此在计算 token 时，中文的密度远高于英文，这也是为什么中文调用 LLM 成本通常更高。'
+    },
+    {
+      q: '当大模型的上下文窗口满了以后，以下哪种管理上下文的方法能在高保真度的前提下，最适合扩展到远超窗口容量的超大型知识库？',
+      options: [
+        '截断法（直接丢弃旧的上下文内容，只保留最新输入）。',
+        '摘要压缩法（每次调用前，调用另一个轻量模型把超出部分进行摘要浓缩）。',
+        '检索增强生成（RAG）技术（通过向量检索只选出最相关的几百个 Token 证据，精准塞入当前上下文窗口）。'
+      ],
+      answer: 2,
+      explain: 'RAG 允许我们在数亿字的庞大知识库中，通过向量检索只挑出最精确的证据片段。这既保护了原文档的细节（保真度高），又极大地节省了 Token 开销（比塞满大窗口更便宜、更快）。'
+    },
+    {
+      q: '如何理解“迷失在中间 (Lost in the Middle)”这一大模型架构中的工程痛点？',
+      options: [
+        '模型在推理到一半时会因为 GPU 显存溢出而自动中断运行。',
+        '当输入上下文非常长时，模型更容易关注并提取开头（System Prompt、早前输入）和结尾（临近的提问）的信息，而对位于输入序列中段（中间位置）的信息抓取能力会大幅度下降。',
+        '如果用户在对话过程中修改了问题，模型会产生混乱而导致输出格式损坏。'
+      ],
+      answer: 1,
+      explain: 'Liu et al. (2023) 的研究证明了这一点。当输入的上下文越长，模型对其两端（开头和结尾）信息的记忆越清晰，而对深埋在中间的文档细节提取准确率会形成一条“U型曲线”下降。因此，控制上下文长度，并将最重要的内容放在两端是优化 prompt 结构的关键。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
