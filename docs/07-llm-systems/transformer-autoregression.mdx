@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M7L1 · Transformer 与自回归生成
 
@@ -26,7 +28,46 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ## 一、一个会接龙的概率机器
 
-把一句话喂给 LLM："今天天气真"，它会算出下一个 token 的概率分布："好"(60%)、"不错"(20%)、"糟"(5%)……选一个（比如"好"），接上去变成"今天天气真好"，再以此为输入预测下一个 token。**它不是先想好整句话再输出，而是一个 token 一个 token 地、基于前文滚动生成。** 这个朴素的"接龙"机制，配上海量参数和训练，就涌现出了看似智能的能力——但底层动作始终是"预测下一个 token"。
+把一句话喂给 LLM："今天天气真"，它会算出下一个 token 的概率分布："好"(60%)、"不错"(20%)、"糟"(5%)……选一个（比如"好"），接上去变成"今天天气真好"，再以此为输入预测下一个 token。**它不是先想好整句话再输出，而是一个 token 一个 token 地、基于前文滚动生成。** 这个朴素的"接龙"机制，配上海量参数 and 训练，就涌现出了看似智能的能力——但底层动作始终是"预测下一个 token"。
+
+```mermaid
+graph TD
+    Start([开始生成]) --> Init[初始化输入序列 X_0]
+    Init --> RunModel[模型运行推理]
+    RunModel --> Predict[预测下一个 Token 的概率分布]
+    Predict --> Sample[根据采样策略选择 Token t_i]
+    Sample --> CheckEnd{t_i == `<end>` 或 达到最大长度?}
+    CheckEnd -- 是 --> End([生成结束])
+    CheckEnd -- 否 --> Append[将 t_i 追加到输入序列: X_new = X_old + t_i]
+    Append --> RunModel
+```
+
+为了让大家更直观地体验这个接龙的过程，下面是一个交互式步骤演示：
+
+<StepFlow
+  steps={[
+    {
+      title: '步骤 1: 初始输入',
+      desc: '用户输入 Prompt: "今天"，模型将其转换为初始 Token。此时输入序列为：["今天"]。'
+    },
+    {
+      title: '步骤 2: 预测并生成首个 Token',
+      desc: '模型计算下一个 Token 的概率：“天气”(70%)、“心情”(30%)。采样选择“天气”，将其追加到前文。新序列为：["今天", "天气"]。'
+    },
+    {
+      title: '步骤 3: 循环预测第二个 Token',
+      desc: '以新序列为输入进行第二轮预测。概率分布为：“真”(60%)、“不”(40%)。采样选择“真”，追加前文。新序列为：["今天", "天气", "真"]。'
+    },
+    {
+      title: '步骤 4: 循环预测第三个 Token',
+      desc: '以新序列进行第三轮预测。概率分布为：“好”(80%)、“糟”(20%)。采样选择“好”，追加前文。新序列为：["今天", "天气", "真", "好"]。'
+    },
+    {
+      title: '步骤 5: 结束符触发',
+      desc: '对新序列进行第四轮预测。概率分布表明下一个最可能是结束符 "<end>" (100%)。生成循环正式停止，最终输出结果。'
+    }
+  ]}
+/>
 
 ## 二、三个核心概念（分层）
 
@@ -39,13 +80,57 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 Transformer 凭什么预测得准？靠<GlossaryTerm term="Self-Attention" definition="自注意力：模型在预测下一个 token 时，让当前位置“关注”输入序列中所有相关的 token，按相关性加权地聚合信息。它让模型能捕捉长距离依赖，是 Transformer 的核心。">自注意力（self-attention）</GlossaryTerm>：预测下一个 token 时，模型让当前位置**关注前文中所有相关的 token**，按相关性加权地综合信息。比如预测"它"指代谁时，注意力会聚焦到前面的那个名词。你不需要推导数学，但要记住直觉：**注意力让模型能把"前文里相关的部分"加权地纳入当前预测**——这就是它能处理长距离依赖、理解上下文的关键。
 
+```mermaid
+graph TD
+    subgraph Attention["自注意力权重分配机制 (预测下一个 Token)"]
+        direction TB
+        T1["今天"]
+        T2["天气"]
+        T3["真"]
+        Next["预测中... (当前词: 真)"]
+        
+        Next -.->|"低权重 (0.1)"| T1
+        Next -.->|"高权重 (0.6)"| T2
+        Next -.->|"中权重 (0.3)"| T3
+        
+        T1 --> Aggregate[加权特征聚合]
+        T2 --> Aggregate
+        T3 --> Aggregate
+        Aggregate --> Out["预测下一个 Token: '好' (60%), '不错' (20%)"]
+    end
+```
+
 ### 深入（选学）：从机制推出工程性质
 
 把自回归 + 注意力想透，一堆工程现象就自然导出：
-- **延迟 = 逐 token 串行**：生成 N 个 token 要串行跑 N 次模型，所以**输出越长越慢**；首 token 延迟（[TTFT](#)）和后续每 token 延迟是两个不同指标（[L15 延迟](../foundations/performance-and-latency)）。
+- **延迟 = 逐 token 串行**：生成 N 个 token 要串行跑 N 次模型，所以**输出越长越慢**；<GlossaryTerm term="TTFT" definition="首 token 延迟 (Time to First Token, TTFT)：从用户发送请求到模型输出第一个 token 的时间，取决于 Prefill 阶段处理全部输入 prompt 的并行计算时间。">首 token 延迟（TTFT）</GlossaryTerm>和后续每 token 延迟是两个不同指标（[L15 延迟](../foundations/performance-and-latency)）。
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as 客户端
+    participant LLM as 推理引擎 (GPU)
+    
+    rect rgb(240, 248, 255)
+        Note over Client, LLM: 阶段 1: Prefill (首 Token 阶段) - 高度并行计算
+        Client->>LLM: 发送 Prompt: "今天天气真" (3 tokens)
+        LLM->>LLM: 一次性并行处理所有输入 Token (计算 KV cache)
+        LLM-->>Client: 返回首 Token: "好" (触发 TTFT 延迟)
+    end
+    
+    rect rgb(255, 240, 245)
+        Note over Client, LLM: 阶段 2: Decode (后续 Token 生成) - 串行自回归
+        Client->>LLM: 串行生成下一个 Token (输入: "今天天气真好")
+        LLM->>LLM: 利用已有 KV cache 仅计算最后一个 Token 的 Self-attention
+        LLM-->>Client: 流式返回: "错" (后续每 token 延迟)
+        Client->>LLM: 串行生成下一个 Token (输入: "今天天气真不错")
+        LLM->>LLM: 计算最后一个 Token
+        LLM-->>Client: 流式返回: "<end>"
+    end
+```
 - **流式输出**：因为是一个个生成的，可以边生成边推给用户（streaming），改善体感延迟。
 - **每步要看全部前文**：注意力的计算量随上下文长度增长（约平方级），所以**上下文越长越慢越贵**——这引出了 [KV cache（M7L7）](./kv-cache-serving) 这个关键优化。
-- **"越说越偏"**：每个 token 基于前面已生成的 token，一旦开了个错头，后面会顺着错下去（错误累积）——这也是为什么[采样策略（M7L3）](./sampling-decoding) 和[防护（M7L9）](./hallucination-guardrails)重要。
+- **"越说越偏"**：每个 token 基于前面已生成的 token，一旦开了个错头，后面会顺着错下去（<GlossaryTerm term="Error Accumulation" definition="错误累积：在自回归生成中，一步预测错会导致该错误被作为下一步的输入前文，从而使后面的生成越来越偏离预定轨道。">错误累积</GlossaryTerm>）——这也是为什么[采样策略（M7L3）](./sampling-decoding) 和[防护（M7L9）](./hallucination-guardrails)重要。
 - **本质是概率**：它预测的是"最可能接什么"，不是"什么是对的"——这是[幻觉（M7L9）](./hallucination-guardrails)的根源。
 
 <ResearchNote
@@ -173,7 +258,7 @@ python labs/month07/m7l1_autoregress/test_autoregress.py
 
 ### 4. 架构师深问（给自己 30 分钟）
 
-- 用自回归解释：为什么让模型"先输出推理过程再给答案"（思维链）会更慢更贵？为什么也可能更准？
+- 用自回归解释：为什么让模型"先输出推理过程再给答案"（<GlossaryTerm term="Chain of Thought" definition="思维链 (CoT)：通过让模型生成中间推理步骤来解决复杂推理任务。由于自回归的逐 token 生成性质，它会显著增加输出 token 数，进而带来高延迟与高成本。">思维链</GlossaryTerm>）会更慢更贵？为什么也可能更准？
 - 你的功能需要模型输出很长内容吗？输出 token 是串行生成的——能不能改成只输出关键结果、减少输出长度？
 - 流式输出对你的产品体验重要吗？它改善的是"首 token 延迟"还是"总时长"？
 
@@ -189,6 +274,44 @@ python labs/month07/m7l1_autoregress/test_autoregress.py
 - **"LLM 在思考/理解"**：它在基于概率预测下一个 token；表现像理解，机制是接龙。
 - **"它一次性想好整句"**：它逐 token 生成，前文决定后文，会错误累积。
 - **"上下文窗口大就能随便塞"**：注意力随长度约平方级增长，越长越慢越贵（下一课细讲）。
+- **"既然思维链（CoT）能让模型生成更准，那么在所有场景下我们都应该默认开启思维链"**：错。思维链的原理是通过生成冗长的推理步骤（中间 token）来换取更高的准确率。但是，因为自回归推理是逐 token 串行的，多生成一个 token 就会多产生一次模型前向传播的延迟，并且按输出 token 数量计费。如果对延迟敏感（如实时搜索、聊天机器人首包时间要求高）或对成本极敏感，盲目开启思维链会使系统延迟和账单急剧上升。架构师必须在“准确率”与“延迟/成本”之间进行严谨的折中（Trade-off）。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '为什么大语言模型的文本生成无法像图像生成或目标检测那样在 GPU 上实现高度并行的输出？',
+      options: [
+        '因为大模型的参数量太大，GPU 显存装不下，所以必须使用 CPU 串行计算。',
+        '因为大语言模型采用的是自回归（Autoregressive）生成模式。每个新 Token 的生成都必须以之前所有已生成的 Token 作为输入。这种“前文决定后文”的依赖关系导致模型只能一个 Token 接一个 Token 地串行推理，无法在输出方向上并行。',
+        '因为现代网络传输协议（如 HTTP）不支持并行传输字符，只能通过 SSE 流式依次发送。'
+      ],
+      answer: 1,
+      explain: '自回归生成的核心特征就是“逐 token 接龙”。因为第 N 个 token 的预测输入里包含第 N-1 个 token 的输出结果，这种时间步上的数据依赖（Data Dependency）决定了它在推理时必须串行。'
+    },
+    {
+      q: '在评估 LLM 的延迟指标时，为什么通常要将“首 token 延迟 (TTFT)”和“后续每 token 延迟”分开来统计？',
+      options: [
+        '因为首 token 是由云端服务器计算的，而后续 token 是在客户端本地浏览器渲染的。',
+        '因为 Prefill 阶段（处理用户输入的 Prompt）可以并行计算所有输入 Token 的注意力，而 Decode 阶段（自回归生成后续 Token）必须串行循环。两者的计算模式、并行度以及 GPU 利用方式完全不同，因此在架构上需要作为两个核心指标分别监控与优化。',
+        '因为首 token 往往最贵，而后续 token 是免费的。'
+      ],
+      answer: 1,
+      explain: '处理输入 prompt 时，所有 token 都是已知的，GPU 可以并行计算；而在生成后续 token 时，每次只能计算一个新 token 且要读取之前的 KV cache，属于 memory-bound 的串行计算。这两阶段的性能瓶颈 and 优化手段完全不同。'
+    },
+    {
+      q: '从自回归生成的工程代价来看，架构师在引入思维链（CoT, Chain-of-Thought）技术时必须做出什么权衡（Trade-off）？',
+      options: [
+        '思维链会使模型训练速度变慢，但推理速度和成本不受影响。',
+        '思维链通过生成中间推理步骤显著提升了复杂任务的准确率；但由于自回归逐 token 生成的特性，生成大量中间 token 会导致推理延迟（首尾总时间）显著上升，且 API 成本（按 token 计费）成倍增加。',
+        '思维链会让模型完全失去流式输出（Streaming）的能力。'
+      ],
+      answer: 1,
+      explain: 'CoT 是一种“用时间换空间/准确率”的典型折中。它确实能通过一步步推导得出正确答案，但代价是输出的 token 数量剧增，直接转嫁为用户体感的延迟增加以及高额的 token 计费账单。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 

@@ -7,9 +7,8 @@ const config: Config = {
   tagline: 'AI 架构师交互式学习站',
   favicon: 'img/favicon.ico',
 
-  future: {
-    v4: true,
-  },
+  // Disable future.v4 to avoid running into SWC native binding block on Windows Host Application Control
+  future: {},
 
   url: 'https://your-docusaurus-site.example.com',
   baseUrl: '/',
