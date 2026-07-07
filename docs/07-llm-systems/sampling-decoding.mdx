@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M7L3 · 采样与解码
 
@@ -28,11 +30,19 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 你问模型同一个问题两次，得到了措辞不同的两个答案。这让人困惑：它到底"知不知道"答案？真相是：模型每步算出一个概率分布（"好"60%、"不错"20%…），然后**从这个分布里随机抽**一个。抽样有随机性，所以输出会变。这种<GlossaryTerm term="Non-determinism" definition="非确定性：相同输入可能产生不同输出。LLM 的非确定性主要来自采样的随机性（也有数值/并发等因素）。它影响可测试性、可复现性和缓存。">非确定性</GlossaryTerm>对习惯了"相同输入相同输出"（[L6 幂等](../foundations/idempotency)）的工程师是个新挑战——但它是可控的。
 
+```mermaid
+graph TD
+    Logits["1. 原始 Logits (模型原始得分: '好': 3.0, '不错': 2.0)"] --> TempScale["2. Temperature 缩放 (分数除以 T: Logits / T)"]
+    TempScale --> SoftmaxVal["3. Softmax 转换 (指数归一化，输出概率和为 1)"]
+    SoftmaxVal --> Filtering["4. Top-p / Top-k 过滤 (截断概率长尾，缩小候选集)"]
+    Filtering --> RandSample["5. 随机抽样/贪心选择 (从候选集中提取下一个 Token)"]
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：从概率分布到一个 token
 
-模型每步输出每个候选 token 的<GlossaryTerm term="Logits" definition="logits：模型对每个候选 token 输出的原始分数，经 softmax 归一化成概率分布。采样就是在这个分布上选出下一个 token。">分数（logits）</GlossaryTerm>，归一化成概率分布。怎么从分布选一个：
+模型每步输出每个候选 token 的<GlossaryTerm term="Logits" definition="logits：模型对每个候选 token 输出的原始分数，经 softmax 归一化成概率分布。采样就是在这个分布上选出下一个 token。">分数（logits）</GlossaryTerm>，经 <GlossaryTerm term="Softmax" definition="Softmax：一种将多分类原始分数 (logits) 转化为概率分布的激活函数。它对每个 logits 做指数幂计算后归一化，使所有项概率之和为 1。">Softmax</GlossaryTerm> 归一化成概率分布。怎么从分布选一个：
 - <GlossaryTerm term="Greedy Decoding" definition="贪心解码：每步直接选概率最高的 token。确定性强、可复现，但可能重复、呆板，且“每步最优”不等于“整句最优”。">贪心解码</GlossaryTerm>：永远选概率最高的。确定、可复现，但容易呆板、重复。
 - **采样**：按概率随机抽（高概率的更可能被选，但低概率的也有机会）→ 更多样、更自然，但不确定。
 
@@ -40,7 +50,34 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 两个最常用的旋钮：
 - <GlossaryTerm term="Temperature" definition="温度：缩放概率分布的参数。温度越低（趋近 0）分布越尖锐、越接近贪心（确定、保守）；越高（>1）分布越平、越随机（多样、可能离谱）。">temperature（温度）</GlossaryTerm>：调节分布的"尖锐度"。低温（→0）让高概率 token 几乎垄断，输出趋于确定、保守；高温让分布变平，输出更随机、更有创造力（也更容易跑偏）。
-- <GlossaryTerm term="Top-p (Nucleus) Sampling" definition="top-p / 核采样：只在累计概率达到 p 的最小 token 集合里采样，动态截掉长尾的低概率 token。在保持多样性的同时避免选到离谱的词。">top-p（核采样）</GlossaryTerm>：只在"累计概率前 p"的那批最可能 token 里采样，砍掉长尾的离谱选项。比 temperature 更稳地控制"别选到太离谱的词"。（还有 top-k：只在概率前 k 个里选。）
+- <GlossaryTerm term="Top-p Sampling" definition="Top-p 采样：只在累计概率达到 p 的最小 token 集合里采样，动态截掉长尾的低概率 token。">top-p</GlossaryTerm>（<GlossaryTerm term="Nucleus Sampling" definition="核采样 (Nucleus Sampling)：即 Top-p 采样。与 Top-k 固定保留前 K 个词不同，它动态保留累计概率之和达到阈值 p 的最小 Token 集合，能根据概率分布的胖瘦自适应调整保留的 Token 数量。">核采样</GlossaryTerm>）：只在"累计概率前 p"的那批最可能 token 里采样，砍掉长尾的离谱选项。比 temperature 更稳地控制"别选到太离谱的词"。（还有 top-k：只在概率前 k 个里选。）
+
+```mermaid
+graph TD
+    subgraph TempDiff["不同 Temperature (T) 对概率分布的调整效应"]
+        direction LR
+        LogitsIn["原始 Logits: [好: 3.0, 不错: 2.0, 烂: 0.1]"]
+        
+        LogitsIn -->|T=0.2 低温| Sharp["尖锐分布: [好: 98%, 不错: 1.9%, 烂: 0.1%] (极高确定性)"]
+        LogitsIn -->|T=1.0 默认| Normal["默认分布: [好: 70%, 不错: 25%, 烂: 5%] (多样与合理兼顾)"]
+        LogitsIn -->|T=1.5 高温| Flat["平缓分布: [好: 45%, 不错: 35%, 烂: 20%] (高随机性/易跑偏)"]
+    end
+```
+
+```mermaid
+graph TD
+    subgraph TopPCut["Top-p 核采样过滤长尾 (例: p=0.8)"]
+        direction TB
+        S1["Token '好': 概率 0.60 (累计 0.60) - 保留"]
+        S2["Token '不错': 概率 0.20 (累计 0.80) - 保留"]
+        S3["Token '一般': 概率 0.15 (累计 0.95) - 截断/淘汰"]
+        S4["Token '糟': 概率 0.05 (累计 1.00) - 截断/淘汰"]
+        
+        S1 --> S2 -->|累计已达 0.80| Cutoff["截断分界线"]
+        Cutoff -.-> S3
+        Cutoff -.-> S4
+    end
+```
 
 ### 深入（选学）：为不同任务选对参数，以及非确定性的工程影响
 
@@ -57,6 +94,33 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 />
 
 ## 三、跟我做一遍：temperature 与 top-p 采样
+
+为了让大家更直观地体验从 Logits 到采样输出的解码全流程，下面是一个交互式步骤演示：
+
+<StepFlow
+  steps={[
+    {
+      title: '步骤 1: 原始 Logits 计算',
+      desc: '大模型前向传播结束后，计算出下一个 Token 的原始非归一化得分（Logits）。例如：{"好": 3.0, "不错": 2.0, "一般": 1.0, "烂": 0.1}。'
+    },
+    {
+      title: '步骤 2: 施加 Temperature 温度缩放',
+      desc: '对 logits 进行缩放（Logits / T）。低温度（如 T=0.2）会将分值差距急剧放大，使最高概率项极度突出；高温度（如 T=1.5）则会拉近分数差距。'
+    },
+    {
+      title: '步骤 3: Softmax 转换为概率分布',
+      desc: '经过 Softmax 变换，将缩放后的数值映射为相加等于 1 的概率区间。以 T=0.2 为例，"好"的概率被放大到 95% 以上，而 T=1.5 下概率则被熨平。'
+    },
+    {
+      title: '步骤 4: Top-p 核采样截断过滤',
+      desc: '将概率降序排列并累加。若设定 p=0.8，累加到“好”和“不错”（0.6 + 0.2 = 0.8）即达到阈值，低于此的“一般”和“烂”会被丢弃，避免选到离谱词。'
+    },
+    {
+      title: '步骤 5: 最终概率区间随机抽样',
+      desc: '在保留的候选词集合（“好”、“不错”）中，根据归一化后的概率进行随机轮盘赌抽样，吐出最终确定的 Token 结果。'
+    }
+  ]}
+/>
 
 <PyRunner
   rows={36}
@@ -191,7 +255,44 @@ python labs/month07/m7l3_sampling/test_sampling.py
 
 - **"模型答案变来变去是它不可靠"**：是采样的随机性，可用低温/贪心让它稳定。
 - **"temperature 越高越聪明"**：高温只是更随机，事实性任务反而更易出错。
-- **"温度调到 0 就绝对确定"**：实际仍可能有细微波动，正确性要靠校验/评测兜底。
+- **"温度调到 0 就绝对确定"**：实际仍可能有细微波动。在高并发批处理（Batching）、多 GPU 并行推理（Tensor Parallelism）或者浮点数数值计算微小舍入误差的影响下，即使 T=0 或使用 Greedy Decoding，模型也有可能生成不同的 token。因此，不能在软件架构中强行假设“只要温度是 0 输出就永恒不变”，仍需要对关键逻辑配以 schema 校验和后置评测兜底。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在数值上，大模型是如何利用 Temperature 旋钮来调节生成文本的随机性或创造性的？',
+      options: [
+        '它是通过调节输入模型的 Prompt 字符数量来间接控制输出复杂度的。',
+        '它是通过在 Softmax 之前对每个候选 Token 的 Logits 分数进行除法缩放（Logits / T）。温度越趋近 0，数值差异越大，Softmax 归一化后的概率分布就越尖锐，越趋向于确定性的贪心选择；温度越高（>1），数值拉得越平，概率分布越平缓，从而增加了中低概率 Token 被采样的可能性。',
+        '它是通过直接增加 GPU 的浮点数运算精度（如从 FP16 切换到 FP32）来动态影响输出随机性的。'
+      ],
+      answer: 1,
+      explain: '这就是 Temperature 作用的数学直觉。缩放公式中 Logits 处于除数的位置。当 T 极小时，原先的差距在指数映射后会被无限放大，反之则会被熨平。'
+    },
+    {
+      q: '为什么在现代 LLM 推理工程中，Top-p（核采样）要比 Top-k 采样更具自适应优势？',
+      options: [
+        '因为 Top-p 总是保留固定数量 of Token，因此能显著减少 GPU 的显存占用。',
+        '因为 Top-k 是截取概率前 k 个固定位置的 Token，在模型概率分布很平缓（候选词多）或极尖锐（候选词少）时容易出现保留太少（呆板）或保留太多（容易选到长尾离谱词）的毛病；而 Top-p 动态截取累计概率达 p 的最小集合，能根据模型生成当前步概率分布的“胖瘦”自适应调整保留的 Token 数量，兼顾质量和多样性。',
+        '因为 Top-p 不需要用到任何 Softmax 函数，所以比 Top-k 的计算延迟更低。'
+      ],
+      answer: 1,
+      explain: 'Top-p（核采样）是 Holtzman et al. (2020) 针对 Neural Text Degeneration（文本退化）提出的革命性优化，其核心就在于自适应性：如果模型对下一个词非常笃定，可能 1 个 token 概率就达到了 0.9，那候选池只有 1 个；如果模型很犹豫，候选池就会自动变大。'
+    },
+    {
+      q: '某个应用需要在高吞吐状态下，通过 API 自动从大篇幅合同中抽取“合同签订日期（格式: YYYY-MM-DD）”并生成结构化的 JSON 数据。如果为了将抽取结果的出错概率降至最低，以下哪组采样参数是架构师应当首选的？',
+      options: [
+        'Temperature = 1.8，不配置 Top-p。',
+        'Temperature = 0 或采用 Greedy Decoding 模式。',
+        'Temperature = 0.8，Top-p = 0.95。'
+      ],
+      answer: 1,
+      explain: '事实抽取和结构化数据生成（如 JSON schema 映射）是典型的事实性/确定性任务，任何不必要的随机性都会增加格式损坏或幻觉的风险。设置极低温度（趋近于 0）或贪心解码能最大限度压缩随机性，提高数据抓取的可靠性与复现性。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
