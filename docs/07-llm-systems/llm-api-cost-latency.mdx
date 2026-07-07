@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M7L5 · LLM API、成本与延迟
 
@@ -28,6 +30,20 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 你做了个 AI 客服 demo，效果不错。但上线前要回答：每天 10 万次问答，token 成本多少钱？高峰期延迟会不会让用户等到崩溃？供应商的速率限额够不够？用最强的模型还是便宜的？这些不算清楚就上线，可能账单爆炸、或者慢到没人用、或者被限流打挂。**LLM 是个有明确成本和延迟特性的组件，要用工程方法对待。**
 
+```mermaid
+graph TD
+    subgraph SystemLimits["生产环境 API 容量防线"]
+        direction TB
+        Cost["日均 Token 经济账单 (上限: \$X / 天)"]
+        RateLimit["Rate Limits (服务商限额: RPM 频次 / TPM 吞吐限制)"]
+        Latency["SLO 延迟红线 (P95 延迟目标 < 3000ms)"]
+    end
+    
+    QPS["日均 10 万次问答流量"] --> SystemLimits
+    SystemLimits -->|超出防线| Incidents["发生线上事故: 账单暴涨 / 频繁 429 限流 / 用户延迟劝退"]
+    SystemLimits -->|引入工程控制| Stability["系统稳定运行: 模型路由/流式体感优化/熔断降级 (M5)"]
+```
+
 ## 二、三个核心概念（分层）
 
 ### 基础：token 计费模型
@@ -41,13 +57,44 @@ LLM 延迟不是一个数，是两段：
 - <GlossaryTerm term="Time Per Output Token" definition="每输出 token 时延（TPOT）：生成阶段平均每个输出 token 的耗时。总生成时间 ≈ TTFT + 输出 token 数 × TPOT。输出越长越慢。">每 token 时延（TPOT）</GlossaryTerm>：之后每个字的间隔。**总时间 ≈ TTFT + 输出长度 × TPOT**，所以输出越长越慢。
 - <GlossaryTerm term="Streaming" definition="流式输出：服务端边生成边把 token 推给客户端，让用户在首 token 后就能逐字看到响应，大幅改善体感延迟（虽然总时长不变）。">流式（streaming）</GlossaryTerm>：边生成边推送，用户在 TTFT 后就开始看到内容——**总时长不变，但体感快很多**（[呼应 M7L1 逐 token 生成](./transformer-autoregression)）。
 
+```mermaid
+gantt
+    title LLM 推理延迟阶段划分与计算时间轴
+    dateFormat X
+    axisFormat %s
+    
+    section 客户端
+    发送请求     :active, c1, 0, 1
+    接收首 Token  :milestone, m1, 4, 0
+    流式渲染输出 :active, c2, 4, 10
+    
+    section 推理服务器 (GPU)
+    Prefill 阶段 (处理 Prompt / 并行计算) :crit, s1, 1, 4
+    Decode 阶段 (串行生成后续 Token - 逐字吐出) :active, s2, 4, 10
+```
+
 ### 深入（选学）：成本/延迟优化与模型档位选择
 
 把 LLM 成本和延迟当系统约束来优化：
 - **选对模型档位**：不是所有任务都要最强模型。简单任务（分类、抽取、格式化）用快而便宜的小模型（如 Haiku 4.5 `claude-haiku-4-5-20251001`），复杂推理用强模型（如 Opus 4.8 `claude-opus-4-8`），中间用均衡档（如 Sonnet 4.6 `claude-sonnet-4-6`）。这叫<GlossaryTerm term="Model Routing" definition="模型路由：根据任务难度把请求分发到不同档位的模型——简单任务用便宜快的小模型，难任务用强模型——在质量、成本、延迟间取平衡。">模型路由</GlossaryTerm>。
+
+```mermaid
+graph TD
+    Request["1. 收到任务请求"] --> Parse["2. 智能网关/路由器 (判断任务难度与吞吐)"]
+    
+    Parse -->|分类/格式化/情感判断| Low["3. 低难度: 路由至 Haiku 4.5 (快、便宜)"]
+    Parse -->|长文摘要/多格式转换| Mid["3. 中难度: 路由至 Sonnet 4.6 (性价比高)"]
+    Parse -->|复杂逻辑/数学推演/编程| High["3. 高难度: 路由至 Opus 4.8 (高智能/贵)"]
+    
+    High -->|Opus 触发 Rate Limit 限流?| Fallback["4. 降级策略: 自动 Fallback 转发至 Sonnet 4.6 兜底"]
+    Mid --> Success["5. 任务成功响应，统计 Token 成本"]
+    Low --> Success
+    Fallback --> Success
+```
+
 - **省 token**：精简 prompt、压缩历史、控制输出长度（让它只输出必要结果）、[缓存重复内容（M7L11）](./llm-caching-resilience)。
 - **省延迟**：流式改善体感、并行调用独立子任务、缓存命中跳过调用、小模型更快。
-- **批处理（batching）**：离线场景把多个请求一起处理（[呼应 M7L7 连续批处理](./kv-cache-serving)）提升吞吐、摊薄成本。
+- **批处理（batching）**：离线场景把多个请求一起处理（[呼应 M7L7 连续批处理](./kv-cache-serving)）提升<GlossaryTerm term="Throughput" definition="吞吐量 (Throughput)：指系统在单位时间内成功处理的请求数或 Token 数量，是评估 LLM 推理服务容量的关键指标。">吞吐量</GlossaryTerm>、摊薄成本。
 - **限额与可靠性**：API 有速率限额，要配 [限流/退避/熔断/降级（M5）](../core-components/rate-limiting)——LLM 调用就是一个会慢、会失败、会被限流的远程依赖。
 
 <ResearchNote
@@ -59,6 +106,33 @@ LLM 延迟不是一个数，是两段：
 />
 
 ## 三、跟我做一遍：成本与延迟估算
+
+制造一个交互式步骤演示，展示流式输出体感时延优化：
+
+<StepFlow
+  steps={[
+    {
+      title: '步骤 1: 客户端发起 API 请求',
+      desc: '用户在前端提交提问，携带着 System Prompt 及 RAG 检索出来的背景资料（共 1000 Tokens）。'
+    },
+    {
+      title: '步骤 2: 服务端 Prefill 阶段并行计算',
+      desc: 'GPU 一次性处理这 1000 Tokens 的输入并计算其 KV Cache。此阶段耗时 300ms，是决定首包延迟的主要因素。'
+    },
+    {
+      title: '步骤 3: 吐出首个 Token 并触发 TTFT 渲染',
+      desc: '300ms 时，服务器吐出第一个输出字符。客户端在收到该字符后，屏幕上立即渲染出首字（首字延迟 TTFT = 300ms）。用户感觉系统几乎是瞬间作答。'
+    },
+    {
+      title: '步骤 4: 自回归 Decode 阶段逐字推送 (TPOT)',
+      desc: '进入后续 Token 的串行计算。每生成 1 个 Token 耗时 15ms（TPOT）。服务器通过 Server-Sent Events (SSE) 持续将新字推向浏览器。'
+    },
+    {
+      title: '步骤 5: 响应生成结束与总延时结算',
+      desc: '模型共输出 100 个 Tokens。最终物理耗时为 300ms + (100 * 15ms) = 1800ms（1.8秒）。虽然总时间近 2 秒，但用户在 300ms 时就开始顺畅阅读，毫无卡顿感。'
+    }
+  ]}
+/>
 
 <PyRunner
   rows={36}
@@ -161,7 +235,7 @@ python labs/month07/m7l5_cost_latency/test_cost.py
 
 ### 3. 真实案例：成本失控与延迟劝退
 
-两类常见翻车：(1) **成本失控**——团队用最强模型 + 大上下文做一个高频功能，月账单远超预期，被迫紧急优化或下线。(2) **延迟劝退**——功能要等十几秒才出结果（输出太长 + 没流式 + 大模型），用户没耐心、流失。成熟做法是上线前就建立"成本/延迟预算"（[呼应 SLO M6L7](../cloud-enterprise-industrial/observability-advanced)）：每次调用成本上限、p95 延迟目标，并用模型路由、流式、缓存、token 精简守住它。**先算账、再上线**，是 LLM 工程的纪律。
+两个极易翻车：(1) **成本失控**——团队用最强模型 + 大上下文做一个高频功能，月账单远超预期，被迫紧急优化或下线。(2) **延迟劝退**——功能要等十几秒才出结果（输出太长 + 没流式 + 大模型），用户没耐心、流失。成熟做法是上线前就建立"成本/延迟预算"（[呼应 <GlossaryTerm term="SLO" definition="服务水平目标 (Service Level Objective, SLO)：指由服务提供者与消费者达成的、关于某些服务指标（如首 token 延迟必须小于 500ms）的目标性规范。">SLO（M6L7）</GlossaryTerm>](../cloud-enterprise-industrial/observability-advanced)）：每次调用成本上限、p95 延迟目标，并用模型路由、流式、缓存、token 精简守住它。**先算账、再上线**，是 LLM 工程的纪律。
 
 ### 4. 架构师深问（给自己 30 分钟）
 
@@ -181,6 +255,44 @@ python labs/month07/m7l5_cost_latency/test_cost.py
 - **"demo 能跑就能上线"**：要先算清高频下的 token 成本、延迟和限额。
 - **"延迟就是一个数"**：分 TTFT 和 TPOT；流式改善体感但不改总时长。
 - **"都用最强模型最省心"**：成本可能高到不可行；按难度做模型路由。
+- **"要让用户体感速度变快，唯一的做法是去堆更高规格的 GPU，把物理耗时压下去"**：大错特错。升级硬件确实能缩短 TPOT 和 TTFT，但在工程侧的优化空间同样巨大：(1) **精简输出长度**：因为自回归是串行的，总耗时随输出 Token 数量线性增长。让模型只输出核心结论，直接能将生成延迟砍掉大半。(2) **精简输入上下文**：通过精细的 RAG 检索而不是塞满整本手册，能极大地缩短 Prefill（首包）时间。(3) **缓存技术**：利用 KV Cache 前缀复用（[M7L7](./kv-cache-serving)）或语义缓存（[M7L11](./llm-caching-resilience)）可以让高频请求直接绕过推理，延迟和成本双双归零。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在设计一个对延迟极其敏感（例如实时搜索摘要）的 AI 系统时，为什么仅仅监控“API 的总耗时”是不够的？',
+      options: [
+        '因为 API 定价只与 Token 数量挂钩，与耗时无关。',
+        '因为总耗时是首包延迟（TTFT）与生成包长乘以每字时延（TPOT）的叠加。如果系统没有使用流式（Streaming）传输，用户就必须在后台干等完所有的 1.8 秒总耗时；而如果采用流式渲染，用户在 300ms 时就能阅读。因此架构师必须将 TTFT 与流式体验列为独立的核心监控指标（SLO）。',
+        '因为首包延迟通常是由客户端本地的网络状况唯一决定的。'
+      ],
+      answer: 1,
+      explain: '流式输出 Streaming 的核心价值就在于解耦了“物理生成时长”与“用户体感等待时间”。监控 TTFT 才能最真实地还原用户的体感反应速度。'
+    },
+    {
+      q: '大模型的推理过程中，关于 Prefill（首包）阶段与 Decode（生成）阶段计算特性的描述，以下正确的是？',
+      options: [
+        'Prefill 阶段必须串行计算每个输入词，因而比 Decode 更加缓慢。',
+        'Prefill 阶段由于所有输入 Token 均已知，可以在 GPU 上实现高度并行的矩阵乘法计算，属于 compute-bound；而 Decode 阶段必须利用前一次的输出作为下一次的输入，导致在时钟步上只能串行，且需要反复从显存读取 KV Cache，属于 memory-bound。',
+        '两阶段在硬件底层的计算逻辑和并行度是完全一致的，无须分开关注。'
+      ],
+      answer: 1,
+      explain: '这解释了为什么 TTFT 和 TPOT 的性能瓶颈和硬件利用率完全不同：Prefill 跑的是矩阵并行运算，GPU 利用率高；Decode 跑的是串行显存搬运，GPU 算力利用率相对极低，属于显存带宽受限。'
+    },
+    {
+      q: '某电商平台需要上线“智能客服工单分发”功能（包含情感分类、意图识别与核心信息提取）。日均调用量高达 100 万次。为了降低运营成本并控制响应延迟，架构师应当采用何种方案？',
+      options: [
+        '全部直接接入最强规格模型（如 Claude Opus），确保分类万无一失。',
+        '设计多级模型路由（Model Routing）方案。利用专门的评测集验证，发现小模型（如 Haiku）对分类/提取等简单任务的准确率完全合格，因此 90% 的低难度任务直接用便宜且飞快的小模型处理，仅 10% 疑难杂症分发给强模型，并在大模型限流时自动降级 fallback。',
+        '不进行任何过滤，利用 prompt 要求模型自动生成 1000 字的长篇解析再做分发。'
+      ],
+      answer: 1,
+      explain: '这是模型路由的经典实践。根据单位经济学（Unit Economics）和任务难度梯队分布，将高吞吐、低难度的任务下放到轻量小模型处理，能直接为业务节省几倍到十几倍的 API 费用，并大幅度拉低平均响应延迟。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
