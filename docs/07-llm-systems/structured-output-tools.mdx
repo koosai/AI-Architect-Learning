@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M7L6 · 结构化输出与工具调用
 
@@ -34,18 +36,65 @@ LLM 默认吐自由文本——人能读，但程序没法可靠地解析。要�
 
 <GlossaryTerm term="Structured Output" definition="结构化输出：让 LLM 按预定义的格式（通常是 JSON，符合某个 schema）输出，使结果能被程序可靠解析和校验，而非自由文本。">结构化输出</GlossaryTerm>：在 prompt 里规定输出格式（[M7L4](./prompting-basics)），很多 API 还支持强制 JSON 模式 / 按 schema 约束输出。但**模型不保证 100% 合规**——所以拿到输出后必须做<GlossaryTerm term="Schema Validation" definition="模式校验：用预定义的 schema（字段、类型、取值范围）检查 LLM 输出是否合法。不合法则拒绝、重试或修复，绝不能直接信任模型输出。">schema 校验</GlossaryTerm>：字段齐不齐、类型对不对、取值在不在允许范围。校验失败就重试或修复，**绝不直接信任**（[L3 不信任输入](../foundations/input-validation) 的延伸——LLM 输出也是不可信输入）。
 
+```mermaid
+graph TD
+    Request["1. 请求大模型输出 JSON"] --> ParseJSON["2. 解析 JSON (json.loads)"]
+    ParseJSON -->|解析成功| Validate["3. Schema 模式校验 (字段与类型是否匹配)"]
+    ParseJSON -->|解析失败: 格式逃逸/多余文本| Repair["4. 自动修复回路 (Auto-repair Loop)"]
+    
+    Validate -->|校验通过| Consumer["5. 消费成功: 输入给下游应用层"]
+    Validate -->|校验失败: 缺字段/类型错误| Repair
+    
+    Repair -->|提取错误栈拼入 Prompt| Request
+```
+
 ### 进阶：工具调用（function calling）
 
 <GlossaryTerm term="Tool Calling" definition="工具调用 / 函数调用：你向模型描述一组可用的工具（函数名、参数 schema），模型在需要时输出“调用哪个工具、传什么参数”，由你的代码执行后把结果回传给模型。让 LLM 能查数据、做动作。">工具调用（function calling）</GlossaryTerm>：你告诉模型"你有这些工具可用"（每个工具有名字 + 参数 schema），模型在需要时**不直接回答，而是输出"我要调 `get_order(order_no='SO-1001')`"**。你的代码执行这个调用、把结果回传给模型、它再继续。这让 LLM 能查数据库、调 API、算数——突破"只会基于训练知识空谈"的限制。注意：**模型只是"决定调什么"，真正执行的是你的代码**——所以工具的权限、校验、安全由你把关。
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as 客户端
+    participant App as 应用程序层 (宿主代码)
+    participant LLM as 大语言模型 (LLM)
+    participant Database as 外部系统/数据库
+    
+    Client->>App: 提问: "帮我查询 SO-1001 状态"
+    App->>LLM: 组装提示词并配置工具 get_order_status
+    LLM->>LLM: 自回归计算决策 (Reasoning)
+    LLM-->>App: 吐出 Tool Call JSON: {"name": "get_order_status", "args": {"id": "SO-1001"}}
+    Note over App: 拦截 Tool Call 并安全校验
+    App->>Database: 执行具体动作: get_order_status(id="SO-1001")
+    Database-->>App: 返回结构化数据: {"status": "shipped"}
+    App->>LLM: 将执行结果以 tool 角色反哺给大模型
+    LLM->>LLM: 结合背景事实再次自回归生成 (Acting)
+    LLM-->>App: 流式输出友好答案: "您的订单已发货..."
+    App-->>Client: 渲染最终答案
+```
 
 ### 深入（选学）：工具调用的工程要点
 
 工具调用是 [Agent（Month 9）](../agent-architectures/overview) 的基础，工程上要注意：
 - **工具描述就是给模型的"API 文档"**：名字、用途、参数 schema 要写清楚（像给人写文档），模型才知道何时用、怎么传参。这是一种特殊的 [prompt 工程](./prompting-basics)。
 - **参数也要校验**：模型可能传错参数类型/缺参/传危险值——执行前必须按 schema 校验（[L3](../foundations/input-validation)），就像校验任何外部输入。
-- **工具要安全、最小权限**：模型决定调用、你的代码执行——所以**危险操作（删数据、转账、发邮件）必须加权限校验、人工确认、审计**，绝不能让模型的输出直接触发不可逆动作（[呼应 M6L11 工业 AI 边界](../cloud-enterprise-industrial/industrial-edge-realtime)）。
+- **工具要安全、最小权限**：模型决定调用、你的代码执行——所以**危险操作（删数据、转账、发邮件）必须加权限校验、人工确认、审计**，绝不能让模型的输出直接触发不可逆动作（[呼应 M6L11 工业 AI 边界](../cloud-enterprise-industrial/industrial-edge-realtime Ganz)）。
 - **多工具分发**：用一个注册表把"工具名 → 实现"映射起来（[正是 M4L6 工厂/注册表](../design-patterns-lld/factory-pattern)），按模型选的名字分发执行。
 - **错误处理**：工具执行失败（查不到、超时）要把错误回传给模型，让它换策略或如实告知——而不是崩溃。
+
+```mermaid
+graph TD
+    subgraph Gateway["工具执行安全网关 (Security Boundary Guard)"]
+        direction TB
+        WhiteList["1. 注册白名单机制 (未知函数直接拦截丢弃)"]
+        ParamSanitize["2. 参数净化校验 (防 SQL 注入/限制参数边界值)"]
+        SensitivityGuard["3. 敏感操作门禁 (转账/写删操作加人工审批 2FA)"]
+    end
+    
+    LLMCall["大模型吐出 Tool Call JSON"] --> Gateway
+    Gateway -->|拦截失败/任意一项未过| Terminate["安全拦截: 终止执行并向大模型反馈错误"]
+    Gateway -->|校验全部通过| Execute["允许执行真实 API/数据库读写操作"]
+```
 
 <ResearchNote
   title="结构化输出与工具调用：让 LLM 可被系统消费、可执行动作"
@@ -56,6 +105,33 @@ LLM 默认吐自由文本——人能读，但程序没法可靠地解析。要�
 />
 
 ## 三、跟我做一遍：schema 校验 + 工具分发
+
+为了让大家更直观地体验用户通过 LLM 工具调用（ReAct 循环）解决问题的交互链路，下面是一个交互式步骤演示：
+
+<StepFlow
+  steps={[
+    {
+      title: '步骤 1: 用户输入与请求拦截',
+      desc: '用户在界面提问：“帮我查看我的订单 SO-1001 发货没有”。应用程序捕获该请求。'
+    },
+    {
+      title: '步骤 2: 大模型决策工具调用 (Reasoning)',
+      desc: '模型分析语义，确定自己无法直接获取实时数据库，决定调用工具。输出特定的 JSON 动作指示：`{"name": "get_order_status", "args": {"id": "SO-1001"}}`。'
+    },
+    {
+      title: '步骤 3: 系统层白名单与参数防注入校验',
+      desc: '系统层（宿主代码）拦截该 JSON。首先检查 `get_order_status` 是否处于已注册工具白名单中；随后对参数 `id` 进行参数化查询和 SQL 注入防范过滤。'
+    },
+    {
+      title: '步骤 4: 执行物理数据库调用与结果反哺',
+      desc: '安全校验通过，宿主代码连接真实的订单数据库。查询得出订单状态为 `{"status": "shipped", "date": "2026-07-07"}`。随后，系统将该 JSON 作为 tool 结果回传给模型。'
+    },
+    {
+      title: '步骤 5: 模型汇总生成最终友好解答 (Acting)',
+      desc: '模型获得事实证据，结合上下文信息自回归生成。输出：“您的订单 SO-1001 已经于今天（7月7日）完成发货，请您注意查收。”'
+    }
+  ]}
+/>
 
 <PyRunner
   rows={38}
@@ -165,7 +241,7 @@ python labs/month07/m7l6_structured_tools/test_structured.py
 
 ### 3. 真实案例：盲信 LLM 输出的事故
 
-常见翻车：直接把模型返回的 JSON `json.loads` 后就用，结果模型偶尔多输出一句解释、或字段名拼错、或编造了枚举值，导致下游解析崩溃或写入脏数据。更严重的是工具调用不设防——让模型的输出直接拼进 SQL（注入）、直接触发删除/支付。**铁律：LLM 输出是不可信输入**（[L3](../foundations/input-validation)），结构化输出要校验、工具参数要校验、危险动作要人工确认。把模型当成一个"很聪明但可能犯错、甚至可能被用户诱导"的下游，用工程手段把它的输出收口到安全范围。
+常见翻车：直接把模型返回的 JSON `json.loads` 后就用，结果模型偶尔多输出一句解释、或字段名拼错、或编造了枚举值，导致下游解析崩溃或写入脏数据。更严重的是工具调用不设防——让模型的输出直接拼进 SQL（发生 <GlossaryTerm term="SQL Injection" definition="SQL 注入：一种将恶意 SQL 代码拼入输入中，以控制数据库执行非授权操作的攻击手段。大模型的工具参数必须参数化或强校验以防止此类注入风险。">SQL注入</GlossaryTerm>）、直接触发删除/支付。**铁律：LLM 输出是不可信输入**（[L3](../foundations/input-validation)），结构化输出要校验、工具参数要校验、危险动作要人工确认。把模型当成一个"很聪明但可能犯错、甚至可能被用户诱导"的下游，用工程手段把它的输出收口到安全范围。
 
 ### 4. 架构师深问（给自己 30 分钟）
 
@@ -185,6 +261,44 @@ python labs/month07/m7l6_structured_tools/test_structured.py
 - **"让模型输出 JSON 就够了"**：模型不保证合规，必须 schema 校验 + 失败处理。
 - **"工具调用是模型自己执行"**：模型只决定调什么，执行和安全在你的代码。
 - **"AI 决定的就可信"**：LLM 输出是不可信输入，危险动作要校验 + 人工确认 + 审计。
+- **"既然工具调用支持查数据库和调外部 API，这意味着大模型已经拥有了高度危险的系统操作权限，必须在服务器物理隔离"**：错。这属于对工具调用的典型心理恐慌。工具调用的核心本质是**模型只出主意（输出参数 JSON），程序执行动作（代码中执行）**。大模型没有独立执行网络请求或数据库写入的能力。所有的系统权限、认证 Token 和安全阻断完全控制在你的**本地工程代码**中。你可以极其自由地在本地代码中对大模型“想要做的事”进行细粒度的参数拦截、白名单过滤和人工二步确认（2FA），从而在大模型与真实系统之间建立一道无坚不摧的隔离防火墙。
+
+## 常见误解自测
+
+<QuizCard
+  questions={[
+    {
+      q: '为什么说在架构上，“大模型吐出的 JSON 数据”必须与来自互联网的外部用户输入一样，被当作“不可信输入（Untrusted Input）”对待？',
+      options: [
+        '因为大模型的输出是非结构化的自由文本，无法用标准代码解析。',
+        '因为大模型是基于概率生成的，即使在 Prompt 中做出了 100% 格式约定，依然会发生“格式逃逸”或者字段编造。如果不加 Schema 校验就直接传递给下游（例如直接解析存库），极易导致下游崩溃或产生脏数据。因此必须使用 JSON Schema 等工具进行硬校验并配置自动修复回路。',
+        '因为大模型会主动通过输出 JSON 来对我们的应用服务器进行 SQL 注入和端口扫描攻击。'
+      ],
+      answer: 1,
+      explain: '大模型输出包装依然是不可信的生成结果，属于输入校验（Input Validation）思想的自然延伸。只有在宿主代码层对输出进行强类型的格式校验与清洗，才能确保核心业务系统的逻辑安全。'
+    },
+    {
+      q: '在 Tool Calling（工具调用）生命周期中，关于大模型与宿主应用程序代码（App Code）之间的职责分工，以下描述正确的是？',
+      options: [
+        '大模型负责安全隔离和执行，App Code 仅负责收集用户的初始提问。',
+        '大模型完全基于其生成决策负责“决定使用哪个工具、并组装参数 JSON”；而宿主 App Code 才是工具的真正“执行者”，并全权承担参数防注入校验、白名单控制和安全审批。',
+        '大模型在决定调用工具后，会自动在后台通过 Python 的 eval 函数直接解释运行对应工具。'
+      ],
+      answer: 1,
+      explain: '模型不具备自主计算和与现实世界物理交互的能力，它只是一个“决策大脑”。真正的执行动作、安全隔离、异常捕获完全掌控在工程师手写的宿主代码中。'
+    },
+    {
+      q: '如果一个 Agent 系统包含“重置数据库”或“给用户转账 $1000”这类的敏感高危工具，架构师该如何构筑安全防线以避免模型因提示词注入攻击产生灾难性决策？',
+      options: [
+        '在 System Prompt 中使用大写字母写上 5 遍“绝对不允许误调用转账工具”。',
+        '不在大模型侧进行任何防备，相信模型一定会根据上下文做出理性判断。',
+        '对敏感工具采用“最小权限”设计，并且在宿主 App Code 执行该工具前强行引入“人工确认门禁（Human-in-the-loop）”，要求用户进行二次弹窗确认（或 2FA 校验），从而将最终决定权归还给人类。'
+      ],
+      answer: 2,
+      explain: '对于有副作用（Side Effects）的高危敏感操作，绝对不能单点依赖模型的概率生成。必须在物理代码层构筑门禁防线，引入人工确认，实现 Human-in-the-loop（人机协同守卫），这是工业 AI 应用的安全底线。'
+    }
+  ]}
+/>
 
 ## 延伸阅读
 
