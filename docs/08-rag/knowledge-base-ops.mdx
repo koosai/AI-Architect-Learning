@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M8L11 · 知识库工程与更新
 
@@ -47,11 +49,11 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - **新增**：新文档 → 解析分块向量化 → 加入索引。
 - **修改**：文档变了 → 删掉它的旧块、加入新块（靠文档 ID 关联）。
 - **删除**：文档作废 → 从索引删掉它的所有块（避免僵尸内容）。
-- <GlossaryTerm term="Deduplication" definition="去重：识别并合并/丢弃重复的文档或块（靠内容指纹/哈希），避免同一内容多次进索引，造成检索冗余和名额浪费。">去重</GlossaryTerm>：靠内容指纹（哈希）识别重复，避免同一内容多次入库（[呼应 M6L10 幂等集成](../cloud-enterprise-industrial/enterprise-erp-integration)：摄取也要幂等，重复导入不产生重复块）。
+- <GlossaryTerm term="Deduplication" definition="去重：识别并合并/丢弃重复的文档或块（靠内容指纹/哈希），避免同一内容多次进索引，造成检索冗余和名额浪费。">去重</GlossaryTerm>：靠内容指纹（哈希）识别重复，避免同一内容多次入库（[呼应 M6L10 幂等集成](../cloud-enterprise-industrial/enterprise-erp-integration)：基于数据流的 <GlossaryTerm term="Idempotency" definition="幂等性：指一个操作被多次重复执行，其系统最终状态与仅执行一次时完全相同。在知识库数据工程中，指同一内容重复导入不会在向量索引中产生任何多余重复的分块。">幂等性 (Idempotency)</GlossaryTerm> 原则，重复导入不产生重复块）。
 
 ### 深入（选学）：新鲜度、权限同步与运维
 
-- <GlossaryTerm term="Freshness" definition="新鲜度：知识库内容与真实来源的同步及时程度。靠定时/事件触发的增量更新、给块打时间戳、检索时按时效过滤旧版本来保证。">新鲜度（freshness）</GlossaryTerm>：怎么保证库跟得上来源？定时重新摄取、或[由数据源变更事件触发（CDC，M3L11）](../data-cache-queue/consistency-patterns)增量更新；给块打时间戳，[检索时过滤旧版本（M8L10）](./advanced-rag)。新鲜度要求越高，更新机制越要实时。
+- <GlossaryTerm term="Freshness" definition="新鲜度：知识库内容与真实来源的同步及时程度。靠定时/事件触发的增量更新、给块打时间戳、检索时按时效过滤旧版本来保证。">新鲜度（freshness）</GlossaryTerm>：怎么保证库跟得上来源？定时重新摄取、或由数据源 <GlossaryTerm term="CDC" definition="变更数据捕获：通过监听底层数据源或文件系统的事务日志，实时捕获并发布数据变更（增、改、删）的技术。在高级知识库更新中用来触发近实时的增量更新。">变更数据捕获 (CDC)</GlossaryTerm>（[M3L11](../data-cache-queue/consistency-patterns)）事件实时触发增量更新；给块打时间戳，[检索时过滤旧版本（M8L10）](./advanced-rag)。新鲜度要求越高，更新机制越要实时。
 - **权限同步**：源文档权限变了，索引里的[权限元数据（M8L10）](./advanced-rag) 必须同步更新——否则会泄露或误拒。这是企业 RAG 的运维难点。
 - **冲突与版本**：同一知识有多版本时，靠元数据（时间、版本号）让检索优先返回最新/权威版，或在生成时提示冲突（[M8L8](./rag-generation)）。
 - **可观测**：监控知识库的覆盖率、新鲜度（最旧内容多久没更新）、摄取失败率、重复率——[像 M6L7 观测系统](../cloud-enterprise-industrial/observability-advanced) 那样观测知识库的健康。
@@ -65,7 +67,102 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="把知识库当持续运维的数据管道：建可重跑的摄取管道、用文档 ID/指纹做增量增改删、内容哈希去重、定时/CDC 保新鲜、同步权限元数据、监控覆盖率/新鲜度/失败率。摄取幂等（重复导入不产生重复）。先把这层数据工程做扎实。"
 />
 
-## 三、跟我做一遍：增量索引更新 + 去重
+## 三、知识运维与数据流管道控制图解 (Deep Dive Diagrams)
+
+本节展示知识库从静态文件转变为高新鲜度、无冗余、动态生命周期管理的数据管道控制逻辑。
+
+### 1. 结构全景：知识摄取与清洗加工数据管道
+
+原始的业务非结构化文档，需要经过摄取加工流水线的多个环节加工清洗，最终成为具有丰富元数据的高可用分块，持久化到向量库。
+
+```mermaid
+graph TD
+    classDef source fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+    classDef clean fill:#e1f5fe,stroke:#0288d1,stroke-width:1px;
+    classDef chunk fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef index fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+
+    Docs["原始非结构化文档<br/>(Markdown/PDF/Word)"]:::source --> Clean["清洗与规范化<br/>(剔除噪音、乱码、格式修剪)"]:::clean
+    Clean --> Split["智能语义分块<br/>(大小: 512, 覆盖: 10%)"]:::chunk
+    Split --> HashGen["生成指纹 (MD5)<br/>与 ACL 权限元数据绑定"]:::chunk
+    HashGen --> Vectorize["向量编码器 (Embedding)<br/>计算稠密向量表示"]:::chunk
+    Vectorize --> UpsertDb["向量数据库写入<br/>(创建向量与元数据关联索引)"]:::index
+```
+
+### 2. 流程全景：文档增量变更（增、改、删）处理管道
+
+当数据源（如 ERP、知识网）变更时，增量同步系统通过内容哈希与文档 ID 对比，确保仅对变动内容做精确的增删改，并彻底释放去重指纹池。
+
+```mermaid
+graph TD
+    classDef op fill:#e1f5fe,stroke:#0288d1,stroke-width:1px;
+    classDef check fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef state fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef danger fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
+
+    Change["感知变更文档 (doc_id)"] --> Action{"变更类型判断"}
+    
+    Action -->|Delete| DelDoc["执行 delete_doc"]:::op
+    DelDoc --> DelIndex["物理删除该 doc_id 的所有分块"]
+    DelIndex --> ClearFP["从 seen_fp 指纹库释放其内容 MD5"]:::state
+    
+    Action -->|Insert| AddDoc["执行 upsert_doc"]:::op
+    AddDoc --> CalcFP["计算每个分块的内容指纹 MD5"]
+    CalcFP --> CheckFP{"指纹是否存在 seen_fp 库中?"}:::check
+    CheckFP -->|Yes| Dedup["判定 DEDUP<br/>(幂等去重，直接抛弃此块)"]:::danger
+    CheckFP -->|No| AddIndex["判定 ADDED<br/>(物理写入向量，添加指纹)"]:::state
+
+    Action -->|Update / Modify| UpDoc["执行 upsert_doc<br/>(更新变动)"]:::op
+    UpDoc --> Cascade["级联调用 delete_doc(doc_id)<br/>(物理清空该文档老数据)"]
+    Cascade --> AddDoc
+```
+
+### 3. 比较全景：定时全量重建 vs. 实时增量更新对比
+
+在选择知识更新机制时，需要在更新延迟、计算费用与系统复杂性之间进行系统级取舍。
+
+```mermaid
+graph TD
+    classDef full fill:#ffcdd2,stroke:#c62828,stroke-width:1px;
+    classDef inc fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+
+    Select{"知识更新方案选择"}
+    
+    Select -->|方案 A: 定时全量重建| FullRebuild["全量重建 (Batch Rebuild)<br/>- 优点: 一致性极佳，流程简单不需版本控制<br/>- 缺点: API调用与向量计算开销巨大、延迟高<br/>- 适用: 小微规模、夜间闲时更新"]:::full
+    
+    Select -->|方案 B: CDC 实时增量更新| RealTimeInc["实时增量更新 (CDC/Event Trigger)<br/>- 优点: 毫秒级新鲜度，API与算力开销极小<br/>- 缺点: 复杂度高，需版本指纹生命周期管理<br/>- 适用: 中大型生产级、频繁更新的系统"]:::inc
+```
+
+## 四、落地实践：知识库自动更新与时效控制流水线
+
+在真实的工程落地中，保障大语言模型获取的知识保持新鲜、防冗余且不被泄露，需在管道中实现如下四个步骤：
+
+<StepFlow
+  steps={[
+    {
+      title: '1. 变更感知与指纹生成 (CDC & Hash Tracking)',
+      desc: '源系统文档变更触发变更捕获（CDC）系统，为所有新分块计算短哈希作为指纹，与数据库关联。',
+      diagram: '文档数据库变更 ──> CDC 监听事件 ──> 触发数据管道 ──> 生成内容指纹 MD5'
+    },
+    {
+      title: '2. 幂等去重与防冗余拦截 (Idempotent De-duplication)',
+      desc: '在解析阶段利用 seen_fp 过滤掉内容一致的重复分块，确保不因多次上传导致库内出现重复块、挤占上下文名额。',
+      diagram: '新建分块指纹 ──> 全局 seen_fp 哈希碰撞比对 ──> 存在则判定 DEDUP 丢弃'
+    },
+    {
+      title: '3. 级联老数据物理清理 (Cascaded Purge)',
+      desc: '对于修改的文档，在执行写入前必须调用清理网关，将该 doc_id 在向量数据库里的所有旧分块和旧指纹完全删除，不留遗留物。',
+      diagram: '执行 upsert_doc ──> 级联清除历史块与 seen_fp 指纹 ──> 写入新块与指纹'
+    },
+    {
+      title: '4. 时效时间戳标记与检索过滤 (Freshness Filtering Gateway)',
+      desc: '为写入向量库的每个分块标记更新时间戳，当前台检索发生时，通过元数据过滤将过时文档前置屏蔽，强制召回最新版本。',
+      diagram: '物理块写入成功 ──> 标记最新 epoch 时间戳 ──> 前台检索器时效加权过滤召回'
+    }
+  ]}
+/>
+
+## 五、跟我做一遍：增量索引更新 + 去重
 
 <PyRunner
   rows={38}
@@ -113,7 +210,7 @@ print("增改删 + 去重 + 不留僵尸")`}
 
 修改文档时先删旧块再加新块（库里只剩新政策"14 天"，没有旧的"7 天"矛盾内容）；重复内容被去重；删除文档清空它的所有块（无僵尸）。**试试**：重复导入整个 docA 两次，看第二次全是 DEDUP；想想如果不做"改=先删后加"，库里会同时存在新旧两版导致检索矛盾。
 
-## 四、动手 Lab（必做）
+## 六、动手 Lab（必做）
 
 打开 `labs/month08/m8l11_kb_ops/`：
 
@@ -146,7 +243,7 @@ python labs/month08/m8l11_kb_ops/test_kb_ops.py
   ]}
 />
 
-## 架构师深潜（Staff+ 视角）
+## 七、架构师深潜（Staff+ 视角）
 
 ### 1. 知识库更新策略
 
@@ -177,17 +274,57 @@ python labs/month08/m8l11_kb_ops/test_kb_ops.py
 
 ### 2. RAG 的长期质量，由知识库运维决定
 
-短期看，RAG 质量取决于检索算法（embedding、混合、重排）；**长期看，取决于知识库的运维质量**。一个检索算法很先进、但知识三个月没更新、满是矛盾旧版和僵尸内容的 RAG，远不如一个检索一般、但知识新鲜准确的。这正是 [M8L4 "RAG 质量常由上游数据决定"](./chunking) 的延续，也呼应 [M6L10 企业 AI 难在数据/集成而非模型](../cloud-enterprise-industrial/enterprise-erp-integration)。架构师做 RAG，要把相当一部分精力放在这个"不性感"的数据工程上——摄取管道、增量更新、新鲜度、权限同步、监控——因为它是 RAG 能长期可靠的地基。**AI 系统的质量，往往由最不起眼的数据管道决定。**
+短期看，RAG 质量取决于检索算法（embedding、混合、重排）；**长期看，取决于知识库的运维质量**。一个检索算法很先进、但知识三个月没更新、满是矛盾旧版和僵尸内容的 RAG，远不如一个检索一般、但知识新鲜准确的。这正是 [M8L4 “RAG 质量常由上游数据决定”](./chunking) 的延续，也呼应 [M6L10 企业 AI 难在数据/集成而非模型](../cloud-enterprise-industrial/enterprise-erp-integration)。架构师做 RAG，要把相当一部分精力放在这个“不性感”的数据工程上——摄取管道、增量更新、新鲜度、权限同步、监控——因为它是 RAG 能长期可靠的地基。**AI 系统的质量，往往由最不起眼的数据管道决定。**
 
 ### 3. 真实案例：知识不新鲜 = RAG 慢性死亡
 
-一个常见的真实衰退：RAG 上线时效果不错，几个月后用户抱怨越来越多——因为知识库还是上线时灌的那批，公司政策、产品、流程都变了，RAG 还在自信地答旧答案。更糟的是有人发现它引用了已经删除的文档。根因不是模型退化，而是**知识库没有运维机制**：没有增量更新、没有新鲜度监控、删除的内容没从索引清掉。修复方式就是本课内容：建摄取管道、接数据源变更（[CDC，M3L11](../data-cache-queue/consistency-patterns)）做增量更新、给内容打时间戳过滤旧版、监控新鲜度。**RAG 不是上线就完成，而是一个要持续喂养和维护的系统**——这是从"做出 RAG demo"到"运营 RAG 产品"的关键认知。
+一个常见的真实衰退：RAG 上线时效果不错，几个月后用户抱怨越来越多——因为知识库还是上线时灌的那批，公司政策、产品、流程都变了，RAG 还在自信地答旧答案。更糟的是有人发现它引用了已经删除的文档。根因不是模型退化，而是**知识库没有运维机制**：没有增量更新、没有新鲜度监控、删除的内容没从索引清掉。修复方式就是本课内容：建摄取管道、接数据源变更（[CDC，M3L11](../data-cache-queue/consistency-patterns)）做增量更新、给内容打时间戳过滤旧版、监控新鲜度。**RAG 不是上线就完成，而是一个要持续喂养和维护的系统**——这是从“做出 RAG demo”到“运营 RAG 产品”的关键认知。
 
 ### 4. 架构师深问（给自己 30 分钟）
 
 - 你的知识库怎么更新？一次性灌的还是有增量管道？源文档改了/删了，多久同步到索引？
 - 删除的文档还能被检索到吗（僵尸内容）？同一知识的新旧版会同时被检索回来打架吗？
-- 你监控知识库的新鲜度吗（最旧内容多久没更新、覆盖率、重复率）？权限变更怎么同步到索引？
+- 你监控知识库新鲜度吗（最旧内容多久没更新、覆盖率、重复率）？权限变更怎么同步到索引？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在长周期的生产级 RAG 系统中，以下哪一项通常是决定其长期可靠度与回答质量的真正基石？',
+      options: [
+        'A. 是否购买了最昂贵的闭源大模型推理 API 服务',
+        'B. 扎实的知识库工程运维（包括增量更新、幂等去重和时效新鲜度控制），如果数据源头陈旧污染，先进的检索算法也无济于事',
+        'C. 将向量数据库的分块大小设置为一个固定的超大值',
+        'D. 在 Prompt 中放置大量“相信我的知识库”的强暗示词'
+      ],
+      answer: 1,
+      explain: '检索算法再先进，如果知识库里充斥着三年前的过期规定、已作废文档（僵尸内容）以及同一政策的十个不同冲突版本，大模型在召回证据时也会彻底被冗余矛盾的上下文淹没。因此，知识库的底层工程运营质量决定了 RAG 的上限。'
+    },
+    {
+      q: '修改知识库中的某篇已有文档时，为什么要采用“级联调用 delete_doc 完全清空旧块，再追加新分块”的覆写模式？',
+      options: [
+        'A. 因为向量库不允许对现有向量的元数据字段执行增量变更操作',
+        'B. 为了物理清除旧版本的冗余碎片和指纹，防止检索时同时召回新旧冲突证据，彻底避免大模型在回答时产生混乱与矛盾',
+        'C. 级联清空仅是为了重置分块的自增 ID',
+        'D. 这样可以使 Embedding 编码器免除计算向量的开销'
+      ],
+      answer: 1,
+      explain: '如果修改文档仅采用“追加新块”而保留旧分块，不仅会极快耗尽向量空间，还会导致新旧不同版本描述并存于索引中，检索时极易产生新旧混杂打架的情况。级联清空（Cascaded Purge）可保障内容的唯一确定性。'
+    },
+    {
+      q: '在构建近乎实时的企业知识库数据管道时，为了保障最高的水准的“数据新鲜度 (Freshness)”，架构师最理想的接入方案是？',
+      options: [
+        'A. 依靠前台用户在检索发现异常时，手动点击提交报错 of 纠错反馈单',
+        'B. 每天夜间进行一次持续数小时的离线全量数据索引重建',
+        'C. 采用变更数据捕获（CDC）系统实时监听源数据库事务日志，以事件驱动触发毫秒级的数据指纹 upsert 增量同步管道',
+        'D. 缩短用户的查询句子的字数，提高检索召回率'
+      ],
+      answer: 2,
+      explain: '全量重建在面对大规模海量库时在时间、算力与 API 消耗上具有极差的扩展性。采用 CDC 监听日志的事件驱动增量管道，能够实现针对性更新，兼顾近乎实时的知识新鲜度与极低的系统运算成本。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
@@ -198,9 +335,9 @@ python labs/month08/m8l11_kb_ops/test_kb_ops.py
 
 ## 常见误解
 
-- **"知识灌进去就完事了"**：知识会变，要增量更新、去重、保新鲜，否则很快腐烂。
-- **"改文档直接加新块就行"**：不删旧块会导致新旧版同时被检索、互相矛盾。
-- **"RAG 质量靠检索算法"**：长期质量更取决于知识库运维（新鲜、准确、无僵尸）。
+- **“知识灌进去就完事了”**：知识会变，要增量更新、去重、保新鲜，否则很快腐烂。
+- **“改文档直接加新块就行”**：不删旧块会导致新旧版同时被检索、互相矛盾。
+- **“RAG 质量靠检索算法”**：长期质量更取决于知识库运维（新鲜、准确、无僵尸）。
 
 ## 延伸阅读
 
