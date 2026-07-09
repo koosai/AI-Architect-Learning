@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M8L7 · 查询改写与扩展
 
@@ -61,7 +63,122 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="当评测显示召回差是因为查询问法（口语/指代/歧义/多意图/术语不符）时，加查询变换：改写（消歧+提炼）、多查询（覆盖广、RRF 融合）、HyDE（用假设答案检索）。多轮场景结合历史消解指代。权衡额外 LLM 调用的成本，按需使用。"
 />
 
-## 三、跟我做一遍：多查询扩展 + 融合
+## 三、查询变换技术图解 (Deep Dive Diagrams)
+
+为了更深度地展现查询端优化所能带来的召回率提升，我们在此剖析查询变换在整个 RAG 漏斗中的定位、多轮对话中的指代还原路径以及 HyDE 检索的物理嵌入比对。
+
+### 1. 结构全景：查询变换在 RAG 全链路中的位置
+
+大语言模型（LLM）不仅用于最终的文本生成，也可以部署在最上游的输入端，用来消除用户提问中的口语歧义与废话。
+
+```mermaid
+graph TD
+    classDef input fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef llm fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+    classDef db fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+
+    UserQuery["用户原始提问<br/>(非结构化/有指代/口语化)"]:::input --> App["应用协调层"]
+    
+    subgraph QueryTransform ["1. 查询变换层 (检索输入端优化)"]
+        App --> RewriteLLM["查询改写 LLM"]:::llm
+        RewriteLLM -->|消歧/扩展| CleanQueries["精纯查询变体 (多路/假设文本)"]
+    end
+
+    subgraph RetrieveStage ["2. 索引检索端"]
+        CleanQueries --> VectorDB["向量/混合检索引擎"]:::db
+    end
+
+    subgraph GenerationStage ["3. 重排与生成端"]
+        VectorDB --> Reranker["Reranker 模型精排"]:::llm
+        Reranker --> ReaderLLM["生成器 LLM"]:::llm
+    end
+
+    ReaderLLM --> UserResponse["Grounded 可靠回复"]:::input
+```
+
+### 2. 指代还原：多轮历史语境消解流程
+
+多轮对话中最忌讳拿着用户的当前句（如：“它是如何实现的？”）直接检索向量库。改写器基于滑动历史窗口，将问题补全为实体相关的精纯查询。
+
+```mermaid
+graph TD
+    classDef history fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+    classDef cur fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef transform fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+
+    H1["第一轮提问: 'Spanner 怎么支持 TrueTime?'"]:::history
+    
+    H1 --> H2["第二轮口语提问: '它是如何实现的?'"]:::cur
+    
+    subgraph CoReferenceResolution ["查询改写消解过程"]
+        H2 --> Resolver["指代消解与语境还原 LLM"]:::transform
+        Resolver -.->|结合第一轮的 'Spanner' 和 'TrueTime'| Resolver
+    end
+
+    Resolver --> FinalQuery["改写后 Query: 'Google Spanner TrueTime 机制实现原理'"]:::cur
+    FinalQuery --> VectorSearch["送入向量数据库精确检索"]
+```
+
+### 3. 语义拉近：HyDE 假设文档的几何对齐机制
+
+用户提问（疑问句）与库中文档（陈述句）具有天然的几何偏置。HyDE 模拟生成假设性的理想答案并对其编码，拉近了它们在语义空间的物理距离。
+
+```mermaid
+graph TD
+    classDef query fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef model fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+    classDef vec fill:#eceff1,stroke:#607d8b,stroke-width:1.5px;
+
+    subgraph RouteStandard ["传统向量检索 (存在语义鸿沟)"]
+        Q_Std["提问 (疑问句):<br/>'Spanner 的只读事务怎么保证一致性?'"]:::query --> Embed_Std["Embedding 编码"]
+        Embed_Std --> Vec_Std["提问向量"]:::vec
+    end
+
+    subgraph RouteHyDE ["HyDE 假设检索 (消除语义鸿沟)"]
+        Q_HyDE["提问:<br/>'Spanner 的只读事务怎么保证一致性?'"]:::query --> LLM_HyDE["LLM 模拟生成假设答案"]:::model
+        LLM_HyDE --> Hypo_Doc["假设文档 (陈述句):<br/>'Spanner 使用 Read-Free 只读事务，基于 TrueTime 提供的外部一致性戳...'"]
+        Hypo_Doc --> Embed_HyDE["Embedding 编码"]
+        Embed_HyDE --> Vec_HyDE["假设文档向量 (陈述语气)"]:::vec
+    end
+
+    subgraph Database ["真实向量空间数据库"]
+        RealDoc["真实文档:<br/>'Spanner 的无锁只读事务基于安全读取时间戳...'"]
+    end
+
+    Vec_Std -->|几何夹角大 / 匹配弱| RealDoc
+    Vec_HyDE -->|几何夹角小 / 匹配极强| RealDoc
+```
+
+## 四、落地实践：多查询扩展与检索管道
+
+在真实的 RAG 检索流水线中，在线查询改写与扩展召回的执行需要遵循如下四个阶段：
+
+<StepFlow
+  steps={[
+    {
+      title: '1. 意图拆解与多角度变体生成 (Variant Generation)',
+      desc: '用户原始提问输入后，首先调用轻量级 LLM 对查询进行改写。生成 3-5 个用词不同、角度互补的查询变体（例如：结合同义词和专业术语）。',
+      diagram: '原始 Query "怎么退货" ──> 生成变体 ["退货政策流程", "15天无理由退货", "退换货申请条件"]'
+    },
+    {
+      title: '2. 并发多路检索召回 (Parallel Multi-Retrieval)',
+      desc: '将生成的多个查询变体，并发地分发给底层的向量检索数据库，分别独立提取出各个变体的 Top-N 召回列表。',
+      diagram: '变体 1, 2, 3 ──> [并发向量检索] ──> 获取三路 Top-30 结果'
+    },
+    {
+      title: '3. 结果汇总与去重排序 (RRF Fusion & Deduplication)',
+      desc: '多路结果返回后，执行合并去重，并可以应用 RRF 算法根据各个变体队列中排名对文档进行累加合并评分，重新排序。',
+      diagram: '合并去重文档集 ──> 基于 RRF 重构总体名次排名'
+    },
+    {
+      title: '4. Top-K 截断与精排送出 (Top-K Context Delivery)',
+      desc: '提取出全局排名最靠前的 Top-K 篇文档段落，输出给后续的重排层或直接构建 Prompt 上下文，交给生成器模型。',
+      diagram: '混合最佳结果 ──> 注入 LLM 上下文 ──> 保障极佳的召回率'
+    }
+  ]}
+/>
+
+## 五、跟我做一遍：多查询扩展 + 融合
 
 <PyRunner
   rows={36}
@@ -99,7 +216,7 @@ print("多查询覆盖更全")`}
 
 单查询对歧义的"苹果"只能偏一边，多查询扩展把它拆成"苹果公司/手机"和"苹果水果/维生素"两个角度分别检索、合并，覆盖更全。**试试**：给 expand 再加一个角度；想想这多出来的覆盖，值不值"多一次 LLM 调用"的成本。
 
-## 四、动手 Lab（必做）
+## 六、动手 Lab（必做）
 
 打开 `labs/month08/m8l7_query/`：
 
@@ -132,7 +249,7 @@ python labs/month08/m8l7_query/test_query.py
   ]}
 />
 
-## 架构师深潜（Staff+ 视角）
+## 七、架构师深潜（Staff+ 视角）
 
 ### 1. 查询变换手段
 
@@ -174,6 +291,46 @@ python labs/month08/m8l7_query/test_query.py
 - 你的用户查询有多口语化/多歧义/多轮指代？直接拿原话检索召回如何？改写能提升多少？
 - 查询变换要多一次 LLM 调用——这个延迟和成本，对你的高频场景可接受吗？哪些查询值得变换、哪些不必？
 - 你能用评测区分"召回差是查询问法问题"还是"分块/embedding/缺精确匹配问题"吗？对症的手段分别是什么？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在多轮 RAG 对话系统中，如果用户在第二轮问出“它的价格是多少？”，直接将该查询向量化送入向量库可能会导致什么严重的检索后果？',
+      options: [
+        'A. 会导致向量库的读写冲突错误（EBUSY）',
+        'B. 因为代词“它”没有具体的向量物理表征，导致检索出大量完全无关的杂乱噪音，使 RAG 发生严重幻觉',
+        'C. 会使得大模型的推理费用翻倍',
+        'D. 检索出的文档只包含“价格”两个字，缺失其他所有信息'
+      ],
+      answer: 1,
+      explain: '在多轮 RAG 检索中，如果不结合历史对话上下文将指代词“它”还原为上一轮所指代的产品实体（即“指代消解”），极易导致匹配出来的文档毫无关联。必须先通过 Query Rewriting 补全实体。'
+    },
+    {
+      q: 'HyDE（假设文档嵌入）算法能够显著提升检索效果，其最核心的前提和原理是什么？',
+      options: [
+        'A. 纯向量检索的性能太差，HyDE 可以提升 CPU 运算效率',
+        'B. 用户提问的疑问句与知识库的陈述句存在“语义鸿沟”，而 LLM 模拟生成的“假设答案”与真实库中文档在措辞与语义分布上高度同质，几何距离更近',
+        'C. 假设答案 100% 必须包含完全正确的事实细节',
+        'D. HyDE 不需要使用任何 Embedding 模型进行二次编码'
+      ],
+      answer: 1,
+      explain: '用户提问（“怎么修E1042？”）和答案陈述（“当遇到E1042，需执行...”）字面和语法截然不同，存在语义鸿沟。LLM 预先模拟生成一个“假设的答案”，其行文风格与知识库极其类似。将其 Embedding 编码后匹配成功率大大增加。'
+    },
+    {
+      q: '在生产环境中引入查询改写（Query Rewriting）或多查询扩展，最大的工程代价与痛点是什么？',
+      options: [
+        'A. 使得向量数据库的存储容量扩充数倍',
+        'B. 会多出一次（或多次）LLM API 推理调用，从而显著增加了用户请求的整体延迟（TTFT）与 Token 费用',
+        'C. 彻底破坏了 Reranker 模型的效果',
+        'D. 会导致 Markdown 格式编译失败'
+      ],
+      answer: 1,
+      explain: '查询改写（或多查询）需要在检索前先调一次 LLM 吐出改写或扩展后的 Query。这一步骤处于整个在线检索管道的最上游，其额外的网络与模型延迟（通常在数百毫秒到 1 秒以上）会直接累加到用户最终看到字的首字延迟上，需要根据场景权衡。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
