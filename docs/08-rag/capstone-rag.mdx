@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M8L12 · Capstone：构建一个 RAG 系统
 
@@ -37,11 +39,11 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 ### 基础：离线摄取 + 在线检索
 
 - **离线摄取（[M8L11/L4](./knowledge-base-ops)）**：文档 → 解析清洗 → [分块](./chunking) → 向量化 → 入库 + 打[元数据（权限/时间）](./advanced-rag)。支持[增量更新](./knowledge-base-ops)。
-- **在线检索**：[查询改写（M8L7）](./query-transformation) → [混合检索（M8L5）](./hybrid-search)（向量+关键词 RRF）→ [权限过滤（M8L10）](./advanced-rag) → [重排（M8L6）](./reranking) → 取 top-k。
+- **在线检索**：[查询改写（M8L7）](./query-transformation) → [混合检索（M8L5）](./hybrid-search)（向量+关键词 <GlossaryTerm term="RRF" definition="互惠排名融合：一种通过将多个检索渠道（如关键词检索和稠密向量检索）的排名倒数进行加权累加，以获得全局统一检索排序结果的混合检索融合算法。">RRF</GlossaryTerm>）→ [权限过滤（M8L10）](./advanced-rag) → [重排（M8L6）](./reranking) → 取 top-k。
 
 ### 进阶：grounding 生成 + 弃答
 
-- **生成（[M8L8](./rag-generation)）**：证据编号拼装 → grounding prompt（只据证据答）→ [结构化输出 `{answer, citations}`（M7L6）](../llm-systems/structured-output-tools) → 校验引用真实存在 → 证据不足[弃答（M7L9）](../llm-systems/hallucination-guardrails)。
+- **生成（[M8L8](./rag-generation)）**：证据编号拼装 → <GlossaryTerm term="Grounding" definition="确定性挂载 / 地面锚定：指使大模型的文本生成过程严格约束在给定的外部检索证据（Context）内，仅根据已知证据进行回答，防止其使用内部参数化记忆进行“天马行空”的幻觉生成。">grounding</GlossaryTerm> prompt（只据证据答）→ [结构化输出 `{answer, citations}`（M7L6）](../llm-systems/structured-output-tools) → 校验引用真实存在 → 证据不足[弃答（M7L9）](../llm-systems/hallucination-guardrails)。
 - **接 M7 可靠层**：[缓存/降级（M7L11）](../llm-systems/llm-caching-resilience)、[低温（M7L3）](../llm-systems/sampling-decoding)、[成本追踪（M7L5）](../llm-systems/llm-api-cost-latency)——RAG 的生成端就是 [M7L12 管道](../llm-systems/capstone-llm-app) 接上检索证据。
 
 ### 深入（选学）：评测闭环与持续运维
@@ -58,7 +60,121 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="设计 RAG：画出离线摄取和在线问答两条链，每环放对应组件；权限在检索层硬过滤；生成端 grounding+引用+弃答；用分维度评测定位优化、跑回归；知识库增量更新保新鲜。把它当 M7 可靠管道 + 检索工程 + 数据运维的总和。"
 />
 
-## 三、跟我做一遍：端到端 RAG 系统
+## 三、生产级端到端 RAG 控制机制图解 (Deep Dive Diagrams)
+
+本节展示端到端 RAG 在运行期间如何将权限隔离、自适应改写、混合检索以及证据生成后置双向校验串联成完整数据回路。
+
+### 1. 结构全景：企业级生产 RAG 端到端全景控制链
+
+企业级生产 RAG 划分为离线摄取更新管道与在线自适应问答检索管道，形成闭环数据流网络。
+
+```mermaid
+graph TD
+    classDef offline fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+    classDef online fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef secure fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+
+    subgraph OfflineChain ["离线摄取更新数据管道"]
+        RawDocs["原始文档库"] --> Normalizer["格式清洗与智能分块"]:::offline
+        Normalizer --> Embedding["向量编码与指纹 (MD5) 生成"]:::offline
+        Embedding --> MetaAcl["元数据与 ACL 权限绑定"]:::offline
+        MetaAcl --> VectorDb[("向量/元数据数据库 (Pinecone/Milvus)")]:::secure
+    end
+
+    subgraph OnlineChain ["在线自适应问答检索管道"]
+        UserQuery["用户提问与 ACL Token"] --> Rewrite["查询改写与意图扩展"]:::online
+        Rewrite --> SearchEngine["混合检索 (稠密向量 + 关键词 RRF)"]:::online
+        SearchEngine --> PreFilter["前置元数据 ACL 硬性过滤"]:::secure
+        PreFilter --> Reranker["重排器 (Cross-Encoder) 重打分"]:::online
+        Reranker --> TopK["召回 Top-K 证据拼装"]:::online
+        TopK --> GroundedGen["受限 Grounding 生成器 (LLM)"]:::online
+        GroundedGen --> Verifier["引用后置双向校验 / 弃答网关"]:::secure
+        Verifier --> UserResp["带引用安全答案 / 降级兜底转人工"]
+    end
+
+    VectorDb -.-> PreFilter
+```
+
+### 2. 流程全景：支持权限隔离与自适应改写的检索时序
+
+在线检索期间，用户的意图与安全标签被多级流转，以保障高召回与高物理安全性。
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as 用户 (ACL: public, staff)
+    participant Rewrite as 查询改写组件
+    participant Db as 向量/元数据数据库
+    participant Reranker as 深度重排器
+    participant LLM as 受限生成大模型
+
+    User->>Rewrite: 提问：“内部折扣怎么申请？”
+    Note over Rewrite: 自适应改写意图<br/>“员工 折扣 申请 步骤 政策”
+    Rewrite->>Db: 混合向量匹配检索
+    Note over Db: 实施硬性权限过滤<br/>对 ACL ['public', 'staff'] 求交集
+    Db-->>Rewrite: 返回有权限分块（排除越权文档）
+    Rewrite->>Reranker: 混合结果排名倒数融合 (RRF)
+    Note over Reranker: 交叉编码交互式排序打分<br/>筛选 top-2 最优证据
+    Reranker-->>LLM: 送入 Grounding 上下文
+    Note over LLM: 根据证据回答并在文末标明引用 id
+    LLM-->>User: 返回结构化 `{answer: "...", citations: [3]}`
+```
+
+### 3. 比较全景：无约束直接生成 vs. 受限 Grounding + 引用 + 弃答校验
+
+严格的 Grounding 生成能够保证内容可追溯、防幻觉，并在缺乏充足证据时启动弃答机制。
+
+```mermaid
+graph TD
+    classDef unsecure fill:#ffcdd2,stroke:#c62828,stroke-width:1px;
+    classDef secure fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    
+    Query["用户提问"] --> ModelGen{"文本生成架构选择"}
+    
+    subgraph OptionA ["方案 A: 无约束直接生成 (零防护)"]
+        ModelGen -->|直接生成| Parametric["依赖模型内部参数化记忆"]
+        Parametric -->|不可靠推理| Hallucination["输出高幻觉答案，<br/>无任何引用与依据，不可信"]:::unsecure
+    end
+
+    subgraph OptionB ["方案 B: 受限 Grounding + 双向校验 (工业级)"]
+        ModelGen -->|受限生成| Grounded["仅允许大模型根据 Context 答题"]
+        Grounded --> StructureResp["结构化输出 {answer, citations}"]
+        StructureResp --> Verification{"Citations 是否存在于证据库?"}
+        Verification -->|No / 证据不足| Abstain["判定弃答，拦截并转人工降级"]:::secure
+        Verification -->|Yes| OutputGrounded["输出有据可查、带来源引用的高信答案"]:::secure
+    end
+```
+
+## 四、落地实践：企业端到端 RAG 系统的执行链路控制
+
+要组装一个完全可靠的生产级 RAG 问答系统，系统需要在运行期间严密控制如下四个执行阶段：
+
+<StepFlow
+  steps={[
+    {
+      title: '1. 查询改写与意图理解 (Query Reformulation)',
+      desc: '在线接受用户提问后，通过查询改写器生成同义词扩展和子意图，提高后续匹配的语义召回覆盖度。',
+      diagram: '用户原始输入 ──> 意图扩展/子句生成 ──> 形成改写检索词集'
+    },
+    {
+      title: '2. 混合检索与前置 ACL 隔离 (Hybrid Search & Meta Filtering)',
+      desc: '向量检索与经典关键字检索同时下发，并在检索源头前置结合用户的 ACL Token，将越权的文档彻底剔除出检索范围。',
+      diagram: '改写词集 ──> 向量 + 关键字 ──> [元数据权限交集过滤] ──> 获取安全结果'
+    },
+    {
+      title: '3. 深度重排打分 (Cross-Encoder Reranking)',
+      desc: '对于混合检索检索出的召回项，使用重排模型（Reranker）计算查询词与分块的深层交互打分，筛选出 top-k 最相关的高质量证据集。',
+      diagram: '混合召回候选项 ──> 重排器二次评估打分 ──> 排序截断 ──> 输出 Top-K 证据'
+    },
+    {
+      title: '4. 受限 Grounding 生成与引用拦截 (Grounded Abstention & Verification)',
+      desc: '将 Top-k 证据塞入 grounding prompt 送入大模型，并在后置校验器中对citations执行校验。若校验失败或证据冲突，则触发弃答。',
+      diagram: 'Top-K 证据 ──> LLM 结构化生成 ──> 引用真实性校验 ──> 判定安全输出或弃答'
+    }
+  ]}
+/>
+
+## 五、跟我做一遍：端到端 RAG 系统
 
 <PyRunner
   rows={42}
@@ -101,7 +217,7 @@ print("检索-权限-重排-生成-弃答 全通")`}
 
 一条端到端 RAG：检索 + 权限过滤（公开用户问内部折扣被弃答、绝不泄露 staff 内容）+ 精排 + grounding 生成 + 引用校验 + 无据弃答。**试试**：让 model 返回越界引用，看被拦；给公开用户也加 staff 权限，看内部折扣能否被检索到——体会权限过滤是怎么在检索层硬挡的。
 
-## 四、动手 Lab（必做）
+## 六、动手 Lab（必做）
 
 打开 `labs/month08/m8l12_rag_system/`：
 
@@ -134,7 +250,7 @@ python labs/month08/m8l12_rag_system/test_rag_system.py
   ]}
 />
 
-## 架构师深潜（Staff+ 视角）
+## 七、架构师深潜（Staff+ 视角）
 
 ### 1. RAG 系统的成熟度
 
@@ -163,19 +279,59 @@ python labs/month08/m8l12_rag_system/test_rag_system.py
   ]}
 />
 
-### 2. RAG 是 Month 7+8 的总集成，也是 AI 系统的"知识底座"
+### 2. RAG 是 Month 7+8 的总集成，也是 AI 系统的“知识底座”
 
-这个 Capstone 把两个月串成了一个完整能力：**Month 7 教你"把不可靠的模型包成可靠功能"，Month 8 教你"把海量知识精准供给模型"**——合起来就是一个能基于特定知识、可靠回答、可引用、可运维的 AI 系统。这套"RAG 知识底座"是绝大多数企业 AI 应用的核心：客服、文档助手、法规/合规问答、内部知识检索，乃至 [Agent（Month 9）](../agent-architectures/overview) 获取知识的工具，都建立在它之上。架构师掌握了这个端到端 RAG 的设计和优化（尤其是用[评测定位、对症优化](./rag-evaluation) 的方法论），就掌握了 AI 应用最常用、最吃工程功力的一块。
+这个 Capstone 把两个月串成了一个完整能力：**Month 7 教你“把不可靠的模型包成可靠功能”，Month 8 教你“把海量知识精准供给模型”**——合起来就是一个能基于特定知识、可靠回答、可引用、可运维的 AI 系统。这套“RAG 知识底座”是绝大多数企业 AI 应用的核心：客服、文档助手、法规/合规问答、内部知识检索，乃至 [Agent（Month 9）](../agent-architectures/overview) 获取知识的工具，都建立在它之上。架构师掌握了这个端到端 RAG 的设计 and 优化（尤其是用[评测定位、对症优化](./rag-evaluation) 的方法论），就掌握了 AI 应用最常用、最吃工程功力的一块。
 
 ### 3. 真实案例：RAG 项目成败的分水岭
 
-回顾本月反复出现的"成败分水岭"：(1) **数据工程**——分块、解析、增量更新做得好不好，决定长期质量（[M8L4/L11](./chunking)）；(2) **检索质量**——是否混合、重排、按需查询改写，决定召回精度（[M8L5/L6/L7](./hybrid-search)）；(3) **生成可信**——grounding、引用、弃答，决定能不能用于严肃场景（[M8L8](./rag-generation)）；(4) **权限安全**——检索层硬过滤，决定能不能上企业（[M8L10](./advanced-rag)）；(5) **评测运维**——能不能定位问题、持续改进、保持新鲜（[M8L9/L11](./rag-evaluation)）。能把这五件事都做扎实的 RAG，才是生产级的。**很多 RAG 项目失败，不是某一处不行，而是只做了"检索 top-k + 生成"这条最细的线，缺了其余四条**。这个 Capstone 的价值，就是让你看到完整的五条线、并知道怎么用评测驱动地把它们都做好。
+回顾本月反复出现的“成败分水岭”：(1) **数据工程**——分块、解析、增量更新做得好不好，决定长期质量（[M8L4/L11](./chunking)）；(2) **检索质量**——是否混合、重排、按需查询改写，决定召回精度（[M8L5/L6/L7](./hybrid-search)）；(3) **生成可信**——grounding、引用、弃答，决定能不能用于严肃场景（[M8L8](./rag-generation)）；(4) **权限安全**——检索层硬过滤，决定能不能上企业（[M8L10](./advanced-rag)）；(5) **评测运维**——能不能定位问题、持续改进、保持新鲜（[M8L9/L11](./rag-evaluation)）。能把这五件事都做扎实的 RAG，才是生产级的。**很多 RAG 项目失败，不是某一处不行，而是只做了“检索 top-k + 生成”这条最细的线，缺了其余四条**。这个 Capstone 的价值，就是让你看到完整的五条线、并知道怎么用评测驱动地把它们都做好。
 
 ### 4. 架构师深问（给自己 30 分钟）
 
 - 给你负责的 RAG，画出离线摄取和在线问答两条完整链。哪一环现在是缺的或薄弱的？
 - 你的权限是在检索层硬过滤，还是危险地靠 prompt？答案有引用、能溯源吗？
 - 你能用分维度评测说清当前 RAG 的瓶颈在检索还是生成、在召回还是精排吗？下一步该优化哪里？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在企业生产级 RAG 架构中，为什么“混合检索 + 重排（Hybrid + Reranking）”相比于单一的向量库相似度检索能大幅提升召回与精准度？',
+      options: [
+        'A. 向量相似度检索擅长捕捉语义模糊的长尾意图，但在面对专用名词、序列代号等精准词匹配时效果不佳；引入关键词检索可补足精准短板，再通过重排模型做深度交互排序，能极大改善供给大模型的 Context 质量',
+        'B. 重排能够使用极小体量的参数直接在向量库的内存中进行分布式排序',
+        'C. 混合检索只适用于中文环境，向量检索只适用于英文环境',
+        'D. 这样做可以使得最终生成的文本长度减少 50%'
+      ],
+      answer: 0,
+      explain: '稠密向量检索在捕捉同义词、宽泛意图上性能优良，但遇到特定的 SKU 编码或专有名词时常会出现误判或漏召回，必须用基于字面精准匹配的倒排索引（关键词检索）双管齐下；再采用重排器利用 Cross-Encoder 深度打分过滤噪音，最大化 Top-k 质量。'
+    },
+    {
+      q: 'RAG 管道中“引用真实性校验（Citation Verification）”这一后置校验器的最核心职能是什么？',
+      options: [
+        'A. 计算当前大模型的 API 消耗费用是否超出财务限额',
+        'B. 在生成后置环节，逐一验证大模型给出的引用标签（如[1], [2]）所对应的实际内容，是否真实包含在检索层送入的 Context 证据集中，若大模型凭空捏造了未包含在证据里的编号引用，则启动拦截或弃答',
+        'C. 统计大模型输出中包含的标点符号数量',
+        'D. 让模型将所生成的回答翻译为系统默认的语言'
+      ],
+      answer: 1,
+      explain: '即使加了 grounding 约束，大模型依然有可能编造没有事实基础的编号标签。通过后置校验器比对模型输出引用的 ID 是否完全在当前输送证据的 ID 闭集内，若存在越界引用则属于幻觉泄密，系统必须拦截并启动降级弃答机制。'
+    },
+    {
+      q: '作为一个合格的系统架构师，要如何科学定位一个线上 RAG 应用发生的“回答不正确”的故障原因？',
+      options: [
+        'A. 马上将采样温度（Temperature）调到最高，然后重试',
+        'B. 建立分维度评测机制（如 RAGAS 框架），首先检测检索召回率与重排质量是否失信；其次在检索完全正确时评估大模型的忠实度与相关性，绝不能混为一谈导致优化路径跑偏',
+        'C. 立即将向量检索更改为普通的布尔正则表达式匹配',
+        'D. 删掉所有的分块策略，直接把整本书送入大模型 context'
+      ],
+      answer: 1,
+      explain: 'RAG 的质量瓶颈是由检索段（召回率、上下文精确率）和生成段（忠实度、答案相关性）多重因素交织决定的。必须用分维度的 RAG 评测科学把脉，找出具体是检索端漏了关键信息还是大模型在生成时发生了幻觉，从而对症下药。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
@@ -186,9 +342,9 @@ python labs/month08/m8l12_rag_system/test_rag_system.py
 
 ## 常见误解
 
-- **"RAG 就是检索 top-k + 生成"**：那只是最细的一条线，缺了数据工程/检索质量/可信生成/权限/评测就不是生产级。
-- **"权限靠提示模型别说"**：必须检索层硬过滤，模型不可信。
-- **"RAG 上线就完成了"**：要持续评测、增量更新、监控新鲜度，是要运营的系统。
+- **“RAG 就是检索 top-k + 生成”**：那只是最细的一条线，缺了数据工程/检索质量/可信生成/权限/评测就不是生产级。
+- **“权限靠提示模型别说”**：必须检索层硬过滤，模型不可信。
+- **“RAG 上线就完成了”**：要持续评测、增量更新、监控新鲜度，是要运营的系统。
 
 ## 延伸阅读
 
