@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M7L10 · LLM 评测
 
@@ -32,21 +34,102 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 基础：评测集与评分方式
 
-<GlossaryTerm term="Eval Set" definition="评测集：一组有代表性的测试用例（输入 + 期望/评分标准），覆盖典型场景、边界、易错情况。是衡量 LLM 系统质量、对比不同 prompt/模型的基准。">评测集（eval set）</GlossaryTerm>：精心挑选的一组用例（输入 + 期望或评分标准），覆盖典型、边界、易错场景。评分方式分几类：
+<GlossaryTerm term="Eval Set" definition="评测集：一组有代表性的测试用例（输入 + 期望/评分标准），覆盖典型场景、边界、易错情况。是衡量 LLM 系统质量、对比不同 prompt/模型的基准。">评测集（eval set）</GlossaryTerm>：精心挑选的一组用例，也常被称为 <GlossaryTerm term="Golden Set" definition="黄金数据集：经过人工校验、高质量、有代表性的基准测试用例集，是评测系统的核心资产。">黄金数据集（Golden Set）</GlossaryTerm>（包括输入 + 期望或评分标准），覆盖典型、边界、易错场景。
+需要注意的是，企业内部的业务评测集通常不同于通用的 <GlossaryTerm term="LLM Benchmarks" definition="大模型基准测试：如 MMLU、GSM8K、MT-Bench 等公开的、通用的行业标准评测集，用来衡量模型底座的通用能力。">行业基准测试（Benchmarks）</GlossaryTerm>（如 MMLU、GSM8K、MT-Bench 等），后者用于测试模型底层通用能力，而前者专门针对具体业务场景。
+
+评分方式分几类：
 - **精确/规则匹配**：答案是否等于/包含标准答案、是否符合格式、数值是否正确——适合有明确答案的任务（分类、抽取）。
 - **语义/相似度**：答案和参考答案语义是否接近——适合开放问答。
 - **人工评分**：人按标准打分——最准但慢、贵、不可复现。
 
 ### 进阶：LLM-as-judge
 
-对开放性输出（没有唯一答案），一个强力方法是<GlossaryTerm term="LLM-as-Judge" definition="用 LLM 当评判：让一个（通常更强的）模型按给定评分标准（rubric）给被测输出打分或两两比较。可规模化、比纯规则更懂语义，但本身也可能有偏差，需校准和抽样人工核对。">LLM-as-judge（用模型当评委）</GlossaryTerm>：让一个（通常更强的）模型按**评分标准（rubric）**给输出打分或两两对比。它能规模化、比规则更懂语义。但要警惕：评委模型本身也有偏差（如偏好长答案、偏好特定风格），需要校准、抽样人工核对、用清晰 rubric 约束。
+对开放性输出（没有唯一答案），一个强力方法是<GlossaryTerm term="LLM-as-Judge" definition="用 LLM 当评判：让一个（通常更强的）模型按给定评分标准（rubric）给被测输出打分或两两比较。可规模化、比纯规则更懂语义，但本身也可能有偏差，需校准和抽样人工核对。">LLM-as-judge（用模型当评委）</GlossaryTerm>：让一个（通常更强的）模型按 <GlossaryTerm term="Rubric" definition="评分细则/标准：给 LLM-as-judge 提供的一套明确、多维度的打分说明，限制模型评判的主观性与偏差。">评分标准（rubric）</GlossaryTerm> 给输出打分或两两对比。它能规模化、比规则更懂语义。
+
+```mermaid
+graph TD
+    classDef default fill:#f9f9f9,stroke:#333,stroke-width:1px;
+    classDef process fill:#e1f5fe,stroke:#0288d1,stroke-width:1px;
+    classDef judge fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef output fill:#e8f5e9,stroke:#388e3c,stroke-width:1px;
+
+    Input["输入 Prompt (Test Input)"] --> SUT["待测模型 (Candidate LLM)"]
+    SUT --> CandidateOutput["模型输出 (Candidate Output)"]
+    
+    CandidateOutput --> Builder["评判 Prompt 组装器 (Prompt Builder)"]
+    Input --> Builder
+    Reference["参考答案 (Golden Reference)"] -.-> Builder
+    Rubric["评分标准 (Rubrics / Criteria)"] --> Builder
+    
+    Builder --> Judge["评委模型 (Judge LLM)"]:::judge
+    Judge --> RawEval["原始评判文本"]
+    RawEval --> Parser["结构化解析器 (JSON Parser)"]:::process
+    
+    Parser --> Score["评分 (Score: 0-1)"]:::output
+    Parser --> Explanation["理由 (Explanation / Chain-of-Thought)"]:::output
+
+    subgraph LLM-as-a-Judge 核心架构
+      Builder
+      Judge
+      RawEval
+      Parser
+    end
+```
+
+但要警惕：评委模型本身也有偏差（如偏好长答案、偏好特定风格），需要校准、抽样人工核对、用清晰 rubric 约束。
 
 ### 深入（选学）：回归、CI 门禁与评测驱动开发
 
 把评测变成工程纪律：
-- <GlossaryTerm term="Regression Eval" definition="回归评测：每次改动（prompt、模型、参数、检索）后，在固定评测集上重跑打分，和基线对比，确保没让已通过的用例退化。是 LLM 系统的回归测试。">回归评测</GlossaryTerm>：每次改 prompt/换模型/调参，都在评测集上重跑、和基线对比——**通过率掉了就别上线**（[呼应 M6L6 质量门禁](../cloud-enterprise-industrial/cicd-pipelines)）。这把“感觉”变成“数字对比”。
+- <GlossaryTerm term="Regression Eval" definition="回归评测：每次改动（prompt、模型、参数、检索）后，在固定评测集上重写打分，和基线对比，确保没让已通过的用例退化。是 LLM 系统的回归测试。">回归评测</GlossaryTerm>：每次改 prompt/换模型/调参，都在评测集上重跑、和基线对比——**通过率掉了就别上线**（[呼应 M6L6 质量门禁](../cloud-enterprise-industrial/cicd-pipelines)）。这把“感觉”变成“数字对比”。
 - **接进 CI**：评测作为流水线的一个门禁阶段，prompt/模型变更要过评测才能合并/发布（[M6L6](../cloud-enterprise-industrial/cicd-pipelines)）——prompt 是代码，要测试（[M7L4](./prompting-basics)）。
+
+```mermaid
+graph TD
+    classDef code fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+    classDef gate fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+    classDef ok fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    Developer["开发者修改 Prompt / 模型"]:::code --> Commit["Git Commit & PR"]:::code
+    Commit --> CI["CI/CD 流水线触发"]
+    
+    subgraph 回归评测引擎 (Regression Eval Engine)
+        CI --> LoadEvalSet["加载 Golden Set (评测集)"]
+        LoadEvalSet --> RunEval["并发运行评测 (Parallel Run)"]
+        RunEval --> MetricCalc["计算评测指标 (Avg Score / Latency / Cost)"]
+    end
+    
+    subgraph 判定逻辑
+        MetricCalc --> Compare["与基线对比 (New vs Baseline)"]
+        Compare --> ThresholdCheck{"通过率低于基线? <br/>(score_new < score_base)"}
+    end
+
+    ThresholdCheck -- Yes --> FailGate["阻断部署 (Block Release)"]:::gate
+    ThresholdCheck -- No --> PassGate["通过并允许合并"]:::ok
+    
+    FailGate --> DevAlert["通知开发者修复"]:::code
+```
+
 - **评测集会演进**：线上发现的 bad case 要加进评测集（防止再犯）——和[特征测试（M4L11）](../design-patterns-lld/code-smells-refactoring) 一个思路。
+
+```mermaid
+graph LR
+    classDef user fill:#ffe0b2,stroke:#f57c00,stroke-width:1px;
+    classDef prod fill:#e1f5fe,stroke:#0288d1,stroke-width:1px;
+    classDef dev fill:#f3e5f5,stroke:#7b1fa2,stroke-width:1px;
+
+    User["用户 / 业务方"]:::user -- 遇到幻觉/错误输出 --> Report["上报 Bad Case (在线监控)"]:::prod
+    Report --> Collector["收集日志 & 上下文 (Tracing)"]:::prod
+    Collector --> Review{"人工审核 / 自动聚类"}:::prod
+    
+    Review -- 确认是缺陷 --> Extract["提取关键 Input-Output"]:::dev
+    Extract --> Generalize["泛化用例 (设计标准答案 / Rubric)"]:::dev
+    Generalize --> Append["追加到 Golden Set"]:::dev
+    
+    Append --> RunRegress["重跑回归测试"]:::dev
+    RunRegress -- 验证修复 --> Deploy["部署上线"]:::prod
+    Deploy --> User
+```
 - **多维度评测**：不只看“对不对”，还要看[幻觉率、引用准确率（M7L9）](./hallucination-guardrails)、[成本、延迟（M7L5）](./llm-api-cost-latency)、安全合规——综合权衡，不能只优化一个维度。
 - **线上评测**：除了离线评测集，还要在线监控真实流量的质量（用户反馈、抽样 LLM-judge、关键指标），因为评测集覆盖不了所有真实输入。
 
@@ -56,6 +139,40 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   href="https://arxiv.org/abs/2306.05685"
   insight="LLM 输出不确定且常无唯一答案，需用评测集 + 多种评分（规则/语义/LLM-judge/人工）来衡量质量。研究表明强模型当评委与人类判断有较高一致性，但存在位置/长度/风格偏差，需校准。把评测做成回归 + CI 门禁，是 LLM 系统可靠演进的基础。"
   application="为每个 LLM 功能建评测集（覆盖典型/边界/线上 bad case）；按任务选评分方式（规则/语义/LLM-judge/人工）；每次改动跑回归对比基线、接进 CI 门禁；多维度（质量/幻觉/成本/延迟/安全）综合评估；离线评测 + 线上质量监控并行。"
+/>
+
+### 实战演练：企业级 LLM 评测落地五步法
+
+为了将评测理念真正落实到企业生产环境，我们可以拆解为以下五步工作流。通过点击下面的交互组件可以查看每一步的运作图景：
+
+<StepFlow
+  steps={[
+    {
+      title: '构建黄金数据集 (Build Golden Set)',
+      desc: '整理线上真实 Bad Case，通过人工校验和泛化，形成覆盖典型业务场景与边界条件的评测用例集（通常在 50~100 条左右即可起步）。',
+      diagram: '用户反馈/Bad Case ──> 人工泛化 ──> 黄金数据集 (Golden Set)'
+    },
+    {
+      title: '制定评分细则与标准 (Define Rubrics)',
+      desc: '针对特定生成任务，定义明确的打分指标（如格式准确度、信息真实度等）。为 LLM Judge 编写带有具体示例的 Prompt 及打分标准细则。',
+      diagram: '评分维度 (例如相关性、有害度) + 分数说明 ──> 结构化 Rubric'
+    },
+    {
+      title: '流水线并发运行 (Run Eval Pipeline)',
+      desc: '在 CI/CD 或定时触发的流水线中，拉取最新的 Prompts 与测试模型，对黄金数据集中的所有用例发起并发 API 调用，收集输出结果。',
+      diagram: '代码提交 ──> 并发调用 LLM 接口 ──> 聚合待评测 Raw Outputs'
+    },
+    {
+      title: '自动化打分与回归检测 (Automated Gating)',
+      desc: '运行规则检查器或调用 Judge 模型为输出进行自动化评估，计算出本轮的平均得分，并与 Baseline 基线分数对比。若分数倒退则在 CI 中阻断。',
+      diagram: '输出结果 ──> LLM Judge / 规则匹配 ──> 计算通过率 ──> 触发回归告警'
+    },
+    {
+      title: '评判模型校准与优化 (Calibrate Judge)',
+      desc: '定期对 Judge 模型的评估结果进行人工盲审抽查，计算 Judge 与人类专家评分的一致性（如 Kappa 系数），从而不断微调优化评分 Prompt。',
+      diagram: '人类评分对比 Judge 评分 ──> 发现偏差 ──> 迭代 Rubric 提示词'
+    }
+  ]}
 />
 
 ## 三、跟我做一遍：评测集打分 + 回归对比
@@ -183,11 +300,54 @@ python labs/month07/m7l10_eval/test_eval.py
 - [ ] 我理解 LLM-as-judge 的用途和偏差风险。
 - [ ] 我能把评测做成回归 + CI 门禁 + 线上监控。
 
+## 章末自测
+
+为了检验你对本章 LLM 评测与回归测试核心理念的掌握情况，请完成以下自测题目：
+
+<QuizCard
+  questions={[
+    {
+      q: '为什么在 LLM 系统开发中，传统的 “assert output == expected” 单元测试方法不再适用？',
+      options: [
+        'A. 因为 LLM API 调用的网络延迟过长，单元测试无法在 CI/CD 中并发执行',
+        'B. 因为 LLM 输出具有随机性且表达多样（没有唯一答案），精确规则匹配会导致极高误报率',
+        'C. 因为大模型具备自愈能力，即使输出错误也会在下一次调用中自行纠正',
+        'D. 因为 LLM 输出的格式一定是 JSON，而传统断言库无法解析复杂的 JSON 对象'
+      ],
+      answer: 1,
+      explain: 'LLM 输出具有不确定性（stochastic nature），即使语义完全正确，每次生成的文字表达也可能有细微差异。因此传统的精确相等断言会导致大量误报。我们需要使用更具弹性的规则（如包含关键词、格式验证）、语义相似度（如向量距离）或 LLM-as-a-Judge 机制来进行软性评分。'
+    },
+    {
+      q: '在使用 LLM-as-a-Judge（以模型作为评委）时，以下哪项最属于评委模型的常见系统性偏差（Bias）？',
+      options: [
+        'A. 位置偏差（倾向给排在前面的选项打高分）和长度偏差（倾向给冗长繁琐的答案打高分）',
+        'B. 计算偏差（无法正确进行基本的十进制四则运算）',
+        'C. 语言偏差（完全无法理解和评审非英语生成的答案）',
+        'D. 逻辑偏差（只会给出 0 分或 100 分的极端二分类评分）'
+      ],
+      answer: 0,
+      explain: '大量研究和工程实践表明，LLM 评委存在明显偏差：如位置偏差（对选项顺序敏感）、长度倾向（Verbosity Bias，更容易给冗长而显得“丰富”的回答评高分）、自恋偏差（更喜欢自己同款模型生成的回答）。这需要架构师通过限制输入长度、随机化候选项顺序，以及提供极度细致的多维度 Rubric 规则进行约束和校准。'
+    },
+    {
+      q: '在 LLM 应用的 CI/CD 自动化回归流水线中，如果发现新 prompt 版本的评测通过率比基线有所下降，应采取什么策略？',
+      options: [
+        'A. 直接将当前评测集从 CI 中移除，保证构建快速变绿通过',
+        'B. 忽略平均分的微弱下降直接合并部署，让线上用户真实体验并收集反馈',
+        'C. 触发部署阻断（Block Gate），提取发生退化的 Case，由开发团队评估 Prompt 泛化问题或校准评测集',
+        'D. 自动回滚整个代码库至最原始的版本，且不再允许对此功能进行任何 prompt 调优'
+      ],
+      answer: 2,
+      explain: '在生产级 AI 架构中，回归评测必须作为强力的质量门禁。一旦新版通过率低于基线，必须阻断部署，并提取失败的 bad cases 进行人工或自动化审计。这能避免“感觉变好了”但实际上在边缘场景发生严重功能退化的情况发生。'
+    }
+  ]}
+/>
+
 ## 常见误解
 
-- **"LLM 输出没法测"**：能——用评测集 + 规则/LLM-judge/人工打分 + 回归对比。
-- **"试几条感觉对就行"**：不全面不可复现；要有代表性评测集和数字对比。
-- **"LLM-as-judge 完全可信"**：它有偏差，要校准、用清晰 rubric、抽样人工核对。
+- **"LLM 输出是不可控的，因此根本没法做测试"**：错误。我们确实无法用硬编码的 `assert ==`，但可以通过精心构建的“黄金数据集（Golden Set）”，结合规则检测、语义度量与 LLM-as-a-Judge 来进行可度量的回归评测，把随机性框定在可控范围内。
+- **"调优 Prompt 时，只要我手测了 5-10 条 Case 没问题，就可以放心上线"**：危险。LLM 是高维非线性的，改动 Prompt 去修复 A 场景的 Bug，极易悄悄导致 B 场景产生严重的质量倒退。没有自动化回归评测，就是在给生产环境埋雷。
+- **"LLM-as-a-Judge 完全公正可信，直接用它给业务评测打分就万事大吉"**：偏颇。Judge 模型也是 LLM，它同样具备上述的长度偏差、位置偏差和幻觉风险。企业中需要使用细化评分细则（Rubric）、控制最大长度、定期做“人机一致性”校准盲审，才能建立稳固的法官可信度。
+- **"开源的通用 Benchmarks（如 MMLU）拿了高分，就证明模型在我们的垂直业务场景同样优秀"**：错误。通用基准只能说明底座的学科知识储备和基础推理能力，业务核心痛点（如特定 API 调用、企业专有格式、隐私合规等）必须依靠企业团队自己收集、演进的业务 Golden Set 进行回归。
 
 ## 延伸阅读
 
