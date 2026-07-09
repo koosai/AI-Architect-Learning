@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M9L1 · Agent Loop 基础
 
@@ -37,7 +39,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 基础：Agent loop
 
-<GlossaryTerm term="Agent" definition="智能体：在给定目标下，能观察现状、决定下一步、调用工具、根据结果继续推进任务的系统。LLM 通常是它的“决策大脑”，外面包着循环、工具、记忆、约束等工程。">Agent</GlossaryTerm> 的核心是一个循环（loop）：
+<GlossaryTerm term="Agent" definition="智能体：在给定目标下，能观察现状、决定下一步、调用工具、根据结果继续推进任务的系统。LLM 通常是它的“决策大脑”，外面包着循环、工具、记忆、约束等工程。">Agent</GlossaryTerm> 的核心是一个受控的 <GlossaryTerm term="Observe-Decide-Act (ODA循环)" definition="观察-决策-行动循环：智能体在运行期间的基础控制模型。观察外界反馈，由大模型大脑进行思维决策，最终调用对应工具产生行动，并把结果作为下一轮观察的输入。">观察-决策-行动循环</GlossaryTerm>：
 1. **观察（observe）**：看当前状态——目标、已知信息、上一步工具结果。
 2. **决策（decide/plan）**：LLM 根据观察，决定下一步——调哪个工具、传什么参数，或"任务完成、给出答案"。
 3. **行动（act）**：执行模型决定的动作（[调工具 M7L6](../llm-systems/structured-output-tools)）。
@@ -50,7 +52,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 三者是一条自主性递增的谱系：
 - **单次调用**：一问一答，无循环（[M7L12](../llm-systems/capstone-llm-app)）。最可控、最便宜，但只能做一步。
 - <GlossaryTerm term="Workflow" definition="工作流：预先用代码写死步骤顺序的多步流程（步骤 A→B→C 固定）。可能每步调 LLM，但“下一步是什么”由代码决定，不由模型自主决定。确定、可控、可测。">固定 workflow</GlossaryTerm>：多步，但**步骤顺序由代码写死**（可能每步调 LLM，但流程固定）。确定、可控、好测。
-- **Agent**：多步，且**"下一步做什么"由模型自主决定**。最灵活（能处理预先不知道步骤的任务），但最难控（会跑偏、循环、闯祸）。
+- **Agent**：多步，且**"下一步做什么"由模型自主决定**。在决策过程中，模型通常利用 <GlossaryTerm term="Scratchpad (草稿纸/思考上下文)" definition="草稿纸/思考上下文：智能体用来记录多步执行期间的中间思考过程、工具调用返回与待完成子目标的内存机制。">Scratchpad (思考草稿纸)</GlossaryTerm> 来理清思路，实施如 <GlossaryTerm term="ReAct (推理-行动框架)" definition="推理-行动框架：一种将大模型的逻辑推理（Thought）与行动调用（Action）紧密结合的提示词工程范式，使模型能在行动前生成思维链。">ReAct</GlossaryTerm> 的推理与行动推进。最灵活（能处理预先不知道步骤的任务），但最难控（会跑偏、循环、闯祸）。
 - **关键判断**：步骤能预先写死的，用 workflow（更可靠）；步骤依赖运行时结果、无法预先确定的，才用 Agent（[M9L11 详谈](./when-not-agent)）。
 
 ### 深入（选学）：从循环本质推出 Agent 的工程挑战
@@ -68,10 +70,118 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   source="ReAct (Yao et al., 2022)；Russell & Norvig, AI: A Modern Approach（agent 定义）；现代 LLM agent 实践"
   href="https://arxiv.org/abs/2210.03629"
   insight="经典 AI 里 agent 就是“感知环境、自主行动以达成目标”的实体。LLM agent 把 LLM 作为决策大脑放进“观察-决策-行动-观察”的循环，使其能多步、依赖中间结果地推进任务。核心不是模型本身，而是包裹它的循环、工具、记忆和约束。"
-  application="把需要多步、下一步依赖上一步结果的任务用 agent loop 实现：observe（收集状态）→ decide（LLM 选下一步）→ act（执行工具）→ 回到 observe，直到完成或触发停止条件。步骤能预先写死的用 workflow 更可靠。循环的约束（停止/预算/权限/记忆/评测）才是工程重点。"
+  application="把需要多步、下一步依赖上一步结果的任务用 agent loop 实现：observe（收集状态）→ decide（LLM 选下一步）→ act（执行工具）→ 回到 observe，直到完成或触发停止条件。步骤能预先写死的用 workflow 更可靠.循环的约束（停止/预算/权限/记忆/评测）才是工程重点。"
 />
 
-## 三、跟我做一遍：一个受控的 Agent Loop
+## 三、智能体循环与控制拓扑图解 (Deep Dive Diagrams)
+
+本节展示智能体在运行期间如何将大模型脑部推理、行动工具反馈与外围工程防护网整合为稳定的闭环控制。
+
+### 1. 结构全景：智能体系统四大核心工程要素
+
+一个在生产环境下可靠运行的智能体，不仅需要一个“大脑”，更需要由观察草稿纸、工具集与护栏规则所组成的躯干。
+
+```mermaid
+graph TD
+    classDef brain fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
+    classDef state fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef tools fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+
+    SubBrain["决策大脑 (LLM / Policy)<br/>- 逻辑推理<br/>- 工具选择与参数组装"]:::brain
+    
+    SubState["观察与草稿纸 (Observations / Scratchpad)<br/>- 目标记忆<br/>- 多步上下文与工具结果记录"]:::state
+    
+    SubTools["行动工具集 (Tools API)<br/>- 外部系统 API / 数据检索<br/>- 本地脚本 / 文件读写"]:::tools
+    
+    SubSafe["外围控制与约束 (Constraints)<br/>- 最大执行步数 (max_steps)<br/>- 费用预算与速率护栏<br/>- 人工介入二次授权网关"]:::safe
+
+    SubBrain -->|1. 动作请求| SubSafe
+    SubSafe -->|2. 安全过滤| SubTools
+    SubTools -->|3. 返回结果| SubState
+    SubState -->|4. 下一轮输入| SubBrain
+```
+
+### 2. 时序全景：受控智能体循环（Observe-Decide-Act Loop）时序流水线
+
+在受控循环中，系统的第一要素是前置状态和步数检查，以防止失控漂移。
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Engine as 受控循环引擎 (Engine)
+    participant Brain as 决策大脑 (LLM)
+    participant Guard as 预算/步数防护网
+    participant Tool as 外部工具接口
+
+    Note over Engine: 步数初始化 step = 0
+    loop 循环直到 step >= max_steps 或判定完成
+        Engine->>Guard: 检查：当前步数是否超限？预算是否超标？
+        Guard-->>Engine: 检查通过，允许推进
+        Engine->>Brain: 送入 [目标 + 历史观察(Scratchpad)]
+        Note over Brain: 执行推理 (Thought)并给出决策 (Action)
+        Brain-->>Engine: 返回决策结果 (例如: weather, "上海")
+        alt 决策为 Finish
+            Engine-->>User: 提取答案，正常中断退出！
+        else 决策为普通工具调用
+            Engine->>Tool: 调用指定工具，传入参数 "上海"
+            Tool-->>Engine: 返回工具执行结果: "上海: 雨"
+            Note over Engine: 将结果 (weather, "上海: 雨") 追加至 observations
+            Note over Engine: step++
+        end
+    end
+    Note over Engine: 步数超载 (step >= max_steps) 强制停止降级！
+```
+
+### 3. 比较全景：单次调用 vs. 固定工作流 vs. 自主智能体
+
+自主性、灵活性与控制难度在不同应用范式中各具优劣，应根据业务特性进行系统性评估。
+
+```mermaid
+graph TD
+    classDef single fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+    classDef flow fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef agent fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
+
+    Select{"架构模式取舍"}
+    
+    Select -->|模式 A: 单次直接调用| M_Single["单次调用 (LLM One-Shot)<br/>- 控制度: 极高<br/>- 自主性: 极低 (无循环)<br/>- 适合: 总结、翻译、单步分类"]:::single
+    
+    Select -->|模式 B: 固定工作流| M_Flow["固定工作流 (Static Workflow)<br/>- 控制度: 高 (代码控制跳转分支)<br/>- 自主性: 中 (LLM仅在节点做单次决策)<br/>- 适合: 规则确定的审批流、多步抽取"]:::flow
+    
+    Select -->|模式 C: 自主智能体| M_Agent["智能体循环 (Agent Loop)<br/>- 控制度: 低 (容易产生死循环/越权)<br/>- 自主性: 极高 (模型自主规划路径)<br/>- 适合: 路径不确定性高的复杂故障排查"]:::agent
+```
+
+## 四、落地实践：受控智能体循环的生命周期阶段
+
+在实现商用级 Agent Loop 时，系统在每个周期运行都需要经过如下四个受控的阶段：
+
+<StepFlow
+  steps={[
+    {
+      title: '1. 状态聚合与上下文组装 (State Aggregation)',
+      desc: '在每一轮循环起点，将全局目标、现有 Observations 历史轨迹组装成特定格式（如 Scratchpad），提供给决策大脑。',
+      diagram: '全局目标 + 历史轨迹 ──> 结构化上下文 ──> 注入 LLM 大脑'
+    },
+    {
+      title: '2. 脑部推理与决策输出 (Brain Reasoning & Plan)',
+      desc: '大模型进行一步逻辑推理（Thought），输出具体的行动意图（Action）与对应的输入参数（Arg）。',
+      diagram: '推理 (Thought) ──> 判定是完成 finish 还是调用工具 ──> 组装参数'
+    },
+    {
+      title: '3. 步数与预算安全网拦截 (Gatekeeping Check)',
+      desc: '在调用真实工具前，前置经过防护模块，验证当前执行步数未越界（小于 max_steps），且没有重复调用陷入死循环。',
+      diagram: '判断步数 < max_steps ──> 防重拦截 ──> 鉴权放行'
+    },
+    {
+      title: '4. 工具执行与观察回灌 (Execution & Observational Feedback)',
+      desc: '物理运行工具 API，捕获返回输出，将 (Action, Result) 形式的观察结果追加至历史记忆库，开启下一轮迭代。',
+      diagram: '工具执行 ──> 捕获结果 ──> 记忆回灌 ──> 步数递增 step++'
+    }
+  ]}
+/>
+
+## 五、跟我做一遍：一个受控的 Agent Loop
 
 <PyRunner
   rows={38}
@@ -114,7 +224,7 @@ print("多步推进直到完成或达上限")`}
 
 模型在循环里一步步查天气、把结果加入观察、查完三个城市就 `finish`——这就是 agent loop 的骨架：observe→decide→act→observe，带 `max_steps` 兜底防失控。**试试**：把 max_steps 设成 2，看任务没完成就被强制停（停止条件的重要性）；想想如果 policy 永远不 finish 会怎样（下节课的循环检测）。
 
-## 四、动手 Lab（必做）
+## 六、动手 Lab（必做）
 
 打开 `labs/month09/m9l1_agent_loop/`：
 
@@ -147,7 +257,7 @@ python labs/month09/m9l1_agent_loop/test_agent_loop.py
   ]}
 />
 
-## 架构师深潜（Staff+ 视角）
+## 七、架构师深潜（Staff+ 视角）
 
 ### 1. 自主性谱系
 
@@ -176,19 +286,59 @@ python labs/month09/m9l1_agent_loop/test_agent_loop.py
   ]}
 />
 
-### 2. Agent 的难点不在"决策大脑"，在"循环的工程"
+### 2. Agent 的难点不在“决策大脑”，在“循环的工程”
 
-新手做 Agent 容易把全部精力放在"怎么让模型决策更聪明"（调 prompt、换更强模型）。但 Agent 能不能上生产，**主要取决于循环的工程约束**——停得下吗（停止条件）、不闯祸吗（权限/护栏）、记得住吗（记忆）、查得清吗（轨迹/评测）、不烧穿吗（预算）。这正是前八个月工程思维在 Agent 上的集中体现：把一个**不可靠、会自主行动**的组件，用循环控制、约束、观测包裹成可靠系统。**"Agent 的智能在模型，可靠性在工程"**——这是本月最该带走的认知，也是 [M7L9 "把不可靠组件用可靠"](../llm-systems/hallucination-guardrails) 的升级版（现在这个组件还会自己行动）。
+新手做 Agent 容易把全部精力放在“怎么让模型决策更聪明”（调 prompt、换更强模型）。但 Agent 能不能上生产，**主要取决于循环的工程约束**——停得下吗（停止条件）、不闯祸吗（权限/护栏）、记得住吗（记忆）、查得清吗（轨迹/评测）、不烧穿吗（预算）。这正是前八个月工程思维在 Agent 上的集中体现：把一个**不可靠、会自主行动**的组件，用循环控制、约束、观测包裹成可靠系统。**“Agent 的智能在模型，可靠性在工程”**——这是本月最该带走的认知，也是 [M7L9 “把不可靠组件用可靠”](../llm-systems/hallucination-guardrails) 的升级版（现在这个组件还会自己行动）。
 
-### 3. 真实案例：从"惊艳 demo"到"不敢上线"
+### 3. 真实案例：从“惊艳 demo”到“不敢上线”
 
 Agent 是 demo 最炫、上生产最难的一类 AI 系统。一个 Agent demo 自主完成复杂任务令人惊艳，但真上线常发现：偶尔陷入死循环烧掉一大笔 token、某次自主调用了危险工具造成事故、复杂任务做到一半跑偏且无法复现、出问题不知道是哪一步错的。能跨过这道鸿沟的，不是更强的模型，而是本月这套约束工程：受控 loop + 工具边界 + 停止预算 + 护栏 + 评测。**判断一个团队的 Agent 是否成熟，看的不是它能做多惊艳的 demo，而是它失控/闯祸时会怎样、以及能不能评测和复现。**
 
 ### 4. 架构师深问（给自己 30 分钟）
 
-- 你想做的"Agent 任务"，真的需要 Agent 吗？步骤能不能预先写成 workflow（更可靠便宜）？
-- 你的 agent loop 有最大步数和停止条件吗？模型永不说"完成"会怎样？
+- 你想做的“Agent 任务”，真的需要 Agent 吗？步骤能不能预先写成 workflow（更可靠便宜）？
+- 你的 agent loop 有最大步数 and 停止条件吗？模型永不说“完成”会怎样？
 - 你记录每一步的轨迹（观察/决策/行动/结果）吗？出问题能定位到是哪一步、能复现吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在构建生产级 AI Agent 系统时，以下哪一种说法最准确地描述了系统可靠性的来源？',
+      options: [
+        'A. 系统可靠性 100% 依赖于底层大模型是否拥有千亿级以上的超大规模参数',
+        'B. 大模型仅作为决策大脑提供了逻辑推理能力，而系统的可靠度则完全建立在包裹它的外围工程约束（如最大步数限制、工具鉴权、记忆草稿纸和运行轨迹观测）上',
+        'C. 只要把 Sampling Temperature 采样温度设为 0，Agent 循环就绝对不可能发生死循环或跑偏',
+        'D. 应该取消一切外部代码拦截，让大模型完全自主掌控计算机'
+      ],
+      answer: 1,
+      explain: '智能体不仅会做出判断，还会自主通过工具接口对物理世界产生副作用。大模型本身缺乏严格的确定性隔离，系统能否在生产上线，完全取决于外围工程为它建立的安全控制循环防护网。'
+    },
+    {
+      q: '当面对一个复杂的企业业务逻辑时，架构师在“固定 Workflow”与“自主 Agent Loop”之间进行方案选型的第一工程原则是什么？',
+      options: [
+        'A. 无论步骤是否清晰，直接全部引入自主 Agent 以跟上最新技术潮流',
+        'B. 只要步骤和逻辑流能够预先编写死，应毫不犹豫地选用确定性的固定 Workflow，仅当下一步完全依赖运行时中间结果、且可能产生无穷路径时才使用 Agent',
+        'C. 必须先通过大模型裁判（LLM-as-judge）跑三天评估，然后再决定是否使用 Agent',
+        'D. 对高成本、高延迟节点一律使用自主 Agent 循环以加快响应速度'
+      ],
+      answer: 1,
+      explain: '依据 YAGNI 与奥卡姆剃刀原则，固定工作流由于状态跳转完全在代码控制内，具有极高的可预测性、可测性与低成本延迟。只有在任务路径彻底无法预知、高度依赖环境动态反馈的多步复杂探索时，才推荐付出高额成本部署 Agent。'
+    },
+    {
+      q: '为什么在生产级 Agent 循环中，最大执行步数（max_steps）是一个不可或缺的兜底条件？',
+      options: [
+        'A. 为了降低向量数据库中 Embedding 向量计算的平均延迟',
+        'B. 大模型在遭遇外部状态异常或工具报错时，经常会陷入反复重试同一个失败动作的“逻辑鬼打墙”或进入死循环，限制步数是防止 Token 账单被烧穿和系统资源耗尽的硬防线',
+        'C. 为了防止大模型因为等待过久而发生内存溢出报错',
+        'D. 只要设置了该参数，智能体便能在第 1 步直接给出最终答案'
+      ],
+      answer: 1,
+      explain: '自主循环的一大天然隐患是“不停机”，大模型在复杂的环境负反馈中可能由于逻辑自洽缺陷永远不发出 finish 信号，甚至无限重试。外围代码强制进行 max_steps 的硬约束是防御死循环的基本防御手段。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
@@ -199,9 +349,9 @@ Agent 是 demo 最炫、上生产最难的一类 AI 系统。一个 Agent demo �
 
 ## 常见误解
 
-- **"Agent 就是让模型自由发挥"**：那是不可控的 demo；生产 Agent 是受控循环 + 大量约束。
-- **"Agent 越自主越好"**：自主性越高越难控越贵，能用 workflow 就别用 Agent。
-- **"Agent 难在让模型更聪明"**：难在循环的工程（停止/权限/记忆/评测），不在模型本身。
+- **“Agent 就是让模型自由发挥”**：那是不可控的 demo；生产 Agent 是受控循环 + 大量约束。
+- **“Agent 越自主越好”**：自主性越高越难控越贵，能用 workflow 就别用 Agent。
+- **“Agent 难在让模型更聪明”**：难在循环的工程（停止/权限/记忆/评测），不在模型本身。
 
 ## 延伸阅读
 
