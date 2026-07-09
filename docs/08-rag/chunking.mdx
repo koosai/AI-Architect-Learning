@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M8L4 · 文档分块
 
@@ -49,9 +51,9 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 按固定大小切是基线，更好的做法是**顺着内容的自然边界切**：
 - <GlossaryTerm term="Semantic / Structural Chunking" definition="语义/结构分块：按文档的自然结构（标题、段落、列表、章节）或语义边界切块，而非机械按字数切，使每块是一个相对完整的意思单元，检索更准。">语义/结构分块</GlossaryTerm>：按标题、段落、章节、列表等自然结构切，让每块是一个**完整的意思单元**——比机械按字数切检索质量高得多。
-- **保留结构与元数据**：每块带上它的标题路径、来源文档、章节、时间、权限标签等元数据——既能在生成时给出处（[M8L8 引用](./rag-generation)），又能[元数据过滤检索（M8L3/M8L11）](./vector-search)。
+- **保留结构与<GlossaryTerm term="Metadata" definition="元数据：附加在文档块上的结构化辅助信息（如文档 ID、创建时间、归属部门、文章来源及标题层级等）。既可用于检索时的过滤筛选，也常用于在生成答案时输出引用依据。">元数据</GlossaryTerm>**：每块带上它的标题路径、来源文档、章节、时间、权限标签等元数据——既能在生成时给出处（[M8L8 引用](./rag-generation)），又能[元数据过滤检索（M8L3/M8L11）](./vector-search)。
 - **文档解析是上游隐患**：PDF 表格、图片、页眉页脚、乱码会污染块（[旧占位提到的四大失败点之一]）——分块质量先取决于解析质量，脏数据进、脏检索出。
-- **小块检索、大块喂给模型**：一种进阶技巧——用小块做精准检索命中，再把它所在的大块（或父文档相关部分）喂给模型，兼顾检索精度和上下文完整（"small-to-big"）。
+- **小块检索、大块喂给模型**：一种进阶技巧——用小块做精准检索命中，再把它所在的大块（或父文档相关部分）喂给模型，兼顾检索精度和上下文完整（<GlossaryTerm term="Small-to-big Retrieval" definition="Small-to-big 检索：一种进阶 RAG 技巧，检索时通过较小的向量分块（语义精确、噪音少）进行精准匹配定位，命中后将与之关联的更大文档父上下文块提取出来喂给模型，兼顾检索精度与语义完整性。">small-to-big 检索</GlossaryTerm>）。
 - 牢记：**分块是 RAG 里性价比极高的优化点**，但也别过早搞复杂语义分块——先按结构 + 合理大小 + 重叠做好基线，按评测再优化。
 
 <ResearchNote
@@ -62,7 +64,105 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="基线：按文档结构（标题/段落/章节）切 + 合理大小（按内容类型，用评测调）+ 适度重叠 + 每块带元数据（来源/标题/权限）。先保证解析干净。需要时用 small-to-big（小块检索、大块供模型）。把分块当可评测、可迭代的参数，而非随手按字数切。"
 />
 
-## 三、跟我做一遍：带重叠的分块
+## 三、分块技术与管道图解 (Deep Dive Diagrams)
+
+为了更具象化地表达分块对于语义检索精度的影响，我们将在此剖析分块尺寸取舍、块重叠防护以及基于语法树的自适应结构分块链路。
+
+### 1. 粒度天平：分块尺寸的黄金分割点
+
+下面的图表展示了如果块切得太大或过碎，在 RAG 计算中带来的典型工程缺陷，明确了合理分块的平衡意义。
+
+```mermaid
+graph TD
+    classDef large fill:#ffcdd2,stroke:#c62828,stroke-width:1px;
+    classDef medium fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef small fill:#e1f5fe,stroke:#0288d1,stroke-width:1px;
+
+    subgraph ChunkGranularity ["分块粒度与性能特征对比 (Chunk Granularity Trade-offs)"]
+        ChunkTooLarge["❌ 粒度过大 (如整篇 5000字)<br/>- 语义驳杂，向量中心发生漂移<br/>- 极易塞满大模型上下文窗口<br/>- 检索匹配精度大幅降低"]:::large
+        
+        ChunkIdeal["✅ 粒度适中 (如 300~500字段落)<br/>- 语义聚焦，向量表征纯净<br/>- 上下文预算与延迟非常友好<br/>- 检索与生成效果的黄金分割"]:::medium
+        
+        ChunkTooSmall["❌ 粒度过小 (如单句 15字)<br/>- 语义残缺，核心证据被无情斩断<br/>- 检索拼装缺乏长距离语境<br/>- 生成结果往往答非所问"]:::small
+    end
+```
+
+### 2. 重叠滑动：防止边界打断的冗余设计
+
+块重叠（Overlap）通过在相邻的滑动窗口间共享特定字符，保证了处于分界线上的句子能被至少一个块完整容纳，从而消除了物理分割产生的信息孤岛。
+
+```mermaid
+graph LR
+    classDef normal fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+    classDef overlap fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
+
+    subgraph SlidingWindow ["滑动窗口切分机制 (Size: 100, Overlap: 30)"]
+        Block1["Chunk 1: 字符 0 ~ 100<br/>'我们公司对电子产品的退货政策是支持15天无理由退换。'"]:::normal
+        Block1Overlap["重叠区: 70 ~ 100<br/>'支持15天无理由退换。'"]:::overlap
+        Block1 --- Block1Overlap
+        
+        Block2["Chunk 2: 字符 70 ~ 170<br/>'支持15天无理由退换。但是运费由消费者自理。'"]:::normal
+        Block2Overlap["重叠区: 70 ~ 100<br/>'支持15天无理由退换。'"]:::overlap
+        Block2Overlap --- Block2
+    end
+    
+    Note over Block1Overlap, Block2Overlap: 重叠区使得跨边界的关键句<br/>“支持15天无理由退换。”<br/>在两端都有完整的物理存在，防止被切断。
+```
+
+### 3. 结构感知：基于语法树层级的智能分块
+
+优秀的摄取机制绝不按字数一刀切，而是基于 HTML/Markdown AST 语法树层级，将整个层级路径作为元数据父节点注入最终的密集块中。
+
+```mermaid
+graph TD
+    classDef parse fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
+    classDef doc fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+    classDef model fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+
+    Doc["Markdown / HTML 源文档"] --> Parser["Markdown / AST 树深度解析"]:::parse
+    
+    Parser -->|解析层级 1| H1["H1 节点 (文章标题: 退货指南)"]:::doc
+    Parser -->|解析层级 2| H2["H2 节点 (核心章节: 退货条件)"]:::doc
+    Parser -->|解析层级 3| Paragraph["段落子节点 <p> (如果商品完好...)"]:::doc
+    
+    H1 --> ChunkEngine["自适应分块引擎"]:::parse
+    H2 --> ChunkEngine
+    Paragraph --> ChunkEngine
+    
+    ChunkEngine -->|合并并附加路径元数据| Block["Chunk 块: '如果商品完好...'<br/>Meta: {path: '退货指南/退货条件' }"]:::doc
+    Block --> Embedding["Embedding 模型 (向量化)"]:::model
+```
+
+## 四、落地实践：文档分块与摄取流水线
+
+在真实的知识库构建流水线（Data Ingestion Pipeline）中，分块与解析的处理过程要遵循如下四个步骤：
+
+<StepFlow
+  steps={[
+    {
+      title: '1. 上游源数据解析 (Ingestion & Cleaning)',
+      desc: '摄取原始 PDF/Markdown 文本，过滤脏字符、移除重复的页眉页脚和空白行，防止污染后续的分块结果。',
+      diagram: '原始包含乱码和页码的 PDF ──> 清理与提取纯净文本'
+    },
+    {
+      title: '2. 语义树层次构建 (Structural AST Extraction)',
+      desc: '通过解析 Markdown 或 HTML 标记，将文本拆解为层级化的抽象语法树（AST），明确文章的标题层级（H1、H2、H3）与物理段落。',
+      diagram: '提取层级: 标题 H1 > 章节 H2 > 段落 Paragraph'
+    },
+    {
+      title: '3. 约束滑动窗口切分 (Constrained Sliding Window)',
+      desc: '以段落边界为基准进行大小计算，若段落超出目标容量（如 400 tokens），则按固定大小切分，并向后滑动设置一定的重叠字符（如 50 tokens）。',
+      diagram: '设定滑动步长 = (块大小 - 块重叠) ──> 循环滚动切块'
+    },
+    {
+      title: '4. 元数据附加与标记 (Metadata Annotation)',
+      desc: '为每一个切出的文档块附加丰富的辅助元数据（包括来源路径、最近更新时间、访问权限标签等），确保在下游支持元数据过滤检索。',
+      diagram: '块文本 + { doc_id: 101, parent_header: "退款流程" } ──> 向量库存储'
+    }
+  ]}
+/>
+
+## 五、跟我做一遍：带重叠的分块
 
 <PyRunner
   rows={34}
@@ -107,7 +207,7 @@ print("按大小切且块间重叠")`}
 
 固定分块保证块大小一致、相邻块重叠（边界内容不丢）；结构分块按段落切、每块是完整意思——后者通常检索质量更好。**试试**：把 overlap 设为 0，看相邻块是否还重叠；把段落 max_size 调很小，看长段落被进一步切开。
 
-## 四、动手 Lab（必做）
+## 六、动手 Lab（必做）
 
 打开 `labs/month08/m8l4_chunking/`：
 
@@ -140,7 +240,7 @@ python labs/month08/m8l4_chunking/test_chunking.py
   ]}
 />
 
-## 架构师深潜（Staff+ 视角）
+## 七、架构师深潜（Staff+ 视角）
 
 ### 1. 分块策略
 
@@ -182,6 +282,46 @@ RAG 翻车的一大隐形元凶在最上游：文档解析。PDF 里的表格被
 - 你的文档是什么结构（FAQ？技术手册？合同？）？该按什么粒度切？用 M8L9 评测试几个 chunk 大小了吗？
 - 你的分块带元数据（来源、标题、权限、时间）吗？没有的话怎么给出处、怎么按权限过滤？
 - 你的文档解析干净吗？表格/页眉页脚/乱码有没有污染块？解析质量是不是你 RAG 的隐形瓶颈？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '为什么在设计分块算法时，机械地“每 500 个字符强制切一块”不是生产环境的最佳选择？',
+      options: [
+        'A. 因为大模型无法处理刚好 500 字符的块',
+        'B. 因为机械切分可能会将一句完整的核心语义硬生生切断，从而导致这一语义块在向量检索时无法被完整匹配',
+        'C. 因为 500 字符的向量比对速度比 400 字符慢很多',
+        'D. 因为向量数据库只支持段落，不支持按字数切分的向量'
+      ],
+      answer: 1,
+      explain: '机械硬切没有考虑文本的语义和语境结构，极易在关键信息点（如“不可退货的产品有：...”）中间切断，导致前后两个块都不完整，向量化的语义被稀释，检索质量随之崩塌。'
+    },
+    {
+      q: '重叠（Overlap）在分块中主要用来解决什么工程隐患？',
+      options: [
+        'A. 解决向量检索的速度太慢问题',
+        'B. 解决相邻分块因边界分割导致语义被物理打断、信息丢失的问题',
+        'C. 解决向量维度不匹配的问题',
+        'D. 解决关系型数据库元数据读取慢的问题'
+      ],
+      answer: 1,
+      explain: '块重叠让相邻的分块共享一小部分内容。这样一来，若某个关键句子刚好落在前一块的尾部，重叠机制能保证它在下一块的开头被完整保留，从而消除了硬切分带来的信息孤岛效应。'
+    },
+    {
+      q: '当面临“检索精度”和“上下文背景完整度”的矛盾时，哪种工程架构是解决该矛盾的标准进阶设计？',
+      options: [
+        'A. 直接使用微调完全取代分块和检索',
+        'B. 使用 Small-to-big 检索策略（小块做向量相似度匹配，匹配后提取关联的大父节点喂给模型）',
+        'C. 放弃向量检索，退回纯关键词匹配',
+        'D. 无限制增大上下文窗口，直到不需要分块'
+      ],
+      answer: 1,
+      explain: 'Small-to-big（例如 Parent Document Retriever）将匹配和生成进行了解耦：计算相似度时使用较小的 Chunk，避免噪音干扰；当选中后，则获取该 Chunk 所属的更宽大块甚至整篇文档注入上下文，兼顾了精准度与长上下文的语义理解。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
