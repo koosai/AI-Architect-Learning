@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M8L3 · 向量检索与向量库
 
@@ -56,7 +58,136 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="大规模检索用 ANN（接受可控的召回率损失换低延迟），用召回率/延迟权衡调参。用向量数据库（pgvector→Qdrant/Milvus/Pinecone 等）获得元数据过滤、更新、扩展能力。元数据过滤是权限隔离和精准检索的关键。向量库本身也按 M5 的分片/复制来扩展。"
 />
 
-## 三、跟我做一遍：top-k 检索 + 召回率评估
+## 三、向量检索技术图解 (Deep Dive Diagrams)
+
+为了深入理解向量数据库底层的索引跳转与过滤原理，我们将在此剖析 HNSW 分层路由结构、IVF 倒排聚类空间划分以及元数据过滤的两大策略机制。
+
+### 1. HNSW 分层跳转：跳表思想在图索引上的演进
+
+HNSW (Hierarchical Navigable Small World) 是最主流的图索引算法。它采用类似跳表 (SkipList) 的分层结构：上层图节点稀疏，用于快速“大步跳跃”逼近目标区域；下层图节点稠密，用于“小步微调”锁定最近邻。
+
+```mermaid
+graph TD
+    classDef sparse fill:#e1f5fe,stroke:#0288d1,stroke-width:1px;
+    classDef dense fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+    classDef route fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+
+    subgraph Layer2 ["第 2 层 (最稀疏: 仅核心骨架)"]
+        N2_1["节点 A"]:::sparse --> N2_2["节点 E"]:::sparse
+    end
+
+    subgraph Layer1 ["第 1 层 (中等稀疏)"]
+        N1_1["节点 A"]:::sparse --> N1_2["节点 C"]:::sparse
+        N1_2 --> N1_3["节点 E"]:::sparse
+        N1_3 --> N1_4["节点 G"]:::sparse
+    end
+
+    subgraph Layer0 ["第 0 层 (最稠密: 包含全部数据点)"]
+        N0_1["节点 A"]:::dense --> N0_2["节点 B"]:::dense
+        N0_2 --> N0_3["节点 C"]:::dense
+        N0_3 --> N0_4["节点 D"]:::dense
+        N0_4 --> N0_5["节点 E"]:::dense
+        N0_5 --> N0_6["节点 F"]:::dense
+        N0_6 --> N0_7["节点 G"]:::dense
+    end
+
+    Query["用户查询 Query"]:::route -->|1. 接入上层| N2_1
+    N2_1 -->|2. 大步路由| N2_2
+    N2_2 -.->|3. 降层定位| N1_3
+    N1_3 -->|4. 中步路由| N1_4
+    N1_4 -.->|5. 降层定位| N0_7
+    N0_7 -->|6. 小步微调锁定最近邻| N0_6
+```
+
+### 2. IVF 空间划分：基于 Centroid 聚类的倒排索引
+
+IVF (Inverted File) 索引通过 K-Means 将高维空间划分为多个 Voronoi 聚类区（维诺单元）。检索时，只需计算查询向量与各个聚类中心 (Centroid) 的距离，并只在最近的若干个聚类区中做向量比对。
+
+```mermaid
+graph TD
+    classDef centroid fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
+    classDef cell fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+    classDef target fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+
+    subgraph VoronoiCellA ["聚类区 A"]
+        CentroidA["聚类中心 A (Centroid)"]:::centroid
+        VecA1["向量 A1"]:::cell
+        VecA2["向量 A2"]:::cell
+        CentroidA --- VecA1
+        CentroidA --- VecA2
+    end
+
+    subgraph VoronoiCellB ["聚类区 B (目标最近区域)"]
+        CentroidB["聚类中心 B (Centroid)"]:::centroid
+        VecB1["向量 B1"]:::cell
+        VecB2["向量 B2"]:::cell
+        CentroidB --- VecB1
+        CentroidB --- VecB2
+    end
+
+    Query["用户查询 Vector"]:::target -->|1. 首先计算与 Centroids 距离| CentroidB
+    Query -->|2. 锁定 Cell B| CentroidB
+    CentroidB -->|3. 仅在此 Cell 内部进行比对| VecB1
+    CentroidB -->|3. 仅在此 Cell 内部进行比对| VecB2
+```
+
+### 3. 元数据过滤：Pre-filtering 与 Post-filtering 权衡
+
+在工程落地时，用户查询通常带有过滤条件（如：只查属于本人权限的知识库）。Pre-filtering（先过滤后检索）和 Post-filtering（先检索后过滤）是两种不同的执行链路，其行为和结果差异巨大：
+
+```mermaid
+sequenceDiagram
+    autonumber
+    rect rgb(230, 245, 255)
+        Note over Ingestion, Query: 策略一：Pre-filtering (先过滤后向量检索)
+        Query->>Engine: 输入: Query向量 + 过滤条件 (如: doc_id in [10, 15])
+        Engine->>MetadataStore: 步骤 1: 扫描元数据，取得 ID 列表 [10, 15]
+        MetadataStore-->>Engine: 返回符合条件的候选 ID 范围
+        Engine->>VectorIndex: 步骤 2: 仅在候选 [10, 15] 对应的向量子集中进行相似度计算
+        VectorIndex-->>Engine: 返回 Top-K 检索结果
+        Engine-->>Query: 展现精确结果 (保证恰好有 K 个且符合条件)
+    end
+
+    rect rgb(255, 250, 230)
+        Note over Ingestion, Query: 策略二：Post-filtering (先检索后过滤)
+        Query->>Engine: 输入: Query向量 + 过滤条件
+        Engine->>VectorIndex: 步骤 1: 进行全局 Top-K 向量检索 (返回前 K 个)
+        VectorIndex-->>Engine: 返回全局最相似的 K 个向量 ID 列表
+        Engine->>Engine: 步骤 2: 遍历这 K 个结果，丢弃不满足过滤条件的条目
+        Engine-->>Query: 展现剩余结果 (警告: 过滤后结果可能远少于 K 个，甚至为空！)
+    end
+```
+
+## 四、落地实践：向量检索方案的生命周期
+
+在真实的 RAG 架构设计中，一条包含过滤属性的向量检索请求，要经历以下四步闭环过程：
+
+<StepFlow
+  steps={[
+    {
+      title: '1. 检索指令解析 (Query Translation & Parsing)',
+      desc: '应用层接收到用户提问和上下文环境，解析出纯文本查询，以及对应的元数据过滤条件（如部门 ID、文件归属、创建时间等）。',
+      diagram: '提问 "查2026年财务报告" ──> 解析出 {Text: "财务报告", Filter: "year == 2026"}'
+    },
+    {
+      title: '2. 查询向量化 (Query Embedding)',
+      desc: '使用与索引库构建时完全相同的 Embedding 模型，将用户输入的文本转换为高维稠密向量。',
+      diagram: '文本 "财务报告" ──(Embedding Model)──> [0.03, -0.42, 0.91, ...]'
+    },
+    {
+      title: '3. 联合检索执行 (Joint Search - Pre-filtering)',
+      desc: '向量数据库接收向量与过滤条件，首先筛选出符合元数据过滤条件的向量子集，然后基于 HNSW 索引在该子集内做快速最近邻跳转路由。',
+      diagram: '筛出 "year==2026" 向量子集 ──> 在子集图上大步路由跳转 ──> 计算相似度'
+    },
+    {
+      title: '4. 结果整合与 Top-K 输出 (Aggregation & Output)',
+      desc: '结合相似度得分对结果进行重新降序排列，截取前 K 个文档块并合并，附带相似度得分与元数据，返回给应用协调器。',
+      diagram: 'Top-K 列表 [Doc3 (0.92), Doc8 (0.87)] ──> 送往大模型生成回答'
+    }
+  ]}
+/>
+
+## 五、跟我做一遍：top-k 检索 + 召回率评估
 
 <PyRunner
   rows={34}
@@ -91,7 +222,7 @@ print("ANN 用召回换速度")`}
 
 ANN 只扫一部分数据就给出 top-k，速度快很多，代价是召回率不到 100%（偶尔漏掉真正最相似的）——这就是"用召回换速度"。**试试**：把 `scan_ratio` 调大（扫更多），看召回率升高但变慢；调到 1.0 就退化成精确暴力检索。
 
-## 四、动手 Lab（必做）
+## 六、动手 Lab（必做）
 
 打开 `labs/month08/m8l3_vector_search/`：
 
@@ -124,7 +255,7 @@ python labs/month08/m8l3_vector_search/test_search.py
   ]}
 />
 
-## 架构师深潜（Staff+ 视角）
+## 七、架构师深潜（Staff+ 视角）
 
 ### 1. 向量检索方案
 
@@ -166,6 +297,46 @@ python labs/month08/m8l3_vector_search/test_search.py
 - 你的知识库有多少向量、查询 QPS 多少？pgvector 够用还是要专用向量库？分水岭怎么判断？
 - 你需要边检索边过滤吗（按权限/部门/时间）？元数据过滤怎么和向量检索结合（先过滤还是先检索）？
 - 你能接受多少召回率损失换多少速度？怎么用 M8L9 的指标在你的数据上调这个权衡？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在向量检索中引入元数据过滤（Metadata Filtering）时，Pre-filtering（先过滤后检索）比 Post-filtering（先检索后过滤）更常用，其根本原因是什么？',
+      options: [
+        'A. Pre-filtering 能够直接降低向量的维度，使检索更快',
+        'B. Post-filtering 在过滤掉不满足条件的数据后，可能会造成最终返回的结果数量远少于需要的 K 个，甚至为空',
+        'C. Post-filtering 不支持 HNSW 索引图的跳转',
+        'D. Pre-filtering 不需要存储任何元数据'
+      ],
+      answer: 1,
+      explain: 'Post-filtering 是先在全局检索出 top-k，如果这些文档里只有极少数（甚至没有）满足用户的元数据条件（如部门权限），过滤后结果就会极少或为空。而 Pre-filtering 先筛选出所有满足条件的文档向量范围，再在该范围内计算 top-k，保证召回数量和准确性。'
+    },
+    {
+      q: '关于 HNSW (Hierarchical Navigable Small World) 分层图索引的检索加速机制，以下说法正确的是：',
+      options: [
+        'A. 搜索开始于最底部的第 0 层，逐步向上层稀疏图收敛',
+        'B. HNSW 不支持增加或者删除向量，只能静态一次性构建',
+        'C. 搜索开始于顶部的稀疏图层，通过“大步路由”快速收敛到目标区域，然后降入更稠密的下层图做局部精确路由',
+        'D. HNSW 的检索时间随向量数量呈线性增长（O(N)）'
+      ],
+      answer: 2,
+      explain: 'HNSW 借鉴了跳表的思想，通过在多层稀疏与稠密的图网络中做分层搜索。最顶层图节点稀疏，跳转跨度大，用来做宏观定位；越往下层节点越稠密，最终在第 0 层锁定精确最近邻。其检索时间复杂度为近似 O(log N)。'
+    },
+    {
+      q: '当我们在向量数据库中将 HNSW 索引参数（如 M 或 efSearch）调大时，会产生什么工程取舍？',
+      options: [
+        'A. 召回率（Recall）会提升，但查询延迟（Latency）和内存开销也会变高',
+        'B. 召回率会降低，但查询速度会变快',
+        'C. 向量的维度会自动被压缩',
+        'D. 只会增加磁盘存储，对内存和检索延迟没有影响'
+      ],
+      answer: 0,
+      explain: 'M 控制节点的最大连接边数，efSearch 决定了搜索时的候选集大小。将它们调大意味着检索时会探索图中更多的路径，提升了找到真实最近邻的概率（即召回率增高），但比对次数也会增加，导致延迟增高、构建开销和内存占用也随之变大。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
