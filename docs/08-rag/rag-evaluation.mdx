@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M8L9 · RAG 评测
 
@@ -36,23 +38,23 @@ RAG 评测的第一要务：**把"对不对"拆成可定位的多个维度**，�
 
 ### 基础：检索质量指标
 
-衡量"有没有找对证据"（[呼应 M8L3 召回率](./vector-search)）：
+衡量“有没有找对证据”（[呼应 M8L3 召回率](./vector-search)）：
 - <GlossaryTerm term="Context Recall" definition="上下文召回率：回答所需的相关证据，有多少被检索到了。低召回意味着“没找到”，要改分块/embedding/混合检索/查询改写。">上下文召回率（recall）</GlossaryTerm>：该找到的相关证据，找到了多少。低 = 漏检（[改检索侧 M8L4/L5/L7](./chunking)）。
 - <GlossaryTerm term="Context Precision" definition="上下文精确率：检索回来的内容里，有多少是真正相关的。低精确率意味着噪声多，会干扰生成、浪费上下文，要改重排/过滤。">上下文精确率（precision）</GlossaryTerm>：检索回来的里，真正相关的占多少。低 = 噪声多（[改重排 M8L6](./reranking)）。
 
 ### 进阶：生成质量指标
 
-衡量"有没有用好证据"：
+衡量“有没有用好证据”：
 - <GlossaryTerm term="Faithfulness" definition="忠实度：答案中的每个说法是否都能由检索到的证据支撑（没有编造、没有超出证据）。低忠实度 = 模型在幻觉或无视证据。">忠实度（faithfulness）</GlossaryTerm>：答案的每句话是否都有证据支撑、没编造。低 = 模型幻觉/无视证据（[改 grounding prompt/换模型 M8L8](./rag-generation)）。
 - <GlossaryTerm term="Answer Relevance" definition="答案相关性：答案是否切题地回应了用户的问题（而非答非所问或答了无关的内容）。低 = 答非所问，可能是 prompt 或问题理解问题。">答案相关性（answer relevance）</GlossaryTerm>：答案是否切题地回答了问题。低 = 答非所问。
-- 这套"检索 + 生成"分维度的框架，正是 <GlossaryTerm term="RAGAS" definition="RAGAS：一个 RAG 评测框架，把质量拆成忠实度、答案相关性、上下文精确率、上下文召回率等维度，让你定位问题出在检索还是生成。">RAGAS</GlossaryTerm> 等 RAG 评测框架的核心思路。
+- 这套“检索 + 生成”分维度的框架，正是 <GlossaryTerm term="RAGAS" definition="RAGAS：一个 RAG 评测框架，把质量拆成忠实度、答案相关性、上下文精确率、上下文召回率等维度，让你定位问题出在检索还是生成。">RAGAS</GlossaryTerm> 等 RAG 评测框架的核心思路。
 
 ### 深入（选学）：用评测驱动 RAG 优化
 
 - **定位 → 对症**：评测各维度的得分组合直接指向修法。召回低→检索侧；精确率低→重排/过滤；忠实度低→生成侧（grounding/模型）；答案相关性低→prompt/查询理解。**这是 RAG 工程最重要的方法论**——先量化定位，再针对性优化，而非盲目堆技术。
 - **建评测集**：和 [M7L10](../llm-systems/llm-evaluation) 一样，要有代表性的（问题 + 期望证据 + 期望答案）评测集，覆盖典型/边界/线上 bad case。建评测集是 RAG 项目的早期投资，不是事后补。
-- **自动评测**：检索指标可由"标注的相关文档"自动算；生成指标（忠实度/相关性）常用 [LLM-as-judge（M7L10）](../llm-systems/llm-evaluation) 自动打分（注意其偏差）。
-- **回归 + CI**：改任何一环（分块/embedding/重排/prompt/模型）都跑评测对比基线，接 [CI 门禁（M6L6）](../cloud-enterprise-industrial/cicd-pipelines)，防止"改好一处、退化一片"。
+- **自动评测**：检索指标可由“标注的相关文档”自动算；生成指标（忠实度/相关性）常用 <GlossaryTerm term="LLM-as-judge" definition="大模型裁判：使用大语言模型（如 GPT-4）代替人类评估者，对生成式任务的输出进行自动化打分或定性分析的技术，它能有效提高自动化评测的效率与覆盖率。">大模型裁判 (LLM-as-judge)</GlossaryTerm>（[M7L10](../llm-systems/llm-evaluation)）自动打分（注意其偏差）。
+- **回归 + CI**：改任何一环（分块/embedding/重排/prompt/模型）都跑评测对比基线，接 CI 门禁（[M6L6](../cloud-enterprise-industrial/cicd-pipelines)），结合软件交付可靠性的 <GlossaryTerm term="DORA" definition="DORA 指标：用于衡量软件交付团队效率和可靠性的四项核心指标。在 RAG 开发中，它启发我们通过评测 and CI 自动化保证检索系统的交付可靠性。">DORA 指标</GlossaryTerm>，防止“改好一处、退化一片”。
 - **端到端 + 分段都要测**：既测最终答案质量（用户感知），也测中间的检索质量（定位用）——两者缺一不可。
 
 <ResearchNote
@@ -63,7 +65,131 @@ RAG 评测的第一要务：**把"对不对"拆成可定位的多个维度**，�
   application="为 RAG 建评测集（问题+期望证据+期望答案）；分别算检索指标（召回/精确率）和生成指标（忠实度/相关性）；用得分组合定位问题环节再优化；改任一环跑回归对比、接 CI；端到端和分段评测并行。"
 />
 
-## 三、跟我做一遍：RAG 分维度评测
+## 三、RAGAS 评测三元组与错误定位图解 (Deep Dive Diagrams)
+
+为了更深度地展现“分段评测”对于诊断和优化 RAG 系统的关键作用，我们在此剖析 RAGAS 的三元定位框架、决策诊断逻辑树以及端到端与分段白盒评测的边界特性。
+
+### 1. 结构对比：RAGAS 评测维度三元图解与错误对齐
+
+通过将数据拆解为用户提问、检索上下文和生成答案三者间的比对，我们可以独立判定检索器与生成器的局限性。
+
+```mermaid
+graph TD
+    classDef input fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef output fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef comp fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+
+    Q["用户提问 (Question)"]:::input
+    C["检索上下文 (Context)"]:::comp
+    A["生成答案 (Answer)"]:::output
+
+    Q -->|1. 相似匹配关系| C
+    C -->|2. grounding/忠实度| A
+    Q -->|3. 题意相关性| A
+
+    subgraph RAGAS_Metrics ["RAGAS 核心度量指标"]
+        relation1["Context Recall (召回率) / Context Precision (精确率)"]
+        relation2["Faithfulness (忠实度: 是否幻觉)"]
+        relation3["Answer Relevance (答案相关性: 是否切题)"]
+    end
+
+    Q -.->|评估检索质量| relation1
+    C -.->|评估检索质量| relation1
+
+    C -.->|评估生成质量| relation2
+    A -.->|评估生成质量| relation2
+
+    Q -.->|评估端到端体验| relation3
+    A -.->|评估端到端体验| relation3
+```
+
+### 2. 决策树：评测驱动的“测量-定位-对症-验证”闭环管道
+
+分维度得分不仅是客观描述，更是系统修复行动的诊断依据。
+
+```mermaid
+graph TD
+    classDef step fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef check fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+    classDef block fill:#ffcdd2,stroke:#c62828,stroke-width:1px;
+
+    StartRun["1. 运行评测集 (Golden Dataset Run)"]:::step --> CalcMetrics["2. 计算多维得分 (Compute Recall/Precision/Faithfulness)"]:::step
+    
+    CalcMetrics --> Condition1{"3. 决策诊断树 (Diagnosis Node)"}:::check
+    
+    Condition1 -->|Recall < 0.6<br/>漏检率高| FixRecall["检索侧优化:<br/>- 调整 Chunk 划分大小<br/>- 切换更高维 Embedding<br/>- 启动多查询扩展 HyDE"]:::block
+    
+    Condition1 -->|Precision < 0.5<br/>噪声干扰多| FixPrecision["精排侧优化:<br/>- 引入 Reranker 模型<br/>- 设定相似度过滤阈值"]:::block
+    
+    Condition1 -->|Faithfulness < 0.7<br/>忠实度低/幻觉| FixFaith["生成侧优化:<br/>- 加强 Grounding Prompt 约束<br/>- 降低大模型采样温度 Temperature<br/>- 选用参数量更大的模型"]:::block
+
+    FixRecall --> CIRegression["4. CI 自动化回归测试 (CI门禁)"]:::step
+    FixPrecision --> CIRegression
+    FixFaith --> CIRegression
+
+    CIRegression --> PassCheck{"通过基线对比吗?"}:::check
+    PassCheck -->|是| PushDeploy["安全上线无退化"]:::step
+    PassCheck -->|否| StartRun
+```
+
+### 3. 特征对比：端到端评测 (End-to-End) 与分段白盒评测 (Component-Level)
+
+选择端到端还是分段，是评测效率与根因分析精度的权衡。
+
+```mermaid
+graph TD
+    subgraph EndToEnd ["端到端评测 (End-to-End Evaluation)"]
+        Q_E["提问"] --> SystemBlackBox["RAG 系统 (黑盒)"] --> A_E["生成答案"]
+        A_E --> CompareTarget["直接对比 Ground Truth"]
+        noteE["特点: 简单直观，反映最终用户体验。<br/>缺陷: 无法得知是检索没捞对，还是大模型没总结对。"]
+    end
+
+    subgraph ComponentLevel ["分段/白盒评测 (Component-Level Evaluation)"]
+        Q_C["提问"] --> Retriever["检索组件"] --> Docs_C["候选文档"]
+        Docs_C --> Reader["大模型生成组件"] --> A_C["生成答案"]
+        
+        eval1["检索评分: Recall / Precision"]
+        eval2["生成评分: Faithfulness"]
+
+        Retriever -.-> eval1
+        Docs_C -.-> eval1
+        Docs_C -.-> eval2
+        Reader -.-> eval2
+        
+        noteC["特点: 白盒，拆分检索和总结环节。<br/>优点: 能够快速指明性能短板，对症下药。"]
+    end
+```
+
+## 四、落地实践：RAG 诊断决策与闭环优化
+
+在真实的生产开发中，基于指标发现故障后执行针对性调优需要遵循如下四个阶段：
+
+<StepFlow
+  steps={[
+    {
+      title: '1. 建立黄金评测集 (Golden Dataset Selection)',
+      desc: '挑选出 100-500 个具有代表性的真实用户提问，手动标注好每个提问期望检索到的“黄金证据片段（Ground Truth Docs）”与“参考标准答案”。',
+      diagram: '构建测试包：{ Question, Gold_Context, Ground_Truth_Answer }'
+    },
+    {
+      title: '2. 评测指标计算与数据分流 (Metrics Execution)',
+      desc: '系统自动运行测试，将大模型实际生成的答案、实际捞出来的 Context 进行文本解析，分别计算上下文召回率、精确率以及忠实度得分。',
+      diagram: '对比三元：[实际 Context vs 黄金 Context] ──> [实际 Answer vs 实际 Context]'
+    },
+    {
+      title: '3. 诊断决策树分析与对症修复 (Diagnostic Repair)',
+      desc: '结合三大核心维度的得分：召回低则修改分块与向量扩展，精确率低则追加 Cross-Encoder 重排，忠实度低则收紧 Grounding Prompt 防幻觉。',
+      diagram: '定位故障节点 ──> 指向具体的 Month 8 优化处方'
+    },
+    {
+      title: '4. CI 回归门禁验证与安全发布 (CI/CD Regression Check)',
+      desc: '在发布前在流水线中跑一遍评测集回归。确保优化某一部分（如增加了改写）不会导致其他查询意图的检索或生成指标发生大范围退化。',
+      diagram: '生成对比雷达图 ──> 确认无退化 ──> 自动合入 master 并上线'
+    }
+  ]}
+/>
+
+## 五、跟我做一遍：RAG 分维度评测
 
 <PyRunner
   rows={36}
@@ -104,7 +230,7 @@ print("定位是检索还是生成问题")`}
 
 案例 A 检索对了但忠实度低 → 生成问题（改 prompt/模型）；案例 B 召回低 → 检索问题（改检索侧）。同样是"答错"，分维度评测立刻指出该动哪里。**试试**：构造一个精确率低（检索回一堆噪声）的案例，看诊断指向"加重排"。
 
-## 四、动手 Lab（必做）
+## 六、动手 Lab（必做）
 
 打开 `labs/month08/m8l9_rag_eval/`：
 
@@ -137,7 +263,7 @@ python labs/month08/m8l9_rag_eval/test_eval.py
   ]}
 />
 
-## 架构师深潜（Staff+ 视角）
+## 七、架构师深潜（Staff+ 视角）
 
 ### 1. RAG 评测维度与对应修法
 
@@ -179,6 +305,46 @@ python labs/month08/m8l9_rag_eval/test_eval.py
 - 你的 RAG 有评测集吗？答错时你能分清是检索没找到、还是找到了没用好吗？
 - 你最近一次 RAG 优化（换 embedding/加重排/改 prompt），有没有用评测验证它真的提升了、且没退化别的？
 - 检索指标（召回/精确）和生成指标（忠实/相关）你都在测吗？还是只看最终答案、无法定位环节？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 RAGAS 评测指标中，上下文精确率（Context Precision）和上下文召回率（Context Recall）分别针对什么故障表现进行诊断？',
+      options: [
+        'A. Context Recall 针对的是答案所需的关键证据漏检；Context Precision 针对的是检索出太多无关的杂乱噪音干扰生成',
+        'B. Context Recall 针对的是模型回答答非所问；Context Precision 针对的是模型回答发生了编造',
+        'C. Context Recall 针对的是数据库硬件延迟；Context Precision 针对的是内存锁死',
+        'D. 它们都用来衡量大模型的逻辑推理深度，不针对检索'
+      ],
+      answer: 0,
+      explain: 'Context Recall（召回率）衡量的是有多少期望文档被找回了（越接近 100% 漏检越少）；Context Precision（精确率）衡量的是召回结果中真正相关的比重（分值越低说明混入的无关噪声垃圾越多，需要重排过滤）。'
+    },
+    {
+      q: 'RAG 系统运行中发现“最终答案的忠实度（Faithfulness）分值很低”，架构师应该优先从哪里开始排查？',
+      options: [
+        'A. 排查向量库，检查分块的 overlap 重叠范围是否足够大',
+        'B. 排查生成端，分析 Grounding Prompt 是否约束不够强、大模型是否发生幻觉，或者应当更换更强、采样温度调至最低的模型',
+        'C. 优先修改最前端的查询改写模板',
+        'D. 更换 Embedding 模型以提高其相似度几何投影精度'
+      ],
+      answer: 1,
+      explain: 'Faithfulness（忠实度）度量的是生成答案是否完全源自于给定背景上下文证据（不编造不添油加醋）。忠实度低下说明生成器 LLM “出轨”了，跑出了限定范围，应当首先在生成端收紧 Prompt Grounding 约束。'
+    },
+    {
+      q: '为什么在严肃生产级 RAG 项目中，不能仅靠“端到端答案正确性（Answer Correctness）”这一个指标来指导整个系统的架构迭代？',
+      options: [
+        'A. 端到端指标会强行阻塞 CI 流水线',
+        'B. 因为端到端指标属于黑盒评测，即使发现答案错了，也无法得知究竟是检索器没有找到正确文档，还是生成器在拥有证据的前提下做出了错误推理',
+        'C. 端到端评测的 API 费用必定比白盒分段评测贵出百倍',
+        'D. 因为 Docusaurus v4 已经废除了端到端自动化测试标准'
+      ],
+      answer: 1,
+      explain: '只测端到端正确性无法提供瓶颈定位。通过将 RAG 拆为“检索侧（Recall / Precision）”与“生成侧（Faithfulness / Relevance）”的分段白盒指标，才能精确定位错误到底出在管道的哪一截，从而对症下药修复。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
