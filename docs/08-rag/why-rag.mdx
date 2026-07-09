@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M8L1 · 为什么需要 RAG
 
@@ -33,15 +35,15 @@ LLM 的知识来自训练数据，有两个边界：**时间上**停在训练截
 ### 基础：四条路线
 
 - **prompt 直塞**：把相关知识写进 prompt。简单，但只适合**少量、固定**的知识（[M7L4](../llm-systems/prompting-basics)）。
-- **长上下文**：用大窗口一次塞很多文档。省去检索，但**贵、慢、会"迷失在中间"（[M7L2](../llm-systems/tokenization-context)）**，且知识一变还得重塞。
-- <GlossaryTerm term="Fine-tuning" definition="微调：用领域数据继续训练模型，把知识/风格“固化”进参数。能改变模型行为和风格，但成本高、迭代慢、知识更新要重训、且难引用来源、仍可能幻觉。">微调</GlossaryTerm>：用你的数据再训练模型。能固化**风格/格式/技能**，但**贵、慢、知识一变要重训、难引用、仍会幻觉**——不适合"经常更新的事实知识"。
-- <GlossaryTerm term="RAG" definition="检索增强生成（Retrieval-Augmented Generation）：回答前先从外部知识源检索最相关的片段，再把这些证据放进上下文让模型基于它生成答案。把“知识”从模型参数里解耦到可更新、可引用的外部检索系统。">RAG</GlossaryTerm>：回答前**先检索最相关的几段**，再让模型基于它们答。知识存外部、随时更新、可引用、省 token。
+- **长上下文**：用大窗口一次塞很多文档。虽然省去了复杂的外部检索工程，但容易在超长输入中发生 <GlossaryTerm term="Lost in the Middle" definition="迷失在中间：大模型处理超长上下文时的一个局限性现象，即模型更容易关注输入段落的最开头和最末尾，而极易忽略处于中间段落的核心证据。">迷失在中间 (Lost in the Middle)</GlossaryTerm> 现象，且伴随着极高的 Token 成本与推理延迟。
+- <GlossaryTerm term="Fine-tuning" definition="微调：用领域数据继续训练模型，把知识/风格“固化”进参数。能改变模型行为和风格，但成本高、迭代慢、知识更新要重训、且难引用来源、仍可能幻觉。">微调</GlossaryTerm>：用你的数据再训练模型。微调属于在模型的 <GlossaryTerm term="Parametric Memory" definition="参数化记忆：大模型训练完成后，固化在数十亿个浮点权重参数中的语言生成、推理和泛化能力。">参数化记忆 (Parametric Memory)</GlossaryTerm> 中固化知识，能够深层改写其**风格/格式/技能**，但对于频繁变动的事实数据则代价过于高昂，且模型依然会发生事实性幻觉，无法标记出处。
+- <GlossaryTerm term="RAG" definition="检索增强生成（Retrieval-Augmented Generation）：回答前先从外部知识源检索最相关的片段，再把这些证据放进上下文让模型基于它生成答案。把“知识”从模型参数里解耦到可更新、可引用的外部检索系统。">RAG</GlossaryTerm>：回答前**先检索最相关的几段**，再让模型基于它们答。它将事实知识外置于大模型的参数之外，构筑起易于秒级更新、支持精准溯源的 <GlossaryTerm term="Non-parametric Memory" definition="非参数化记忆：外置于大模型参数之外、可独立读写和实时更新的知识库系统（如向量数据库、文档索引、传统关系型数据库）。">非参数化记忆 (Non-parametric Memory)</GlossaryTerm>。
 
 ### 进阶：RAG 为什么适配"事实知识"
 
 RAG 的关键洞察：**把"知识"从模型参数里解耦出来，放到一个可更新、可检索、可引用的外部系统**（[呼应 M7L8 长期记忆](../llm-systems/context-memory)）。对"大量、会变、要溯源"的事实知识，这正好对症：
 - 知识更新 = 更新知识库（秒级），不用重训模型。
-- 每次只取最相关的几段进上下文，避开窗口限制和"迷失在中间"。
+- 每次只取最相关的几段进上下文，避开窗口限制和“迷失在中间”现象。
 - 答案能附出处（[grounding + 引用，M7L9/M8L8](../llm-systems/hallucination-guardrails)），可验证、降幻觉。
 
 ### 深入（选学）：四者不是互斥，而是组合
@@ -54,6 +56,111 @@ RAG 的关键洞察：**把"知识"从模型参数里解耦出来，放到一个
 - **长上下文 vs RAG 不是非此即彼**：大窗口让 RAG 能放下更多相关证据（召回更宽松），但不取代检索——你仍需"从海量知识里选出相关的"这一步。"大窗口=不用 RAG"是常见误区（[M7L2](../llm-systems/tokenization-context)）。
 - 判断顺序（[呼应 M7L4 由轻到重](../llm-systems/prompting-basics)）：**prompt → RAG → 微调**，越往后越贵越慢，先用够前面的。
 
+---
+
+### 三、技术路线深度图解 (Deep Dive Diagrams)
+
+#### 1. 架构解耦：能力归模型，事实归外部 (Decoupled Memory)
+
+```mermaid
+graph TD
+    classDef memory fill:#e1f5fe,stroke:#0288d1,stroke-width:1px;
+    classDef logic fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+    classDef db fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+    classDef input fill:#e8f5e9,stroke:#388e3c,stroke-width:1px;
+
+    User["用户查询 (User Query)"]:::input --> App["应用层协调器 (Application Orchestrator)"]
+    
+    subgraph ParameterMemory [参数化记忆 (大模型内部)]
+        App --> LLM["LLM 推理引擎 (能力/风格/推理逻辑)"]:::logic
+        LLM -.- Weights["数十亿参数权重 (Parametric Weights)"]:::memory
+    end
+    
+    subgraph NonParameterMemory [非参数化记忆 (外部系统)]
+        App --> SearchEngine["知识检索模块 (Retriever)"]:::db
+        SearchEngine --> KB["外置知识库/向量库 (Non-parametric KB)"]:::db
+    end
+
+    KB -.->|1. 快速秒级更新数据| SystemAdmin["业务系统/管理员"]:::input
+    SearchEngine -->|2. 提供精准证据 (Facts)| App
+    App -->|3. 拼装 Grounded Prompt| LLM
+    LLM -->|4. 生成可靠答案| User
+```
+
+#### 2. 决策流图：知识引入路线的选择树 (Decision Tree)
+
+```mermaid
+graph TD
+    classDef select fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef opt fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    Start["遇到业务特定知识需求"] --> Q1{"1. 知识量大小?"}
+    
+    Q1 -- "少量 (KB级 / 几个文档)" --> Q2{"2. 知识是否经常改变?"}
+    Q1 -- "大量 (MB/GB/TB级)" --> Q3{"3. 核心诉求是啥?"}
+    
+    Q2 -- 几乎不变 --> OptPrompt["Prompt 直塞 / System Prompt <br/>(零门槛, 极低成本)"]:::opt
+    Q2 -- 经常更新 --> OptRAG["RAG 检索增强 <br/>(高性价比首选)"]:::opt
+    
+    Q3 -- "改变行为风格/格式/语调/微缩技能" --> OptFT["微调 (Fine-tuning) <br/>(固化行为, 成本高周期长)"]:::opt
+    Q3 -- "事实知识/经常更新/需要引用溯源" --> OptRAG
+    
+    OptRAG --> CombCheck{"是否也需要改变格式与风格?"}
+    CombCheck -- 是 --> CombineFT_RAG["混合路线: <br/>微调(定风格行为) + RAG(供事实知识)"]:::select
+    CombCheck -- 否 --> FinalRAG["纯 RAG 架构"]:::select
+```
+
+#### 3. 知识更新路径对比：微调 vs RAG (Update Flow Comparison)
+
+```mermaid
+graph TD
+    subgraph FineTuningPath [微调模式下的知识更新 (更新周期: 天/周/月)]
+        FT_Data["业务文档变更"] --> FT_Prepare["1. 数据收集与清洗"]
+        FT_Prepare --> FT_Train["2. 算力微调训练 (GPU 耗时)"]
+        FT_Train --> FT_Eval["3. 模型评测与部署上线"]
+        FT_Eval --> FT_Serve["4. 模型参数记忆提供回答"]
+    end
+
+    subgraph RAGPath [RAG 模式下的知识更新 (更新周期: 秒/分级)]
+        RAG_Data["业务文档变更"] --> RAG_Index["1. 切块与向量化 (Embedding)"]
+        RAG_Index --> RAG_DB["2. 写入外部向量库 (秒级)"]
+        RAG_DB --> RAG_Serve["3. 检索器直接查询最新数据并回答"]
+    end
+```
+
+---
+
+### 四、落地实践：架构决策的闭环推演
+
+在实际的软件系统升级过程中，大模型架构师需要通过严密的决策链来选取最合理的数据与模型集成方式。以下展示了典型的决策流程：
+
+<StepFlow
+  steps={[
+    {
+      title: '1. 需求评估与分类 (Analyze Requirements)',
+      desc: '深入梳理知识的属性。区分这是需要动态查询的“事实型知识”（如价格、条款、日志），还是需要调整输出范式、表达语气或语法特征的“技能风格”（如模仿特定病历书写规范）。',
+      diagram: '业务需求 ──> 提取指标 (量、更新频率、需要引用吗?) ──> 分类事实与风格'
+    },
+    {
+      title: '2. 优先测试 Prompt 直塞 (Test Prompts First)',
+      desc: '遵循 YAGNI 极简原则。若知识体量能缩减进几千个 Tokens (如三条安全红线)，且几乎不改变，直接通过硬编码 System Prompt 写入，无需其他基础设施。',
+      diagram: '微量静态知识 ──> 编写 System Prompt ──> 零部署成本快速交付'
+    },
+    {
+      title: '3. 事实解耦至 RAG 系统 (Decouple Facts via RAG)',
+      desc: '若知识具有“大量”、“频繁变动”（秒级更新）、或“严肃场景必须溯源给出处”的特点，立刻采用 RAG。将事实剥离至外部非参数化数据库，保持底座模型的纯净性。',
+      diagram: '海量易变要溯源事实 ──> 构建外部向量库 ──> 实时检索注入上下文'
+    },
+    {
+      title: '4. 特殊场景结合微调 (Apply Fine-tuning if Needed)',
+      desc: '若模型在格式遵循、复杂内部推理（如特定长文本摘要步骤）上表现不佳，或需要降低调用延迟（小模型微调代替大模型提示词），才启动微调。必要时实施微调与 RAG 混合架构。',
+      diagram: '高阶行为风格限制 ──> 精洗专有数据集 ──> 离线训练微调模型'
+    }
+  ]}
+/>
+
+---
+
 <ResearchNote
   title="RAG：把可更新知识从模型参数中解耦出来"
   source="Lewis et al. (2020), Retrieval-Augmented Generation；行业“RAG vs 微调”实践对比"
@@ -62,7 +169,7 @@ RAG 的关键洞察：**把"知识"从模型参数里解耦出来，放到一个
   application="按知识性质选路线：风格/技能用微调或 system prompt；大量易变的事实用 RAG；少量稳定规则直接进 prompt。长上下文是放大 RAG 容量而非替代检索。决策顺序 prompt→RAG→微调，先用够便宜的。"
 />
 
-## 三、跟我做一遍：方案选择决策
+## 五、跟我做一遍：方案选择决策
 
 <PyRunner
   rows={32}
@@ -92,7 +199,7 @@ print("按知识性质选对方案")`}
 
 知识的性质（风格 vs 事实、量大小、变不变、要不要引用）决定方案——风格用微调/prompt、少量稳定写进 prompt、大量易变要引用用 RAG。**试试**：加一个"内部代码库的编码规范（量中等、偶尔变、要引用）"，想想它该走哪条路、为什么。
 
-## 四、动手 Lab（必做）
+## 六、动手 Lab（必做）
 
 打开 `labs/month08/m8l1_choose/`：
 
@@ -124,7 +231,7 @@ python labs/month08/m8l1_choose/test_choose.py
   ]}
 />
 
-## 架构师深潜（Staff+ 视角）
+## 七、架构师深潜（Staff+ 视角）
 
 ### 1. 四种方案对比
 
@@ -173,20 +280,63 @@ AI 应用早期，很多团队第一反应是"微调一个懂我们业务的模�
 - 你的知识多久变一次？如果用微调，每次变都重训受得了吗？RAG 改库就行，省多少？
 - 你的场景要不要"答案带出处"？要的话基本只能 RAG（微调答不出可靠出处）。
 
-## 自检清单
+## 八、自检清单
 
 - [ ] 我能区分 prompt/长上下文/微调/RAG 四条路及取舍。
 - [ ] 我的 lab 能按知识性质选对方案。
 - [ ] 我能解释 RAG 为什么适配大量易变要引用的事实知识。
-- [ ] 我理解"知识外置、能力靠模型"的分离原则。
+- [ ] 我理解“知识外置、能力靠模型”的解耦架构设计原则。
 
-## 常见误解
+## 九、章末自测
 
-- **"想让模型懂业务就微调"**：微调适合风格/技能；易变事实用 RAG 更新快、可引用、少幻觉。
-- **"窗口够大就不用 RAG"**：长上下文是放大容量，不替代"从海量知识选相关"的检索。
-- **"RAG 和微调二选一"**：常组合——微调定风格、RAG 供事实、prompt 放核心规则。
+为了检验你对本章 RAG 起源、知识解耦以及不同技术路线优劣取舍等核心理念的掌握情况，请完成以下自测题目：
 
-## 延伸阅读
+<QuizCard
+  questions={[
+    {
+      q: '某电商平台希望上线一个 AI 助手提供“实时商品价格与库存查询”服务。由于平台商品上百万，价格和库存因秒杀活动频繁闪变，且业务要求必须标注价格来源（如链接或政策），请问最适合使用哪种架构路线？',
+      options: [
+        'A. 对平台所有商品信息进行每日微调（Fine-tuning）',
+        'B. 采用 RAG 架构，将商品价格与实时库存放入外部向量库/缓存数据库中，回答前进行检索接地 (Grounding)',
+        'C. 将所有商品信息拼接成一个 10M tokens 的超大 System Prompt 塞入长上下文窗口',
+        'D. 仅通过普通的 Few-shot 提示工程让大模型自己估算商品价格'
+      ],
+      answer: 1,
+      explain: '商品数据量庞大（上百万商品）且闪变频繁，微调训练完全赶不上数据的更新速度，且微调无法输出可信的溯源出处；将全部数据塞入 Prompt 会导致天价的 Token 账单与灾难级的延迟。而 RAG 能将事实数据与模型解耦，支持秒级数据库更新且原生支持出处引用，是最完美的解决方案。'
+    },
+    {
+      q: '关于长上下文窗口（Long Context Windows，例如 1M+ tokens）与 RAG 的关系，以下哪项理解最为准确？',
+      options: [
+        'A. 随着上下文窗口的增大，检索增强（RAG）将变得毫无必要，因为所有文档都可以直接塞入上下文',
+        'B. 即使窗口足够大，将海量无关文档直接塞入模型依然会导致极高的 Token 成本、推理延迟，以及因为“迷失在中间”而忽略关键证据的风险',
+        'C. 长上下文窗口只适合微调场景，不能用于零样本（Zero-shot）推理',
+        'D. RAG 只能与小窗口模型配合，无法使用大窗口模型的语义理解能力'
+      ],
+      answer: 1,
+      explain: '“大窗口 = 不用 RAG”是行业中典型的误区。虽然大窗口能装下很多内容，但直塞会导致两个严重问题：一是成本呈线性/平方级暴涨，且首字延迟（TTFT）大幅增加；二是模型在海量上下文中寻找中段信息的召回率会严重下降（Lost in the Middle 现象）。因此 RAG 依然是过滤无关噪声、精简输入的核心屏障。'
+    },
+    {
+      q: '大模型架构师在设计 AI 知识系统时提倡“知识放外部，能力靠模型”。这里的“能力”具体指的是什么？',
+      options: [
+        'A. 模型脑中储存的某个产品的实时价格',
+        'B. 模型对特定结构化格式的解析、复杂长文本的逻辑推理与语言表达语调风格',
+        'C. 外部关系型数据库中的表关联关系与 SQL 查询语句',
+        'D. 从互联网上检索到的最新新闻事件数据'
+      ],
+      answer: 1,
+      explain: '大模型的强项在于其泛化的推理逻辑、强大的文本压缩/抽取能力以及语调语言控制。这些属于“能力/风格”，适合通过模型权重 and Prompt 约束来塑造。而事实、条款、数字等具体的业务“知识”，则应保持外置在检索系统（RAG）中，从而以最低的成本维持数据的准确性与实时性。'
+    }
+  ]}
+/>
+
+## 十、常见误解
+
+- **“想让模型懂业务就微调”**：微调适合改造模型的能力边界和回复语调风格；如果是频繁更新的业务事实，微调更新极慢且昂贵，仍会发生编造幻觉。
+- **“窗口够大就不用 RAG，把整个 PDF 直塞最省事”**：超大窗口虽然省去了切块和匹配等工程，但直塞会导致 Token 计费急剧飙升，并且因为“迷失在中间 (Lost in the Middle)”使得模型对中段关键信息的捕捉准确率大打折扣。
+- **“RAG 和微调是竞争二选一的关系”**：二者通常组合使用。例如先通过微调固定好符合法律合规和专业格式规范的输出“技能/风格”，再通过 RAG 实时灌入“事实案例证据”，以达到最佳效果。
+- **“微调可以作为 RAG 知识检索失败的备用兜底”**：错误。微调训练是“软性写入”，模型无法保证输出 100% 准确的事实。将微调作为事实性知识的兜底会极大增加排查幻觉的复杂性。
+
+## 十一、延伸阅读
 
 - [RAG (Lewis et al., 2020)](https://arxiv.org/abs/2005.11401)
 - [Anthropic: Retrieval / context](https://docs.anthropic.com/en/docs/build-with-claude/context-windows)
