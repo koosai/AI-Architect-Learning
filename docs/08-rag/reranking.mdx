@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M8L6 · 重排序
 
@@ -63,7 +65,116 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="高质量 RAG 用两/三阶段：混合检索高召回出 top-N（20~100）→ cross-encoder/LLM 重排精排出 top-k（3~5）进上下文。调 N 和 k 用评测。记住重排只能从召回结果里挑，召回率是前提。专用 reranker 通常比 LLM 重排更划算。"
 />
 
-## 三、跟我做一遍：两阶段检索（召回 + 重排）
+## 三、重排技术与两阶段检索图解 (Deep Dive Diagrams)
+
+为了更深度地展现精排所能带来的精度红利，我们在此剖析双塔/交叉编码器的底层拓扑差异、两阶段执行的生命周期时序以及精排上限天花板的限制机制。
+
+### 1. 结构对比：双塔编码 (Bi-Encoder) 与交叉编码 (Cross-Encoder)
+
+召回和精排对应的网络结构有着本质的不同。双编码器由于提取后独立运算而无法捕捉微观特征，而交叉编码器通过内部 Token 级全交互实现了极高的对齐精度。
+
+```mermaid
+graph TD
+    subgraph BiEncoder ["双编码器 (Bi-Encoder: 用于大规模召回)"]
+        Q1["查询 Query"] --> EncQ["Encoder A"] --> VecQ["向量 Q<br/>(比如 1024 维)"]
+        D1["文档 Doc"] --> EncD["Encoder B"] --> VecD["向量 D<br/>(预先算好存库)"]
+        VecQ --> Similarity["点积 / 余弦相似度<br/>(在向量库中秒级检索)"]
+        VecD --> Similarity
+        noteBi["特点: Query与Doc独立编码，没有早期交互，速度极快，精度中等。"]
+    end
+
+    subgraph CrossEncoder ["交叉编码器 (Cross-Encoder: 用于高精度重排)"]
+        Concated["查询 Query + 文档 Doc<br/>(拼接为单个序列输入)"] --> EncCross["Transformer 骨干网络<br/>(Self-Attention 深度交互)"]
+        EncCross --> DenseOut["全连接输出层"]
+        DenseOut --> Score["相关性评分 (Score)"]
+        noteCross["特点: 两者所有Token在底层发生交互，无法预存计算，速度慢，精度极高。"]
+    end
+```
+
+### 2. 时序全景：两阶段检索的粗筛与精挑
+
+用户提问发出后，两阶段检索的生命周期先调用轻量级的粗排（如向量库）捞出较宽列表，再使用重排器（Cross-Encoder）进行精确洗牌。
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as 用户
+    participant App as 应用协调器
+    participant Retriever as 粗排检索器 (向量数据库)
+    participant Reranker as Reranker 交叉编码模型
+    participant LLM as 大语言模型
+
+    User->>App: 问：“退货运费谁付？”
+    App->>Retriever: 步骤 1 粗筛：快速向量检索
+    Retriever-->>App: 返回 Top-30 粗排文档块 (N=30, 高召回率，含较多噪声)
+    App->>Reranker: 步骤 2 精排：计算 (Query, Doc) 交互评分
+    Note over Reranker: 依次评估 30 个文档块与 Query 的深层相关性
+    Reranker-->>App: 返回重排后的 Top-3 核心文档 (K=3, 高精确率)
+    App->>LLM: 步骤 3 生成：将这 3 个最精准证据注入上下文
+    LLM-->>App: 生成 grounded、可靠的回复
+    App-->>User: 展现最终回答
+```
+
+### 3. 短板瓶颈：重排器对未召回数据的无奈
+
+重排的核心前提是**答案文档必须在召回候选中**。如果粗排阶段由于字符不匹配或向量偏移导致文档落榜，精排层将永远无法看到并拉升它。
+
+```mermaid
+graph TD
+    classDef target fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef candidate fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+    classDef missed fill:#ffcdd2,stroke:#c62828,stroke-width:1px;
+
+    subgraph DbList ["全库 1,000,000 文档分布"]
+        DocIdeal["真实包含答案文档 A<br/>(排第 45 名)"]:::missed
+        DocNoise["粗筛出的各种不含答案噪声文档<br/>(1st ~ 30th)"]:::candidate
+    end
+
+    subgraph RecallWindow ["粗排召回窗口 (N = 30)"]
+        RecallQueue["召回候选集: [Doc1, Doc2, ... , Doc30]"]:::candidate
+    end
+
+    subgraph RerankLayer ["重排模型 (Reranker)"]
+        RerankerRun["对候选集进行 Cross-Encoder 评估"]
+    end
+
+    DbList -->|1. 粗排检索截断| RecallWindow
+    RecallWindow -->|2. 输入给重排模型| RerankLayer
+    RerankLayer -->|3. 输出 Top-3| FinalLLMContext["大模型最终上下文 (K=3)"]
+
+    Note over DocIdeal: 答案文档 A 落在 30名开外！<br/>它无法进入 Recall 召回集，<br/>重排模型没有输入它，<br/>最终大模型绝对无法获取答案。
+```
+
+## 四、落地实践：重排执行与上下文排序闭环
+
+在真实的 RAG 架构设计中，重排精排流程的执行过程需要遵循如下四个阶段：
+
+<StepFlow
+  steps={[
+    {
+      title: '1. 快速粗排召回 (Retrieve Top-N)',
+      desc: '使用极其快速的向量库最近邻（ANN）或混合检索，从百万级文本段落里快速捞出 N 个（例如 30 个）可能相关的候选文档，优先保障召回率。',
+      diagram: '用户 Query ──> 快速匹配 ──> 获取 Top-30 宽候选列表'
+    },
+    {
+      title: '2. 交叉样本对构建 (Cross-Pair Concatenation)',
+      desc: '将用户的查询 Query 与这 N 个候选文档分别两两拼接，构建出 (Query, Doc1), (Query, Doc2) ... 交互序列对，作为重排模型的输入样本。',
+      diagram: '拼接 Query 与 Doc1, Doc2 ... ──> 生成交叉样本对列表'
+    },
+    {
+      title: '3. 自注意力打分推理 (Cross-Attention Scoring)',
+      desc: '将拼接好的交互样本依次送入 Cross-Encoder 模型（如 bge-reranker），模型基于 Self-Attention 评估两者字里行间的真实语义相关度，输出分数。',
+      diagram: '样本序列 ──(Transformer推理)──> 获得精确的语义匹配得分'
+    },
+    {
+      title: '4. Top-K 截断与注入 (Truncation & Injection)',
+      desc: '依据精排评分对 N 个候选重新做降序排列，截取分数最高的前 K 个（例如前 3 个）文档，作为证据注入 Prompt，送达 LLM 渲染最终答案。',
+      diagram: 'Top-3 文档 ──> 拼装 Context ──> 大语言模型生成 (Grounded Response)'
+    }
+  ]}
+/>
+
+## 五、跟我做一遍：两阶段检索（召回 + 重排）
 
 <PyRunner
   rows={38}
@@ -107,7 +218,7 @@ print("重排把真正相关的提到前面")`}
 
 召回阶段广撒网捞出 4 个候选（含粗排噪声），重排阶段用"是否真的回答了问题"精排，把真正含"7 天内"答案的 d2 提到最前——只把 top-2 进上下文。**试试**：把召回 n 调成 2，看如果真正相关的没进召回，重排也救不回来（召回是前提）。
 
-## 四、动手 Lab（必做）
+## 六、动手 Lab（必做）
 
 打开 `labs/month08/m8l6_rerank/`：
 
@@ -140,7 +251,7 @@ python labs/month08/m8l6_rerank/test_rerank.py
   ]}
 />
 
-## 架构师深潜（Staff+ 视角）
+## 七、架构师深潜（Staff+ 视角）
 
 ### 1. 检索架构的阶段数
 
@@ -182,6 +293,46 @@ python labs/month08/m8l6_rerank/test_rerank.py
 - 你的 RAG 现在是几阶段？纯向量取 top-k，还是加了重排？诊断过"相关内容召回到了但没排进 top-k"吗？
 - 召回 N 和重排 k 设多少？用评测调过吗？N 够大保证不漏、又不让重排太慢吗？
 - 该用专用 reranker 还是 LLM 重排？延迟/成本/质量怎么权衡？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: 'Cross-Encoder（交叉编码器）比 Bi-Encoder（双编码器）在语义匹配精度上高得多的根本原因是什么？',
+      options: [
+        'A. Cross-Encoder 能够直接缩短文档的字数，去除噪音',
+        'B. Cross-Encoder 将查询和文档拼在一起送入模型，让两者的每个 token 在 Transformer 的自注意力机制（Self-Attention）下进行极其充分的交叉计算，而 Bi-Encoder 在计算相似度前两个向量是完全独立的',
+        'C. Cross-Encoder 支持离线将全库向量计算好，直接缓存',
+        'D. Cross-Encoder 的计算复杂度远远小于 Bi-Encoder'
+      ],
+      answer: 1,
+      explain: 'Bi-Encoder 将 Query 和 Doc 独立编码，无法捕捉到词语之间的微观交互（如对否定词、逻辑词的精细对齐）；Cross-Encoder 拼在一起送入，每一层的 Self-Attention 都在让 Query 和 Doc 的 Token 互相“关注”和交互，这带来了极高的语义对齐精度。'
+    },
+    {
+      q: '如果在生产环境中发现“用户的问题其实已经在数据库中了，但 Reranker 重排后返回的 Top-3 却始终不包含正确文档”，架构师在诊断时应该优先排查什么？',
+      options: [
+        'A. 直接升级 Reranker 模型的参数大小',
+        'B. 优先排查第一阶段的粗排（向量/混合检索）召回列表（Top-N）。若粗排根本没有捞上这个文档，精排模型无论多么优秀也无能为力',
+        'C. 将重排输出的 K 值从 3 强制调成 1',
+        'D. 更换 Embedding 模型以支持稀疏向量查询'
+      ],
+      answer: 1,
+      explain: '这就是重排算法的“短板效应”：精排重排器只能在粗排漏斗筛选出的 Top-N 候选里挑。如果粗排召回率太低，把正确文档排除在 N 之外，重排层对它也是不可见的。必须先提升粗排召回率。'
+    },
+    {
+      q: '关于召回候选集 N 和最终精排输出 k 的配置取舍，以下哪项是最务实的工程实践？',
+      options: [
+        'A. 设定 N = K，使得召回与重排阶段合并，降低复杂度',
+        'B. 设定 N 足够大（如 500），以绝不遗漏文档，无视模型计算延迟',
+        'C. N 应放宽（如取 20~50）以保障较高的召回率，k 应收紧（如取 3~5）以配合上下文预算，并通过评测折中系统延迟与生成质量',
+        'D. 将 k 设得比 N 更大，确保精排后召回的元素更多'
+      ],
+      answer: 2,
+      explain: 'N 控制了第一阶段的容错空间，放宽（如 20~50）可保证召回率；但因为 Cross-Encoder 算力消耗高，N 不能设得太大（如 500 会导致接口超时）；K 控制了最终喂给 LLM 的 Token 量，收紧（如 3~5）可防“迷失在中间”并节省 API 成本。因此需要两阶段配合并用评测指标寻找平衡点。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
