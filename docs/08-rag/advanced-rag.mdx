@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M8L10 · 高级 RAG 架构
 
@@ -36,7 +38,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 基础：元数据过滤（最常用、最该先有）
 
-<GlossaryTerm term="Metadata Filtering (RAG)" definition="元数据过滤：检索时结合结构化字段（权限、时间、文档类型、部门、版本）过滤，只在符合条件的子集里做向量检索。是实现权限隔离、时效控制、精准检索的基础能力。">元数据过滤</GlossaryTerm>（[M8L3 提过](./vector-search)）：给每个块带上结构化元数据（来源、时间、权限标签、部门、版本），检索时**先按元数据过滤再做向量检索**。这是最常用、几乎必备的“高级”能力——尤其**权限过滤**：企业 RAG 绝不能让用户检索到他无权看的内容（[呼应 M6L10 企业权限](../cloud-enterprise-industrial/enterprise-erp-integration)）。时效过滤（只要最新版）也靠它。
+<GlossaryTerm term="Metadata Filtering (RAG)" definition="元数据过滤：检索时结合结构化字段（权限、时间、文档类型、部门、版本）过滤，只在符合条件的子集里做向量检索。是实现权限隔离、时效控制、精准检索的基础能力。">元数据过滤</GlossaryTerm>（[M8L3 提过](./vector-search)）：给每个块带上结构化元数据（来源、时间、权限标签、部门、版本），利用安全 <GlossaryTerm term="ACL" definition="访问控制列表：定义哪些用户或系统进程被授予对特定文档资源访问权限的配置列表。在企业 RAG 中，它是执行元数据过滤硬核隔离的基础。">访问控制列表 (ACL)</GlossaryTerm> 在检索时**先按元数据过滤再做向量检索**。这是最常用、几乎必备的“高级”能力——尤其**权限过滤**：企业 RAG 绝不能让用户检索到他无权看的内容（[呼应 M6L10 企业权限](../cloud-enterprise-industrial/enterprise-erp-integration)）。时效过滤（只要最新版）也靠它。
 
 ### 进阶：多跳检索与 GraphRAG
 
@@ -58,7 +60,114 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="按需选择：权限/时效过滤几乎必备；多跳用于需串联证据的问题；GraphRAG 用于关系型/全局性知识；agentic RAG 用于动态复杂任务。务必先把基础检索 + 评测做好、确认基础解决不了，再上高级架构，避免过度工程。"
 />
 
-## 三、跟我做一遍：元数据过滤 + 多跳检索
+## 三、高级 RAG 与多维控制技术图解 (Deep Dive Diagrams)
+
+为了更深度地展现“控制与图谱结构”对克服基础检索局限的关键价值，我们在此展示高级 RAG 架构的复杂度阶梯、多跳迭代的时序推理过程以及物理检索硬过滤与大模型软防线在越权防御上的安全性对比。
+
+### 1. 结构全景：高级 RAG 架构的复杂度阶梯
+
+高级 RAG 框架不是越复杂越好，应当根据系统的实际规模与需求痛点，沿复杂度台阶进行渐进式升级。
+
+```mermaid
+graph TD
+    classDef step1 fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef step2 fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef step3 fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef step4 fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
+
+    L1["第一阶: 基础 RAG + 元数据过滤<br/>- 权限隔离、时效控制<br/>- 几乎为生产级硬需求，高可控、低成本"]:::step1
+    
+    L2["第二阶: 多跳检索 (Multi-hop)<br/>- 解决需要串联推理的复杂查询<br/>- 子问题自动分拆迭代，中等复杂度"]:::step2
+    
+    L3["第三阶: 图谱 RAG (GraphRAG)<br/>- 基于知识图谱的实体与关系检索<br/>- 捕捉非局部、全局性脉络关联"]:::step3
+    
+    L4["第四阶: 智能体 RAG (Agentic RAG)<br/>- 大模型自主决定检索工具与次数<br/>- 灵活性最高，但极难控、慢、贵"]:::step4
+
+    L1 --> L2
+    L2 --> L3
+    L3 --> L4
+```
+
+### 2. 时序全景：多跳检索（Multi-hop Retrieval）迭代计算流程
+
+当面对“经理所在的部门2026年预算是多少”这类关联查询时，多跳检索组件驱动大模型，串联跨物理表单或段落的碎片证据。
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as 用户
+    participant App as 应用协调器 (LLM改写器)
+    participant Db as 向量/元数据数据库
+    participant Rerank as 排序重评层
+
+    User->>App: 问：“Alice的经理所在的部门2026年预算是多少？”
+    Note over App: 步骤 1：拆解首跳子问题<br/>“Alice 的经理是谁？”
+    App->>Db: 检索首跳证据
+    Db-->>App: 返回：“Alice 的经理是 Bob”
+    Note over App: 步骤 2：生成第二跳子问题<br/>“Bob 在哪个部门工作？”
+    App->>Db: 检索第二跳证据
+    Db-->>App: 返回：“Bob 在平台部”
+    Note over App: 步骤 3：生成最终跳子问题<br/>“平台部 2026 年的预算是多少？”
+    App->>Db: 检索第三跳证据 (结合财务用户 ACL)
+    Db-->>App: 返回：“平台部 2026 预算 500 万”
+    App->>Rerank: 整合链条：“Alice->经理 Bob->平台部->预算 500 万”
+    Rerank-->>User: 答：“Alice 的经理是 Bob，属于平台部，该部门 2026 预算为 500 万。”
+```
+
+### 3. 安全对比：物理级检索硬过滤 vs. 大模型 Prompt 软防护
+
+在企业应用中，信息隔离不能依赖大模型后置的口头约法三章，必须在前置数据检索时通过元数据求交集硬隔离。
+
+```mermaid
+graph TD
+    classDef secure fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef leak fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
+    classDef db fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+
+    UserQuery["用户查询: '获取Bob部门的机密预算' <br/>(用户 ACL: ['public'])"] --> Router{"权限控制方式选择"}
+    
+    subgraph HardFilter ["检索层硬过滤 (100% 物理防泄密)"]
+        Router -->|方案 A: ACL 交集过滤| MatchACL["对库中元数据求交集<br/>'public' & 'finance' = 空"]
+        MatchACL -->|物理排除| DocExclude["机密文档被物理剔除，<br/>检索器查无此文"]:::secure
+    end
+
+    subgraph SoftFilter ["生成层 Prompt 约束 (极其危险)"]
+        Router -->|方案 B: 靠大模型封口| DocRetrieve["将机密文档检索出来<br/>塞入 LLM 的 Context 中"]:::db
+        DocRetrieve --> CallLLM["大模型推理，Prompt 指示:<br/>'不要透露机密内容'"]
+        CallLLM -->|越狱攻击/诱导| DocLeak["用户通过注入攻击成功套出机密，<br/>发生合规泄密灾难"]:::leak
+    end
+```
+
+## 四、落地实践：高级 RAG 的元数据过滤与多跳执行
+
+在真实的商业开发中，整合 ACL 权限验证及子查询迭代检索需要遵循如下四个阶段：
+
+<StepFlow
+  steps={[
+    {
+      title: '1. 元数据提取与权限匹配 (ACL & Meta Extraction)',
+      desc: '在系统解析用户查询时，首先提取出该用户的身份令牌（Token）与对应的安全组权限（例如 public/finance 标签），作为过滤条件。',
+      diagram: '用户身份 ──> 提取 ACL 权限组 ──> 与向量检索组合构成混合查询'
+    },
+    {
+      title: '2. 子问题分拆与多跳检索 (Multi-hop Resolution)',
+      desc: '对于复杂关联查询，大模型自动进行意图分解，首先派生出首跳子查询。只有通过第一步 ACL 硬性安全过滤的文档，才能够参与文本向量匹配。',
+      diagram: '原始复杂查询 ──> 首跳子查询 ──> [元数据+向量库匹配] ──> 获取中间结果'
+    },
+    {
+      title: '3. 迭代上下文扩展与串联 (Iterative Expansion)',
+      desc: '将上一轮多跳检索出的实体名称（如经理 Bob）作为上下文基础，动态拼装下一跳的子问题。重复上述权限过滤检索，串联证据网络。',
+      diagram: '中间结果 Bob ──> 下一跳子查询 "Bob 部门" ──> 进行二级权限过滤检索'
+    },
+    {
+      title: '4. 证据汇聚与受信任总结生成 (Grounded Generation)',
+      desc: '多跳证据全部收纳完成并经过后置校验后，拼装入 Grounding Prompt 中，最终在低温下渲染大模型答案。保障答案的可验证性与合规性。',
+      diagram: '有权限的证据集 ──> 大语言模型 ──> 交付安全且可追溯的答案'
+    }
+  ]}
+/>
+
+## 五、跟我做一遍：元数据过滤 + 多跳检索
 
 <PyRunner
   rows={38}
@@ -98,7 +207,7 @@ print("权限过滤 + 多跳串联")`}
 
 元数据（acl）过滤保证用户只检索到有权限的内容（机密 d3 对公开用户绝不泄露）；多跳把"Alice→经理 Bob→平台部→预算"串起来。**试试**：给 d3 也加 "public" 权限，看公开用户是否就能检索到它——体会权限过滤是怎么挡住越权访问的。
 
-## 四、动手 Lab（必做）
+## 六、动手 Lab（必做）
 
 打开 `labs/month08/m8l10_advanced/`：
 
@@ -131,7 +240,7 @@ python labs/month08/m8l10_advanced/test_advanced.py
   ]}
 />
 
-## 架构师深潜（Staff+ 视角）
+## 七、架构师深潜（Staff+ 视角）
 
 ### 1. 高级 RAG 架构选择
 
@@ -160,19 +269,59 @@ python labs/month08/m8l10_advanced/test_advanced.py
   ]}
 />
 
-### 2. "别为想象的复杂度过度工程"在 RAG 里尤其常见
+### 2. “别为想象的复杂度过度工程”在 RAG 里尤其常见
 
-高级 RAG 的名字（GraphRAG、agentic RAG）很吸引人，导致一个常见错误：**基础检索还没调好、评测都没建，就直接上最复杂的架构**。结果复杂度暴涨、延迟成本飙升、还难调试，而效果未必比"调好的基础 RAG + 元数据过滤 + 重排"更好。这正是 [M4L1 YAGNI](../design-patterns-lld/change-driven-design)、[M6L9 别过度](../cloud-enterprise-industrial/multi-cloud) 在 RAG 的又一次体现。架构师的判断力在于：**用 [评测（M8L9）](./rag-evaluation) 证明基础架构确实解决不了某类问题，再针对那个局限上对应的高级架构**——而不是因为"高级听起来厉害"就上。权限过滤是少数"几乎一定要有"的，其余都要按需。
+高级 RAG 的名字（GraphRAG、agentic RAG）很吸引人，导致一个常见错误：**基础检索还没调好、评测都没建，就直接上最复杂的架构**。结果复杂度暴涨、延迟成本飙升、还难调试，而效果未必比“调好的基础 RAG + 元数据过滤 + 重排”更好。这正是 [M4L1 YAGNI](../design-patterns-lld/change-driven-design)、[M6L9 别过度](../cloud-enterprise-industrial/multi-cloud) 在 RAG 的又一次体现。架构师的判断力在于：**用 [评测（M8L9）](./rag-evaluation) 证明基础架构确实解决不了某类问题，再针对那个局限上对应的高级架构**——而不是因为“高级听起来厉害”就上。权限过滤是少数“几乎一定要有”的，其余都要按需。
 
 ### 3. 真实案例：权限是企业 RAG 不可妥协的底线
 
-企业 RAG 最容易出大事的地方不是检索质量，而是**权限泄露**：员工通过 AI 助手检索到了他无权看的薪资、合同、机密文档——这是合规和信任的灾难（[呼应 M6L10 企业 AI 要尊重既有权限](../cloud-enterprise-industrial/enterprise-erp-integration)）。所以企业 RAG 的第一条工程纪律是：**权限过滤必须在检索层硬约束，绝不能只靠 prompt 让模型"别说不该说的"**（模型不可靠、会被诱导）。元数据过滤虽然是"基础的高级能力"，却是企业 RAG 能不能上线的前提。架构师设计企业知识系统时，权限模型要和[企业既有权限（M6L10）](../cloud-enterprise-industrial/enterprise-erp-integration) 对齐，并在检索层强制执行。
+企业 RAG 最容易出大事的地方不是检索质量，而是**权限泄露**：员工通过 AI 助手检索到了他无权看的薪资、合同、机密文档——这是合规和信任的灾难（[呼应 M6L10 企业 AI 要尊重既有权限](../cloud-enterprise-industrial/enterprise-erp-integration)）。所以企业 RAG 的第一条工程纪律是：**权限过滤必须在检索层硬约束，绝不能只靠 prompt 让模型“别说不该说的”**（模型不可靠、会被诱导）。一旦攻击者通过精心构造的提问绕过了提示词规则，实行了 <GlossaryTerm term="Prompt Injection" definition="提示词注入攻击：恶意用户通过精心构造的提问，诱导或欺骗大模型突破原有的系统 Prompt 约束（如绕过“请勿透露Bob的薪资”约束），从而获取受限机密信息的安全攻击手段。">提示词注入 (Prompt Injection)</GlossaryTerm>，将导致严重的合规泄露。元数据过滤虽然是“基础的高级能力”，却是企业 RAG 能不能上线的前提。架构师设计企业知识系统时，权限模型要和[企业既有权限（M6L10）](../cloud-enterprise-industrial/enterprise-erp-integration) 对齐，并在检索层强制执行。
 
 ### 4. 架构师深问（给自己 30 分钟）
 
 - 你的 RAG 需要权限/时效过滤吗？现在权限是在检索层硬过滤，还是危险地靠 prompt 约束？
-- 你的问题里有多少是"多跳"的（要串联几段才能答）？基础 RAG 答这类时表现如何？
-- 你有没有"基础没调好就想上 GraphRAG/agentic"的冲动？用评测确认过基础真的不够吗？
+- 你的问题里有多少是“多跳”的（要串联几段才能答）？基础 RAG 答这类时表现如何？
+- 你有没有“基础没调好就想上 GraphRAG/agentic”的冲动？用评测确认过基础真的不够吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在企业 RAG 架构设计中，为什么必须在“检索层”根据元数据硬过滤权限，而绝不能寄希望于在 Prompt 中告诉模型“不要说出机密内容”？',
+      options: [
+        'A. 因为元数据过滤对提高系统计算延迟有直接的收益',
+        'B. 大模型存在不确定性，极易遭受提示词注入（Prompt Injection）和越狱欺骗进而泄密，必须在物理检索端完全阻断无权文档进入上下文',
+        'C. 检索层的过滤可以使用大模型裁判（LLM-as-judge）代替，效率更高',
+        'D. 因为如果不这么做，Docusaurus 编译将报错'
+      ],
+      answer: 1,
+      explain: '大模型基于概率生成且缺乏严格的物理隔离属性，黑客通过注入式提问极易突破 Prompt 中的“防线”。最安全的作法是从输入源头斩断，使用 ACL 等进行前置元数据物理隔离，无权文档绝不出现在模型的 Context 候选集中。'
+    },
+    {
+      q: 'GraphRAG 相比于基础向量检索，其最核心的技术优势与适用场景是什么？',
+      options: [
+        'A. 它的内存消耗非常低，能够在小微型设备上极其流畅地离线运行',
+        'B. 它完全废除了 Embedding 编码过程，仅依赖布尔匹配',
+        'C. It 将知识库转化为实体与关系相互交织的图谱结构，能够提取非局部、跨文档的网状复杂关联，擅长解答“汇总、全局及脉络强关联”的问题',
+        'D. 它的开发周期与系统复杂度甚至低于基础的单阶段 RAG'
+      ],
+      answer: 2,
+      explain: 'GraphRAG 针对传统 RAG “只见树木不见森林”（难以回答如：“本文档库中所有项目的共同财务风险有哪些？”这类需要汇总全局多实体网状关系的全局性复杂提问）的局限，基于知识图谱能精准理清脉络相关实体。'
+    },
+    {
+      q: '在高级 RAG 的优化征程中，架构师应当遵循的最科学的工程选型逻辑是什么？',
+      options: [
+        'A. 无论系统规模如何，直接全盘部署 Agentic RAG 与 GraphRAG 联合体以彰显先进性',
+        'B. 依据 YAGNI 原则与评测结果，首先确保基础召回与重排工作调优到极致，仅在评测数据证明基础框架无法应付时，才针对性引入多跳、过滤或图检索',
+        'C. 优先用 Prompt 替代一切复杂的结构化过滤，减少前端开发代码量',
+        'D. 直接将系统的采样温度 Temperature 设为最大，从而让大模型自行发现答案'
+      ],
+      answer: 1,
+      explain: '高级架构在带来能力提升的同时，也引入了数十倍甚至百倍的延迟、算力与工程复杂度成本。若无黄金测试集客观诊断并证明存在瓶颈，盲目“为想象的复杂度买单”必将遭遇工程低效灾难，故应遵循 YAGNI 阶梯式递进。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
@@ -183,9 +332,9 @@ python labs/month08/m8l10_advanced/test_advanced.py
 
 ## 常见误解
 
-- **"越高级的 RAG 越好"**：高级架构对症特定局限，基础没调好就上是过度工程。
-- **"权限靠 prompt 让模型别说就行"**：模型不可靠，权限必须在检索层硬过滤。
-- **"agentic RAG 是未来都该用"**：它慢、贵、难控，只在动态复杂任务且基础不够时才值。
+- **“越高级的 RAG 越好”**：高级架构对症特定局限，基础没调好就上是过度工程。
+- **“权限靠 prompt 让模型别说就行”**：模型不可靠，权限必须在检索层硬过滤。
+- **“agentic RAG 是未来都该用”**：它慢、贵、难控，只在动态复杂任务且基础不够时才值。
 
 ## 延伸阅读
 
