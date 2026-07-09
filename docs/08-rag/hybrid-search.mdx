@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M8L5 · 混合检索
 
@@ -58,7 +60,116 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="术语密集或混合查询场景用混合检索：向量 + BM25 各取较宽 top-N，用 RRF 融合再取 top-k，常作为重排前的召回层。纯自然语言问答单向量可能够用。是否加混合，用评测在你的数据上验证收益。"
 />
 
-## 三、跟我做一遍：BM25 简版 + 向量 + RRF 融合
+## 三、混合检索技术图解 (Deep Dive Diagrams)
+
+为了更清晰地表达混合检索的底层数学原理与多路融合的设计，我们在此拆解稀疏表征与稠密表征的维度特征、RRF 排序计算机制以及归一化加权策略的弊端。
+
+### 1. 特征对比：稀疏向量 (Sparse) 与稠密向量 (Dense)
+
+稀疏与稠密不仅代表检索算法的不同，本质上是两种完全相反的数据结构表示法，其维度与承载语义有根本的差异。
+
+```mermaid
+graph TD
+    classDef sparse fill:#e1f5fe,stroke:#0288d1,stroke-width:1px;
+    classDef dense fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+
+    subgraph SparseRepresentation ["稀疏表征 (Sparse Vector - BM25 词袋匹配)"]
+        S_Vec["[0, 0, 1.0, 0, 0, 0, 0.8, 0, ... , 0]"]:::sparse
+        S_Note["- 维度极高 (等于词表大小, 如 10万+)<br/>- 极度稀疏 (绝大多数位置为 0)<br/>- 严格绑定词字面，精确，但无语义关联"]:::sparse
+    end
+
+    subgraph DenseRepresentation ["稠密表征 (Dense Vector - Embedding 语义)"]
+        D_Vec["[0.12, -0.42, 0.88, 0.05, ... , -0.31]"]:::dense
+        D_Note["- 维度固定且低 (如 768 或 1536 维)<br/>- 稠密且每一维都是实数浮点数<br/>- 映射高维语义概念，理解同义词/换说法"]:::dense
+    end
+```
+
+### 2. 多路合并：RRF 倒数排名融合计算过程
+
+RRF 算法将每个候选文档在两路队列中的排序转为倒数分数相加。在这个模型中，即便某个文档在其中一路没有很高的语义分，它也可能凭借极高的字面匹配度被拉进 Top-K。
+
+```mermaid
+graph TD
+    classDef step fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef doc fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+    
+    Query["用户查询: 'E1042 故障处理'"] --> Sparse["路 1: 稀疏检索 (BM25)"]
+    Query --> Dense["路 2: 稠密检索 (向量)"]
+
+    subgraph SparseRank [BM25 召回排名]
+        S1["1st: 文档 d3 (精确命中 E1042)"]:::doc
+        S2["2nd: 文档 d1 (含故障)"]:::doc
+    end
+    Sparse --> SparseRank
+
+    subgraph DenseRank [向量召回排名]
+        D1["1st: 文档 d1 (语义高相关)"]:::doc
+        D2["2nd: 文档 d2 (语义相关)"]:::doc
+        D3["3rd: 文档 d3 (语义低相关)"]:::doc
+    end
+    Dense --> DenseRank
+
+    SparseRank --> MergeRRF["RRF 融合打分计算 (常数 k=60)"]:::step
+    DenseRank --> MergeRRF
+
+    subgraph MergeCalc [RRF 分数叠加]
+        M1["d1: 1/(60+2) [BM25] + 1/(60+1) [向量] = 0.0325"]:::doc
+        M2["d3: 1/(60+1) [BM25] + 1/(60+3) [向量] = 0.0322"]:::doc
+        M3["d2: 0 [BM25] + 1/(60+2) [向量] = 0.0161"]:::doc
+    end
+    MergeRRF --> MergeCalc
+
+    MergeCalc --> FinalOutput["最终混合排序结果: [d1, d3, d2]"]:::step
+```
+
+### 3. 稳健底座：分数归一化加权 vs RRF 图解
+
+在融合两路结果时，直接做分数的归一化极度受到异常最大/最小值的扰动，这也是工业级架构师为什么首选 RRF 这个无量纲鲁棒策略的原因。
+
+```mermaid
+graph TD
+    classDef bad fill:#ffcdd2,stroke:#c62828,stroke-width:1px;
+    classDef good fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+
+    subgraph StrategyA ["策略一: 分数归一化加权 (Score Normalization)"]
+        ScoreBad["将向量分数 [0.0 ~ 1.0] 和 BM25 分数 [0 ~ 无上界] 进行归一化计算<br/>❌ 缺点：极大受到离群值或异常分数的影响，加权参数难以调优，极不鲁棒。"]:::bad
+    end
+
+    subgraph StrategyB ["策略二: RRF 倒数排名融合 (Reciprocal Rank Fusion)"]
+        RRFGood["抛弃绝对分值，仅提取每个文档的相对 Rank (1st, 2nd, ...)<br/>S(d) = Σ 1 / (60 + r)<br/>✅ 优点：无量纲、免归一化、不受评分波动影响，极易在工业级落地。"]:::good
+    end
+```
+
+## 四、落地实践：混合检索与 RRF 融合闭环
+
+在真实的 RAG 架构设计中，一条包含过滤属性的混合检索请求，要经历以下四步处理流程：
+
+<StepFlow
+  steps={[
+    {
+      title: '1. 多路检索分发 (Multi-Query Ingestion)',
+      desc: '在线层接收用户提问，同步将提问转化为稀疏特征（关键词集合）与稠密特征（Embedding 向量）。并发分发到稀疏引擎和向量引擎中。',
+      diagram: '提问 "E1042错误怎么修" ──> [BM25 检索] & [向量检索] 并发执行'
+    },
+    {
+      title: '2. 召回宽列表提取 (Recall Generation)',
+      desc: '两路检索各独立返回一个候选列表，为了后续融合留足空间，通常两路召回的范围 N 应该大于最终展现数 K（例如设置 N=50, K=10）。',
+      diagram: 'BM25 召回 Top-50 ──> | RRF 融合层 | <── 向量召回 Top-50'
+    },
+    {
+      title: '3. 倒数排名融合计算 (RRF Scoring)',
+      desc: '在融合层中提取出各候选文档在各自队列中的排位索引。应用公式 1/(k + rank) 计算得分。将文档在稠密、稀疏两路的得分做相加合并。',
+      diagram: '文档 d3 ──> 稀疏排 1st (1/61), 稠密排 3rd (1/63) ──> 分数相加 = 0.0322'
+    },
+    {
+      title: '4. 融合重新排序与截断 (Truncation & Context)',
+      desc: '对累加后的 RRF 得分按降序重新排列，取最靠前的 Top-K 篇文档作为检索结果，并注入 Prompt 上下文送入大模型生成最终回答。',
+      diagram: '排序结果 [d1, d3, d2, ...] ──> 取前 K 个 ──> 构建 RAG 回答'
+    }
+  ]}
+/>
+
+## 五、跟我做一遍：BM25 简版 + 向量 + RRF 融合
 
 <PyRunner
   rows={38}
@@ -100,7 +211,7 @@ print("混合融合兼顾语义和术语")`}
 
 纯向量会漏掉精确命中"E1042"的 d3（语义不突出），纯关键词又不懂语义；RRF 融合把两路的优势合起来，d3 被关键词那路拉上来。**试试**：把查询改成纯语义的（去掉术语），看融合结果如何更偏向向量那路；调 RRF 的 k 值看排名变化。
 
-## 四、动手 Lab（必做）
+## 六、动手 Lab（必做）
 
 打开 `labs/month08/m8l5_hybrid/`：
 
@@ -133,7 +244,7 @@ python labs/month08/m8l5_hybrid/test_hybrid.py
   ]}
 />
 
-## 架构师深潜（Staff+ 视角）
+## 七、架构师深潜（Staff+ 视角）
 
 ### 1. 检索方式对比
 
@@ -175,6 +286,46 @@ python labs/month08/m8l5_hybrid/test_hybrid.py
 - 你的用户查询里，有多少是精确术语/型号/编号/代码？纯向量会漏掉它们吗？
 - 加 BM25 混合要多维护一套关键词索引——这个复杂度，用 [M8L9 评测](./rag-evaluation) 量化收益值不值？
 - 混合作召回层（高召回）+ 重排作精排（高精度）——你的两/三阶段检索架构怎么设计？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '稀疏检索（如 BM25）与稠密检索（如向量相似度）相比，其最显著的优势体现在哪里？',
+      options: [
+        'A. 稀疏检索能够理解复杂的同义词替换',
+        'B. 在遇到精确的产品序列号、错误码、特定 API 函数名等对字符有字面精确匹配要求的场景时，召回率极高',
+        'C. 稀疏检索的向量维度非常低，消耗极少的内存',
+        'D. 稀疏检索在英文问答上的准确率远远高于中文'
+      ],
+      answer: 1,
+      explain: 'BM25 基于精确词项匹配和 IDF（逆文档频率）打分，对于低频、罕见且字面精确的术语（如 E1042 错误码）能进行精确的检索，完美弥补了向量检索在表征此类词汇时容易产生的语义稀释问题。'
+    },
+    {
+      q: 'RRF（Reciprocal Rank Fusion）倒数排名融合算法中，引入常数参数 k（默认通常为 60）的主要目的是什么？',
+      options: [
+        'A. 限制最终融合后输出的文档数量为 60',
+        'B. 为了防止处于非常靠后排名的项的微小变动对最终融合结果产生过大的权重偏置，并且平滑各路检索低名次位置的得分权重',
+        'C. 为了减少向量库的查询 QPS',
+        'D. 为了防止 API 调用超时而设定的最大连接数限制'
+      ],
+      answer: 1,
+      explain: '如果 k 过小，低名次排名的微小波动（比如从 10 降到 11）会对倒数分值产生非常强烈的拉扯影响；加上常数 k=60 可以使分母整体偏大，有效平滑掉低名次排位波动对总分的影响，保证检索系统的鲁棒性。'
+    },
+    {
+      q: '在搭建生产级混合检索系统时，如果我们将两路召回的候选范围 N 设得与最终需要的展现数 K 一致（例如 N = K = 5），会带来什么工程隐患？',
+      options: [
+        'A. 向量数据库会发生分片错误',
+        'B. 导致合并打分时发生内存溢出错误',
+        'C. 可能会导致在融合阶段，部分在一个维度上极强而在另一个维度上稍微落后的核心文档由于没被召回（即未进入各自的 Top-5 候选集），从而错失了在融合后进入前 5 名的机会，导致混合检索优势荡然无存',
+        'D. 强制导致 RRF 的 k 自动被重置为 0'
+      ],
+      answer: 2,
+      explain: '如果召回候选集 N 过小，多路融合就失去了“互相补救”的意义。比如文档 A 虽然在向量通道上排第 6 名（未进入前 5 召回集），但在 BM25 上排第 1，如果 N=5，融合层在向量队列里就完全找不到该文档，无法对其累加分数，最终使其可能落榜。因此通常要放宽候选提取（如 N >= 3 * K）。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
