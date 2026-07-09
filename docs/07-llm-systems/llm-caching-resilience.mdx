@@ -10,6 +10,9 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
+import SystemSimulator from '@site/src/components/SystemSimulator';
 
 # M7L11 · 缓存、限流与降级
 
@@ -21,25 +24,79 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 />
 
 :::tip 好消息：LLM 是个远程依赖，你前面学的弹性模式全用得上
-[Month 5](../core-components/circuit-breaker) 你学了缓存、限流、熔断、重试、降级。LLM 调用恰恰是一个**又贵、又慢、会失败、会被限流**的远程依赖——所以这些模式正好全派上用场，而且因为 LLM 特别贵特别慢，它们的价值比普通依赖更大。这一课把前面的弹性工程，专门“调味”到 LLM 场景。
-:::
-
-## 一、LLM 依赖的四个老问题，更严重的版本
-
-LLM 调用把普通远程依赖的问题放大了：
-- **贵**：每次调用真金白银（[M7L5](./llm-api-cost-latency)），重复调用纯烧钱。
-- **慢**：秒级延迟，高频场景体验差。
-- **会失败/限流**：API 会超时、报错、触发[速率限额](../core-components/rate-limiting)。
-- **会成本失控**：一个 bug 或流量激增可能让账单瞬间爆炸。
-
-对应的解药你都学过——**缓存**（省钱降延迟）、**限流**（防超支）、**重试/熔断/降级**（保可用）——只是用法要针对 LLM 调整。
-
-## 二、三个核心概念（分层）
+[Month 5](../core-components/circuit-breaker) 你学了缓存、限流、熔断、重试、降级。LLM## 二、三个核心概念（分层）
 
 ### 基础：LLM 缓存（精确 + 语义）
 
-- **精确缓存**：相同输入（同 prompt + 同参数）直接返回缓存结果——前提是[低温/确定性输出（M7L3）](./sampling-decoding) 才有意义。命中就**完全跳过调用**（成本和延迟归零）。
+- <GlossaryTerm term="Exact Cache" definition="精确缓存：完全相同的 Prompt 和参数输入时，直接返回缓存结果。仅在模型输出确定（如温度为0）且对时效性不敏感的场景适用。">精确缓存</GlossaryTerm>：相同输入（同 prompt + 同参数）直接返回缓存结果——前提是[低温/确定性输出（M7L3）](./sampling-decoding) 才有意义。命中就**完全跳过调用**（成本和延迟归零）。
 - <GlossaryTerm term="Semantic Cache" definition="语义缓存：用向量相似度判断新请求是否和缓存过的某个请求语义相近，相近就复用缓存答案。比精确匹配命中率高得多（运费多少 和 运费几块 能命中同一条），但要设相似度阈值、防误命中。">语义缓存</GlossaryTerm>：很多问法不同但意思相同（“运费多少” vs “运费几块钱”）。语义缓存用[向量相似度（Month 8）](../rag/overview) 判断“够不够像”，像就复用——命中率远高于精确匹配。代价：要设相似度阈值，太松会误命中（返回不对的答案）。
+
+```mermaid
+graph LR
+    classDef process fill:#e1f5fe,stroke:#0288d1,stroke-width:1px;
+    classDef db fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    Query["用户输入 Prompt"] --> Embeder["Embedding 模型"]:::process
+    Embeder --> Vector["文本向量化 (Vector)"]:::process
+    Vector --> Search["向量相似度检索"]:::process
+    VectorDB[("向量数据库 <br/>(Vector DB)")]:::db <--> Search
+    
+    Search --> Compare{"余弦相似度 >= 阈值? <br/>(Similarity >= Threshold)"}
+    Compare -- 是 (>= 0.85) --> Hit["语义命中 (Hit) <br/>返回缓存文本"]:::db
+    Compare -- 否 (< 0.85) --> Miss["缓存穿透 (Miss) <br/>请求大模型"]
+    
+    LLM["大语言模型 (LLM)"] --> Miss
+    LLM --> Write["将 (Prompt, Vector, Output) <br/>存入向量数据库"]:::db
+```
+
+在实际的内存级/分布式缓存机制中，你可以通过以下模拟器，动手调整并体验传统精确缓存机制在 LRU 驱逐策略下的状态变化（如 M3L5 缓存基础）：
+
+<SystemSimulator type="cache-lru" />
+
+### 进阶：限流、预算与成本护栏
+
+- **限流**（[M5L5](../core-components/rate-limiting)）：限制调用频率，防滥用、防触达 API 限额、防成本失控。常见的算法如 <GlossaryTerm term="Token Bucket" definition="令牌桶：限流中常用的一种算法。桶内按固定速率放入令牌，请求到达时必须消耗令牌才能执行，令牌耗尽则拒绝或排队。">令牌桶算法（Token Bucket）</GlossaryTerm>，可以使用以下模拟器运行观察：
+
+<SystemSimulator type="token-bucket" />
+
+- <GlossaryTerm term="Cost Budget / Spend Cap" definition="成本预算/支出上限：给 LLM 调用设每用户/每功能/每天的花费上限，逼近上限时降级或拒绝，防止 bug 或流量激增导致账单失控。">成本预算 / 支出上限</GlossaryTerm>：给每用户/每功能/每天设花费上限，逼近就降级或拒绝——这是 LLM 特有的、必须有的“成本护栏”（普通依赖很少需要，但 LLM 的钱是按调用烧的）。
+
+### 深入（选学）：模型降级链与完整弹性
+
+把 [M5 的弹性组合拳](../core-components/circuit-breaker) 套到 LLM：
+- <GlossaryTerm term="Model Fallback Chain" definition="模型降级链：主模型失败/超时/限流/超预算时，依次回退到备选（更便宜/更快/其它供应商的模型），最后回退到缓存/默认答/人工，保证服务不整体挂。">模型降级链</GlossaryTerm>：主模型（如 Opus 4.8 `claude-opus-4-8`）失败/限流/超时 → 退到备选（如 Sonnet 4.6 `claude-sonnet-4-6`，甚至换供应商）→ 再退到缓存的旧答案/模板答/转人工。结合[熔断（M5L6）](../core-components/circuit-breaker)（某模型持续失败就跳闸）、[重试+退避（M5L7）](../core-components/retry-backoff-timeout)（应对瞬时错误和限流）、[超时（M5L7）](../core-components/retry-backoff-timeout)（别让慢调用拖死）。
+
+```mermaid
+graph TD
+    classDef startEnd fill:#cfd8dc,stroke:#90a4ae,stroke-width:1px;
+    classDef decision fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+    classDef action fill:#e1f5fe,stroke:#0288d1,stroke-width:1px;
+
+    Start(["开始请求"]):::startEnd --> ExactC{"1. 精确缓存是否存在?"}:::decision
+    ExactC -- 是 --> ReturnExact["直接返回精确缓存"]:::action
+    ExactC -- 否 --> SemanticC{"2. 语义缓存是否命中?"}:::decision
+    
+    SemanticC -- 是 --> ReturnSemantic["直接返回语义缓存"]:::action
+    SemanticC -- 否 --> Limit{"3. 超出限流/成本预算?"}:::decision
+    
+    Limit -- 是 --> Reject["拒绝请求 / 成本超额降级"]:::action
+    Limit -- 否 --> TryPrimary["4. 尝试请求主模型"]:::action
+    
+    TryPrimary -- 成功 --> SaveCache["写入精确与语义缓存"]:::action --> End(["返回结果"]):::startEnd
+    TryPrimary -- 失败/超时/限流 --> CB{"5. 主模型熔断器已开启?"}:::decision
+    
+    CB -- 否 --> Retry["带退避重试 (Retry with Backoff)"]:::action
+    Retry -- 重试成功 --> SaveCache
+    Retry -- 重试失败 --> TryBackup["6. 动态路由至备用模型"]:::action
+    CB -- 是 --> TryBackup
+    
+    TryBackup -- 成功 --> SaveCache
+    TryBackup -- 失败 --> FinalFallback["7. 返回兜底静态结果/转人工"]:::action --> End
+```
+
+- **降级也可以是“降质量换可用”**：高峰期把难任务也路由到[小模型（M7L5）](./llm-api-cost-latency)、缩短上下文、关掉非核心 AI 功能——有损服务好过无服务（[呼应 M5L5](../core-components/rate-limiting)）。
+- **缓存 + 流式 + 路由 + 降级**共同构成 LLM 的“成本与可用性”工程：缓存省重复、流式改体感、路由按难度选档、降级保底线。
+- **观测**（[M6L7](../cloud-enterprise-industrial/observability-advanced)）：监控 token 用量、成本、命中率、各模型成功率/延迟、降级触发率——LLM 系统的可观测重点和传统系统不同（多了 token 和成本维度）。�）。语义缓存用[向量相似度（Month 8）](../rag/overview) 判断“够不够像”，像就复用——命中率远高于精确匹配。代价：要设相似度阈值，太松会误命中（返回不对的答案）。
 
 ### 进阶：限流、预算与成本护栏
 
@@ -60,6 +117,40 @@ LLM 调用把普通远程依赖的问题放大了：
   href="https://github.com/zilliztech/GPTCache"
   insight="LLM 是又贵又慢又会限流失败的远程依赖，因此缓存（精确/语义）、限流、重试退避、熔断、模型降级链、成本预算等弹性模式价值被放大。语义缓存用向量相似度提升命中率；模型降级链在故障/限流/超预算时回退到更便宜模型或缓存/人工，保证可用。"
   application="给 LLM 调用配齐：语义缓存（省钱降延迟）+ 限流和成本上限（防超支）+ 超时/重试退避/熔断（抗故障限流）+ 模型降级链（保可用）+ token/成本/命中率观测。把 M5 弹性模式针对 LLM 的贵和慢做加强。"
+/>
+
+### 实战指南：搭建生产级大模型弹性治理链路
+
+要在大规模业务中安全、低成本地部署大模型，我们需要分层构建弹性安全网络。点击下方步骤可以了解落地实施流程：
+
+<StepFlow
+  steps={[
+    {
+      title: '接入网关与多模型配置',
+      desc: '自建或使用开源 LLM 代理网关，配置主备模型（如 Opus 与 Sonnet）和多云 API 备用密钥，以解决单点故障与单供应商限流问题。',
+      diagram: 'Client ──> LLM Gateway (管理多模型路由 & 多云 Key 轮询)'
+    },
+    {
+      title: '部署双层缓存架构',
+      desc: '在网关前置 Redis 精确缓存（完全相同输入零开销），后置基于 Redis Vector / Milvus 的语义缓存，阈值设在 0.85 左右，在命中率与误判率间取得平衡。',
+      diagram: '输入 Prompt ──> 精确匹配 (Redis) ──(未命中)──> 向量搜索 (向量库) ──(未命中)──> LLM'
+    },
+    {
+      title: '实现滑动窗口限流与成本护栏',
+      desc: '对 API Key 或用户级别设置滑动窗口 Token 限制；建立 Daily Cost Budget 控制器，在调用总额逼近设定预算（如每日 100 美元）时，自动降级至 Haiku 模型或拒绝非核心请求。',
+      diagram: '请求 ──> 验证 Token 令牌桶 & 滑动窗口 ──> 校验今日累计 API 消耗金额 ──> 放行'
+    },
+    {
+      title: '配置故障转移与熔断降级链',
+      desc: '为每一个模型调用配置熔断器（Circuit Breaker）。主模型连续超时或报 429 时进入熔断，自动路由至降级回退链（Opus ──> Sonnet ──> 静态兜底 ──> 人工）。',
+      diagram: 'API 429/超时 ──> 触发熔断 ──> 自动跳闸 ──> 降级指向备用模型'
+    },
+    {
+      title: '搭建可观测性看板',
+      desc: '在 Prometheus/Grafana 或 OpenTelemetry 控制台打通 Token 成本、LLM 延迟、各层缓存命中率、熔断状态和模型降级率的指标大盘，确保财务与技术风险完全可见。',
+      diagram: '实时收集 Metrics ──> 监控 Token 计费 & 降级比率 ──> 异常告警'
+    }
+  ]}
 />
 
 ## 三、跟我做一遍：语义缓存 + 模型降级链
@@ -191,11 +282,54 @@ python labs/month07/m7l11_cache_resilience/test_resilience.py
 - [ ] 我理解成本上限是 LLM 特有的必备护栏。
 - [ ] 我能把前六个月的工程能力迁移到 LLM 组件上。
 
+## 章末自测
+
+为了检验你对本章 LLM 缓存、限流、熔断与降级等弹性设计理念的掌握情况，请完成以下自测题目：
+
+<QuizCard
+  questions={[
+    {
+      q: '对于语义缓存（Semantic Cache），如果把相似度阈值（Similarity Threshold）设置得过低（例如 0.45），会产生什么后果？',
+      options: [
+        'A. 缓存完全失效，所有相似的问法都无法命中缓存，被迫直接调用大模型',
+        'B. 缓存命中率升高，但极易将语义不相关的请求误判为命中，导致向用户返回完全错误的历史答案',
+        'C. 模型生成的响应延迟大幅翻倍，且向量计算变得极其缓慢',
+        'D. 大模型的单次调用 Token 成本会自动增加一倍'
+      ],
+      answer: 1,
+      explain: '语义缓存依赖向量余弦相似度来进行模糊匹配。如果阈值过低，两个语义完全相左或无关的 Prompt（例如“我要买机票” vs “我要退机票”）就会被误判为相似，造成严重的内容张冠李戴（即“缓存污染”与“幻觉”）。一般生产环境的语义相似度阈值建议设定在 0.85~0.92 之间。'
+    },
+    {
+      q: '模型降级链（Model Fallback Chain）在解决大模型调用被限流（API Rate Limited）或服务宕机时，其主要架构原则是？',
+      options: [
+        'A. 当请求遇到瞬时错误时立即无限重试，直至大模型返回 200 OK 响应',
+        'B. 在主模型挂掉时将请求直接作废，向终端用户抛出内部 HTTP 500 报错',
+        'C. 遵循“有损服务”的降级设计，当高级主模型失败或超时时，自动退避路由至备选的、更便宜的或跨云的模型，最后回退至兜底静态答案',
+        'D. 自动重构 Prompt，将用户提问缩减为单个词汇后重新强制发往主模型'
+      ],
+      answer: 2,
+      explain: '模型降级链贯彻了传统微服务架构中“降级换可用”的设计哲学：Opus (主) ──> Sonnet (备) ──> Haiku (轻量) ──> 缓存/静态兜底/转人工。通过退避到备用模型或不同供应商的 API，在主服务部分故障时依然保障用户基本功能的连续性。'
+    },
+    {
+      q: '在 LLM 系统架构中，关于“成本上限护栏（Spend Cap）”的说法，以下哪项最准确？',
+      options: [
+        'A. 它是为了限制底层大模型的内部参数规模，防止显存溢出',
+        'B. 它是针对按 Token 计费的大模型 API 专门设计的核心业务护栏，用于防止死循环 Bug 或恶意刷流量导致企业产生灾难性的天价账单',
+        'C. 设置成本上限后，系统底层的向量数据库搜索吞吐量将自动被限额 50%',
+        'D. 成本上限应当由财务部门在月度报表中手工维护，不需要通过网关层代码做阻断'
+      ],
+      answer: 1,
+      explain: '不同于传统的内存、CPU 仅占用物理资源，大模型调用是按使用量（Token 数量）实时产生资金损耗的。如果系统发生代码死循环、遭受爬虫 DDoS 攻击或遭遇恶意刷量，短短几小时内就可能烧掉成千上万美元。必须在 LLM 网关层对单用户、单 Key、单应用实施每日/每小时的累计资金支出限额（Spend Cap）和自动阻断。'
+    }
+  ]}
+/>
+
 ## 常见误解
 
-- **"LLM 应用就是调 API"**：裸调不可靠；要配缓存、限流、降级、成本护栏、观测。
-- **"缓存对 LLM 没用"**：精确缓存（确定性输出）+ 语义缓存能大幅省钱降延迟。
-- **"AI 工程是全新领域"**：核心是把前六个月的系统工程用到 LLM 这个新组件上。
+- **"LLM 应用无非就是调个 API，不需要什么复杂的后端架构"**：极度危险。裸调大模型 API 在高并发和生产环境下极其脆弱。由于 API 极其昂贵、响应缓慢且经常限流，大模型应用必须要用 LLM 网关包裹，并配齐语义缓存、分布式限流、故障熔断、降级回退链以及成本护栏等弹性架构手段。
+- **"缓存对 LLM 应用没用，因为模型的生成都是随机和动态的"**：错误认知。通过降低温度（Temperature -> 0）可以使特定业务生成趋向确定。使用“精确缓存”能实现常见分类与重复请求的零延迟；而“语义缓存”通过向量搜索，能把拼写不同但逻辑相同的海量相似查询拦截在网关层，节省大量 API 开销。
+- **"只要大模型足够聪明，就可以不需要设计模型降级链"**：偏颇。再聪明的模型也无法规避网络波动、云供应商故障、单账号并发配额限制（Rate Limit Block）或突发的账单爆表。大模型本身的智力与其服务的系统可用性是两码事，模型降级链和熔断器是系统可用性的物理保障。
+- **"大模型的观测指标和传统微服务是一样的，看 CPU/内存/QPS 就行"**：漏掉了关键维度。除了常规微服务指标外，LLM 的可观测性重点是按 Token 计算的消费额度、语义缓存命中率（Cache Hit Rate）、长字符的首字响应时间（TTFT - Time-to-First-Token）、累计消费成本（Spend Rate）等专有指标。
 
 ## 延伸阅读
 
