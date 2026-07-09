@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M8L2 · Embedding 与向量表示
 
@@ -54,7 +56,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="用匹配任务和语言的 embedding 模型把文档和查询编码到同一空间，用余弦相似度做语义检索。牢记“语义相似≠含答案”，需重排和评测补足。选模型看检索质量、语言支持、维度/成本。query 和 doc 必须同模型编码。"
 />
 
-## 三、跟我做一遍：余弦相似度语义检索
+## 五、跟我做一遍：余弦相似度语义检索
 
 <PyRunner
   rows={34}
@@ -86,7 +88,7 @@ print("找到语义最相近的文档")`}
 
 "怎么退货"和"退换货流程""无理由退货的条件"字面不同，但向量方向相近、余弦相似度高，被排在前面——这就是语义检索胜过关键词的地方。**试试**：把 query 改成偏物流的向量 `[0.2,0.9,0]`，看排序如何变；想想为什么"天气预报"永远排最后。
 
-## 四、动手 Lab（必做）
+## 六、动手 Lab（必做）
 
 打开 `labs/month08/m8l2_embeddings/`：
 
@@ -119,7 +121,7 @@ python labs/month08/m8l2_embeddings/test_embeddings.py
   ]}
 />
 
-## 架构师深潜（Staff+ 视角）
+## 七、架构师深潜（Staff+ 视角）
 
 ### 1. 相似度/检索表示方式
 
