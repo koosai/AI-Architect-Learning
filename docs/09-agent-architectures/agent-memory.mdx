@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M9L6 · Agent 记忆
 
@@ -30,7 +32,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - **忘了目标**：第 8 步时忘了最初要完成什么，开始偏题。
 - **重复劳动**：忘了第 3 步已经查过某信息，第 9 步又查一遍。
 - **丢失中间结果**：第 5 步算出的关键数据，第 10 步要用时找不到了。
-- **上下文爆炸**：把所有步骤的完整记录都塞进上下文，很快[超窗口、又贵又慢（M7L2）](../llm-systems/tokenization-context)。
+- **上下文爆炸**：把所有步骤的完整记录都塞进上下文，很快[超 **<GlossaryTerm term="Context Window" definition="上下文窗口：大语言模型在单词交互中能够接收并处理的最大 Token 数量上限。限制了智能体的单次工作记忆容量。">上下文窗口 (Context Window)</GlossaryTerm>**、又贵又慢（[M7L2](../llm-systems/tokenization-context)）]。
 
 这都是因为没有专门管理 Agent 的状态。记忆要解决两件事：**让 Agent 在多步中保持连贯**，且**不超 token 预算**。
 
@@ -43,8 +45,8 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 ### 进阶：短期/长期/外部记忆
 
 Agent 记忆分三类（[呼应 M7L8](../llm-systems/context-memory)）：
-- **短期记忆**：当前任务的 scratchpad（任务结束就清）。风险：[上下文污染/爆炸（M7L2）](../llm-systems/tokenization-context)——要摘要、要只留相关的。
-- **长期记忆**：跨任务/跨会话要记的（用户偏好、历史项目、学到的经验），存外部（数据库/[向量库 M8](../rag/overview)），需要时**检索**回来（[这就是 RAG 用在记忆上](../rag/overview)）。风险：隐私、过期信息。
+- **短期记忆**：当前任务的 scratchpad（任务结束就清）。风险：**<GlossaryTerm term="Short-term Memory" definition="短期记忆：在 AI Agent 中，通常指在单次任务执行生命周期内，为了维持上下文连贯而保存在上下文窗口中的结构化草稿纸（Scratchpad）或交互历史。">短期记忆</GlossaryTerm>** [上下文污染/爆炸（M7L2）](../llm-systems/tokenization-context)——要摘要、要只留相关的。
+- **长期记忆**：跨任务/跨会话要记的（用户偏好、历史项目、学到的经验），存外部（数据库/[**<GlossaryTerm term="Vector Database" definition="向量数据库：专门用于存储和高维向量相似度检索的非关系型数据库。常在长期记忆中作为 Agent 的大容量外部知识存储仓库。">向量数据库</GlossaryTerm>** M8](../rag/overview)），需要时**检索**回来（[这就是 RAG 用在记忆上](../rag/overview)）。风险：隐私、过期信息。
 - **外部记忆**：文件系统、数据库、[RAG 知识库](../rag/overview)——Agent 把它们当作可读写的"外部大脑"，不必全塞进上下文。风险：检索错误、[权限越界（M8L10）](../rag/advanced-rag)。
 
 ### 深入（选学）：记忆的工程要点
@@ -61,6 +63,116 @@ Agent 记忆分三类（[呼应 M7L8](../llm-systems/context-memory)）：
   href="https://arxiv.org/abs/2310.08560"
   insight="Agent 多步执行需要记住目标、进度、中间结果——靠 scratchpad（工作记忆，放进上下文）维持连贯，靠外部存储（数据库/向量库）做长期/大容量记忆按需检索。核心是上下文工程：在 token 预算内精选该让模型看到的状态，用摘要压缩、结构化存储提升可靠性，避免上下文爆炸和遗忘。"
   application="给多步 Agent 设计 scratchpad（结构化存目标/进度/findings），每步放进上下文；跨任务记忆存外部、按需检索（RAG）；在 token 预算内精选+摘要；写记忆时去重判值。简单短任务用 ReAct 轨迹即可，按需加长期记忆，别过度。"
+/>
+
+### 技术架构图解与生命周期演示 (Deep Dive Diagrams & Lifecycle)
+
+#### 1. Agent 分层记忆系统架构 (Hierarchical Memory Architecture)
+
+```mermaid
+graph TD
+    classDef brain fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef working fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+    classDef session fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
+    classDef external fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+
+    LLM["LLM 决策大脑 (LLM Core)"]:::brain
+    
+    subgraph ContextMemory [工作/短期记忆 (Context Working Memory - RAM)]
+        Scratchpad["结构化草稿纸 (Scratchpad)<br/>- 核心目标 (Goal)<br/>- 规划进度 (Plan)<br/>- 关键观察 (Observations)"]:::working
+    end
+
+    subgraph CacheMemory [会话本地缓存 (Session RAM Cache)]
+        FullHistory["完整轨迹日志 (Full History Log)<br/>- 原生 Thought/Action 历史"]:::session
+    end
+
+    subgraph LongtermStore [外部长期记忆 (Long-term DB Store - Disk)]
+        VectorDB["外部向量数据库 (Vector DB)<br/>- 跨任务沉淀经验<br/>- 用户偏好画像 (Profiles)"]:::external
+        RelationalDB["传统关系型数据库 / 文件系统<br/>- 归档的完工报告"]:::external
+    end
+
+    LLM <-->|1. 实时读取/装配| Scratchpad
+    Scratchpad -.->|2. 满溢则滑入| FullHistory
+    LLM <-->|3. 语义相似度检索| VectorDB
+    LLM -->|4. 任务结束持久化回写| VectorDB & RelationalDB
+```
+
+#### 2. 记忆写入与压缩淘汰控制流 (Memory Condensation & Compression Flow)
+
+```mermaid
+graph TD
+    classDef check fill:#e1f5fe,stroke:#0288d1,stroke-width:1px;
+    classDef run fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
+    classDef compression fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    Start["新步骤 Observation 产生"] --> Append["追加数据至 Full History"]:::run
+    Append --> CheckBudget{"工作记忆 Token 审计<br/>(History Size >= 80% Window?)"}:::check
+    
+    CheckBudget -->|否: 空间充裕| Assemble["装配上下文: Goal + Scratchpad + Full History"]:::run
+    CheckBudget -->|是: 空间满溢| Condense["启动上下文压缩淘汰<br/>(Context Compressor)"]:::compression
+    
+    Condense --> LLMSummarize["调用 LLM 摘要旧步骤<br/>(保留关键 Key-Findings，丢弃 Action 琐碎文本)"]
+    LLMSummarize --> ArchiveOld["将旧步骤日志持久化归档至 Disk"]
+    ArchiveOld --> UpdateContext["更新工作记忆: Goal + Findings Summary + 近3步历史"]:::run
+    
+    Assemble & UpdateContext --> RunNext["大脑开启下一轮推理循环"]
+```
+
+#### 3. 跨会话长期记忆检索与对齐时序 (Cross-Session Long-Term Memory Sequence)
+
+```sequenceDiagram
+autonumber
+    participant Orchestrator as 编排协调器 (Host)
+    participant VectorDB as 向量记忆库 (Vector DB)
+    participant LLM as LLM 大脑 (Brain)
+    participant RelationalDB as 关系型数据库 (DB)
+
+    Orchestrator->>VectorDB: 1. 语义检索 (Query: "用户偏好 / 之前是如何做竞品分析的")
+    VectorDB-->>Orchestrator: 返回: "用户喜欢以表格输出对比，不想要冗长字眼"
+    
+    Orchestrator->>Orchestrator: 2. 装配工作上下文 (将偏好注入 Scratchpad)
+    Orchestrator->>LLM: 3. 执行单步推理与动作
+    LLM-->>Orchestrator: 返回结果: 分析完工
+    
+    Orchestrator->>RelationalDB: 4. 写入完工报告
+    Orchestrator->>LLM: 5. 提取复盘经验 ("这次任务有什么跨会话的经验学到了?")
+    LLM-->>Orchestrator: 返回: "竞品 B 备用数据源解析速率更高"
+    
+    Orchestrator->>VectorDB: 6. 将新经验转换为 Embedding 存入长期记忆
+```
+
+#### 4. 交互演示：记忆装配与回写流程
+
+以下展示了 Agent 在执行复杂任务时，记忆各分层机制协作的五个具体阶段：
+
+<StepFlow
+  steps={[
+    {
+      title: '1. 检索用户偏好与对齐初始化',
+      desc: '在任务启动阶段，系统从外部向量库中检索关于该任务或当前用户的历史偏好，并注入 Scratchpad 作为全局提示词。',
+      diagram: '启动 ──> 检索向量库 ──> 读出: 用户喜欢简洁表格 ──> 固化进 Scratchpad.goal'
+    },
+    {
+      title: '2. 动态短期状态维护',
+      desc: '随着步骤推进，Scratchpad 动态记录“已完成任务”和“核心 Findings”，保证模型在每步调用时绝不重复劳动。',
+      diagram: '执行查竞品A ──> done.append("查竞品A") ──> findings.update({"A价格": 100})'
+    },
+    {
+      title: '3. Token 警戒线审查与溢出拦截',
+      desc: '在每一轮装配 context 时，系统审计 Token 计数。若累积的历史轨迹过厚导致接近上下文窗口警戒线，触发自动淘汰。',
+      diagram: '计数: 6600 Tokens ──> 阈值: 8000 Tokens (80%) ──> 触发压缩淘汰机制'
+    },
+    {
+      title: '4. 垃圾回收与摘要压缩 (Condensation)',
+      desc: '调用副脑 LLM 对前 10 步的琐碎交互日志进行抽取，凝练为 150 Tokens 的“关键事实纪要”，并将原始日志归档，空出 Token 槽位。',
+      diagram: '旧步骤 (3000t) ──> LLM 摘要 ──> 事实纪要 (150t) ──> 释放窗口空间'
+    },
+    {
+      title: '5. 复盘提炼与长期记忆固化',
+      desc: '任务执行 finish 阶段。Host 调用 LLM 进行最终复盘，提取对未来具有通用参考价值的经验（如哪些数据源更可靠），存入向量库持久化。',
+      diagram: '提取经验: 竞品B备用源响应快 ──> 转向量 ──> 写入 Vector DB 长期记忆'
+    }
+  ]}
 />
 
 ## 三、跟我做一遍：带 scratchpad 的 Agent 记忆
@@ -170,7 +282,7 @@ python labs/month09/m9l6_memory/test_memory.py
 
 ### 2. "上下文工程"是 Agent 的核心竞争力
 
-到这里你会发现，Agent 的很多能力——[记忆、规划进度、ReAct 轨迹](./react-pattern)——本质都是同一件事：**每一步该把什么信息放进模型的上下文窗口**。这就是"上下文工程"（[M7L8 提过](../llm-systems/context-memory)）：在有限的 token 预算里，精选出"模型这一步决策真正需要看到的"——目标、计划进度、最近几步、相关检索结果、关键发现——而非把所有历史一股脑塞进去。做得好，Agent 连贯、省钱、不迷路；做得差，要么忘事、要么[上下文爆炸又贵又慢又"迷失在中间"（M7L2）](../llm-systems/tokenization-context)。**同样的模型、同样的工具，上下文工程的好坏能让 Agent 的表现天差地别**——这正在成为 Agent 系统最吃功力的部分，也是架构师最该投入的地方。
+到这里你会发现，Agent 的很多能力——[记忆、规划进度、ReAct 轨迹](./react-pattern)——本质都是同一件事：**每一步该把什么信息放进模型的上下文窗口**。这就是"上下文工程"（[M7L8 提过](../llm-systems/context-memory)）：在有限的 token 预算里，精选出"模型这一步决策真正需要看到的"——目标、计划进度、最近几步、相关检索结果、关键发现——而非把所有历史一股脑塞进去。做得好，Agent 连贯、省钱、不迷路；做得差，要么忘事、要么[上下文爆炸又贵又慢又 **<GlossaryTerm term="Lost in the Middle" definition="迷失在中间：大模型在处理超长上下文时，容易过度关注最开始和最结尾的信息，而忽略/遗忘中间段落内容的现象。">迷失在中间 (Lost in the Middle)</GlossaryTerm>** （[M7L2](../llm-systems/tokenization-context)）]。**同样的模型、同样的工具，上下文工程的好坏能让 Agent 的表现天差地别**——这正在成为 Agent 系统最吃功力的部分，也是架构师最该投入的地方。
 
 ### 3. 真实案例：长任务 Agent 的"金鱼记忆"问题
 
@@ -182,6 +294,46 @@ python labs/month09/m9l6_memory/test_memory.py
 - 你每步放进上下文的是"全部历史"还是"精选的相关状态"？长任务会不会上下文爆炸/迷失在中间？
 - 你需要跨任务/跨会话记忆吗（用户偏好、历史经验）？存哪、怎么检索、怎么防过期和越权？
 
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '关于类比计算机操作系统的 Agent 分层记忆系统（如 MemGPT 的设计），以下哪一项描述是正确的？',
+      options: [
+        'A. 大模型的浮点数参数矩阵类似于主板上的 RAM，是随时可以读写的临时工作空间',
+        'B. 上下文窗口（Context Window）类似于 CPU 的 RAM 运行内存，提供极快但容量受限的“工作记忆”；而向量数据库（Vector DB）则类似于 Disk 硬盘，提供慢速但大容量的“外部长期记忆”',
+        'C. 向量数据库的检索速度比大模型上下文窗口的直接检索快 100 倍以上，因此应完全废弃短期工作记忆',
+        'D. 只要模型开启了长期记忆，大模型的输入窗口限制就自动消失了'
+      ],
+      answer: 1,
+      explain: '在分层记忆模型中，大模型无状态，其上下文窗口（RAM）是其直接用于推理的短期工作记忆（Scratchpad），但容量有限且价格昂贵。外部长期存储（Vector DB/Disk）提供了海量的跨任务冷数据存取，系统需通过检索将长期记忆按需拉回短期记忆中。'
+    },
+    {
+      q: '在长链 Agent 运行中，将每一次工具调用的原始 XML 或 JSON 返回一字不漏地追加到上下文里，会有什么隐患？',
+      options: [
+        'A. 会导致大模型的 Temperature 参数漂移，产生随机性错误',
+        'B. 会迅速撑爆上下文窗口（Context Window）造成成本剧增与首字延迟飙升，并且超长上下文容易触发大模型“迷失在中间（Lost in the Middle）”的缺陷，导致关键信息被淹没',
+        'C. 大模型无法识别包含换行符的 JSON 字符串',
+        'D. 会使外部向量库中的数据发生逻辑越权错误'
+      ],
+      answer: 1,
+      explain: '直接将原始详细日志堆砌在上下文中是极其简陋的设计。大模型处理超长输入不仅贵且慢，还会引发“Lost in the Middle”的注意力分散。优秀的设计应该进行结构化维护并使用 LLM 进行摘要淘汰压缩（Condensation）。'
+    },
+    {
+      q: '如果需要构建一个跨越多个独立任务会话（比如今天帮用户订机票，明天帮用户查酒店）的客服 Agent，架构师首选的记忆管理设计是什么？',
+      options: [
+        'A. 把今天订机票的所有原生 Trace 记录一直保存在内存中，第二天接着使用',
+        'B. 开启跨任务长期记忆（Long-term Memory），在会话结束时通过大模型提取用户偏好画像（如“不爱坐早班机”），将其以 Embedding 形式固化至外部向量库，在新会话开始前进行语义检索拉回',
+        'C. 强行要求用户每天重写一遍旅行偏好 prompt',
+        'D. 允许大模型直接读写环境的物理内存，绕过向量数据库'
+      ],
+      answer: 1,
+      explain: '跨任务/跨会话的记忆是“长期记忆”的经典用例。通过在会话尾声进行“记忆固化”，提炼高价值画像经验，并在新会话前“按需激活（Recall）”，能够兼顾个性化服务与极低的 Token 开销。'
+    }
+  ]}
+/>
+
 ## 自检清单
 
 - [ ] 我能解释 Agent 为什么需要 scratchpad 维持多步连贯。
@@ -191,9 +343,9 @@ python labs/month09/m9l6_memory/test_memory.py
 
 ## 常见误解
 
-- **"把所有步骤历史塞进上下文就有记忆了"**：会爆窗口、迷失在中间；要精选+摘要。
-- **"记忆是模型的能力"**：模型无状态，记忆是你的系统的上下文工程。
-- **"所有 Agent 都要复杂长期记忆"**：简单任务 ReAct 轨迹够用；按需加，别过度。
+- **“把所有的工具调用、步骤日志一字不落塞进 Context 就是完美的记忆”**：这是最直觉也是最粗暴的错误方法。这不仅会造成 Token 账单的爆炸，还会因为无关的噪音细节过多，触发“迷失在中间”现象，导致模型彻底忘掉最初的 Goal。上下文必须经过精选、过滤和摘要压缩。
+- **“记忆是模型参数的一部分，模型升级了记忆力就自然变强”**：这是一个核心误区。大模型本身是无状态（Stateless）的。系统感知到的“记忆”，本质上是外围工程代码进行的**上下文装配与管理**。模型变聪明会提升理解上下文的能力，但如何收集、筛选、压缩、淘汰和召回记忆，是系统架构师的硬核功力。
+- **“我的 Agent 很先进，必须引入向量数据库做长期记忆检索”**：根据 YAGNI 原则，对于绝大多数单次任务的 Agent（例如帮用户写一篇周报），ReAct 轨迹或结构化 Scratchpad 提供的短期工作记忆已完全足够。只有涉及跨任务沉淀、跨会话画像等业务场景，引入长期向量记忆库才具备投资回报比。
 
 ## 延伸阅读
 
