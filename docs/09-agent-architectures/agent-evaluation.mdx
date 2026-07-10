@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M9L10 · Agent 评测与可观测
 
@@ -52,10 +53,10 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 深入（选学）：Agent 评测与可观测的工程
 
-- **tracing 是前提**：评测和排错都要靠完整的 [轨迹记录（trace）](./react-pattern)——每步的输入、推理、动作、参数、结果、耗时、成本。没有 trace，Agent 就是个无法调试的黑盒（[呼应 M6L7 可观测、M9L3 ReAct 轨迹](../cloud-enterprise-industrial/observability-advanced)）。这是 Agent 可运维的基础。
-- **评测方式**：成功与否常能用客观信号判（任务完成的硬标准、测试通过）；过程合理性常用 [LLM-as-judge（M7L10）](../llm-systems/llm-evaluation) 评判轨迹（注意其偏差）或人工抽查；效率/合规用规则算（步数、是否调了禁用工具）。
-- **建评测集 + 回归**：和 [M7L10/M8L9](../llm-systems/llm-evaluation) 一样，要有代表性任务的评测集，改 Agent（prompt/工具/流程）后跑回归对比、接 [CI 门禁（M6L6）](../cloud-enterprise-industrial/cicd-pipelines)，防止“改好一类任务、退化另一类”。
-- **线上可观测**：监控真实运行的成功率、步数分布、成本、违规告警、降级/审批触发率（[呼应 M6L7 SLO/告警、M7L11 LLM 观测](../cloud-enterprise-industrial/observability-advanced)）。Agent 的成本和步数波动大，更要盯。
+- **tracing 是前提**：评测和排错都要靠完整的 <GlossaryTerm term="Trace Log" definition="轨迹日志：智能体在运行期间产生的、详尽记录每一步 Reasoning (推理)、Action (行动参数) 与 Observation (外部反馈) 的结构化执行日志，是进行轨迹评测与异常排错的基础数据。">轨迹记录 (Trace Log)</GlossaryTerm>——每步的输入、推理、动作、参数、结果、耗时、成本。没有 trace，Agent 就是个无法调试的黑盒（[呼应 M6L7 可观测、M9L3 ReAct 轨迹](../cloud-enterprise-industrial/observability-advanced)）。这是 Agent 可运维的基础。
+- **评测方式**：成功与否常能用客观信号判（任务完成的硬标准、测试通过）；过程合理性常用 <GlossaryTerm term="LLM-as-judge" definition="大模型裁判：使用大语言模型（通常是能力更强的闭源模型）作为评估器，根据特定的 Prompt 指引和评分标准，对其他 AI 系统生成的文本或执行轨迹进行自动打分和评估的机制。">LLM-as-judge</GlossaryTerm> 评判轨迹（注意其偏差）或人工抽查；效率/合规用规则算（步数、是否调了禁用工具）。
+- **建评测集 + 回归**：和 [M7L10/M8L9](../llm-systems/llm-evaluation) 一样，要有代表性任务的评测集，改 Agent（prompt/工具/流程）后跑回归对比、接 <GlossaryTerm term="CI Gate" definition="持续集成门禁：在代码合入干线前自动运行的质量卫士。对 Agent 系统而言，CI 门禁在每次提交代码时运行评测集，自动对比新旧轨迹指标，如果发现成功率退化或违规动作，则拒绝合并代码。">CI 门禁 (CI Gate)</GlossaryTerm>，防止“改好一类任务、退化另一类”。
+- **线上可观测**：对线上系统实施 <GlossaryTerm term="SLO Monitoring" definition="SLO 监控：服务等级目标监控。对生产环境下的 Agent 运行状况进行实时监控，关注成功率、步数波动、Token/延迟开销以及违规告警等核心系统指标，保证其在安全与效率的红线内运行。">SLO 监控 (SLO Monitoring)</GlossaryTerm>，监控真实运行的成功率、步数分布、成本、违规告警、降级/审批触发率（[呼应 M6L7 SLO/告警、M7L11 LLM 观测](../cloud-enterprise-industrial/observability-advanced)）。Agent 的成本 and 步数波动大，更要盯。
 - **Agent 难评测，是它难上生产的核心原因之一**：多步、非确定、过程复杂——没有好的轨迹评测和可观测，你既不敢信它、也无法改进它。**评测能力往往决定一个 Agent 能不能真正上生产**（[呼应 M9L1 “成熟看失控时怎样、能否复现”](./agent-loop-basics)）。
 
 <ResearchNote
@@ -66,7 +67,91 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="给 Agent 全程记录 trace（每步推理/动作/参数/结果/成本）；评测整条轨迹（目标达成 + 过程合理 + 效率 + 合规）；建任务评测集跑回归、接 CI；线上监控成功率/步数/成本/违规。用客观信号判成功、LLM-judge/人工评过程合理性、规则算效率合规。把可评测当 Agent 上生产的门槛。"
 />
 
-## 三、跟我做一遍：Agent 轨迹评测
+## 三、智能体评估与可观测图解 (Deep Dive Diagrams)
+
+本节展示智能体评测的四维指标模型、自动化 CI 回归测试门禁架构以及轨迹诊断排错控制流程。
+
+### 1. 结构全景：轨迹评测 vs. 结果评测
+
+```mermaid
+graph TD
+    classDef bad fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+    classDef good fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef eval fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+
+    UserQuery["用户复杂任务需求"] --> AgentRun["智能体执行回路 (Agent Loop)"]
+    AgentRun --> TraceLog["生成运行轨迹 (Trace Logs)"]
+    AgentRun --> FinalAnswer["最终输出答案"]
+
+    subgraph TraditionalEval [传统评估 (结果主义)]
+        FinalAnswer --> CheckAns{"只判答案对错?"}
+        CheckAns -->|True| PassResult["判定通过 (Pass)"]:::good
+    end
+
+    subgraph TrajectoryEval [轨迹评估 (过程主义)]
+        TraceLog --> MultiEval["四维联合评估器 (Evaluator)"]:::eval
+        MultiEval --> CheckGoal["1. 目标达成度 (Goal Reached)"]
+        MultiEval --> CheckReason["2. 步骤合理性 (Step Validity)"]
+        MultiEval --> CheckEff["3. 运行效率 (Steps/Tokens Budget)"]
+        MultiEval --> CheckSafe["4. 安全合规性 (Compliant)"]
+        
+        CheckGoal & CheckReason & CheckEff & CheckSafe --> CombinedJudge{"四维全部满足?"}
+        CombinedJudge -->|No| RejectTrace["判定失败 (Fail: 揭示绕弯/越权)"]:::bad
+        CombinedJudge -->|Yes| PassTrace["判定通过 (Pass: 过程可靠)"]:::good
+    end
+```
+
+### 2. 控制流程：可观测闭环与评估 CI 门禁
+
+```mermaid
+graph LR
+    classDef main fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef ci fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    Developer["架构师修改 Agent Prompt/逻辑"] --> CodeCommit["提交代码 (Git Commit)"]
+    
+    subgraph CICDPipeline [CI/CD 自动化门禁]
+        CodeCommit --> TriggerCI["触发测试流水线"]:::ci
+        TriggerCI --> RunEvalSet["运行标准评测任务集 (Evaluation Suite)"]:::ci
+        RunEvalSet --> ExtractTrace["提取步级 Trace Log"]
+        ExtractTrace --> TrajectoryScore["轨迹多维打分 (Evaluator)"]:::main
+        TrajectoryScore --> ScoreCheck{"指标是否退化？<br/>(成功率/平均步数)"}
+        
+        ScoreCheck -->|退化/违规| RejectPR["拒绝并告警 (CI Block)"]
+        ScoreCheck -->|达标| MergeCode["允许合并代码"]:::ci
+    end
+
+    subgraph ProductionObs [线上生产观测监控]
+        MergeCode --> Deploy["部署上线 (Deploy)"]:::ci
+        Deploy --> RealUser["线上真实用户流量"]
+        RealUser --> Collector["Trace 收集器"]:::main
+        Collector --> Dashboard["SLO 实时看板<br/>(成功率/Token/成本/违规告警)"]:::main
+    end
+```
+
+### 3. 时序全景：轨迹排错时序与异常定位
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Developer as 架构师 (Developer)
+    participant Evaluator as 轨迹评估器 (Evaluator)
+    participant Judge as LLM 裁判 (LLM Judge)
+    participant Trace as 轨迹日志 (Trace DB)
+
+    Developer->>Evaluator: 1. 触发轨迹异常诊断 (Trace ID: #982)
+    Evaluator->>Trace: 2. 读取该次执行的完整 Thought/Action/Observation 序列
+    Trace-->>Evaluator: 3. 返回序列数据
+    Evaluator->>Judge: 4. 送入 (目标 + 某单步 Thought/Action/Observation)
+    Note over Judge: 评估思考与行动是否匹配环境反馈
+    Judge-->>Evaluator: 5. 步级诊断报告: "第 4 步模型忽略了 DB CPU 95% 的警报，重复查询日志"
+    Evaluator->>Evaluator: 6. 计算有效步骤比 (valid_steps_ratio)
+    Evaluator-->>Developer: 7. 诊断定位报告：模型在第 4 步陷入“逻辑鬼打墙”，建议优化 Prompt 容错机制
+```
+
+---
+
+## 四、跟我做一遍：Agent 轨迹评测
 
 <PyRunner
   rows={40}
@@ -175,6 +260,46 @@ python labs/month09/m9l10_agent_eval/test_agent_eval.py
 - 你怎么知道你的 Agent "行不行"？只看最终结果，还是评了整条轨迹（过程/效率/合规）？
 - 你的 Agent 有完整 trace 吗？出错时能定位到哪一步、能复现吗？改了之后有回归对比吗？
 - 你线上盯 Agent 的成功率、步数/成本分布、违规告警吗？成本和步数波动你能及时发现吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在生产中，为什么评估 Agent 系统时仅仅评估“最终输出是否正确”是远远不够的？',
+      options: [
+        'A. 因为最终输出是由外部协调器硬编码拼接的，不能反映模型的真实水平',
+        'B. 因为最终输出的评测计算开销远高于中间轨迹的规则计算',
+        'C. 答案正确可能会掩盖中途的低效空转（如绕了50步）、违规调用（如调用了越权工具）或碰巧蒙对的逻辑错误，无法保证在其他输入下的稳定性和合规性',
+        'D. 轨迹日志 (Trace) 必须上传到公有云才能进行离线打分，存在安全隐患'
+      ],
+      answer: 2,
+      explain: '轨迹评估关注的是智能体的执行过程（Thought-Action-Observation）。只看结果容易在测试集上产生“假阳性”（比如模型绕弯碰巧给出正确答案，但实际上已经消耗了天量 token 并违反了安全红线），必须通过轨迹分析来暴露效率与安全风险。'
+    },
+    {
+      q: '关于智能体评估中的“步级指标 (Step-level)”与“整体指标 (Global)”，以下说法最合理的是？',
+      options: [
+        'A. 步级指标只适用于开发阶段，线上生产监控应当只看整体成功率指标',
+        'B. 整体指标（如任务成功率、平均步数）用于宏观衡量 Agent 整体系统的优劣与退化；步级指标（如有效步骤比、工具报错率）则用来定位具体问题出在哪个环节（如检索结果被忽略）',
+        'C. 只要大模型的参数量足够大，整体指标与步级指标会自动对齐，不需要分开评估',
+        'D. 步级指标专门用作安全护栏卡点，整体指标只用来计算费用预算'
+      ],
+      answer: 1,
+      explain: '整体指标是系统的“SLO / DORA”指标，说明系统是否健康；而步级指标则是“应用级 Metrics/Traces”，用于在系统不达标或 PR 回归测试失败时，精准诊断出是“检索未命中”还是“工具逻辑出错”导致的缺陷。'
+    },
+    {
+      q: '在 Agent 可观测工程中，如何正确理解“Trace 轨迹记录是可评测与可运维的前提”？',
+      options: [
+        'A. Trace 日志能够直接注入大模型，作为其非参数记忆的向量存储',
+        'B. 如果没有完整的 Trace（包括每步的 Thought/Action/Arg/Observation），Agent 对外部而言就是一个不可解释、不可调试的黑盒；有了 Trace 才能进行事后回放、LLM-judge 打分并实现故障定位与复现',
+        'C. 只要开启了 Trace，智能体的多步推理延迟就会自动缩短一半',
+        'D. Trace 的唯一目的就是将所有的运行时错误吞掉并降级退出'
+      ],
+      answer: 1,
+      explain: '智能体是多步、状态连贯的动态回路。如果没有记录每一步的 Trace，当最终任务失败或发生安全越权时，架构师无法像调试传统代码那样追踪其决策脉络。Trace 是让 AI 自主行动具备确定性监控与诊断能力的基石。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

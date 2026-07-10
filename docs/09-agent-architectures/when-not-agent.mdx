@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M9L11 · 何时不该用 Agent
 
@@ -39,7 +40,7 @@ Agent 很酷，容易让人想"什么都做成 Agent"。但每次把本可以更
 ### 基础：判断标准——步骤能不能预先确定
 
 核心判断只有一个问题：**这个任务的步骤，能不能在运行前就确定下来？**
-- **能确定** → 用 [固定 workflow](./agent-loop-basics)（步骤写死、每步可调 LLM）。确定、可控、可测、便宜。
+- **能确定** → 用 <GlossaryTerm term="Deterministic Workflow" definition="确定性工作流：步骤顺序由代码固化，跳转分支完全由程序分支或规则决定（即便步骤内部调用 LLM）。具备高可预测性、高效率且成本低廉。">确定性工作流 (Deterministic Workflow)</GlossaryTerm>（步骤写死、每步可调 LLM）。确定、可控、可测、便宜。
 - **不能确定**（下一步依赖运行时结果、路径因输入而异、无法预先枚举）→ 才用 Agent。
 - 例子："把这批文档分类归档"（步骤固定）→ workflow；"调查这个 bug 的根因"（每步查什么取决于上一步发现）→ Agent。
 
@@ -55,9 +56,9 @@ Agent 很酷，容易让人想"什么都做成 Agent"。但每次把本可以更
 ### 深入（选学）：Agent 真正适合的场景与判断陷阱
 
 - **Agent 真正的甜区**：任务**开放、步骤不可预知、需要根据中间结果动态决策**——如复杂调研、交互式排错、需要灵活组合多种工具的探索性任务。这类任务用固定 workflow 写不出来（你无法预先枚举所有路径），Agent 的自主性才真正创造价值。
-- **常见判断陷阱**：(1) **被"酷"诱惑**——Agent 听起来高级就上，忽略了简单方案更可靠；(2) **把固定流程硬做成 Agent**——明明步骤固定却让模型每步"自主决定"，徒增不确定和成本；(3) **低估 Agent 的工程负担**——以为搭个 loop 就行，忽略了停止/护栏/评测/可观测一大套。
-- **混合架构**：现实中常是 **workflow 为主干 + 局部用 Agent**——把确定的部分写成 workflow，只在真正需要自主决策的某一步用 Agent。而非整个系统都是一个大 Agent。这往往是最务实的架构。
-- **这是贯穿全课的判断力**：[M4 别过度设计](../design-patterns-lld/change-driven-design)、[M6L9 别盲目多云](../cloud-enterprise-industrial/multi-cloud)、[M8L10 别上来就 GraphRAG](../rag/advanced-rag)、[M9L8 简单问答别 agentic](./agentic-retrieval)——核心都是**按真实需求选最简单够用的方案，抵制"高级=更好"的诱惑**。Agent 是这个判断的终极考验，因为它最酷、最容易被滥用。
+- **常见判断陷阱**：(1) **被"酷"诱惑**——Agent 听起来高级就上，忽略了简单方案更可靠，极易引入 <GlossaryTerm term="Over-engineering" definition="过度工程：在系统设计中引入远超实际业务需求所需的复杂度。例如，在步骤完全可以写死的场景下强行使用自主智能体。">过度工程 (Over-engineering)</GlossaryTerm>；(2) **把固定流程硬做成 Agent**——明明步骤固定却让模型每步"自主决定"，徒增不确定和成本；(3) **低估 Agent 的工程负担**——以为搭个 loop 就行，忽略了停止/护栏/评测/可观测一大套。
+- **混合架构**：现实中常是 **workflow 为主干 + 局部用 Agent**——把确定的部分写成 workflow，只在真正需要自主决策的某一步用 <GlossaryTerm term="Hybrid Architecture" definition="混合架构：以确定性工作流（Workflow）为主干，仅在其中个别高度不确定、需自主探索的子节点嵌入微型智能体（Agent Loop）的系统设计范式，兼顾了可靠性与灵活性。">混合架构 (Hybrid Architecture)</GlossaryTerm>。而非整个系统都是一个大 Agent。这往往是最务实的架构。
+- **这是贯穿全课的判断力**：遵守 <GlossaryTerm term="YAGNI" definition="You Aren't Gonna Need It：极限编程核心原则，意为‘你不会需要它’。告诫架构师不要为尚未发生的复杂性进行过度预设。">YAGNI</GlossaryTerm> 与 <GlossaryTerm term="KISS" definition="Keep It Simple, Stupid：保持简单与愚蠢原则。倡导系统设计应尽可能简单，避免引入无必要的计算开销与不确定性。">KISS</GlossaryTerm> 原则，[M4 别过度设计](../design-patterns-lld/change-driven-design)、[M6L9 别盲目多云](../cloud-enterprise-industrial/multi-cloud)、[M8L10 别上来就 GraphRAG](../rag/advanced-rag)、[M9L8 简单问答别 agentic](./agentic-retrieval)——核心都是**按真实需求选最简单够用的方案，抵制"高级=更好"的诱惑**。Agent 是这个判断的终极考验，因为它最酷、最容易被滥用。
 
 <ResearchNote
   title="先问该不该用 Agent：能写死就别让模型自主"
@@ -67,7 +68,86 @@ Agent 很酷，容易让人想"什么都做成 Agent"。但每次把本可以更
   application="选方案按从简到繁：普通代码 → 单次调用 → 固定 workflow → Agent，能用前面的就别用后面的。判断标准：步骤能否预先确定（能则 workflow，不能则 Agent）。抵制“为 Agent 而 Agent”，警惕被酷诱惑、把固定流程硬做成 Agent、低估 Agent 工程负担。优先 workflow 主干 + 局部 Agent。"
 />
 
-## 三、跟我做一遍：workflow vs agent 决策
+## 三、架构决策与混合谱系图解 (Deep Dive Diagrams)
+
+本节通过可视化决策树与混合架构模型，理清在实际工程中何时应该抑制智能体的引入，转而使用更简单可靠的方案。
+
+### 1. 选型漏斗：方案决策树 (Decision Funnel)
+
+```mermaid
+graph TD
+    classDef select fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef opt fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    Start["新业务需求输入"] --> Q1{"1. 必须使用大模型吗？<br/>(规则/正则/传统 ML 是否足够？)"}
+    
+    Q1 -- "否" --> OptCode["方案一：普通代码/硬编码规则<br/>(100% 确定, 0成本)"]:::opt
+    Q1 -- "是" --> Q2{"2. 任务是单步的吗？<br/>(输入一次即刻输出)"}
+    
+    Q2 -- "是" --> OptSingle["方案二：单次 LLM 调用<br/>(简单, 延迟低, 易评测)"]:::opt
+    Q2 -- "否" --> Q3{"3. 执行步骤能否预先确定？<br/>(即使有分支逻辑，步骤是否已知？)"}
+    
+    Q3 -- "是" --> OptWorkflow["方案三：确定性 Workflow (RAG)<br/>(代码控制跳转, 极度稳健)"]:::opt
+    Q3 -- "否" --> OptAgent["方案四：自主 Agent Loop<br/>(模型自主决策, 不确定, 昂贵)"]:::opt
+
+    OptAgent --> MixCheck{"局部是否能降级为 Workflow？"}
+    MixCheck -- "可以" --> OptHybrid["方案五：混合架构 (Workflow + 局部 Agent)"]:::select
+    MixCheck -- "必须全自主" --> FinalAgent["纯 Agent 架构 (需全套护栏与评测)"]:::select
+```
+
+### 2. 折中谱系：自主性 vs 确定性与系统开销 (Tradeoff Spectrum)
+
+```mermaid
+graph TD
+    classDef factor fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+    classDef option fill:#eceff1,stroke:#607d8b,stroke-width:1.5px;
+
+    option1["普通代码 / 规则"]:::option
+    option2["单次 LLM 调用"]:::option
+    option3["确定性工作流 (Workflow)"]:::option
+    option4["智能体循环 (Agent Loop)"]:::option
+
+    option1 -->|最大化| Determinism["确定性与可靠性<br/>(100% 预测)"]:::factor
+    option4 -->|最大化| Autonomy["自主性与灵活性<br/>(处理未知路径)"]:::factor
+
+    option1 -->|最低| Cost["系统运行开销<br/>(延迟/Token 费用)"]:::factor
+    option4 -->|最高| Cost
+
+    option4 -->|最高| DevComplexity["工程复杂度<br/>(需配置停止/护栏/Trace)"]:::factor
+```
+
+### 3. 落地架构：Workflow 主干 + 局部 Agent 混合控制模型 (Hybrid Control Model)
+
+```mermaid
+graph LR
+    classDef workflow fill:#e1f5fe,stroke:#0288d1,stroke-width:1px;
+    classDef agent fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
+    classDef nodeStyle fill:#ffffff,stroke:#333333,stroke-width:1px;
+
+    subgraph MasterWorkflow [主控工作流 (Master Workflow - 代码驱动)]
+        NodeA["步骤A: 校验并读取输入"]:::nodeStyle --> NodeB["步骤B: 数据转换与切块"]:::nodeStyle
+        NodeB --> NodeC["步骤C: 调用向量检索"]:::nodeStyle
+        
+        NodeC --> NodeD{"步骤D: 是否存在多跳逻辑冲突？"}:::workflow
+        
+        NodeD -- "否: 简单事实" --> NodeE["步骤E: 单次 LLM 生成答案"]:::nodeStyle
+        NodeD -- "是: 开放排查" --> AgentNode["步骤F: 局部智能体子环 (Agent Loop)"]:::agent
+        
+        AgentNode --> NodeG["步骤G: 审计日志归档"]:::nodeStyle
+        NodeE --> NodeG
+    end
+
+    subgraph SubAgentLoop [智能体子系统 (Brain Loop)]
+        AgentNode --> Observe["观察状态 (Observe)"]
+        Observe --> LLMReason["模型决策 (Decide)"]
+        LLMReason --> Action["工具动作 (Act)"]
+        Action --> Observe
+    end
+```
+
+---
+
+## 四、跟我做一遍：workflow vs agent 决策
 
 <PyRunner
   rows={36}
@@ -170,6 +250,46 @@ Agent 热潮中一个反复出现的教训：很多团队把本是固定流程�
 - 你想做/在做的"Agent"，步骤其实是固定的吗？能不能用 workflow（更可靠便宜）？是不是被"酷"驱动了？
 - 你的系统里，哪些部分真的需要自主决策（→Agent）、哪些是固定流程（→workflow）？能不能做成"workflow 主干 + 局部 Agent"？
 - 你评估过 Agent 的成本了吗（不确定性、token、延迟、评测/护栏的工程负担）？值得吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '架构师在为多步多任务系统进行技术选型时，决定采用“确定性工作流 (Workflow)”还是“自主智能体 (Agent)”的首要判断原则是什么？',
+      options: [
+        'A. 业务的优先级与大模型开发团队的规模大小',
+        'B. 执行步骤和跳转分支在运行前能否被确定或枚举（能则坚决选用确定性工作流，只有在路径彻底未知、高度依赖运行时中间状态的开放排查时才用 Agent）',
+        'C. 智能体系统是否采用了最前沿的 Multi-Agent 多智能体通信协议',
+        'D. 任务执行中需要的外部 API 工具数量是否大于 10 个'
+      ],
+      answer: 1,
+      explain: '依据 YAGNI 和 KISS 原则，确定性工作流由于路径完全在代码控制之中，具有极高的可预测性、易测性与低运行成本。只要步骤能写死，哪怕其中某一步需要调用 LLM，都应该首选工作流，而非将控制权完全移交给自主循环。'
+    },
+    {
+      q: '关于“混合架构 (Hybrid Architecture)”在企业复杂业务中的应用落地，以下哪项描述最准确？',
+      options: [
+        'A. 混合架构主张通过大模型直接编排全局代码，排除传统开发者的逻辑干预',
+        'B. 混合架构主张以确定性工作流（Workflow）作为业务主干，仅在其中个别需要根据中间返回结果进行动态决策和探索的子步骤上，嵌入微型智能体循环（Agent Loop）',
+        'C. 混合架构仅指在同一个 Agent 中混合调用闭源和开源大模型进行思考',
+        'D. 混合架构指的是完全废除 LLM，用传统数据库存储过程代替工作流'
+      ],
+      answer: 1,
+      explain: '在真实的商业系统里，90% 以上的大流程（如订单处理、合规校验、财务结算）其骨架均应是高可靠、零幻觉的确定性工作流。只有在例如“诊断日志的未知故障”等个别高度灵活的分支，才适合接入局部 Agent 动作。这种组合实现了安全与灵活性的平衡。'
+    },
+    {
+      q: '为什么说“默认选择最简单够用的方案”是架构师对抗 AI 应用开发复杂度的核心纪律？',
+      options: [
+        'A. 因为使用简单的代码可以有效降低 GPU 的能耗与碳排放',
+        'B. 盲目使用 Agent 会带来极高工程负担（必须配置最大步数限制、人在回路审批、物理沙箱隔离、多维轨迹评测等安全防护），并伴随着高昂的 Token 费用和难以复现的幻觉缺陷',
+        'C. 大模型对简单的 Prompt 拥有天然的拒答倾向，因此必须用复杂结构强迫其回答',
+        'D. 只有使用最复杂的架构，才能保证系统在部署上线时不会发生并发拥堵'
+      ],
+      answer: 1,
+      explain: '自主智能体是 demo 最好看、生产最难做的一类系统。其天然的不确定性、难控制、高延迟和高开销，意味着它是解决未知多步问题的高成本“特种武器”，绝不应作为 AI 系统的默认配置。架构师应当从普通代码、单次调用、固定工作流，逐层向上评估，直到没有证据表明简单方案能行，再诉诸 Agent。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

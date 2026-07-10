@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M9L9 · Agent 护栏与安全
 
@@ -46,13 +48,13 @@ Agent 的安全风险比纯 LLM 高一个量级：
 ### 进阶：沙箱与防注入
 
 - <GlossaryTerm term="Sandboxing" definition="沙箱：把 Agent 的执行环境隔离起来——限制它能访问的文件、网络、系统资源，即使它（被诱导）尝试越权或破坏，影响也被关在沙箱内。是 Agent 安全的纵深防御。">沙箱（sandboxing）</GlossaryTerm>：把 Agent 的执行环境隔离——限制能访问的文件、网络、系统资源（[呼应 M6L1 容器隔离、M5L8 舱壁](./tools-and-boundaries)）。即使 Agent 被诱导做坏事，破坏也被关在沙箱里。尤其当 Agent 能执行代码/命令时，沙箱是必须的。
-- <GlossaryTerm term="Prompt Injection" definition="提示注入：攻击者在 Agent 会读到的内容里（用户输入、网页、文档、工具返回）藏入恶意指令，企图劫持 Agent 去执行非预期的危险操作。是 Agent 特有的重要安全威胁。">prompt injection（提示注入）</GlossaryTerm>：攻击者在 Agent 会读到的内容（用户输入、检索到的网页/文档、工具返回）里藏恶意指令，劫持 Agent。防御：**把“数据”和“指令”隔离**（[M7L4](../llm-systems/prompting-basics)）、对 Agent 的动作做独立的[权限/校验（M9L2）](./tools-and-boundaries)（不因为“是 Agent 决定的”就放行）、危险动作人确认——核心是**不让外部内容能直接触发危险动作**。
+- <GlossaryTerm term="Prompt Injection" definition="提示注入：攻击者在 Agent 会读到的内容里（用户输入、网页、文档、工具返回）藏入恶意指令，企图劫持 Agent 去执行非预期的危险操作。是 Agent 特有的重要安全威胁。">prompt injection（提示注入）</GlossaryTerm>：攻击者在 Agent 会读到的内容（用户输入、检索到的网页/文档、工具返回）里藏恶意指令，劫持 Agent。当恶意的 Prompt 藏于 Agent 调取读取的网页、文档或第三方 API 返回数据中时，这被称为 **<GlossaryTerm term="Indirect Prompt Injection" definition="间接提示注入：攻击者不直接与 LLM 交互，而是通过把恶意指令藏在 Agent 会读取的外部文档、网页或第三方 API 返回数据中，当 Agent 执行检索工具读取这些数据时被动态劫持的攻击方式。">间接提示注入 (Indirect Prompt Injection)</GlossaryTerm>**。防御：**把“数据”和“指令”隔离**（[M7L4](../llm-systems/prompting-basics)）、对 Agent 的动作做独立的[权限/校验（M9L2）](./tools-and-boundaries)（不因为“是 Agent 决定的”就放行）、危险动作人确认——核心是**不让外部内容能直接触发危险动作**。
 
 ### 深入（选学）：分层安全与“最小信任”
 
-- **纵深防御**：单一防线会被突破，要多层叠加——工具最小权限（[M9L2](./tools-and-boundaries)）+ 危险动作人审批 + 沙箱隔离 + 防注入 + [停止条件/预算（M9L4）](./stopping-budget) + [审计可追溯](./tools-and-boundaries) + [评测（M9L10）](./agent-evaluation)。任一层都不假设其它层完美（[呼应 M5L8 分层防护](../core-components/bulkhead-isolation)）。
+- **<GlossaryTerm term="Defense in Depth" definition="纵深防御：一种网络安全策略，主张在系统不同层面叠加多种独立且互补的防线（如沙箱、审批、校验），使得单个防御点的崩溃不会导致全局安全失守。">纵深防御 (Defense in Depth)</GlossaryTerm>**：单一防线会被突破，要多层叠加——工具 **<GlossaryTerm term="Principle of Least Privilege" definition="最小特权原则 (PoLP)：信息安全基本原则，规定系统中的任何主体（包括智能体、工具）只应被授予其完成特定任务所必需的最小系统访问权限，决不能为了方便授予多余权限。">最小特权原则 (Principle of Least Privilege)</GlossaryTerm>** + 危险动作人审批 + 沙箱隔离 + 防注入 + [停止条件/预算（M9L4）](./stopping-budget) + [审计可追溯](./tools-and-boundaries) + [评测（M9L10）](./agent-evaluation)。任一层都不假设其它层完美（[呼应 M5L8 分层防护](../core-components/bulkhead-isolation)）。
 - **对 Agent 最小信任**：默认**不信任** Agent 的任何危险决策——它说要删库，不是直接删，而是走审批/校验/沙箱。把它当一个“很能干但可能犯错、可能被策反的实习生”：能放手做的让它做，碰钱碰数据碰对外的必须有人把关。
-- **爆炸半径控制**：万一某层失守，损失要被限制在最小范围——最小权限 + 沙箱 + 分单元（[cell，M5L8](../core-components/bulkhead-isolation)）让单个 Agent 出事不波及全局。
+- **<GlossaryTerm term="Blast Radius" definition="爆炸半径：一个安全事故、系统漏洞或局部故障发生时，对整个系统和业务资源所能造成的最大影响与破坏范围。">爆炸半径 (Blast Radius)</GlossaryTerm>** 控制：万一某层失守，损失要被限制在最小范围——最小权限 + 沙箱 + 分单元（[cell，M5L8](../core-components/bulkhead-isolation)）让单个 Agent 出事不波及全局。
 - **审计是安全的最后一环**：所有动作（尤其危险的、被拦的）都要[留痕（M9L2）](./tools-and-boundaries)，出事能追溯、能复盘、能改进。
 - **安全 vs 自主的权衡**：护栏越严，Agent 越安全但越不灵活（事事审批就退化成 workflow）。要按**动作的后果**精准设防——危险的严管、安全的放手，而非一刀切。这是判断力。
 
@@ -64,7 +66,94 @@ Agent 的安全风险比纯 LLM 高一个量级：
   application="给生产 Agent 设计分层安全：动作按后果分级（安全自主/可逆审计/危险人审批）；能执行代码/命令的必须沙箱；防 prompt injection（隔离数据与指令、动作独立校验、危险动作人确认）；最小权限 + 停止预算 + 全程审计。按动作后果精准设防，别一刀切。"
 />
 
-## 三、跟我做一遍：危险动作分级 + 审批
+## 三、智能体安全与人在回路图解 (Deep Dive Diagrams)
+
+本节展示智能体在运行期间如何将多层防护、人在回路审批和输入防御工程有机整合为稳固的防线。
+
+### 1. 结构全景：Agent 纵深防御分层安全拓扑
+
+```mermaid
+graph TD
+    classDef input fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
+    classDef gate fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef sandbox fill:#ffebee,stroke:#c62828,stroke-width:2px;
+    classDef audit fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+
+    UserQuery["1. 外部不可信输入<br/>(User / Document / Web)"]:::input --> LLM["2. 大脑决策层<br/>(LLM Reasoning & Output)"]
+    
+    LLM -->|3. 发起动作指令| GateKeeper["3. 安全拦截网关<br/>(Policy Gatekeeper)"]:::gate
+    
+    subgraph ControlGate [安全边界与审批层]
+        GateKeeper -->|敏感/高危动作| HITL["人在回路网关 (HITL Approval)"]:::gate
+        GateKeeper -->|普通/只读动作| ExecuteDirect["放行直连"]
+    end
+
+    HITL -->|4. 人工驳回| Terminate["拒绝动作 (Reject & Log)"]
+    HITL -->|4. 人工批准| SandboxExecutor["5. 沙箱执行器<br/>(Docker Sandbox)"]:::sandbox
+    ExecuteDirect --> SandboxExecutor
+    
+    subgraph SandboxEnv [物理沙箱隔离层]
+        SandboxExecutor -->|最小特权权限| RealSystem["6. 物理系统 API / 敏感资源"]:::sandbox
+        SandboxExecutor -->|文件系统隔离| TempDir["只读/临时目录"]
+    end
+    
+    SandboxExecutor -.->|7. 行动审计留痕| AuditLog["7. 统一审计日志 (Auditor)"]:::audit
+```
+
+### 2. 时序全景：危险动作人在回路审批 (Human-in-the-Loop) 时序
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Agent as 智能体 (Agent Loop)
+    participant Host as 编排协调器 (Host Engine)
+    participant Gate as 策略网关 (Gatekeeper)
+    participant Human as 人工审批端 (Human HITL)
+    participant Sandbox as 沙箱/真实环境
+
+    Agent->>Host: 1. 拟执行动作: (rollback, "production-db")
+    Host->>Gate: 2. 检查权限与动作风险
+    Note over Gate: 识别到 rollback 属 Dangerous 等级
+    Gate-->>Host: 3. 拦截：必须触发人在回路审批
+    Host->>Human: 4. 挂起任务，推送审批请求 (拟运行: rollback)
+    Note over Human: 操作员评估变更范围与风险
+    alt 审批通过 (Approved)
+        Human-->>Host: 5a. 批准执行 (Approved: true)
+        Host->>Sandbox: 6a. 授权在容器沙箱中运行 rollback
+        Sandbox-->>Host: 7a. 返回执行结果: "回滚成功"
+        Host->>Agent: 8a. 回灌 Observation: "已回滚" 并继续 Loop
+    else 审批拒绝 (Rejected)
+        Human-->>Host: 5b. 拒绝执行 (Approved: false)
+        Host->>Agent: 6b. 回灌 Error Observation: "操作被人工驳回"
+        Note over Agent: 自主反思并尝试替代路线
+    end
+```
+
+### 3. 防御流向：间接提示注入 (Indirect Prompt Injection) 的攻击与阻断
+
+```mermaid
+graph LR
+    classDef attacker fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+    classDef agent fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+
+    Attacker["1. 恶意网页/文档<br/>(含对抗指令: '忽略原任务...')"]:::attacker -->|2. 被爬取/检索| VectorDB["3. 向量库/检索工具<br/>(Retrieved Context)"]
+    VectorDB -->|4. 带入上下文| LLM["4. 大脑决策层<br/>(LLM Context Window)"]:::agent
+    
+    LLM -->|5. 决策失控 (被诱导越权)| ExecuteDanger["6. 危险指令: delete_record"]:::attacker
+    
+    subgraph Defenses [硬性防御三道哨卡]
+        ExecuteDanger -->|哨卡一: 隔离数据与指令| ParseFilter["指令独立解析器"]:::safe
+        ParseFilter -->|哨卡二: 行为网关校验| RiskChecker["Policy Gatekeeper"]:::safe
+        RiskChecker -->|哨卡三: 人在回路确认| HITLGate["HITL 审批"]:::safe
+    end
+
+    HITLGate -->|7. 阻断并告警| Stop["安全终止 (Audit & Alert)"]:::safe
+```
+
+---
+
+## 四、跟我做一遍：危险动作分级 + 审批
 
 <PyRunner
   rows={38}
@@ -98,7 +187,7 @@ print("危险动作被拦去人工审批")`}
 
 只读动作自主执行、可逆动作执行+审计、危险动作必须人审批（且未知动作按最小信任当危险处理）——这就是按后果分级的护栏。**试试**：给 send_email 区分"内部"和"外部"（外部更危险）；想想真实系统里"审批"怎么呈现给人（展示拟执行的动作 + 影响 + 一键批准/拒绝）。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month09/m9l9_guardrails/`：
 
@@ -174,6 +263,46 @@ Agent 时代的标志性新威胁是 prompt injection：攻击者不直接攻击
 - 你的 Agent 会读外部内容（用户输入、网页、检索文档、工具返回）吗？被注入恶意指令会怎样？数据和指令隔离了吗？
 - 万一某层防线失守（被注入 + 越权），损失会被限制在多小范围？有沙箱、最小权限、审计吗？
 
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 Agent 系统安全设计中，为什么不能把安全防线仅仅寄托在 System Prompt 的约束上（例如写上“你是一个遵纪守法的 AI，不能删库”）？',
+      options: [
+        'A. 因为系统提示词会被向量检索所覆盖，导致指令失效',
+        'B. 因为大模型本质上是非确定性的，它分不清什么是“只读数据”和“系统指令”，一旦大模型读取到夹带恶意指令的外部输入（Prompt Injection），很容易发生指令覆盖和越权动作，必须由外围工程护栏提供硬性约束',
+        'C. 因为 System Prompt 在大模型运行超过 10 步后就会被自动清空',
+        'D. 因为只有使用 TypeScript 编写的提示词才能保证安全'
+      ],
+      answer: 1,
+      explain: '由于 LLM 大脑的黑盒本质与数据指令混合（Data-Instruction Mixed）的天然缺陷，任何提示词层面的限制都可以通过对抗性 Prompt（如间接提示注入）被攻破。真正的安全来自于硬性的工程机制（人在回路、沙箱隔离、校验过滤）。'
+    },
+    {
+      q: '当 Agent 需要调用执行代码、改写系统配置或下发终端命令等危险工具时，架构师首选的运行时安全保障手段是什么？',
+      options: [
+        'A. 提高显卡物理显存，减少模型计算时的随机噪声',
+        'B. 将代码以字符串形式直接在宿主机的主系统进程中执行',
+        'C. 建立完全物理隔离或隔离网络与挂载卷的容器沙箱（Docker Sandbox），将执行环境独立出来，把破坏范围死死框定在沙箱内部（控制爆炸半径）',
+        'D. 仅仅限制单次 shell 命令执行的字数长度'
+      ],
+      answer: 2,
+      explain: '执行可执行脚本或终端命令属于最高危等级动作。如果不做运行时的物理沙箱（Sandboxing）隔离，被劫持的 Agent 可以完全控制宿主机的操作系统。必须建立只读挂载、网络受限、只读文件系统的轻量级 Docker 隔离环境。'
+    },
+    {
+      q: '以下关于“最小特权原则 (PoLP)”应用在 Agent 工具设计中的场景，哪一项是最合规的？',
+      options: [
+        'A. 为了防止报错，直接给 Agent 的数据库工具配置具有读写删权限的 root 账号',
+        'B. 把所有的 API 工具和读写工具全部挂载在一个统一的大 token 证书下',
+        'C. 对查询订单的 Agent 工具只授予只读视图权限，将敏感的转账/修改密码工具独立出来、配以严格的审计留痕且必须触发人在回路（HITL）审批',
+        'D. 允许大模型在执行过程中自发创建并授权新的数据库角色'
+      ],
+      answer: 2,
+      explain: '最小特权原则要求任何动作和工具都应只具备完成当下任务所需的最低极限权限。只读接口绝不授予副作用（Write/Delete）权限，遇到必须执行副作用的步骤时则强制转为“人在回路”审批，将越权事件的发生概率降至零。'
+    }
+  ]}
+/>
+
 ## 自检清单
 
 - [ ] 我能按后果给 Agent 动作分级、危险动作走人审批。
@@ -183,9 +312,9 @@ Agent 时代的标志性新威胁是 prompt injection：攻击者不直接攻击
 
 ## 常见误解
 
-- **"提示模型别做危险操作就行"**：模型会犯错、会被注入劫持；危险动作要硬性审批/校验。
-- **"Agent 安全和 LLM 安全一样"**：Agent 会自主行动，风险质变，要加审批/沙箱/防注入。
-- **"防注入是小概率"**：会读外部内容的 Agent 注入是头号威胁(OWASP)，必须防。
+- **“只要在系统提示中写上：‘绝对不能执行 delete 动作’，Agent 就能在所有场景防删库”**：大模型没有概念层面的“硬护栏”，所有的文本对模型而言都是语义权重。在遭遇精妙设计的间接提示注入（Indirect Prompt Injection）后，模型会忽略最初的安全指导。真正的安全护栏必须由外围代码（如 Policy Gatekeeper 和 HITL 审批器）作为物理卡点硬性拦截。
+- **“人在回路（HITL）会严重降低智能体的运作效率，应当用一个微调后的‘安全裁判 LLM’来代替人工审批”**：这属于安全链条上的“循环论证”。用来当护栏的 LLM 同样存在幻觉与被注入劫持的缺陷，这相当于让“另一个实习生”来把关高风险决策。对于动钱、删库、对外的不可逆动作，绝对不能放手让大模型独立完成自检，人在回路是工程合规的最后生命线。
+- **“我们使用了微调后的闭源大模型，因此天然具备极高的安全防护力，不需要做繁琐的沙箱”**：模型的先进性不等于物理隔离能力。大模型代码执行（Code Execution）只要能够直接调用 `os.system()`，任何小漏洞都会转化为操作系统最高权限的攻破。只要工具库包含执行代码或 shell，物理容器沙箱隔离（Sandboxing）就是不可妥协的必选项。
 
 ## 延伸阅读
 

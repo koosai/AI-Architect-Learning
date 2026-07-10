@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M9L12 · Capstone：构建一个可靠 Agent
 
@@ -26,26 +27,26 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ## 一、需求：一个“运维排查助手”Agent
 
-做一个帮 SRE 排查线上问题的 Agent：给定一个告警，它自主地查日志、查指标、查依赖状态，定位可能的根因、给出处置建议。这是个**适合用 Agent**的任务（[M9L11](./when-not-agent)）——因为“下一步查什么”取决于上一步的发现，步骤不可预先确定。但它也**高风险**——会接触生产系统、可能建议危险操作。正好考验本月全部能力。
+做一个帮 SRE 排查线上问题的 <GlossaryTerm term="SRE Agent" definition="运维智能体：专为站点可靠性工程 (SRE) 场景设计的智能体。能够自动执行故障指标查询、日志检索、依赖检查以及敏感变更等任务，以加快故障诊断与自愈。">SRE Agent (运维智能体)</GlossaryTerm>：给定一个告警，它自主地查日志、查指标、查依赖状态，定位可能的根因、给出处置建议。这是个**适合用 Agent**的任务（[M9L11](./when-not-agent)）——因为“下一步查什么”取决于上一步的发现，步骤不可预先确定。但它也**高风险**——会接触生产系统、可能建议危险操作。正好考验本月全部能力。
 
 ## 二、组装一个可靠 Agent
 
 ### 基础：受控循环 + 工具边界
 
 - **agent loop（[M9L1](./agent-loop-basics)）**：observe（告警 + 已查到的）→ decide（[ReAct M9L3](./react-pattern)：想下一步查什么）→ act（调工具）→ observe，循环推进。
-- **工具边界（[M9L2](./tools-and-boundaries)）**：查日志/指标/状态是只读工具（自主调）；重启服务/改配置是[危险工具（M9L9 需人审批）](./agent-guardrails)。每个工具有 schema/权限/预算/审计。
+- **工具边界（[M9L2](./tools-and-boundaries)）**：查日志/指标/状态是只读工具（自主调）；重启服务/改配置是危险工具（M9L9 需经由 <GlossaryTerm term="HITL Gatekeeper" definition="人在回路网关：在智能体执行敏感或不可逆副作用动作前触发拦截，必须由操作员在控制台进行人工审核与二次授权后，方才释放执行权限的拦截器。">人在回路网关 (HITL Gatekeeper)</GlossaryTerm> 审核）。每个工具有 schema/权限/预算/审计。
 
 ### 进阶：约束与能力
 
-- **停止/预算（[M9L4](./stopping-budget)）**：最大步数 + 循环检测 + 成本上限——防止反复查同一个、烧穿。
-- **记忆（[M9L6](./agent-memory)）**：scratchpad 记住告警、已查的、发现的——不重复查、不忘目标。
+- **停止/预算（[M9L4](./stopping-budget)）**：最大步数 + 循环检测 + 成本上限与 <GlossaryTerm term="Budget constraints" definition="预算约束：通过对智能体的最大执行步数（Max Steps）和消耗的 Token/费用进行计数，一旦超出预设阈值即强行熔断停止，防止死循环或账单烧穿的硬性工程限制。">预算约束 (Budget constraints)</GlossaryTerm>——防止反复查同一个、烧穿。
+- **记忆（[M9L6](./agent-memory)）**：<GlossaryTerm term="Memory Scratchpad" definition="记忆草稿纸：智能体运行时维护的结构化上下文存储。用于暂存当前任务的目标、已执行的历史工具动作（done）以及从工具中提取出的最新事实发现（findings）。">记忆草稿纸 (Memory Scratchpad)</GlossaryTerm> 记住告警、已查的、发现的——不重复查、不忘目标。
 - **反思（[M9L7](./reflection-correction)）**：某次查询无果/异常时，反思调整查询策略，而非无脑重复。
 - **护栏（[M9L9](./agent-guardrails)）**：处置建议里的危险操作（重启/回滚/删除）必须人审批；防注入（日志里的恶意内容不能劫持 Agent）。
 
 ### 深入（选学）：评测、可观测与“先判断该不该用”
 
 - **轨迹评测（[M9L10](./agent-evaluation)）**：评估排查轨迹——是否定位到根因、用了几步、有没有违规查/越权、有没有空转。建评测集（历史故障）跑回归。
-- **可观测**：全程 trace（每步查了什么、发现什么、建议什么），出问题能复盘（[呼应 M6L7](../cloud-enterprise-industrial/observability-advanced)）。
+- **可观测**：全程 <GlossaryTerm term="Run trace" definition="运行轨迹：智能体在 ODA 循环中执行的 Thought、Action 和 Observation 步骤及其耗时、成本的完整序列记录，用于回归评测和白盒调试。">运行轨迹 (Run trace)</GlossaryTerm>（每步查了什么、发现什么、建议什么），出问题能复盘（[呼应 M6L7](../cloud-enterprise-industrial/observability-advanced)）。
 - **它就是 M7 可靠管道 + 自主循环**：[M7L12 的单次可靠管道](../llm-systems/capstone-llm-app) 处理“一次调用”，Agent 是把它放进**受控循环**并加上工具/记忆/反思/护栏——每一环都在约束自主性的风险。整条 Agent = LLM 决策大脑 + 一圈工程约束。
 - **先判断该不该用（[M9L11](./when-not-agent)）**：设计任何 Agent 前，先确认这任务真需要自主决策（排查确实需要——边查边定）。如果步骤固定，就别做成 Agent。
 
@@ -57,7 +58,105 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="设计 Agent：先确认需自主决策（否则用 workflow）；搭受控 loop + ReAct；工具按只读/副作用分级设边界；配停止/预算/循环检测；用 scratchpad 记忆、反思纠错；危险动作人审批 + 防注入 + 沙箱；全程 trace + 轨迹评测 + 线上观测。智能在模型，可靠性在这一圈工程。"
 />
 
-## 三、跟我做一遍：可靠 Agent 骨架
+## 三、运维排查智能体架构图解 (Deep Dive Diagrams)
+
+本节通过架构拓扑与交互时序图，展示如何将本月所学的各个安全与效能约束组件拼装为一个生产就绪的“运维排查助手”智能体。
+
+### 1. 结构全景：SRE 运维排查助手架构
+
+```mermaid
+graph TD
+    classDef brain fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
+    classDef state fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+    classDef tool fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef monitor fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+
+    UserAlert["1. SRE 告警输入<br/>(e.g., API 5xx 升高)"] --> Orchestrator["2. 编排协调器 (Host Engine)"]
+    
+    subgraph AgentBrain [智能体大脑与状态]
+        Orchestrator <-->|3. 读取/回灌状态| Scratchpad["3. 记忆草稿纸 (Scratchpad)<br/>- 待解决告警 (Alert)<br/>- 已执行动作 (done)<br/>- 已有发现 (findings)"]:::state
+        Orchestrator -->|4. 组装 Context 发送| LLMBrain["4. 大脑决策层 (ReAct LLM)"]:::brain
+        LLMBrain -->|5. 返回 Thought 与 Action| Orchestrator
+    end
+
+    subgraph ProtectiveShield [安全控制与边界]
+        Orchestrator -->|6. 校验与路由动作| Gatekeeper["6. 策略门禁网关"]
+        Gatekeeper -->|A. 只读动作<br/>(query_logs/query_metrics)| ReadTools["只读工具集"]:::tool
+        Gatekeeper -->|B. 危险副作用动作<br/>(restart_service/rollback)| HITL["人在回路审批网 (HITL)"]
+    end
+
+    HITL -->|驳回| Terminate["安全中止并提示"]
+    HITL -->|批准| WriteTools["敏感动作执行器"]:::tool
+
+    ReadTools & WriteTools -->|7. 返回运行结果| Orchestrator
+    
+    Orchestrator -.->|8. 记录执行轨迹| Tracer["8. 运行日志收集与评测 (Tracer)"]:::monitor
+```
+
+### 2. 时序全景：只读排查与危险动作拦截审批
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Agent as 智能体决策回路
+    participant Host as 编排引擎 (Host Engine)
+    participant HITL as 人在回路审批网 (HITL)
+    participant Logs as 生产日志系统 (Logs API)
+    participant Shell as 敏感控制终端 (Shell)
+
+    Host->>Agent: 1. 输入故障目标: "DB CPU 95%"
+    Agent->>Host: 2. 拟执行只读排查: query_logs("DB CPU 95%")
+    Note over Host: 门禁判定 query_logs 为 Safe 只读动作
+    Host->>Logs: 3. 运行日志查询
+    Logs-->>Host: 4. 返回 "大量超时日志且连接池占满"
+    Host->>Agent: 5. 更新 Observation
+    
+    Agent->>Host: 6. 拟执行高危处置: restart_service("database")
+    Note over Host: 门禁判定 restart_service 为 Dangerous 动作
+    Host->>HITL: 7. 挂起任务，推送人工审批通知
+    Note over HITL: 操作员查阅前 5 步排查日志，确认重启必要性
+    alt 操作员批准重启 (Approve)
+        HITL-->>Host: 8a. 审批通过 (Approved: true)
+        Host->>Shell: 9a. 安全下发重启数据库容器
+        Shell-->>Host: 10a. 返回 "DB 已成功重启"
+        Host->>Agent: 11a. 回灌 Observation 并最终 conclude 退出
+    else 操作员拒绝重启 (Reject)
+        HITL-->>Host: 8b. 审批拒绝 (Approved: false)
+        Host->>Agent: 9b. 回灌 Error Observation: "重启操作被操作员驳回"
+        Note over Agent: 智能体反思，寻找其他容错/限流策略
+    end
+```
+
+### 3. 控制回路：智能体自适应控制约束网
+
+```mermaid
+graph LR
+    classDef check fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef alert fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    StartStep["每一轮 ODA 循环起点"] --> AuditBudget{"1. 预算审计<br/>(spent >= budget?)"}:::check
+    
+    AuditBudget -->|是| StopBudget["2a. 触发预算超限安全熔断<br/>(STOP_BUDGET)"]:::alert
+    AuditBudget -->|否| Decision{"2b. 模型进行决策 (Decide)"}
+    
+    Decision -->|判定 conclude| Done["3a. 达成目标正常退出<br/>(DONE)"]
+    Decision -->|判定 Action 动作| AuditDone{"3b. 记忆去重审计<br/>(action in done?)"}:::check
+    
+    AuditDone -->|是| SkipStep["4a. 拦截重复执行，跳过动作"]
+    SkipStep --> StartStep
+    
+    AuditDone -->|否| AuditDanger{"4b. 动作风险评级"}:::check
+    
+    AuditDanger -->|危险且未审批| HITLCheck["5a. 触发人在回路拦截<br/>(NEEDS_APPROVAL)"]:::alert
+    AuditDanger -->|安全或已审批| Execute["5b. 运行工具动作 (Act)"]
+    
+    Execute --> UpdatePad["6. 更新记忆 & 累加预算 (spent++)"]
+    UpdatePad --> StartStep
+```
+
+---
+
+## 四、跟我做一遍：可靠 Agent 骨架
 
 <PyRunner
   rows={42}
@@ -181,6 +280,46 @@ python labs/month09/m9l12_agent/test_agent.py
 - 给你想做的 Agent，先判断：它真需要自主决策吗（还是该 workflow）？如果需要，画出它的完整约束圈。
 - 每一道约束（工具边界/停止/护栏/记忆/反思/评测）你都设计了吗？哪一环现在是缺的？
 - 最坏情况：模型决策错 + 被注入 + 陷入循环同时发生，你的 Agent 会造成多大损失？每一种你都框住了吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '以下关于“生产级可靠智能体 (Production-ready Agent)”与“演示版智能体 (Demo Agent)”的工程差异，哪项描述最贴切？',
+      options: [
+        'A. 演示版使用 Python 实现，生产级必须改用 C++ 重写所有底层 ODA 循环',
+        'B. 演示版通常是仅包含一个裸 Loop 的原型，任由模型自由发挥；而生产级则在 Loop 外部包裹了工具边界、最大步数/预算、人在回路审批、防注入及轨迹回归评测等一整圈硬性工程约束',
+        'C. 生产级智能体为了适应无限多跳场景，必须废除最大步数（Max Steps）的兜底限制',
+        'D. 演示版主要运行在客户端浏览器，生产级只能在移动端 App 中运行'
+      ],
+      answer: 1,
+      explain: '“智能在模型，可靠在工程”。大模型本身无法提供 100% 的确定性与安全隔离。要将 Agent 推向生产环境，核心工作并非调试 Prompt 让它更聪明，而是用传统的工程卡点、沙箱、审批网关将其最坏影响牢牢框死。'
+    },
+    {
+      q: '在运维排查智能体 (SRE Agent) 中，为什么必须把工具区分为“只读”和“副作用 (Dangerous)”两类，并对后者强制引入人在回路审批？',
+      options: [
+        'A. 限制只读工具的并发查询数，防止将监控系统后台流量打满',
+        'B. 只读工具（如查指标/日志）没有不可逆的物理破坏力，可授权自主运行；而重启、回滚、改配置等敏感工具一旦发生决策失控（幻觉/提示词注入）会造成灾难性事故，必须强制将最终确认权留给人',
+        'C. 为了防止只读工具的结果被智能体篡改，必须人工审核每一条日志的真伪',
+        'D. 只要工具带了 Dangerous 标签，大模型在调用时就会自动降低 Sampling Temperature'
+      ],
+      answer: 1,
+      explain: '依据最小特权与爆炸半径控制原则，智能体可以自主收集环境信息进行“思考”。但任何对物理世界产生副作用（特别是写、改、删、发）的指令，属于高风险卡点，不经 HITL Gatekeeper 拦截将极易造成生产事故。'
+    },
+    {
+      q: '结合本章 Capstone，如何理解传统系统工程原则在 AI 智能体时代的作用？',
+      options: [
+        'A. 传统的软件工程规范（如输入校验、容器沙箱隔离、日志审计、CI/CD 回归测试）已完全过时，AI 应用需要重新发明技术栈',
+        'B. 传统工程原则（如输入校验、沙箱隔离、故障容错、日志审计、最小特权和回归评测）在智能体时代不仅没过时，反而由于模型自身的黑盒不确定性而变得更为关键，是驯服 AI 的生命线',
+        'C. 只要模型能力足够强（如实现通用人工智能 AGI），所有外围的工程拦截机制都将变得多余并被废除',
+        'D. 只有使用 TypeScript 这种强类型语言，传统的系统设计模式才能被运用到大模型应用中'
+      ],
+      answer: 1,
+      explain: '架构师的职责就是将不确定、不可靠的组件设计为可靠可控的系统。智能体本身虽然具备极强的灵活性和决策力，但在面对数据注入攻击、逻辑鬼打墙和越权行为时，依然必须通过传统的沙箱隔离（Sandbox）、HITL、输入验证和 CI PR 门禁进行立体防御。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
