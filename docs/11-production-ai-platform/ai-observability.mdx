@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M11L4 · AI 可观测性
 
@@ -62,7 +64,94 @@ AI 可观测就是消除这些黑盒——**让一次请求的内部全过程可
   application="给 AI 系统装 trace:每个检索/调用/工具一个 span,记 token/成本/延迟/质量。加 AI 指标维度(成本、质量分、TTFT)。用 Metrics->Traces->Logs 从异常查到根因。trace 数据回流评估集。统一 trace id 贯穿全链,采样脱敏。平台统一 AI 可观测口径与看板。"
 />
 
-## 三、跟我做一遍：给一次 RAG 请求装 trace
+## 三、AI 可观测性图解 (Deep Dive Diagrams)
+
+本节展示 AI 可观测三支柱的职责划分、Trace ID 跨服务传递控制流，以及可观测指标采样率与开销的折中选型。
+
+### 1. 结构全景：AI 可观测性三支柱模型 (Metrics -> Traces -> Logs)
+
+```mermaid
+graph TD
+    classDef metrics fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef traces fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef logs fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+
+    subgraph ObservabilityPillars [可观测三支柱]
+        Metrics["1. 度量指标 (Metrics)"]:::metrics
+        Traces["2. 链路追踪 (Traces)"]:::traces
+        Logs["3. 详细日志 (Logs)"]:::logs
+
+        Metrics -->|展现| MetricsNote["SLO 告警 / P95 耗时 / Token 单价<br/>(发现整体系统异常)"]
+        Traces -->|展现| TracesNote["跨服务 Trace ID / 耗时占比 / 检索与模型 Span<br/>(精确定位是哪一步故障)"]
+        Logs -->|展现| LogsNote["具体 Prompt / JSON 响应 / Tool Params<br/>(核查具体上下文和幻觉根因)"]
+    end
+```
+
+### 2. 控制流程：分布式 Trace ID 的级联传播与调用链
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as 客户端 (App)
+    participant GW as API 网关 [Trace ID: t-100]
+    participant Vector as 向量检索引擎 [Span ID: s-1]
+    participant LLM as 大模型 API [Span ID: s-2]
+    participant Tool as 天气查询工具 [Span ID: s-3]
+
+    App->>GW: 1. 发起请求 "深圳今天天气" (Inject Header)
+    Note over GW: 生成 Trace ID = t-100
+    GW->>Vector: 2. 执行向量检索 (Context retrieval) [Parent: t-100, Span: s-1]
+    Vector-->>GW: 3. 返回匹配的文档
+    GW->>LLM: 4. 发起推理请求 (System + Doc context) [Parent: t-100, Span: s-2]
+    Note over LLM: 决策需要天气工具
+    LLM->>Tool: 5. 路由执行天气查询 [Parent: t-100, Span: s-3]
+    Tool-->>LLM: 6. 返回天气数据 "深圳市雨天"
+    LLM-->>GW: 7. 生成响应结果
+    GW-->>App: 8. 返回最终响应
+```
+
+### 3. 折中谱系：数据采集与采样率策略折中
+
+```mermaid
+graph TD
+    classDef full fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+    classDef sample fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    TraceStrategy["Trace 采集存储策略"]
+    
+    TraceStrategy -->|策略一| FullTrace["全量录制 (100% Trace & Prompt)"]:::full
+    TraceStrategy -->|策略二| SampleTrace["基于规则/概率采样 (如 10% + 异常 100%)"]:::sample
+
+    FullTrace --> FullNote["优势: 绝不丢失任何 Bad Case, 审计极度方便<br/>劣势: 存储费用爆炸, 面临极高的敏感隐私泄露风险"]
+    SampleTrace --> SampleNote["优势: 存储开销大幅下降, 隐私风险可控<br/>劣势: 可能会漏掉偶发且未引发系统报错的细微幻觉 Bad Case"]
+```
+
+### 4. 步骤流演示：根因排查轨迹
+
+<StepFlow
+  steps={[
+    {
+      title: 'Metrics 报警',
+      desc: 'SLO 监控检测到 P95 延迟超过 3s 或 Token 成本突增，触发通知。'
+    },
+    {
+      title: 'Traces 下钻',
+      desc: '根据时间戳定位到受影响的调用链路，下钻到具体 Trace，发现 `llm_call` span 占比达 90%。'
+    },
+    {
+      title: 'Logs 定位',
+      desc: '关联查看该 span 的 input prompt。发现 context 包含了超长重复文档，导致 KV 缓存失效与推理极慢。'
+    },
+    {
+      title: '回流防御',
+      desc: '将导致超长的异常文档录入评估集，作为 Gold Set 的边界案例进行回归保护。'
+    }
+  ]}
+/>
+
+---
+
+## 四、跟我做一遍：给一次 RAG 请求装 trace
 
 <PyRunner
   rows={48}
@@ -104,7 +193,7 @@ print("每步可见:定位慢/贵/错在哪一步")`}
 
 一次 RAG 请求被拆成检索/构造/模型调用/后处理四个 span，每步的 token、成本、延迟都可见——一眼看出瓶颈在 `llm_call`（最慢最贵），优化就有的放矢。这就是把黑盒变成可归因链路。**试试**：给某个 span 标 `ok=False` 模拟某步失败，想想 Metrics（总量异常）→ Traces（定位到步）→ Logs（看那步细节）的排查路径；想想这些 trace 数据怎么同时喂给[在线评估](./online-eval-feedback)。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month11/m11l4_observability/`：
 
@@ -179,6 +268,46 @@ python labs/month11/m11l4_observability/test_observability.py
 - 你的 AI 系统出问题时，能顺着 Metrics→Traces→Logs 查到是哪一步吗？还是只能瞎猜？
 - 你能说清每类请求、每一步花了多少 token/钱/时间吗？成本和质量是可见指标还是月底才知道？
 - 你的 trace 数据有回流给评估/回归吗？可观测和评估在你这是一体的还是两张皮？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 AI 可观测性体系中，首 token 延迟 (TTFT) 与每输出 token 耗时 (TPOT) 分别描述了什么？为什么它们比“单请求总耗时”更能反映流式输出下的用户体验？',
+      options: [
+        'A. TTFT 指系统执行完整个 Python 逻辑的时间，TPOT 指模型内部的自注意力权重耗时；用户只关注最终回答的完整性',
+        'B. TTFT (Time To First Token) 描述模型生成第一个字的时间，TPOT (Time Per Output Token) 描述后续生成速度；在流式输出下，用户只要看到打字机效果开始（TTFT 低）且后续流畅（TPOT 低）即可，无需等待总耗时结束',
+        'C. TTFT 指网络排队延迟，TPOT 指向量检索延迟；两者之和等于总耗时',
+        'D. 两者仅用于微调模型，与线上运行体验无关'
+      ],
+      answer: 1,
+      explain: '对于支持流式（Streaming）响应的 AI 系统，用户在打字机效果出现时就开始阅读。此时，决定用户体感延迟的核心是 TTFT（让用户感知到服务有响应）和 TPOT（字跳出的平滑度），而非把所有字全部吐完的总时延。因此，传统只监控总时延是不够的，必须将 TTFT 与 TPOT 视作一等监控指标。'
+    },
+    {
+      q: '一个 RAG 问答服务突发质量崩塌，用户反馈回答文不对题。作为系统架构师，你将如何串联可观测三支柱（Metrics, Traces, Logs）定位根因？',
+      options: [
+        'A. 仅查看日志 (Logs)，搜索所有带有“Error”的行以寻找异常信息',
+        'B. 通过度量指标 (Metrics) 发现“用户点踩率”这一代理质量指标异常；通过追踪链路 (Traces) 下钻定位到具体 trace ID 并确认是 `retrieve` span 还是 `llm_call` span 发生报错；最后查阅日志 (Logs) 检查该 span 具体的 Prompt 内容和检索文档，确认是否是检索召回了脏数据',
+        'C. 重新跑一遍所有的离线评估集，覆盖之前的模型',
+        'D. 提升系统的并发容量以自动重试模型请求'
+      ],
+      answer: 1,
+      explain: '这是标准的可观测排查三部曲：Metrics（发现异常并告警） -> Traces（追踪并下钻定位到出错或变慢的具体 span 组件） -> Logs（读取详细参数和上下文定位根本成因）。三者协同，才能将黑盒系统的调试时间缩短到分钟级。'
+    },
+    {
+      q: '全量录制和持久化 AI 系统的每一个 Prompt 和输出，在工程实践中会带来什么问题？',
+      options: [
+        'A. 存储开销暴增；极高的敏感隐私数据泄漏风险（可能录入用户输入的密码或 PII）；合规审计阻碍',
+        'B. 会导致 LLM 的 Temperature 参数重置为 0，降低回答的创造性',
+        'C. 会导致 Docusaurus 前端页面无法正常解析 Mermaid 图表',
+        'D. 导致分布式追踪的 trace ID 发生溢出和丢失'
+      ],
+      answer: 0,
+      explain: '全量录制不仅带来庞大的存储账单，更核心的是安全隐患——用户输入中可能包含敏感的身份证号、金融账号（PII 数据）或商业机密。在没有经过平台网关脱敏和合理采样率控制的情况下，长期留存这些数据会面临严重的合规和安全风险。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import SystemSimulator from '@site/src/components/SystemSimulator';
 
 # M11L10 · 可靠性与容量
 
@@ -62,6 +64,82 @@ AI 系统的可靠性风险，很大一部分来自模型这个依赖本身：
   application="把模型当不可靠外部依赖:设 AI SLO(可用+延迟+质量+成本);加限流/重试退避幂等/熔断/降级;关键能力配多模型 failover(备用要过评估)。容量按 token 吞吐规划、非实时任务异步削峰。可靠性含质量监控(软故障)。弹性/failover/配额做成平台网关统一能力,别每个应用重造。"
 />
 
+## 三、可靠性防护与高可用图解 (Deep Dive Diagrams)
+
+本节展示 AI 系统可靠性防御（熔断、限流、重试）的纵深架构、多模型故障转移（Failover）控制流，以及高可用保障策略的系统折中。
+
+### 1. 结构全景：大模型可靠性弹性防护架构
+
+```mermaid
+graph TD
+    classDef rate fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef cb fill:#ffebee,stroke:#c62828,stroke-width:2px;
+    classDef models fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef fallback fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    UserRequest["用户大并发请求流"] --> Limiter["1. 令牌桶限流器 (Rate Limiter)"]:::rate
+    
+    Limiter -->|通过| Breaker["2. 熔断判定器 (Circuit Breaker)"]:::cb
+    
+    subgraph FailoverGroup [多模型容灾备份组]
+        Breaker -->|正常通行| Primary["主模型 API (强力提供商)"]:::models
+        Primary -.->|持续 429 / 5xx 故障| Secondary["备用模型 API (他厂模型)"]:::models
+    end
+
+    Secondary -.->|全不可用降级| FallbackLocal["3. 优雅降级兜底 (本地小模型/保守提示)"]:::fallback
+```
+
+### 2. 控制流程：多模型冗余级联 Failover 序列
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as 客户端 (App)
+    participant Gate as 平台路由网关 (Gateway)
+    participant Primary as 强主模型 API
+    participant Backup as 备用模型 API
+    participant Local as 本地部署小模型
+
+    App->>Gate: 1. 提交推理请求
+    Gate->>Primary: 2. 发起主模型调用
+    Primary-->>Gate: 3. 返回 HTTP 429 (限流超载)
+    Note over Gate: 拦截 429，启动避让重试
+    Gate->>Primary: 4. 指数退避重试，依然返回 429
+    Note over Gate: 触发熔断切流，启动 Failover
+    Gate->>Backup: 5. 自动切流至备用模型 API
+    Backup-->>Gate: 6. 返回 HTTP 503 (故障不可用)
+    Note over Gate: 所有远程 API 挂死，启动终极降级
+    Gate->>Local: 7. 调用本地微型模型 (Llama 8B)
+    Local-->>Gate: 8. 返回流式粗略结果
+    Gate-->>App: 9. 返回降级响应 (维持核心业务在线)
+```
+
+### 3. 折中谱系：可靠性策略与资源开销折中
+
+```mermaid
+graph TD
+    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef risk fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    Strategy["可靠性控制手段"]
+    
+    Strategy -->|盲目重试| Retry["粗暴重试: 失败立刻不断重试"]:::risk
+    Strategy -->|退避与熔断| Cb["避让与熔断: 指数退避抖动 + 熔断切换"]:::safe
+    Strategy -->|备用灾备| Failover["多提供商 Failover: 物理多活冗余"]:::safe
+
+    Retry --> RetryNote["优点: 实施极其简单，无需额外库<br/>缺点: 极易引发惊群效应（DDoS 自己的提供商），加剧瘫痪"]
+    Cb --> CbNote["优点: 保护下游依赖，快速 fail-fast 维持主服务线程<br/>缺点: 用户在熔断期会接收到部分功能降级体验"]
+    Failover --> FailoverNote["优点: 绝对消除单点故障，可用性达 99.9% 以上<br/>缺点: 管理多套 Prompt、多份账单及备用模型的质量漂移"]
+```
+
+### 4. 模拟器演练：Token Bucket 限流与限额保护
+
+在遭遇高并发流量或成本攻击时，限流是保护系统底线的重要防御手段。下面展示了平台级令牌桶限流模拟器，可实时观测令牌生成速率与拦截效果。
+
+<SystemSimulator type="token-bucket" />
+
+---
+
 ## 三、跟我做一遍：多模型 failover + 熔断降级
 
 <PyRunner
@@ -112,7 +190,7 @@ print("主模型故障自动切备用、都不可用则降级")`}
 
 主模型不稳定时，请求自动重试、失败就 failover 到备用模型，全部不可用才优雅降级转人工——单个模型的抖动不再直接砸给用户。这就是弹性四件套 + 多模型冗余用在 AI 上。**试试**：把所有模型 fail_rate 调到 0.9，看降级如何兜底；想想为什么 failover 顺序是"强→他厂→本地小模型"（可用性优先于能力，[呼应 M11L8 优雅降级](./human-oversight-fallback)）。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month11/m11l10_reliability/`：
 
@@ -187,6 +265,46 @@ python labs/month11/m11l10_reliability/test_reliability.py
 - 你的 AI 系统假设模型调用永远成功吗？限流/超时/宕机时，有重试/熔断/降级兜底吗？
 - 你的关键 AI 能力单点依赖一个模型/提供商吗？有多模型 failover 吗，还是它一宕你就全宕？
 - 你的可靠性只盯可用性吗？有没有监控"软故障"（在线地答错但不报错）？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 AI 可靠性工程设计中，以下关于大模型故障重试策略的描述，最符合生产级高可用要求的是？',
+      options: [
+        'A. 一旦请求超时，立刻高频自旋重试，直到拿到结果为止',
+        'B. 采用“指数退避与随机抖动（Exponential Backoff with Jitter）”重试机制，防止大量失败请求在同一精确时间戳对模型提供商发起二次冲击，并设立重试上限',
+        'C. 永远禁止重试，任何失败一律直接弹窗报错给终端用户',
+        'D. 仅仅在 GPU 降温时才进行重试，因为过热会导致 429 报错'
+      ],
+      answer: 1,
+      explain: '429 报错（Too Many Requests）或 503 报错通常代表模型服务器已超载。如果在相同的时间间隔内发起密集重试（如每隔 100ms 重试一次），会产生重试放大，即惊群效应，导致本已脆弱的服务器彻底宕机。指数退避（逐渐拉长重试间隔）配合随机抖动（打散重试时间戳）能以最大概率让服务器在间歇期处理成功。'
+    },
+    {
+      q: 'AI 可靠性设计中引入了“软故障 (Soft Failure)”概念，作为 AI 平台架构师，以下关于软故障与硬故障的对比陈述中，正确的是：',
+      options: [
+        'A. 硬故障是返回了 200 OK 但语义错误，软故障是返回了 500 报错',
+        'B. 软故障指系统返回了 200 OK 且响应流畅，但模型输出了幻觉、涉黄政等违规内容或被提示词注入劫持；硬故障是指远程服务器断网或超时。软故障无法通过传统的 HTTP 可用性指标发现，必须配合多维评估与护栏监控',
+        'C. 软故障仅发生在开源模型中，闭源模型只会发生硬故障',
+        'D. 软故障可以通过在 Docusaurus 中增加 Markdown 缓存完全杜绝'
+      ],
+      answer: 1,
+      explain: '硬故障是确定性的，如网络断开、模型超时或返回 5xx 错误；而软故障是 AI 时代的特有灾难：系统状态码全绿，却给用户吐出了严重的幻觉或有害回答。架构师不能仅盯着传统 SLO 指标（如 HTTP 200 率），必须配合在线评估（Online Eval）和输出护栏（Output Guardrails）持续监测生成质量，才算做好了 AI 的可靠性工程。'
+    },
+    {
+      q: '为消除模型提供商的单点故障风险（SPOF），多模型冗余 failover 成了核心手段。在 Failover 顺序的设计上，以下哪项最符合可用性优先原则？',
+      options: [
+        'A. 顺序随意，随机切换，只要有备用即可',
+        'B. 主模型（强力提供商远程 API） -> 备用模型（备选远程 API） -> 本地部署开源小模型（优雅降级兜底）。让可用性底线最终由本地自主可控的节点把守',
+        'C. 本地小模型 -> 备选远程 API -> 主强力远程 API，先用便宜小模型，不行再升级',
+        'D. 永远不使用本地模型，在两个同地域的主模型实例之间打转'
+      ],
+      answer: 1,
+      explain: '高可用要求“有底线兜底”。远程第三方 API（无论是主还是备）都受制于公网链路与第三方服务商的限流与宕机风险。将本地部署（本地物理集群/专有云）的开源模型作为 failover 链条的终点，能确保即使在全网断网、公网第三方全线崩溃的极端灾难下，系统依然能提供基础的问答降级，从而实现“优雅降级”。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

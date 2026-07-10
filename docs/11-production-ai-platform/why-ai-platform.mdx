@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M11L1 · 为什么需要 AI 平台
 
@@ -60,7 +61,82 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="有多个 AI 应用且共性明确时才建平台,从最痛的共性(评估/成本/网关)起步、逐步演进。只有 1-2 个应用先别抽平台(YAGNI)。平台把安全合规护栏做成强制统一(AI 风险不能分散治理)、性能灵活做成可选。把平台当产品来运营。"
 />
 
-## 三、跟我做一遍：从重复到共享能力
+## 三、AI 平台化架构与折中图解 (Deep Dive Diagrams)
+
+本节展示多应用自建共性能力的重复与冲突、AI 平台集中治理与复用的参考拓扑，以及平台化演进中的组织与技术折中。
+
+### 1. 结构全景：多应用分散自建 vs. AI 平台统一托管
+
+```mermaid
+graph TD
+    classDef app fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef repeat fill:#ffebee,stroke:#c62828,stroke-width:1px;
+    classDef platform fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    subgraph Decentralized [分散自建模式 (轮子重复/治理失控)]
+        AppA["应用 A: 客服 Bot"]:::app
+        AppB["应用 B: 代码助手"]:::app
+        
+        AppA --> Guard1["自建护栏A (不一致)"]:::repeat
+        AppA --> Eval1["自建评估A (口径不一)"]:::repeat
+        
+        AppB --> Guard2["自建护栏B"]:::repeat
+        AppB --> Eval2["自建评估B"]:::repeat
+    end
+
+    subgraph Centralized [平台托管模式 (能力共享/集中治理)]
+        AppC["应用 C: 数据 Agent"]:::app
+        AppD["应用 D: 翻译 Bot"]:::app
+        
+        Platform["共享 AI 平台 (Control/Data Plane)"]:::platform
+        
+        AppC & AppD -->|调用 API| Platform
+        
+        Platform --> PGuard["统一安全护栏网关"]
+        Platform --> PEval["统一自动化评估引擎"]
+        Platform --> PBilling["统一 Token 计量归因"]
+    end
+```
+
+### 2. 控制流程：基于共享平台能力的请求生命周期
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as AI 业务应用
+    participant Gate as 统一平台网关
+    participant LLM as 模型提供商 (LLM API)
+    participant Monitor as 平台计量与可观测
+
+    App->>Gate: 1. 发送用户 prompt
+    Gate->>Gate: 2. 执行统一输入安全审计 (PII/注入检测)
+    Gate->>LLM: 3. 转发清洗后的 prompt
+    LLM-->>Gate: 4. 返回模型响应 (流式/块)
+    Gate->>Gate: 5. 执行统一输出护栏检测 (幻觉/敏感词)
+    Gate->>Monitor: 6. 异步上报使用 Token 与延迟指标
+    Gate-->>App: 7. 返回安全响应
+```
+
+### 3. 折中谱系：过早平台化与分散治理的级联折中
+
+```mermaid
+graph TD
+    classDef limit fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+    classDef value fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+
+    option["实施 AI 平台化 (AI Platform)"]
+    
+    option -->|获取价值| Benefit1["复用与交付加速<br/>应用接入即可上线"]:::value
+    option -->|获取价值| Benefit2["集中安全与合规治理<br/>一处修补,全线生效"]:::value
+
+    option -->|付出代价| Cost1["过早抽象成本 (YAGNI 风险)<br/>只有 1-2 个应用时是额外负担"]:::limit
+    option -->|付出代价| Cost2["架构层级增加<br/>额外网关引入 20-50ms 延迟"]:::limit
+    option -->|付出代价| Cost3["灵活性受限<br/>团队必须契合平台抽象协议"]:::limit
+```
+
+---
+
+## 四、跟我做一遍：从重复到共享能力
 
 <PyRunner
   rows={42}
@@ -107,7 +183,7 @@ print("共享平台能力被多个应用复用、统一治理")`}
 
 三个应用复用同一套护栏、成本追踪、评估口径——不必各造一遍，且公司层面能统一看到总成本和风险（集中治理）。一处更新护栏，三个应用同时生效。**试试**：想象没有平台时要改护栏得改三处、还可能漏改一处；再想如果只有一个应用，这层 `AIPlatform` 抽象是不是反而多余（过早平台化）。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month11/m11l1_platform/`：
 
@@ -182,6 +258,46 @@ python labs/month11/m11l1_platform/test_platform.py
 - 你们有几个 AI 应用？它们真的有足够多、足够稳定的共性值得抽平台了吗，还是你在过早平台化？
 - 如果要抽，从哪块最痛的共性起步（评估？成本？护栏网关？）？哪些必须强制统一（安全合规）、哪些可选？
 - 你的 AI 治理是分散在各团队（安全团队看不全）还是集中可控？监管问"你们所有 AI 都合规吗"你答得上来吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: 'AI 平台的“集中治理”价值在安全/合规层面尤为突出，以下关于“分散治理”与“集中治理”的对比中，最准确的陈述是？',
+      options: [
+        'A. 分散治理只在开发期有优势，但集中治理能彻底消除任何形式的内容幻觉',
+        'B. 分散治理会导致安全和合规策略在各个应用中不一致，面临审计合规风险；集中治理可实现一处修补、全线生效，但可能带来额外的请求延迟和架构复杂度',
+        'C. 集中治理要求所有模型均部署在本地，而分散治理支持云端混合部署',
+        'D. 集中治理能降低 90% 以上的 API 调用开销，因为可以进行本地缓存'
+      ],
+      answer: 1,
+      explain: '集中治理通过统一入口管控输入输出护栏与计量，能确保组织的安全与成本底线。然而，额外增加的路由网关网元必然会引入微小的延迟开销（一般在20~50ms之间），同时也要求各应用接入时遵循平台契约，降低了部分极速创新的灵活性。'
+    },
+    {
+      q: '在评估构建 AI 平台时，以下哪种情况属于典型的“过早平台化 (Premature Platformization)”？',
+      options: [
+        'A. 公司在只有 1 个处于 POC 探索阶段的 AI 应用时，就启动了全面的 AI 中台研发，并强行抽取未定型的评估与安全模型',
+        'B. 在有 5 个应用且均遭遇大额账单时，平台团队决定搭建统一的 Token 账单大盘',
+        'C. 在多个团队重复实现各自的 PII 脱敏算法后，平台将其抽取为共享库',
+        'D. 在安全团队审计指出多套客服机器人内容过滤标准冲突时，上线了统一网关护栏'
+      ],
+      answer: 0,
+      explain: '依据 YAGNI（You Aren\'t Gonna Need It）原则，平台化应是自下而上“长”出来的。在业务初期和共性未知时强行抽取未定型的能力，不仅无法给业务提效，反而会用错误且繁冗的抽象绑架业务，增加极高的废弃成本。'
+    },
+    {
+      q: '对于平台的安全/合规这类“错一次就很贵”的模块，架构师通常倾向于将其设计为：',
+      options: [
+        'A. 核心安全合规强制统一，性能与灵活性部分则提供可选配置或共享库接入',
+        'B. 全量强制执行，拒绝任何形式的业务自定义参数配置',
+        'C. 完全由应用端自行决定是否采用，平台仅提供文档参考',
+        'D. 仅在开发环境中强制，在生产环境中为了高吞吐全部旁路绕过'
+      ],
+      answer: 0,
+      explain: 'AI 系统的风险（如提示注入、数据泄露）具有严重的连锁效应，安全合规策略必须强制统一执行以规避一票否决式的合规灾难。而对于具体的业务性能、定制开发等，平台应提供可选套件，以防止平台成为业务演进的瓶颈。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

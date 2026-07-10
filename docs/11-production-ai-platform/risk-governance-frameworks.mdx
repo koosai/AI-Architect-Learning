@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M11L7 · 风险治理框架
 
@@ -69,7 +70,77 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="用 NIST RMF 语言组织 AI 治理:给每个系统配模型卡、留审计日志、指定责任人。高风险系统加合规审查(可解释/人工监督/记录)、公平评估。治理按风险分级、别一刀切。把模型卡模板/审计基础设施/上线风险评审做成平台标准动作。把治理当信任通行证而非负担。"
 />
 
-## 三、跟我做一遍：治理清单与审计追溯
+## 三、AI 风险治理架构与合规流程图解 (Deep Dive Diagrams)
+
+本节展示 NIST RMF 治理框架的四功能逻辑闭环、模型卡片（Model Cards）生成与灰度准入时序，以及治理强度与开发敏捷度的核心取舍。
+
+### 1. 结构全景：NIST AI RMF 风险治理框架四功能逻辑闭环
+
+```mermaid
+graph TD
+    classDef govern fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
+    classDef map fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef measure fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef manage fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    subgraph NIST_RMF [AI 风险管理框架]
+        Govern["1. 治理 (Govern)<br/>职责: 组织文化、问责制、角色与政策分工"]:::govern
+        Map["2. 映射 (Map)<br/>职责: 识别系统上下文、边界与潜在威胁风险"]:::map
+        Measure["3. 度量 (Measure)<br/>职责: 离线/在线多维评估、安全红队测试"]:::measure
+        Manage["4. 管理 (Manage)<br/>职责: 网关护栏、持续监控、容灾与降级"]:::manage
+        
+        Govern --> Map
+        Map --> Measure
+        Measure --> Manage
+        Manage --> Govern
+    end
+```
+
+### 2. 控制流程：基于模型卡片 (Model Cards) 的就绪检查与准入控制
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Dev as 模型研发团队
+    participant Registry as 模型仓库 (Model Registry)
+    participant Sec as 安全合规委员会 (HITL)
+    participant CI as 自动化就绪检查器 (Platform)
+    participant Gate as 生产网关
+
+    Dev->>Registry: 1. 注册新模型包 (包含模型权重与初始参数)
+    Dev->>Registry: 2. 编写并提交模型卡片 (限制条件、偏见评估、预期用途)
+    Registry->>CI: 3. 触发自动化就绪校验
+    Note over CI: 检查 Model Card, 责任人, Fairness 评估, 审计日志是否就绪
+    alt 缺项未就绪
+        CI-->>Dev: 4a. 拒绝就绪标记并报告缺失项
+    else 校验通过
+        CI->>Sec: 4b. 提交至合规审查队列
+        Sec->>Sec: 5. 执行公平性审计与法律合规审批
+        Sec-->>Gate: 6. 标记为 "Ready" 并发布网关路由规则
+    end
+```
+
+### 3. 折中谱系：治理强度与交付速度的折中
+
+```mermaid
+graph TD
+    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef risk fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    GovernanceStrategy["组织治理强度策略"]
+    
+    GovernanceStrategy -->|轻量治理| Light["轻量治理: 仅配责任人与基础审计日志"]:::risk
+    GovernanceStrategy -->|风险自适应| Adaptive["风险自适应: 按系统风险分级施加治理"]:::safe
+    GovernanceStrategy -->|绝对治理| Heavy["极重治理: 阻断一切未经完整法务合规审批的迭代"]:::risk
+
+    Light --> LightNote["优点: 交付速度极快，研发零束缚<br/>缺点: 高危应用极易触碰合规与偏见歧视红线，出事时面临天价罚单"]
+    Adaptive --> AdaptiveNote["优点: 内部工具极速上线，高危资产重点防范，兼顾敏捷与安全<br/>缺点: 需要平台提供精细的准入校验规则配置"]
+    Heavy --> HeavyNote["优点: 合规风险近乎零<br/>缺点: 拖慢创新迭代，团队被迫绕过平台，导致非受控 AI 泛滥"]
+```
+
+---
+
+## 四、跟我做一遍：威胁识别与风险排序审计追溯
 
 <PyRunner
   rows={48}
@@ -113,7 +184,7 @@ print("按风险分级治理、可审计追溯、责任明确")`}
 
 治理要求按风险等级分级（高风险信贷系统必须有人工监督+合规审查+公平评估，低风险内部工具从简），上线前检查是否就绪、缺项挡住；审计日志让每个决策可追溯到"哪个模型版本、什么依据"。这就是把"负责任"变成可检查的制度。**试试**：把 credit 的 human_oversight 补上，看就绪检查通过；想想为什么审计日志要记录"model version"（模型升级后要能追溯当时用的是哪版）。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month11/m11l7_governance/`：
 
@@ -188,6 +259,46 @@ python labs/month11/m11l7_governance/test_governance.py
 - 你的每个 AI 系统有明确的责任人吗？出了事故谁负责，还是会陷入"算法决定的"责任真空？
 - 一个 AI 决策被质疑时，你能还原"哪个模型版本、什么输入、什么依据"吗？审计日志够吗？
 - 你的高风险 AI（涉及钱/健康/机会）做了公平评估、合规审查、人工监督了吗？治理是你解锁这些场景的牌照还是缺失的短板？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在引入 NIST AI RMF 风险管理框架时，以下关于“治理 (Govern)”与具体“技术防护（如护栏、过滤）”之间关系的陈述，最准确的是？',
+      options: [
+        'A. 技术防护可以完全取代组织治理，只要技术指标达到 100%，就不需要设定法律问责制',
+        'B. 治理是组织层面的顶层设计与政策约束（定义谁负责、局限在哪、何种合规指标），而具体的评估、护栏与监控是治理要求的具体技术实现。缺乏治理的系统，其技术安全无法被组织层面持续审计与问责',
+        'C. 治理仅负责编写模型卡片 (Model Cards)，与系统的技术评估无关',
+        'D. GDPR 与 EU AI Act 仅要求技术安全，不要求定义任何组织层面的责任机制'
+      ],
+      answer: 1,
+      explain: '技术护栏与评估是防御的“盾牌”，而治理是使用盾牌的“制度”。治理通过 NIST RMF 语言，把威胁建模 (Map)、多维评估 (Measure)、网关护栏 (Manage) 组织成一套有责任人、可回溯审计、受法律合规监督的组织运行制度。这才是解锁高价值场景（如信贷、招聘等涉及个人重大权益决策）的合规入场券。'
+    },
+    {
+      q: '为什么模型卡片 (Model Cards) 中的“已知局限性 (Limitations)”和“预定用途 (Intended Use)”是 AI 系统架构中极度关键的合规资产，而不是空泛的文档？',
+      options: [
+        'A. 因为它是 Docusaurus 静态网站不可或缺的渲染参数',
+        'B. 它们明确界定了 AI 决策的边界，一旦模型在非预期用途下被滥用（如初筛助手被私自用于直接裁决录取），模型卡片能提供明确的技术免责和审计依据，同时约束了过度代理的发生',
+        'C. 它们可以被编译器直接读取并自动生成安全护栏代码',
+        'D. 它们可以降低 50% 以上的 LLM 推理延迟，因为限制了用途'
+      ],
+      answer: 1,
+      explain: '模型卡片是 AI 系统的说明书与责任边界声明。它明确告知系统拥有者与用户：“该模型偏见度在 X，不可用于唯一性商业决策；其预期用途仅为信息辅助”。当发生争议或监管审计时，模型卡片是证明系统已尽到合理披露与合规设计的头号客观证据。'
+    },
+    {
+      q: '在构建高风险 AI 系统（如招聘初筛 AI 或贷款审批 AI）时，为规避类似 GDPR 第 22 条“自动化决策权限制”带来的合规风险，架构师应首要采取何种系统设计？',
+      options: [
+        'A. 彻底废除审计日志，以防留下任何监管证据',
+        'B. 提供可解释性评估 (Interpretability)，并强制在关键边界部署 HITL (Human-in-the-Loop) 人工审核，确保模型仅作为决策辅助，终极裁决权归属人类责任人',
+        'C. 将模型部署在多云环境下，以利用分布式架构规避地缘法律约束',
+        'D. 要求所有用户在提问前签署免责协议，承诺不发起任何合规质疑'
+      ],
+      answer: 1,
+      explain: 'GDPR 及主流合规法案对于完全由机器作出的“重大影响个人权益的决策”有着严苛的限制。架构师必须引入人工监督（Human Oversight）：大模型输出决策草案和依据（可解释性分量），然后由人类专员做终极点击审批与责任认领。这既规避了完全自动化的法律雷区，也防止了模型幻觉和偏见带来的一票否决。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

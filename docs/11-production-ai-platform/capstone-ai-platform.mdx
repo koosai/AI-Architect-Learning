@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M11L12 · 综合实战：把 AI 应用送上生产
 
@@ -62,7 +64,102 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - 网关[路由降本 + 成本归因 + 预算上限](./cost-engineering) 防失控。
 - [重试/熔断/多模型 failover](./reliability-capacity)，依赖抖动时优雅降级不崩。
 
-## 三、跟我做一遍：生产级 AI 应用（经网关集成全月能力）
+## 三、生产级 AI 平台交付图解 (Deep Dive Diagrams)
+
+本节展示 Capstone 综合实战系统的全景模块划分、一次请求在数据面与控制面流转的端到端调用序列，以及“能 Demo”与“能上生产”在工程复杂度层面的取舍。
+
+### 1. 结构全景：ProductionGateway 综合实战平台系统架构
+
+```mermaid
+graph TD
+    classDef app fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef gate fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef human fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef ext fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    UserApp["业务客户端"]:::app -->|1. 统一接口请求| Gateway["AI 生产网关 (ProductionGateway)"]:::gate
+    
+    subgraph GatewayCapabilities [网关内置横切拦截中间件]
+        Gateway --> InGuard["输入安全护栏"]
+        Gateway --> BudgetCheck["全局预算校验"]
+        Gateway --> HITLRouter["HITL 人工审批队列"]:::human
+        Gateway --> Router["模型路由器"]
+    end
+
+    Router -->|2a. 主模型调用| PrimaryModel["主模型 API"]:::ext
+    Router -.->|2b. 异常 Failover| BackupModel["他厂备用 API"]:::ext
+    Router -.->|2c. 极限降级| LocalModel["本地小模型 API"]:::ext
+
+    PrimaryModel & BackupModel & LocalModel --> OutGuard["输出脱敏 & 质量评估"]
+    OutGuard --> TraceLogger["可观测 Traces & 治理审计 Logs"]
+```
+
+### 2. 控制流程：端到端生产请求全链路流转序列
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as 用户
+    participant GW as 生产网关 (Gateway)
+    participant Queue as HITL 审核池
+    participant LLM as 模型提供商 (LLM)
+    participant Trace as 链路追踪与审计日志
+
+    User->>GW: 1. 发送高危退款申请 "refund"
+    GW->>GW: 2. 执行输入越狱扫描与长度限制
+    Note over GW: 发现涉及高危 action = refund
+    GW->>Queue: 3. 拦截并投送任务至人工审批池
+    Note over Queue: 客服复核通过并批准
+    Queue-->>GW: 4. 人工确认放行指令
+    GW->>LLM: 5. 动态路由选择中型模型执行退款描述生成
+    LLM-->>GW: 6. 返回退款凭证 "退款单 101 已登记 (电话13812345678)"
+    GW->>GW: 7. 执行输出脱敏 (屏蔽电话敏感词)
+    GW->>Trace: 8. 异步写入 Trace ID、 Token 费用、与不可篡改审计日志
+    GW-->>User: 9. 返回安全、已审的最终响应
+```
+
+### 3. 折中谱系：Demo 级与生产级工程复杂度的对比
+
+```mermaid
+graph TD
+    classDef demo fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+    classDef prod fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    ReleaseState["发布就绪状态描述"]
+    
+    ReleaseState -->|Demo 级| Demo["仅能演示 (Demo-grade: 调通 API + 简易 UI)"]:::demo
+    ReleaseState -->|生产级| Prod["可运营生产级 (Production-grade: 平台网关+六大工程防护)"]:::prod
+
+    Demo --> DemoNote["优点: 1天极速交付，业务体验炫酷，研发门槛极低<br/>缺点: 零安全隔离，成本无上限，无法阻断退化，一上真实流量就翻车"]
+    Prod --> ProdNote["优点: 成本可控、合规安全、软硬故障皆有降级，能够支撑万级并发<br/>缺点: 需要投入 2~4 周的平台工程建设，架构复杂度上升"]
+```
+
+### 4. 步骤流演示：AI 应用上生产质量门槛自检
+
+<StepFlow
+  steps={[
+    {
+      title: '质量评估',
+      desc: '使用离线黄金测试集（Gold Set）与 LLM 评委对新版本跑回归验证，拦截任何准确度倒退。'
+    },
+    {
+      title: '威胁与护栏',
+      desc: '执行 OWASP 威胁建模，在网关层部署对应的双向护栏过滤，对敏感 PII 数据网关侧强脱敏。'
+    },
+    {
+      title: '弹度与成本',
+      desc: '部署多模型 Failover 高可用路由，给业务添加每日 Token 配额与全局月度预算告警安全带。'
+    },
+    {
+      title: '治理审计',
+      desc: '注册模型卡片（Model Card）说明局限性，对所有核心决策记录不可篡改的系统审计日志。'
+    }
+  ]}
+/>
+
+---
+
+## 四、跟我做一遍：生产级 AI 应用（经网关集成全月能力）
 
 <PyRunner
   rows={58}
@@ -131,7 +228,7 @@ print("经网关交付:质量+观测+安全+成本+可靠+治理")`}
 
 一个请求进来，经网关顺序过：输入护栏 → 预算 → 高风险 HITL/低置信升级 → 路由 → failover 调用 → 输出脱敏 → 成本&观测&审计——本月每块能力都在，且统一收口、不可绕过。这就是"能上生产"的样子。**试试**：把 budget 调到 0.001 看预算拦截；给 `handle` 加一个"输出后跑质量检查、低分回流评估集"的钩子（[M11L3](./online-eval-feedback)）——体会评估闭环如何嵌进网关。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month11/m11l12_production/`：
 
@@ -206,6 +303,46 @@ python labs/month11/m11l12_production/test_production.py
 - 拿你手上一个"能 demo"的 AI，对照这张上生产清单——它缺哪几项？缺的那些，是不是恰恰是"上线后会要命"的？
 - 你能按这个 AI 的风险和价值，克制地决定每项能力做到什么程度吗？还是要么全不做、要么全拉满？
 - 你现在能把"AI 应用"看成"AI 能力（内层）+ 生产工程（外层）"两层了吗？你更擅长哪层、缺哪层？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '为什么说“大语言模型在 Demo 时的惊艳表现，与能够在生产环境中安全可控运行，中间隔着一整个月的平台工程”？以下理解最符合架构师心智模型的是？',
+      options: [
+        'A. 因为 Demo 运行在 CPU 上，而生产环境必须升级为八卡 H800 GPU 集群',
+        'B. 让模型给出正确答案只决定了系统的能力上限（内层）；而要解决生产中必然面对的质量退化、提示注入越权、天价 Token 账单、单点接口崩溃、合规追责与人工干预，必须依靠围绕模型构建的外层平台工程来提供底座保障。外层决定了它能否合法、经济、安全地交付',
+        'C. Demo 是 Python 写的，上生产必须改写为完全不需要任何大模型的 C++ 汇编代码',
+        'D. 只要 Prompt 写的长，就可以替代所有可观测、护栏和降级等技术组件'
+      ],
+      answer: 1,
+      explain: '模型的能力决定了“可能性”，而工程能力决定了“可靠性”。一个在演示中表现优秀的 Agent，若缺乏输入输出护栏（Jailbreak 危险）、缺乏配额拦截（烧光预算风险）、缺乏 failover 熔断和人工介入机制，上线后随时会变成公司的公关灾难和财务危机。AI 架构师的核心职责正是建立这层“外层工程保护罩”。'
+    },
+    {
+      q: '在生产网关的设计中，当“安全护栏”、“预算控制”、“人工审核”、“Failover 路由”和“可观测链路”等功能集成在一起时，它们的合理执行顺序应该是：',
+      options: [
+        'A. 输出护栏 -> 调用模型 -> 输入护栏 -> 全局审计 -> 预算判定',
+        'B. 输入护栏（尽早拦截） -> 预算判定（防止超支白跑） -> 人工审核/低信升级（高风险拦截） -> 动态路由选择与 Failover 调用（执行） -> 输出脱敏与过滤（防止泄露） -> 计费计量与 Trace 日志写入（归因）',
+        'C. 异步写入日志 -> 动态路由调用 -> 输入过滤 -> 输出过滤 -> 人工复核',
+        'D. 只要功能都有，执行顺序对系统性能和安全合规无任何影响'
+      ],
+      answer: 1,
+      explain: '这是一个按照“最省 Token、最安全拦截”原则排序的网关拦截管线（Gateway Pipeline）。输入护栏和预算控制放在最前，可以防止恶意注入或已超预算的请求浪费宝贵的模型算力和响应延迟；人工审核在调用前介入以阻止不可逆动作；调用后的输出护栏能拦截并脱敏模型自生的隐私或违规内容；最后，将真实的消费和链路状态记录归因。'
+    },
+    {
+      q: '大模型应用上生产必须遵守“克制配置”原则，关于此原则的正确实践是：',
+      options: [
+        'A. 不论什么业务，把所有护栏分类器、最高级人审流程、最繁冗的合规卡片全部拉满到极致',
+        'B. 依据 AI 应用的“风险等级”和“业务价值”精细定制每一处防护的强度。例如，低风险内部翻译 bot 仅保留基础审计与成本上限；高风险自动化划款 Agent 则必须配备严苛的 HITL 人工审核和双向同步护栏',
+        'C. 全凭开发者的直觉决定，没有任何平台级的约束标准',
+        'D. 为了提升开发速度，一律不配置任何评估和安全模块'
+      ],
+      answer: 1,
+      explain: '过度防护和缺乏防护同样危险。如果给一个员工食堂菜单翻译 Bot 强加双人复审（HITL）、严苛的敏感词过滤和重度合规卡片，会直接拖垮研发效率和用户体验，这属于“过度平台化”。AI 平台必须提供自适应治理，根据风险等级（高、中、低）和可逆性，施加匹配强度的技术防线。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

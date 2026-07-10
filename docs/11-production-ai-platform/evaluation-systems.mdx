@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M11L2 · 评估体系
 
@@ -62,7 +64,98 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="给每个 AI 功能建评估集(典型+边界+线上 bad case),分维度打分,三层评估都覆盖(尤其别漏 risk)。接入 CI 做回归门禁挡住退化。开放输出用校准过的 LLM-judge。评估含成本延迟。平台统一评估口径与工具。评估集持续更新防过拟合。"
 />
 
-## 三、跟我做一遍：评估集 + 分维度评分 + 回归门禁
+## 三、AI 评估架构与流水线图解 (Deep Dive Diagrams)
+
+本节展示三层评估体系的纵深覆盖、CI/CD 自动化回归门禁与 Bad Case 闭环流转，以及主流评估评判方法的折中选型。
+
+### 1. 结构全景：三层评估体系架构 (Unit -> Scenario -> Risk)
+
+```mermaid
+graph TD
+    classDef unit fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef scenario fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef risk fill:#ffebee,stroke:#c62828,stroke-width:2px;
+
+    subgraph EvalSystem [三层评估体系]
+        Unit["1. 单元级测试 (Unit Checks)"]:::unit
+        Scenario["2. 场景级评估 (Scenario Evals)"]:::scenario
+        Risk["3. 风险与对抗评估 (Risk Evals)"]:::risk
+        
+        Unit -->|测试对象| UnitTarget["解析器规则 / Tool Schemas / 结构化模板"]
+        Scenario -->|测试对象| ScenarioTarget["用户黄金样本集 (Gold Set) / 检索相关性 / 生成质量"]
+        Risk -->|测试对象| RiskTarget["注入对抗 / PII泄露 / 越权逃逸 / 幻觉幻灭度"]
+    end
+```
+
+### 2. 控制流程：CI/CD 自动化回归门禁与 Bad Case 反馈环
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Dev as 开发分支提交
+    participant CI as CI/CD 评估流水线
+    participant Judge as LLM-as-a-Judge 评委
+    participant DB as 黄金评估集库
+    participant Prod as 生产环境 (可观测)
+
+    Dev->>CI: 1. 提交新 Prompt / 代码修改
+    CI->>DB: 2. 拉取当前版本场景与风险评估集
+    CI->>Judge: 3. 并行执行评估样本推理并打分
+    Judge-->>CI: 4. 返回多维度打分矩阵
+    CI->>CI: 5. 门禁断言: 实际得分 < 历史基线？
+    alt 发生退化 (Regression)
+        CI-->>Dev: 6a. 拒绝合并 (Blocked) 报告退化维度
+    else 达标通过
+        CI-->>Dev: 6b. 允许合并与灰度上线 (Pass)
+    end
+    Prod->>DB: 7. 自动收集线上用户反馈的 Bad Case 并回流
+```
+
+### 3. 折中谱系：评估判定方法对比
+
+```mermaid
+graph TD
+    classDef rules fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef judge fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef human fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+
+    Method["评估评判判定方式"]
+    
+    Method -->|方案一| Rules["基于规则与比对 (Exact/ROUGE/F1)"]:::rules
+    Method -->|方案二| JudgeLLM["模型即评委 (LLM-as-a-Judge)"]:::judge
+    Method -->|方案三| Human["人工评估 (Human Review)"]:::human
+
+    Rules --> RulesNote["优点: 极快、零成本、无随机性<br/>缺点: 无法评判长文本语义相似度"]
+    JudgeLLM --> JudgeNote["优点: 泛化性强、贴近人类、秒级反馈<br/>缺点: 评委自身存自评偏差/幻觉风险"]
+    Human --> HumanNote["优点: 黄金标准、绝对准确<br/>缺点: 昂贵、极慢、无法接入自动化 CI 门禁"]
+```
+
+### 4. 步骤流演示：自动化回归测试管线
+
+<StepFlow
+  steps={[
+    {
+      title: '评估准备',
+      desc: '从平台数据库拉取对应版本的 Gold Set 黄金数据集与 Adversarial Set 对抗样本。'
+    },
+    {
+      title: '批处理推理',
+      desc: '系统并行分发推理请求给测试模型，记录每笔响应的 Tokens 消耗与 TTFT 耗时。'
+    },
+    {
+      title: '多维判定',
+      desc: '通过 Regex 规则与 LLM 评委联合打分，对相关性、准确性与安全性等指标进行多维量化。'
+    },
+    {
+      title: '基线门禁',
+      desc: '比对当前得分与合并前的 Baseline。如安全性得分低于 99% 或准确率下降，自动拦截流程。'
+    }
+  ]}
+/>
+
+---
+
+## 四、跟我做一遍：评估集 + 分维度评分 + 回归门禁
 
 <PyRunner
   rows={46}
@@ -110,7 +203,7 @@ print("分维度评估 + 回归门禁挡住退化")`}
 
 同一套评估集分维度打分（正确性 + 安全），回归门禁在安全维度退化时自动挡住上线——这就是评估体系挡住"改好一处、弄坏一处"的方式。注意风险样本（对抗注入）是评估集的一等公民，不是只测正常问题。**试试**：加一个"证据不足要弃答"的风险样本；把 baseline 调低看门禁如何放行退化——体会阈值就是你的质量底线。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month11/m11l2_eval/`：
 
@@ -185,6 +278,46 @@ python labs/month11/m11l2_eval/test_eval.py
 - 你每个 AI 功能有评估集吗？还是改 prompt 靠感觉、退化靠用户投诉发现？
 - 你的评估覆盖 risk 层（对抗/越权/弃答）吗，还是只测正常问题、一上线就被打穿？
 - 新模型出来时，你能一键在评估集上对比新旧、带数据决策吗？评估集是你的复利资产还是还没建？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在设计 AI 系统的 CI/CD 评估门禁时，为什么简单的 `assert 实际输出 == 期望输出` 不能作为核心验证手段？',
+      options: [
+        'A. 每次模型推理都会产生不同的随机数种子，导致传统断言完全报错',
+        'B. 大模型输出具有天然的不确定性，表达方式多样（同义不同词），且“正确性”往往是个多维连续变量（如忠实度 0.8），非简单的布尔值',
+        'C. 传统断言相等运行在 CPU 上，无法加速大模型测试的运行效率',
+        'D. Docusaurus 本地构建无法处理布尔类型的断言逻辑'
+      ],
+      answer: 1,
+      explain: 'AI 系统的核心特质是不确定性。同一个正确的答案可以有几十种字面表达方式。因此，必须将“断言相等”升级为基于多维度指标打分（如使用语义相似度、LLM-as-a-Judge 的百分制评分），并在整个评估集上统计平均表现，通过门禁阈值来判断系统是否发生实质退化。'
+    },
+    {
+      q: '一个完整的 AI 平台评估体系强调“三层评估 (Unit, Scenario, Risk)”，以下关于这三层职责的划分，哪一项是错误的？',
+      options: [
+        'A. 单元级测试 (Unit checks) 负责验证 JSON 解析器、Prompt 组装模板等非模型组件的确定性逻辑',
+        'B. 场景级评估 (Scenario evals) 用于评估在典型用户路径下的回答质量、检索相关性等',
+        'C. 风险级评估 (Risk evals) 仅负责检测输入中的 SQL 注入，不评估逻辑越权或提示注入',
+        'D. 场景评估和风险评估缺一不可，否则极易发生“正常场景优秀但上线立刻被对抗输入打爆”的惨剧'
+      ],
+      answer: 2,
+      explain: '风险评估 (Risk evals) 不仅关注传统的网络注入，在 AI 语境下，它重点评估提示词注入 (Prompt Injection)、数据越权、PII 泄露、敏感话题逃逸、证据不足时的强行幻觉生成等对抗场景，属于安全性与合规的重要底座。'
+    },
+    {
+      q: '在引入“模型即评委 (LLM-as-a-Judge)”以评判无标准答案长文本时，以下哪项属于架构师必须执行的风险控制措施？',
+      options: [
+        'A. 永远选用与待测模型版本完全相同的评委模型，因为其兼容性最好',
+        'B. 禁止人工介入，全部采用模型自主评估以确保客观公正',
+        'C. 对评委模型的 Prompt Rubrics 进行微调并使用部分人类标记样本进行“评委校准”，并定期抽查评委判定结果',
+        'D. 将评委模型的 Temperature 设为最大，以引入更多灵感判定'
+      ],
+      answer: 2,
+      explain: '评委模型（Judge）自身同样是个大模型，依然有其局限性和偏差（例如对长文章的偏爱、自评偏差等）。架构师必须提供校准环节：使用由人工标定好的黄金基准数据集去评判评委，得出评委与人类的一致性，且必须在生产中定期抽样人工审核，以防“评委模型幻觉”产生虚假的安全报告。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M11L3 · 在线评估与反馈
 
@@ -62,7 +64,95 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="上线后建在线评估:代理指标监控+抽样评审;显隐式反馈+线上 bad case 自动回流评估集;改进用影子->灰度A/B安全放量;监控漂移触发告警和评估集更新。把它做成监控-回流-改进闭环。反馈结合隐式信号防偏。线上数据脱敏合规使用。"
 />
 
-## 三、跟我做一遍：反馈闭环 + 影子对比
+## 三、在线监控与反馈回流图解 (Deep Dive Diagrams)
+
+本节展示在线评估持续闭环的数据流向、影子评估与灰度发布的安全检验链路，以及显式与隐式反馈信号的度量特征。
+
+### 1. 结构全景：在线评估与反馈回流闭环系统 (ML Ops Loop)
+
+```mermaid
+graph TD
+    classDef prod fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef collector fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef db fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    subgraph ProductionEnv [生产环境 (运行态)]
+        User["用户交互"] -->|产生会话| App["AI 业务应用"]:::prod
+        App -->|记录交互日志| Logger["可观测性 Log / Trace"]:::prod
+    end
+
+    subgraph EvaluationPlatform [平台评估与闭环]
+        Logger -->|提取负信号| Detector["异常与坏例识别 (Drift/Bad Case Detector)"]:::collector
+        Detector -->|自动回流| Recycler["坏例清洗与去噪 (Bad Case Recycler)"]:::collector
+        
+        Recycler -->|生成样本/标注| GoldSet[("黄金评估集 (Gold Set)")]:::db
+    end
+
+    GoldSet -->|反馈拉取| OfflineCI["离线 CI 门禁评估"]
+```
+
+### 2. 控制流程：从生产异常发现到评估集演进的时序
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as 用户
+    participant App as AI 业务应用
+    participant Collector as 反馈收集器 (Platform)
+    participant DB as 黄金评估集库
+    participant Developer as 架构师 / Prompt工程师
+
+    User->>App: 1. 提问并收到回答
+    User->>App: 2. 点踩 (Explicit) / 转人工 (Implicit)
+    App->>Collector: 3. 上报负反馈信号与完整 Context/Session
+    Collector->>Collector: 4. 评估代理指标 (Bad Rate / Drift Alert)
+    Collector->>DB: 5. 将该 Bad Case 序列化写入“候选评估集”
+    DB-->>Developer: 6. 触发通知: 评估集分布发生漂移，需要回归验证
+    Developer->>DB: 7. 校准/标注新样本并打上版本标签
+```
+
+### 3. 折中谱系：显式反馈与隐式信号对比
+
+```mermaid
+graph TD
+    classDef explicit fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+    classDef implicit fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    Signal["反馈信号类型"]
+    
+    Signal -->|方式一| Exp["显式反馈 (Explicit: 点赞/点踩/主动吐槽)"]:::explicit
+    Signal -->|方式二| Imp["隐式信号 (Implicit: 转人工/重问/复制采纳)"]:::implicit
+
+    Exp --> ExpNote["优点: 判定直观、语义极度清晰<br/>缺点: 参与度极低 (<5%)，且极端用户偏见严重 (有偏噪声)"]
+    Imp --> ImpNote["优点: 覆盖率极高 (100% 用户轨迹)、难造假<br/>缺点: 噪声高 (如重问不一定代表满意度低，需规则校正)"]
+```
+
+### 4. 步骤流演示：线上 Bad Case 回流与免疫管线
+
+<StepFlow
+  steps={[
+    {
+      title: '信号抓取',
+      desc: '用户执行了隐式或显式负反馈操作，平台拦截该 Session 轨迹并与 trace ID 关联。'
+    },
+    {
+      title: '降噪脱敏',
+      desc: '过滤无效噪声（如胡乱点踩），并利用 PII 模块对用户输入和模型输出做敏感隐私脱敏处理。'
+    },
+    {
+      title: '准入评估',
+      desc: '将 Bad Case 放入影子待评审区，由 LLM 评委判定是否为严重事实错误、幻觉或拒绝服务失败。'
+    },
+    {
+      title: '合并演进',
+      desc: '去重后正式合并入离线测试集。下一次 CI 合并时，该坏例即作为必考题防退化。'
+    }
+  ]}
+/>
+
+---
+
+## 四、跟我做一遍：反馈闭环 + 影子对比
 
 <PyRunner
   rows={46}
@@ -106,7 +196,7 @@ print("线上信号触发评估集回流、影子安全对比")`}
 
 线上用代理指标（bad_rate）持续量化质量、把负反馈样本自动回流进评估集（防复发）；影子评估让新版本在真实流量上跑但不影响用户，安全地对比差异。这就是评估的持续闭环。**试试**：把 reask 也想象成一种隐式负信号；想想影子对比出的差异，怎么用[评估集或 LLM-judge](./evaluation-systems) 裁定"新版是真的更好还是更差"。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month11/m11l3_online/`：
 
@@ -181,6 +271,46 @@ python labs/month11/m11l3_online/test_online.py
 - 你的 AI 上线后还在被评估吗？还是上线即"停止体检"、只能靠用户流失才发现变差？
 - 你的线上 bad case 会自动回流进评估集吗？系统是越用越强还是越用越旧？
 - 你改进时怎么验证？敢直接全量上，还是有影子→灰度的安全链？你信单一反馈指标吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '为什么说上线后的“用户显式反馈信号（如 👍/👎）”不能盲目作为优化系统质量的唯一指标？',
+      options: [
+        'A. 因为显式反馈在传输过程中极易发生数据包丢失',
+        'B. 因为显式反馈存在严重的“选择偏差（Selection Bias）”和噪声，满意用户往往保持沉默，且点踩行为可能夹杂大量非大模型错误的非技术因素',
+        'C. 点赞和点踩属于非法网络资产，容易引发安全审计合规问题',
+        'D. 显式反馈的分数无法与 Docusaurus 系统直接兼容'
+      ],
+      answer: 1,
+      explain: '显式反馈的转化率通常低于 5%，且存在显著偏差——极度不满或有特殊吐槽诉求的用户倾向于高频点踩，而大量正常获得帮助的用户则保持沉默。因此，它只能作为信号之一，必须与覆盖全量用户的隐式信号（如转人工率、采纳率、重问率）以及抽样人工/模型评委相结合，才能得出准确的线上质量分布。'
+    },
+    {
+      q: '在 AI 系统发布新版本（新 Prompt/新模型）时，以下哪项安全试新发布路径是架构师所推崇的？',
+      options: [
+        'A. 离线评估合格 -> 线上灰度 A/B 测试 -> 生产全量发布（省去影子测试以节省开销）',
+        'B. 离线评估合格 -> 线上影子测试 (Shadow Evals) 观察真实分布 -> 小流量 A/B 灰度测试 -> 生产全量发布',
+        'C. 影子测试合格 -> 离线系统评估 -> 生产全量发布',
+        'D. 灰度 A/B 测试合格 -> 离线评估合格 -> 生产全量发布'
+      ],
+      answer: 1,
+      explain: '这是一个从“零风险”到“统计可信”的发布防线：离线评估用来快速阻断已知缺陷；影子测试（Shadow）用真实线上请求输入进行并发测试，但不返回给用户，从而零风险地暴露长尾输入下的稳定性与分布差异；然后通过 A/B 灰度对部分用户返回新结果以获得行为验证；确认整体业务和技术指标无虞后，再做全量切流。'
+    },
+    {
+      q: '关于在线评估中“分布漂移 (Distribution Drift)”的应对策略，以下最务实的是？',
+      options: [
+        'A. 一旦发现漂移，立刻下线 AI 系统，退回传统数据库查询',
+        'B. 保持 Prompt 绝对不变，通过持续漂移测试，让用户去适应模型的行为习惯',
+        'C. 监控输入分布与代理质量指标，当检测到漂移特征后，自动拉取新分布下的长尾 Bad Cases 扩充、演进离线评估集并重新调优模型/Prompt',
+        'D. 增加模型温度（Temperature）至 1.5 以上，使模型随机应变'
+      ],
+      answer: 2,
+      explain: '真实世界的用户行为是在演进的。分布漂移意味着当初设立的“模拟试卷”（离线评估集）已经跟不上面试要求了。正确做法是监控输入分布和错误率，当检测到漂移后，提取包含新特征的样本作为新的 Gold Set，重新微调/优化 Prompt 以适应漂移后的环境。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M11L11 · AI 平台架构
 
@@ -63,7 +65,104 @@ AI 平台不止网关，是分层的：
   application="AI 平台从模型网关起步:统一入口集中路由/护栏/成本/观测/failover,应用只调网关不直连模型。分层加控制面(评估/治理/配额)和自助层。强制统一安全合规成本、灵活留性能模型选择。网关做高可用可扩展避免单点。演进式建设、让团队觉得用比不用省事。把 API 网关/服务网格经验直接迁移。"
 />
 
-## 三、跟我做一遍：一个最小模型网关
+## 三、模型网关与分层架构图解 (Deep Dive Diagrams)
+
+本节展示 AI 平台中控制面（Control Plane）与数据面（Data Plane）的拓扑关系、模型网关的管道拦截与路由流转，以及网关集中部署与分布式部署的对比。
+
+### 1. 结构全景：AI 平台控制面与数据面分离架构 (Gateway Control/Data Plane)
+
+```mermaid
+graph TD
+    classDef control fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef data fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef user fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+
+    subgraph ControlPlane [控制面 (Control Plane)]
+        AdminPortal["1. 平台管理台 (Portal)"]:::control
+        ConfigDB[("配置数据库 (Model/Quota/Rules)")]:::control
+        EvalEngine["2. 统一评估引擎 (离线/影子)"]:::control
+        
+        AdminPortal -->|下发配置| ConfigDB
+    end
+
+    subgraph DataPlane [数据面 (Data Plane - High Thruput)]
+        Gateway["3. AI 模型网关 (Model Gateway)"]:::data
+        MetricsAgent["4. 计量与 Span 收集 (OTel)"]:::data
+        
+        Gateway -->|记录 Span| MetricsAgent
+    end
+
+    ConfigDB -->|同步路由与限流规则| Gateway
+    UserApp["各业务 AI 应用"]:::user -->|发起请求| Gateway
+```
+
+### 2. 控制流程：模型网关中间件流水线调用时序
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as 客户端 (App)
+    participant GW as 模型网关 (Gateway)
+    participant Config as 网关内存配置 (Rules)
+    participant Provider as 模型供应商 (LLM API)
+
+    App->>GW: 1. 发送推理请求 (深圳天气, 复杂度=1)
+    GW->>Config: 2. 读取路由规则与限流状态
+    Config-->>GW: 3. 返回: 走小模型 (Llama8B), 预算充足
+    GW->>GW: 4. 执行输入过滤安全检测
+    alt 输入安全
+        GW->>Provider: 5. 转发请求至 Llama8B
+        Provider-->>GW: 6. 返回模型结果 "深圳今天下雨..."
+        GW->>GW: 7. 执行输出脱敏 (屏蔽个人信息)
+        GW->>GW: 8. 异步上报 Trace 和 Token 使用量
+        GW-->>App: 9. 返回安全结果
+    else 包含注入
+        GW-->>App: 10. 拦截直接返回降级
+    end
+```
+
+### 3. 折中谱系：集中式网关 vs. 分布式 Sidecar 网关的架构折中
+
+```mermaid
+graph TD
+    classDef center fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef mesh fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    DeployStrategy["网关物理部署架构"]
+    
+    DeployStrategy -->|中心化网关| Center["集中式模型网关 (Centralized LLM Gateway)"]:::center
+    DeployStrategy -->|Service Mesh| Mesh["分布式 Sidecar 网关 (Service Mesh Model Proxy)"]:::mesh
+
+    Center --> CenterNote["优势: 部署极简，配置集中化，对多语言应用友好<br/>劣势: 引入额外网络跃点，存在单点故障风险（SPOF）"]
+    Mesh --> MeshNote["优势: 零额外网络层延迟，弹性高，支持本地限流与故障切换<br/>劣势: 运维极其复杂，对宿主内存开销大，配置同步一致性难度高"]
+```
+
+### 4. 步骤流演示：AI 平台演进式建设路径
+
+<StepFlow
+  steps={[
+    {
+      title: '第一阶段：基础网关',
+      desc: '收口多模型 API 接入。提供集中式 Token 计量归因与统一的 Prometheus 延时指标。'
+    },
+    {
+      title: '第二阶段：动态路由',
+      desc: '引入模型路由。分析输入复杂度，自动分发给小模型或强模型。同时部署 OTel 分布式追踪。'
+    },
+    {
+      title: '第三阶段：网关护栏',
+      desc: '加载输入/输出安全分类器，支持敏感 PII 数据网关侧脱敏，阻断非合规流量。'
+    },
+    {
+      title: '第四阶段：自助服务',
+      desc: '建立内部自助管理 Portal。业务团队可自助申请 Token 额度配额，发布自定义评估 Gold Set。'
+    }
+  ]}
+/>
+
+---
+
+## 四、跟我做一遍：一个最小模型网关
 
 <PyRunner
   rows={54}
@@ -117,7 +216,7 @@ print("所有流量经网关:统一路由/护栏/成本/观测")`}
 
 一个模型网关把路由、护栏、成本、观测全部收口在一处：应用只管把请求交给网关（代码干净），路由/护栏/成本/脱敏/追踪统一执行、不可绕过，公司级能一处看清所有应用的成本和风险。这就是 AI 平台的架构核心。**试试**：给 `handle` 加一层 failover（主 backend 抛错就切备用）；想想为什么这个结构和你在 [M5L2 学的 API 网关中间件链](../core-components/api-gateway) 几乎一样。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month11/m11l11_gateway/`：
 
@@ -192,6 +291,46 @@ python labs/month11/m11l11_gateway/test_gateway.py
 - 你们的 AI 横切能力（护栏/成本/观测/路由）散落在各应用，还是收口到了统一网关？
 - 你们到了该引入模型网关的时机吗（共性够多、痛够真）？还是太早（过度）或太晚（各自为政了）？
 - 换模型对你们是"改十几个应用"还是"改一处配置"？网关是你敏捷驾驭模型迭代的支点吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '为什么说“模型网关 (Model Gateway)”是企业级 AI 平台演进的必然汇聚架构？它与微服务架构中的什么组件最为同构？',
+      options: [
+        'A. 因为大模型没有网关就无法进行 GPU 显存分配；它与传统数据库缓存最为同构',
+        'B. 当企业内 AI 应用增多时，路由、护栏、成本计量、可观测追踪这四项横切关注点存在大量的重复开发与一致性监管要求。集中式网关能将这些非功能需求彻底收口。它与微服务中的 API 网关（或 Service Mesh Sidecar）高度同构',
+        'C. 它是大模型网络通信专用的网卡；与物理路由器最为同构',
+        'D. 它是为了提高 Docusaurus 本地构建效率的编译插件'
+      ],
+      answer: 1,
+      explain: '架构的演进是相似的。微服务时代催生了 API 网关（处理限流、鉴权、日志等横切面关注点）。AI 时代同样如此，若让各团队各自在应用层写护栏、算 token 账单、配 failover，不仅会导致重复造轮子，更会让全公司安全与合规治理失控。模型网关是解决这一收敛压力的必然架构解。'
+    },
+    {
+      q: '在建设 AI 平台的生命周期中，架构师应时刻防范的“反模式（Anti-pattern）”是：',
+      options: [
+        'A. 先从最小的模型网关起步，被真实痛点驱动着演进',
+        'B. 过早平台化 (Premature Platformization)：在公司只有 1 个处于 POC 探索阶段的 AI 功能时，便凭空规划大而全的 AI 中台，设计重度抽象协议并强推给业务团队，最终因过于死板导致业务方纷纷绕过平台',
+        'C. 安全合规和成本控制在网关层做强制拦截，性能参数提供灵活配置',
+        'D. 定期使用生产回流数据更新离线评估集'
+      ],
+      answer: 1,
+      explain: '过早的平台化是极其昂贵且危害极高的过度工程。平台必须是自下而上“长”出来的。在业务初期，架构师应专注于让两三个 AI 应用跑出闭环，看清共性。若凭空猜测并确立死板的平台契约，不仅浪费平台研发精力，更会拖垮业务敏捷性，导致“平台建好却无人用”的窘境。'
+    },
+    {
+      q: '对于流量全部收口的“集中式模型网关”，如何化解其“单点故障 (SPOF)”与“延迟瓶颈”的架构代价？',
+      options: [
+        'A. 降低网关的服务器性能，使其物理重启更快',
+        'B. 网关层只作轻量级的数据面控制转发，使用水平扩展 (Autoscaling) 的网关实例群以化解吞吐压力，将重型的语义评估和漂移计算置于异步旁路，并利用熔断和降级机制防止下游抖动拖垮网关',
+        'C. 彻底废除网关，退回共享库 (SDK) 的分散治理模式',
+        'D. 缩短用户的会话超时上限为 1 秒，强制断开延迟链接'
+      ],
+      answer: 1,
+      explain: '既然选择集中式，就必须承担网关作为必经之路的可用性风险。网关数据面必须足够薄和快（只做正则匹配、轻量级 header 路由和转发），其自身必须是无状态的且能弹性扩容。将耗时较长、非阻断型的逻辑（如详细评估、漂移检测、全面 FinOps 汇总）异步处理。同时，配置合理的降级逻辑以保全自身。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

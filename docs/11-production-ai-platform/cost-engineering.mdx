@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M11L9 · 成本工程
 
@@ -64,7 +66,101 @@ AI 成本的特殊性让它容易失控：
   application="做成本工程:归因到功能/用户/步骤找二八重点;路由简单请求到小模型、缓存重复、精简 prompt token 降本;给每请求/用户/全局设预算上限防失控和成本攻击。降本用评估量化质量代价、别砸招牌。从第一天就有归因和预算(安全带),但别过早抠成本。平台统一成本看板/预算/总账。"
 />
 
-## 三、跟我做一遍：成本归因 + 模型路由 + 预算上限
+## 三、Token 经济学与成本管控图解 (Deep Dive Diagrams)
+
+本节展示大模型成本分摊与归因的可观测拓扑、实时 Token 额度校验与拦截执行流，以及成本优化技术与系统质量的折中关系。
+
+### 1. 结构全景：Token 计费计量与归因系统架构
+
+```mermaid
+graph TD
+    classDef app fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef metering fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef billing fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    App1["应用 A: 客服"]:::app
+    App2["应用 B: 分析"]:::app
+    
+    subgraph MeteringPlatform [平台计量网关]
+        App1 & App2 -->|网关 API 调用| Collector["1. 流量与 Token 收集器"]:::metering
+        Collector -->|实时上报| Aggregator["2. 异步聚合器 (Kafka / Redis)"]:::metering
+    end
+
+    subgraph CostBilling System [FinOps 成本分析系统]
+        Aggregator -->|存储计量记录| DB[("成本明细数据库")]
+        DB -->|看板聚合展示| Dashboard["3. 成本归因大盘 (FinOps 看板)"]:::billing
+        DB -->|超支控制| Limiter["4. 实时配额与预算限制器"]:::billing
+    end
+```
+
+### 2. 控制流程：实时 Token 额度验证与超支限流序列
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as 客户端 (User)
+    participant Gate as 计费网关 (Platform)
+    participant DB as 预算与配额数据库
+    participant LLM as 模型提供商 (LLM API)
+
+    User->>Gate: 1. 发起模型请求 (传递 App ID)
+    Gate->>DB: 2. 查询该 App 今日累计已花费用与全局额度
+    DB-->>Gate: 3. 返回预算状态 (累计 $10.2 / 额度上限 $10.0)
+    alt 已超预算 (Out of Budget)
+        Gate-->>User: 4a. [拒绝执行] 返回 HTTP 429 "已超出今日 Token 消费上限，请求受限"
+    else 预算充沛
+        Gate->>LLM: 4b. 转发推理请求
+        LLM-->>Gate: 5. 返回推理结果及 Usage (In: 1000, Out: 500)
+        Gate->>Gate: 6. 计算本次调用费用 (例如 $0.006)
+        Gate->>DB: 7. 增量更新已花费用大盘
+        Gate-->>User: 8. 返回模型结果
+    end
+```
+
+### 3. 折中谱系：成本优化技术与系统质量折中
+
+```mermaid
+graph TD
+    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef risk fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    Strategy["成本优化策略分类"]
+    
+    Strategy -->|模型路由| Route["模型路由: 简单走小模型, 复杂走大模型"]:::safe
+    Strategy -->|Prompt 压缩| Compress["Prompt 压缩/截断: 精简输入 Context"]:::risk
+    Strategy -->|语义缓存| Cache["语义/前缀缓存 (Prompt Caching)"]:::safe
+
+    Route --> RouteNote["优点: 极高降本杠杆 (降本 50~80%)<br/>缺点: 路由分类错误时会造成回答质量的偶发下降"]
+    Compress --> CompressNote["优点: 普适度极高，显著降低输入延迟<br/>缺点: 压缩过度可能丢失关键细节，引发模型幻觉与乱答"]
+    Cache --> CacheNote["优点: 零质量损害，额外降低 TTFT 耗时<br/>缺点: 仅对高频重复输入负载有效，命中率具不确定性"]
+```
+
+### 4. 步骤流演示：FinOps 成本管控管线
+
+<StepFlow
+  steps={[
+    {
+      title: '配额设定',
+      desc: '平台管理员在控制台为各 AI 应用（如客服 bot）预置每日消费额度（例如 $20/天）。'
+    },
+    {
+      title: '实时拦截',
+      desc: '网关层在接收请求前读取 Redis 消费状态。如额度已扣完，当场快速失败，拦截高额流量。'
+    },
+    {
+      title: '模型路由',
+      desc: '如果额度充足，路由器根据任务复杂度分发。简单翻译分配给便宜模型，逻辑推理送往昂贵模型。'
+    },
+    {
+      title: '计量汇总',
+      desc: '在收到 LLM 响应后提取输入和输出的 Token 数，折算单价，归因上报至 FinOps 数据大盘。'
+    }
+  ]}
+/>
+
+---
+
+## 四、跟我做一遍：成本归因 + 模型路由 + 预算上限
 
 <PyRunner
   rows={50}
@@ -109,7 +205,7 @@ print("归因看清、路由降本、预算防失控")`}
 
 简单请求路由到便宜的小模型、复杂的才用强模型（最大降本杠杆），每笔花费归因到功能（一眼看出"分析"类最烧钱、是优化重点），全局预算上限在超支时拒绝（防失控和成本攻击）。这就是成本从"月底吓一跳"变成可控工程。**试试**：把预算调到 0.02，看预算上限如何提前拦截；把"分析"类也路由到 small，看成本和（想象中的）质量如何变化——体会成本质量的权衡。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month11/m11l9_cost/`：
 
@@ -190,6 +286,46 @@ python labs/month11/m11l9_cost/test_cost.py
 - 你的 AI 成本归因到功能/用户/请求类型了吗？能说出哪个最烧钱、值不值吗？还是月底看总账才知道？
 - 你有全局/每用户预算上限吗？如果某个 bug 或攻击让调用量暴涨，有东西踩刹车吗？
 - 你在架构决策（用不用 Agent、塞多少 context、用哪个模型）时，把成本和质量、延迟一起算了吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '为什么在设计大语言模型（LLM）架构时，成本（Cost）必须被视作“一等系统约束”，而不是事后查看的财务账单？',
+      options: [
+        'A. 因为 LLM 的网络带宽是按字节收费的，容易引发网络延迟堵塞',
+        'B. AI 系统具有极高的边际运行成本（Token 即钱），且随着输入 Context 长度线性或二次方膨胀，多轮 Agent 推理更会成倍放大这一开销。不把成本作为一等约束在架构设计期进行模型路由、缓存和限制，上线即可能引发无法承受的经济灾难',
+        'C. 成本高低决定了大模型被编译为 Docusaurus 静态网站时的排版速度',
+        'D. 每次大模型调用都会自动把信用卡卡号泄露给模型提供商'
+      ],
+      answer: 1,
+      explain: '与传统软件边际服务器成本微乎其微不同，大语言模型的每次调用都需要消耗庞大的算力和资源（Token 计费）。长文本检索（RAG）、长上下文记忆和 Agent 循环均会急剧放大 Token 开销。如果不将其作为一等约束与质量、延迟同步权衡，上线后一旦调用量暴涨，昂贵的账单会直接掐断业务的生命线。'
+    },
+    {
+      q: '在进行 AI 成本优化时，公认的降本杠杆最大、最先考虑的系统设计手段是：',
+      options: [
+        'A. 模型路由 (Model Routing)：通过判定任务复杂度，将 80% 的简单问答路由给低成本的小模型（如 Llama 8B），仅在需要高复杂逻辑推理时路由给昂贵的强模型',
+        'B. 彻底限制用户输入的字数在 10 个字符以内',
+        'C. 部署多云架构，在不同云提供商之间高频同步模型权重',
+        'D. 将大模型的 Temperature 参数固定调至 0.0'
+      ],
+      answer: 0,
+      explain: '大模型与小模型的单价通常相差 10 至 50 倍。在真实业务中，大部分用户提问（例如“我的包裹到哪了”或“翻译这句话”）都是浅层语义理解，便宜模型即可完美胜任。通过模型路由进行分级治理，在质量无损的情况下，能直接把总体运行开销削减 70% 以上，是降本的核心手段。'
+    },
+    {
+      q: '为了规避意外死循环或遭遇成本注入攻击，AI 平台必须强制部署的“安全带”设计是：',
+      options: [
+        'A. 完全使用开源模型，拒绝任何计费网关',
+        'B. 全局预算上限与用户/功能级配额设置，在达到或超出费用警戒线时直接实施网关层 Fail-Safe 限流拦截',
+        'C. 在 Docusaurus 前端加装警告提示框，要求用户自觉节省 Token',
+        'D. 禁止任何长文本 RAG 功能，所有 Prompt 固定为 100 字符以下'
+      ],
+      answer: 1,
+      explain: '没有预算上限的系统相当于将钱包彻底敞开。当应用遭遇“提示词注入”被恶意诱导陷入死循环，或者遭遇恶意用户疯狂刷接口（成本型 DDoS），如果没有配额拦截，可能会在几小时内烧光一个团队数月的 LLM 预算。配额拦截和警报是上线生产必须强制配备的底线防护。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

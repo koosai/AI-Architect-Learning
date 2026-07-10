@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M11L8 · 人类监督与失败处理
 
@@ -62,7 +64,99 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="按风险给 AI 配监督:高风险不可逆用 HITL、中风险 HOTL、低风险自动。低置信触发弃答/升级。AI 组件失败走优雅降级。尽量把动作设计成可逆(软删/草稿/需确认),不可逆留人。备 AI 事故预案(关停开关/回滚/审计/补救)。只把高风险低置信升级给人并给足上下文,防监督沦为橡皮图章。升级/审批/降级/关停做成平台共享能力。"
 />
 
-## 三、跟我做一遍：置信度升级 + 优雅降级 + 可逆性
+## 三、人机协作与降级回退图解 (Deep Dive Diagrams)
+
+本节展示人机协同处理管道的决策矩阵、低置信度与系统级故障下的降级与升级时序，以及人机控制模式与系统吞吐的特征对比。
+
+### 1. 结构全景：人机协作 (HITL/HOTL) 决策边界与升级网络
+
+```mermaid
+graph TD
+    classDef auto fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef hotl fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef hitl fill:#ffebee,stroke:#c62828,stroke-width:2px;
+
+    UserAction["用户交互操作行为"] --> CheckRisk{"1. 操作是否涉及<br/>资金/写修改/高危？"}
+    
+    CheckRisk -- "否: 低风险" --> CheckConf1{"2. 模型置信度 (Confidence)"}
+    CheckRisk -- "是: 高风险" --> CheckRev{"3. 动作是否具有<br/>物理可逆性 (Reversible)？"}
+
+    CheckConf1 -- ">= 0.6: 高" --> OptAuto["全自动路由 (Autonomous)"]:::auto
+    CheckConf1 -- "< 0.6: 低" --> OptHOTL["人在环上 (HOTL)<br/>自动执行+异步撤销"]:::hotl
+
+    CheckRev -- "可逆 (有24小时缓冲)" --> CheckConf2{"4. 模型置信度"}
+    CheckRev -- "不可逆 (即时划款)" --> OptHITL["人在环中 (HITL)<br/>必须人工一键确认"]:::hitl
+
+    CheckConf2 -- ">= 0.8" --> OptHOTL
+    CheckConf2 -- "< 0.8" --> OptHITL
+```
+
+### 2. 控制流程：低置信度升级与异常降级时序
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as 客户端 App
+    participant Gate as AI 平台网关 (Gateway)
+    participant LLM as 模型提供商 (LLM API)
+    participant Queue as 人工审核队列 (HITL Queue)
+    participant Agent as 客服专员 (Human)
+
+    App->>Gate: 1. 发送高风险写动作 (修改订单地址)
+    Gate->>LLM: 2. 执行意图识别与解析
+    LLM-->>Gate: 3. 返回动作 schema (置信度 = 0.55 < 0.6)
+    Note over Gate: 检测到置信度过低，拒绝全自动
+    Gate->>Queue: 4. 将任务及 AI 推荐答案打包入库并挂载
+    Queue->>Agent: 5. 专员工作台分发，展示 AI 推理解析与置信度
+    Agent->>Queue: 6. 专员复核并修正地址，点击“确认提交”
+    Queue-->>Gate: 7. 执行修改操作并落库
+    Gate-->>App: 8. 返回处理成功响应
+```
+
+### 3. 折中谱系：人机协作度量谱系
+
+```mermaid
+graph TD
+    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef risk fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    OversightStrategy["人机控制模式分类"]
+    
+    OversightStrategy -->|人在环中| Hitl["人在环中 (HITL - Human in the Loop)"]:::safe
+    OversightStrategy -->|人在环上| Hotl["人在环上 (HOTL - Human on the Loop)"]:::safe
+    OversightStrategy -->|全机自主| Auto["全自主执行 (No Human in control)"]:::risk
+
+    Hitl --> HitlNote["安全度: 极高 (绝对屏障)<br/>吞吐开销: 极低 (吞吐受限于人力规模，且人极易疲劳沦为橡皮图章)"]
+    Hotl --> HotlNote["安全度: 中高 (提供异步纠错审计)<br/>吞吐开销: 极高 (支持高并发执行，只需少数审计人)"]
+    Auto --> AutoNote["安全度: 极低 (无故障控制，错误极易传播级联灾难)<br/>吞吐开销: 无穷大 (纯机器时延，低成本)"]
+```
+
+### 4. 步骤流演示：人机审核与降级控制链路
+
+<StepFlow
+  steps={[
+    {
+      title: '低信度捕获',
+      desc: '大模型返回 JSON 意图置信度过低，或输出结果包含了弃答退回标识（如 REFUSE）。'
+    },
+    {
+      title: '降级兜底',
+      desc: '系统放弃大模型推理动作，转而从本地 Redis 缓存拉取冷备份兜底预案，或静默降级为传统规则脚本。'
+    },
+    {
+      title: '审核挂载',
+      desc: '如果是高风险且不可逆动作，自动拦截并挂载到企业人工审核任务池，提供 Trace ID 和上下文可视化看板。'
+    },
+    {
+      title: '人工批阅',
+      desc: '专业审计员在工作台完成一击必杀的二次核验或修正。最终审批事件存入系统防篡改审计日志。'
+    }
+  ]}
+/>
+
+---
+
+## 四、跟我做一遍：置信度升级 + 优雅降级 + 可逆性
 
 <PyRunner
   rows={50}
@@ -97,7 +191,7 @@ print("按风险与置信度决定:自动/人审/降级")`}
 
 同一个决策函数按"风险等级 + 置信度 + 可逆性 + AI 是否可用"路由：高风险/不可逆走人类审批、低置信升级转人工、AI 挂了优雅降级、只有低风险高置信可逆才全自动。这就是把"出错/没把握时怎么办"设计成系统的一等逻辑。**试试**：把"转账1万"改成可逆的"草稿转账（需二次确认才生效）"，看它是否还需要 HITL——体会可逆性如何改变风险；想想如果所有操作都要人批，人会不会疲劳成橡皮图章。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month11/m11l8_oversight/`：
 
@@ -172,6 +266,46 @@ python labs/month11/m11l8_oversight/test_oversight.py
 - 你的 AI 系统假设自己不会错吗？出错/没把握/被攻破/挂掉时，分别有兜底吗？
 - 你的高风险不可逆操作有 HITL 吗？能不能通过"可逆化"改造，让 AI 更自主又更安全？
 - 你的人类监督是有效判断还是橡皮图章？你只把该升级的升级、给了人足够上下文吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 AI 系统设计中，“可逆性 (Reversibility)”被视作比“模型准确率”更高杠杆的系统安全工具，以下哪项最符合可逆性设计？',
+      options: [
+        'A. 把删除数据的物理操作改为逻辑删除（软删除），或设立 24 小时延迟生效期与一键撤销机制，以容忍 AI 在自动决策时的偶发幻觉错误',
+        'B. 将模型推理的 Temperature 参数设为 0，防止模型产生不同回答',
+        'C. 强制在数据库层使用单主节点同步，拒绝任何多云备份',
+        'D. 每次模型报错时，自动反向调整模型的参数权重以撤销决策'
+      ],
+      answer: 0,
+      explain: '提高准确率存在严重的边际效应递减且成本高昂。架构师应通过系统设计降低“出错的代价”。将高危动作设计为可逆的（如软删除、草稿审核态、退款锁定缓冲期），可容忍大模型的偶尔失手。即使 AI 发生幻觉判定错误，也能够在不破坏真实业务价值的前提下通过确定性的异步操作撤销，从而安全地赋予 AI 更高的自主权。'
+    },
+    {
+      q: '某大型企业为防范 AI 内容审核漏判，要求 100% 的 AI 输出必须经过人工审核员双人复审才能发布。系统上线后不久便发生了大量敏感词漏判漏拦的生产事故。导致这一灾难性退化的根本原因是：',
+      options: [
+        'A. 没有采用多云部署，导致网络链路延迟过大',
+        'B. “橡皮图章（Rubber-stamping）”效应：人工审核池充斥了海量正常且低风险的文案，繁重的冗余审核导致审核员产生严重的感官疲劳，在缺乏 AI 推理依据上下文的情况下沦为盲目一键同意的图章',
+        'C. 人工审核员的电脑 CPU 核心数过少，无法解析复杂的多维图表',
+        'D. 应该取消全部人工，转为全自主大模型进行 100% 自我反思'
+      ],
+      answer: 1,
+      explain: '人类监督（Human Oversight）的设计重心是“让人的每一次介入都有质量”。将 100% 无风险的低置信或低风险操作全部倒给人工审核员，会瞬间冲垮人力的注意力带宽，使其疲于奔命并产生严重的注意力盲区，退化为无脑点通过的“橡皮图章”。架构师应推行“分级升级”：只有中高风险或模型低置信问题才投送至人，并提供清晰的可解释上下文。'
+    },
+    {
+      q: '在构建 AI 平台的优雅降级 (Fallback) 架构时，面对大语言模型全面不可用（例如 OpenAI 服务突发大面积中断）的极端事故，以下降级方案中最不可接受的是？',
+      options: [
+        'A. 针对高频的客服会话，直接降级到传统基于 ElasticSearch 倒排检索的常见问题答疑（QA）匹配或本地规则匹配',
+        'B. 让网关层拦截所有写动作并直接 Fail-Safe，引导用户进入“传统手工录入工单”通道',
+        'C. 直接抛出 HTTP 500 模型未响应，并让客户端发起高频（100ms）自旋重试，直到第三方 API 恢复',
+        'D. 路由切流至备用本地部署的开源小模型（如 Llama 8B），降级精度以维持核心业务在线'
+      ],
+      answer: 2,
+      explain: 'AI 系统本质是分布式系统，必须践行 M5 的弹性设计。模型接口超时或挂掉时，高频自旋重试无异于对已瘫痪的第三方执行自残式的 DDoS 攻击，且会让用户体感彻底卡死崩溃。优雅降级应做到 fail-safe 和 fail-fast，通过本地缓存、小模型切流或保守默认规则让系统带伤运行，而非当场瘫痪。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

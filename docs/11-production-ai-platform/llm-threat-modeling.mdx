@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M11L5 · 威胁建模与 OWASP LLM Top 10
 
@@ -65,7 +67,103 @@ OWASP LLM Top 10 是 AI 威胁的行业清单，重点几类：
   application="用 OWASP LLM Top 10 系统列全威胁,画信任边界(用户输入/检索内容/工具返回/真实操作)在每处设防,按影响排优先级重点防高危(过度代理触发不可逆操作)。凡模型会读的外部内容当不可信、防间接注入。上线前威胁建模作为平台强制治理。提示注入当作降低风险而非根除来设计。"
 />
 
-## 三、跟我做一遍：威胁识别与风险排序
+## 三、AI 威胁建模与注入安全图解 (Deep Dive Diagrams)
+
+本节展示大模型应用的典型攻击面与信任边界、间接提示词注入（Prompt Injection）的攻击路径，以及安全管控与用户体验的平衡选型。
+
+### 1. 结构全景：LLM 典型攻击面与信任边界拓扑
+
+```mermaid
+graph TD
+    classDef attacker fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+    classDef boundary fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef sys fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+
+    Attacker["恶意用户 / 投毒文档"]:::attacker
+    
+    subgraph TrustBoundary [信任边界 (Boundary Control)]
+        InputFilter["1. 输入过滤 / PII 脱敏"]:::boundary
+        OutputFilter["2. 输出护栏 / 幻觉检测"]:::boundary
+    end
+
+    subgraph LLMAppSystem [LLM 应用系统核心]
+        Prompt["Prompt 拼接区"]:::sys
+        Model["大语言模型 (LLM)"]:::sys
+        Database[("企业数据库 (向量库)")]:::sys
+    end
+
+    Attacker -->|直接注入 / 越狱攻击| InputFilter
+    InputFilter --> Prompt
+    Database -->|间接注入 (检索投毒)| Prompt
+    Prompt --> Model
+    Model --> OutputFilter
+```
+
+### 2. 控制流程：间接提示注入 (Indirect Prompt Injection) 攻击序列
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Alice as 正常员工
+    actor Attacker as 恶意攻击者
+    participant DB as 企业共享知识库
+    participant App as RAG 问答应用
+    participant LLM as 大语言模型 (LLM)
+
+    Attacker->>DB: 1. 上传被“指令投毒”的共享文件 (包含白底白字的越狱指令)
+    Alice->>App: 2. 提问: "请帮我汇总今日的产品文档"
+    App->>DB: 3. 执行向量相似度检索 (向量包含被投毒的段落)
+    DB-->>App: 4. 返回投毒数据上下文 (包含恶意越狱代码)
+    App->>App: 5. 拼装 Prompt: (System Prompt + 用户问题 + 投毒内容)
+    App->>LLM: 6. 提交最终拼装内容 (模型无法区分“数据”与“指令”)
+    Note over LLM: 触发越狱：模型开始执行投毒代码<br/>泄露 Alice 敏感信息至外部服务器
+    LLM-->>App: 7. 返回带泄露链接或欺骗性的错误结论
+```
+
+### 3. 折中谱系：防御等级与模型能力/体验折中
+
+```mermaid
+graph TD
+    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef risk fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    DefenseLevel["防护严格度等级"]
+    
+    DefenseLevel -->|宽松策略| Loose["宽松策略: 弱过滤/强工具自主权"]:::risk
+    DefenseLevel -->|平衡策略| Balanced["平衡策略: 双向过滤/高危工具人类审核"]:::safe
+    DefenseLevel -->|极严策略| Strict["极端策略: 阻断一切非标准提问/剥离工具"]:::risk
+
+    Loose --> LooseNote["优点: 极高灵活性，回答准确性不受过滤噪音干扰<br/>缺点: 极易被直接与间接注入秒杀，造成越权"]
+    Balanced --> BalancedNote["优点: 拦截 90% 以上注入风险，保障核心系统安全<br/>缺点: 存在 5% 左右的良性误阻拦率"]
+    Strict --> StrictNote["优点: 绝对安全<br/>缺点: 系统退化为确定性查表工具，彻底失去 LLM 创造力"]
+```
+
+### 4. 步骤流演示：威胁分析与应对管线
+
+<StepFlow
+  steps={[
+    {
+      title: '威胁登记',
+      desc: '使用 OWASP LLM Top 10 标准对新上线功能（如邮箱助手）做全面静态风险点分析。'
+    },
+    {
+      title: '信任边界标定',
+      desc: '在系统流图中标出“不可信输入跨入可信执行区”的全部接口（如 RAG 检索返回、用户自由文本等）。'
+    },
+    {
+      title: '风险矩阵评分',
+      desc: '按照“可能性 × 影响严重度”矩阵自动计算综合风险分，筛选出高于临界分值的高危资产。'
+    },
+    {
+      title: '纵深防御部署',
+      desc: '针对高危项部署缓解策略（如添加 XML tags 指令隔离、工具副作用操作引入 HITL 人工确认）。'
+    }
+  ]}
+/>
+
+---
+
+## 四、跟我做一遍：威胁建模评估与登记风险排序
 
 <PyRunner
   rows={46}
@@ -104,7 +202,7 @@ print("识别威胁、按影响排序、标出信任边界")`}
 
 同一个系统被系统地列出威胁、按"可能性×影响"排序、标出每个威胁跨越的信任边界——防护资源就该优先投给排在最前的（这里间接注入和过度代理最危险）。这就是威胁建模：**先看清会被怎么打，再决定防哪里**。**试试**：加一个"供应链——第三方 MCP 工具被投毒"的威胁；想想为什么间接注入的 impact 给到 5（它能攻击到其他用户）。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month11/m11l5_threats/`：
 
@@ -185,6 +283,46 @@ python labs/month11/m11l5_threats/test_threats.py
 - 你的 AI 系统会读取哪些外部内容（用户输入/检索/工具返回/网页）？每一个你都当不可信、都设防了吗？
 - 你的 Agent 能触发哪些不可逆的真实操作？被诱导执行了最坏会怎样？这是你的头号威胁吗？
 - 你们有没有"上线前过一遍 OWASP LLM Top 10"的强制流程？还是靠个人自觉、经常漏掉间接注入这类隐蔽威胁？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 OWASP LLM Top 10 安全分类中，为什么“间接提示词注入 (Indirect Prompt Injection)”比“直接提示词注入 (Direct Prompt Injection)”在许多企业场景下危害更广、更难防范？',
+      options: [
+        'A. 因为直接提示词注入需要攻击者掌握模型物理服务器的 Root 权限',
+        'B. 直接提示词注入的影响仅限于发起攻击的恶意用户本人；而间接注入可以将攻击指令隐藏在外部文档或邮件中，通过系统的 RAG 检索被动触发，进而劫持其他无辜用户的会话，甚至造成大面积敏感信息泄露',
+        'C. 间接注入在运行时会触发硬件级的 GPU 物理死锁，直接瘫痪服务器',
+        'D. 间接注入只针对特定小语种生效，而直接注入针对英文和中文'
+      ],
+      answer: 1,
+      explain: '直接注入是攻击者和模型的双向互动，最坏的情况是模型对这名攻击者胡言乱语；但间接注入（例如在知识库文档或待分析邮件中埋入隐秘越狱词）会污染共享数据平面。当其他普通员工询问 RAG 时，系统会自动把投毒内容检索出来作为 context 喂给模型，触发越狱。攻击者不需要拥有该系统的账户，只需将带毒文件放入系统必经的检索源即可，隐蔽性极高。'
+    },
+    {
+      q: '在 AI 架构设计中，“信任边界 (Trust Boundary)”概念的升级对于防范“过度代理 (Overreliance / Insecure Agency)”尤为关键。以下哪项设计最符合最小权限安全原则？',
+      options: [
+        'A. 给 Agent 赋予一整套包含 read_db, write_db, send_email, run_shell 的全局工具箱，通过 Prompt 警告模型“不准私自执行危险操作”',
+        'B. 让模型自主判定工具调用的安全性，一旦模型觉得安全就直接免审执行',
+        'C. 明确划定信任边界：Agent 仅拥有内存草稿只读权，一切涉及数据库修改、资金划拨、外部邮件发送等具有副作用的动作均需输出结构化指令并路由至 HITL (Human-in-the-Loop) 进行显式的人工确认与执行',
+        'D. 彻底禁止 Agent 使用任何工具，所有业务流程均退回纯人工手写代码'
+      ],
+      answer: 2,
+      explain: '任何时候大模型都不是 100% 可信的，它极易被恶意 Prompt 越狱或因为幻觉产生非预期的动作。因此，必须将“动作生成（模型决策）”与“动作执行（系统操作）”剥离，任何带有副作用、不可逆的危险操作都必须放在信任边界之外，依靠确定性的机制（如人工二次审计、物理鉴权）来做终极屏障。'
+    },
+    {
+      q: '以下关于“提示词注入防御”的认知中，作为架构师应时刻牢记并践行的事实是：',
+      options: [
+        'A. 目前业界存在一种最强 Prompt，可以 100% 免疫任何形式的提示词注入，不需要网关过滤',
+        'B. 指令与数据同为自然语言，在 LLM 交互中目前无法从数学上做到 100% 可靠区分，必须建立多重输入分类拦截、输出扫描、权限隔离的“纵深防御 (Defense-in-depth)”体系来降低整体风险',
+        'C. 只要模型参数足够大（如达到万亿级），提示词注入攻击就会自动失效',
+        'D. 提示词注入仅属于软件工程阶段的 bug，可以通过编写单测直接捕获'
+      ],
+      answer: 1,
+      explain: '由于自然语言在大模型中既当“代码（指令）”又当“数据（上下文）”，从底层原理上就注定了无法像 SQL 注入（通过参数化绑定彻底杜绝）那样做到 100% 数学隔离。我们必须接受“模型必然有可能被越狱”的前提，并通过纵深防御：输入层检测脱敏、Prompt 层结构化（如 XML 隔离）、执行层最小特权分离、输出层护栏过滤检测，四道防线层层把关，降低其发生概率并把危害范围降到最低。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
