@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M10L3 · Supervisor 编排
 
@@ -38,7 +39,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 基础：Supervisor 模式
 
-<GlossaryTerm term="Supervisor Pattern" definition="主管模式：一个主控（supervisor）Agent 负责编排——把任务分配给合适的专精（worker）Agent、收集它们的结果、决定下一步、并作为唯一的最终出口。是最常用、最可控的多 Agent 协作结构。">Supervisor（主管）模式</GlossaryTerm>：一个主控 Agent 负责编排，专精 Agent 是它的“下属”（worker）：
+<GlossaryTerm term="Supervisor Pattern" definition="主管模式：一个主控（supervisor）Agent 负责编排——把任务分配给合适的专精（worker）Agent、收集它们的结果、决定下一步、并作为唯一的最终出口。是最常用、最可控的多 Agent 协作结构。">Supervisor（主管）模式</GlossaryTerm>：一个主控 Agent 负责编排，专精 Agent 是它的“下属”即 <GlossaryTerm term="Worker Agent" definition="执行者/从属智能体：多智能体系统（尤其是主管模式）中专门承担某一项具体子任务的轻量智能体节点，只接受上层 Supervisor 的调配。">Worker Agent</GlossaryTerm>：
 1. **分配（delegate）**：Supervisor 看任务，决定派给哪个专精 Agent 做什么（[路由 M10L7](./handoff-routing)）。
 2. **收集（collect）**：worker 完成后把结构化结果交回 Supervisor。
 3. **决策（decide）**：Supervisor 根据已有结果，决定还要派什么任务、还是可以结束。
@@ -48,7 +49,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 进阶：为什么 Supervisor 最可控
 
-Supervisor 模式之所以是多 Agent 的首选，因为它**集中了控制**（[呼应 M5L2 网关收口](../core-components/api-gateway)）：
+Supervisor 模式之所以是多 Agent 的首选，因为它它集中了控制（[呼应 M5L2 <GlossaryTerm term="API Gateway" definition="API 网关：微服务架构中的单一入口点，用于聚合内部服务接口、实现流量控制、安全审计和协议转换。">API 网关 (API Gateway)</GlossaryTerm> 收口](../core-components/api-gateway)）：
 - **单一控制点**：流程由 Supervisor 主导，不是一群 Agent 自由交互——可预测、可追踪。
 - **单一出口**：最终答案只由 Supervisor 给，对外一致（不会多个 Agent 各说各话）。
 - **集中的停止/预算**：Supervisor 持有[全局停止条件和预算（M9L4/M10L10）](../agent-architectures/stopping-budget)——它决定何时结束，防止协作无限进行。
@@ -58,8 +59,8 @@ Supervisor 模式之所以是多 Agent 的首选，因为它**集中了控制**�
 
 - **Supervisor 可能成瓶颈/单点**（[呼应 M5L2 网关瓶颈](../core-components/api-gateway)）：所有协调都经过它，它的决策质量决定整个系统。如果任务太复杂、Supervisor 的“调度智能”不够，会成为瓶颈。对策：分层 Supervisor（[像组织的多级管理](../system-design-bridge/lld-classes)）、或让部分 worker 在子任务内自治。
 - **Supervisor 也是个 Agent，要全套约束**：它有 [agent loop](../agent-architectures/agent-loop-basics) 的所有风险（[会不停、会乱派 M9L4](../agent-architectures/stopping-budget)）——要给它停止条件、预算、轨迹记录、护栏。
-- **分配可以是确定的或自主的**：简单场景用**固定流程**（workflow 编排：研究→设计→审查，[呼应 M9L11/M10L1 优先 workflow](./why-multi-agent)）；复杂场景才让 Supervisor **自主决定**派给谁做什么。前者更可控，后者更灵活——按需选。
-- **结构化的任务和结果**：Supervisor 派任务、worker 回结果，都要用 [schema（M7L6/M10L4）](./communication-state)，而非自由文本——保证协作可靠。
+- **分配可以是确定的或自主的**：简单场景用**固定流程**（workflow <GlossaryTerm term="Orchestration Topology" definition="编排拓扑：描述多智能体节点间连接和协作流程走向的控制结构。">编排 (Orchestration)</GlossaryTerm>：研究→设计→审查，[呼应 M9L11/M10L1 优先 workflow](./why-multi-agent)）；复杂场景才让 Supervisor **自主决定**派给谁做什么。前者更可控，后者更灵活——按需选。
+- **结构化的任务和结果**：Supervisor 派任务、worker 回结果，都要用 <GlossaryTerm term="State Schema" definition="状态约束：描述系统或智能体节点间通信交换的数据契约，使用强 schema（例如 JSONSchema）确保可解析与类型安全。">State Schema</GlossaryTerm>（[M7L6/M10L4](./communication-state)），而非自由文本——保证协作可靠。
 - Supervisor 模式对应人类组织里的“项目经理 + 专家团队”——这再次说明设计多 Agent 是在做[组织设计（M10L2/Conway）](./roles-specialization)。理解它，你就掌握了多 Agent 最实用的骨架。
 
 <ResearchNote
@@ -70,7 +71,83 @@ Supervisor 模式之所以是多 Agent 的首选，因为它**集中了控制**�
   application="多 Agent 优先用 Supervisor 编排：主控分配任务给专精 Agent、收集结构化结果、决定下一步、作为唯一出口、持有全局停止预算。简单流程用固定编排（workflow），复杂才让 Supervisor 自主分配。给 Supervisor 配停止/预算/护栏/轨迹。复杂时分层 Supervisor。"
 />
 
-## 三、跟我做一遍：Supervisor 编排
+## 三、Supervisor 集中编排图解 (Deep Dive Diagrams)
+
+本节展示集中编排 Supervisor 的星型星状架构、任务路由状态机流程，以及主管智能体调度 Workers 的交互时序。
+
+### 1. 结构全景：Supervisor 集中控制型架构
+
+```mermaid
+graph TD
+    classDef supervisor fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
+    classDef worker fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef boundary fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+
+    UserTask["SRE / 业务任务输入"] --> Supervisor["1. 主管智能体 (Supervisor Agent)"]:::supervisor
+    
+    subgraph ExecutionTeam [专精执行智能体团队]
+        Supervisor -->|2a. 分派任务 A| WorkerResearch["研究员 (Researcher Agent)"]:::worker
+        Supervisor -->|2b. 分派任务 B| WorkerCode["编写员 (Coder Agent)"]:::worker
+        Supervisor -->|2c. 分派任务 C| WorkerReview["质检员 (Reviewer Agent)"]:::worker
+        
+        WorkerResearch -.->|3a. 结构化交回| Supervisor
+        WorkerCode -.->|3b. 结构化交回| Supervisor
+        WorkerReview -.->|3c. 结构化交回| Supervisor
+    end
+
+    Supervisor -->|4. 共识收敛与结论整理| FinalAnswer["唯一的最终答案输出"]:::boundary
+```
+
+### 2. 控制流程：Supervisor 任务路由状态机
+
+```mermaid
+graph LR
+    classDef state fill:#e1f5fe,stroke:#0288d1,stroke-width:1px;
+    classDef alert fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    Start(["1. 接收外部任务"]) --> Init["2. 初始化全局 Scratchpad"]:::state
+    
+    Init --> CheckBudget{"3. 全局预算与步数审计"}
+    CheckBudget -->|预算耗尽| StopBudget["4a. 强行熔断停止 (STOP_BUDGET)"]:::alert
+    
+    CheckBudget -->|余额充足| Decide["4b. Supervisor LLM 决策下一步"]:::state
+    
+    Decide -->|Action: Worker A| CallWorker["5. 调用专精 Worker，挂起等待"]:::state
+    CallWorker --> ReceiveResult["6. 收集并更新黑板状态"]:::state
+    ReceiveResult --> CheckBudget
+    
+    Decide -->|Action: Finish| Conclude["4c. 最终结果汇总并导出 (DONE)"]
+```
+
+### 3. 时序全景：Supervisor-Workers 调度与反馈时序
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Host as 编排协调器 (Host Engine)
+    participant Supervisor as 主管智能体 (Supervisor)
+    participant Researcher as 专精 Worker A (Researcher)
+    participant Writer as 专精 Worker B (Writer)
+
+    Host->>Supervisor: 1. 送入总体任务: "调研并总结 DB 连接池泄漏"
+    Supervisor->>Host: 2. 路由分派: 调用 Worker A 查监控指标
+    Host->>Researcher: 3. 执行工具 (query_metrics)
+    Researcher-->>Host: 4. 返回 "Active = Max Limit"
+    Host->>Supervisor: 5. 汇总 Observation 回写黑板
+    
+    Note over Supervisor: 决策：下一步需要 Writer 编写修复指南
+    Supervisor->>Host: 6. 路由分派: 调用 Worker B 编写修复方法
+    Host->>Writer: 7. 执行方案生成
+    Writer-->>Host: 8. 返回 Markdown 限流修复文档
+    Host->>Supervisor: 9. 汇总 Observation
+    
+    Note over Supervisor: 决策：已完成，可以导出
+    Supervisor-->>Host: 10. 输出一致的最终研究简报 (Finish)
+```
+
+---
+
+## 四、跟我做一遍：Supervisor 编排
 
 <PyRunner
   rows={40}
@@ -103,7 +180,7 @@ print("主控分配-收集-决策-出口")`}
 
 Supervisor 依次把任务派给研究员、架构师、审查员，收集各自的结构化产出，最后作为唯一出口汇总——流程集中可控、有停止上限、对外一致。**试试**：把固定 plan 改成"根据审查结果决定要不要再让架构师改一版"（Supervisor 自主决策的雏形）；想想 worker 数量很多时 Supervisor 会不会成瓶颈（分层 Supervisor）。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month10/m10l3_supervisor/`：
 
@@ -178,6 +255,46 @@ Supervisor 模式不是 Agent 时代的发明——它就是把贯穿全课的"�
 - 你的多 Agent 有明确的 Supervisor（单一控制点和出口）吗？还是一群 Agent 自由交互、各说各话？
 - Supervisor 持有全局停止条件和预算吗？整个协作什么时候、由谁叫停？最坏花多少？
 - Supervisor 会不会成瓶颈（任务太复杂、worker 太多）？需要分层 Supervisor 或局部 worker 自治吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在多 Agent 协作设计中，以下关于 Supervisor (主管) 模式的优势，哪项描述最准确？',
+      options: [
+        'A. 它让所有的 Worker Agent 能够并行运行，并且完全不需要共享黑板内存',
+        'B. 它实现了单一控制点、单一一致出口，并且通过集中管理全局预算和停止条件，极大地提高了多 Agent 系统的可控性与可预测性',
+        'C. 它使每一个 Worker Agent 都可以自由跳过权限校验，直接读写物理数据库',
+        'D. 它通过在 Worker 之间直接交接控制权，彻底消除了协调器引起的调度延迟'
+      ],
+      answer: 1,
+      explain: '微服务和多 Agent 一样，最怕“群龙无首”导致行为失控。Supervisor 作为统一收口，控制了所有对外产出与内部调度流，能确保系统不陷入死循环，且对外输出的一致性最高。'
+    },
+    {
+      q: '当多 Agent 系统非常庞大、Worker 数量极多且任务过于复杂时，Supervisor 模式面临的最大痛点是什么？如何防范？',
+      options: [
+        'A. 痛点是 GPU 的显存利用率过低，防范手段是增加并行扇出数',
+        'B. 痛点是 Supervisor 节点的 prompt 太短，防范手段是使用 RAG 压缩',
+        'C. 痛点是 Supervisor LLM 成为整个系统的调度瓶颈与单点故障；防范手段是采用“分层 Supervisor”进行多级管理，或在子任务中授予 Worker 局部自治权',
+        'D. 痛点是 Worker 之间无法直接传输明文 Thought，防范手段是切换为 Swarm 模式'
+      ],
+      answer: 2,
+      explain: '如果所有的微小决策都交由一个 Supervisor 去分配与决策，会使得主控 Agent 的 Context Window 迅速膨胀，且容易因模型注意力焦点模糊做出错误路由。利用组织行为学中的“多级管理”分而治之是解决该瓶颈的成熟实践。'
+    },
+    {
+      q: '在设计 Supervisor 与 Workers 之间的交互接口时，为什么应该优先采用结构化 schema (如 JSONSchema) 交互，而非自由文本对话？',
+      options: [
+        'A. 因为自由文本无法在 Markdown 预览中正确加粗显示',
+        'B. 因为自由文本会导致 Worker 无法被 Python 的 PyRunner 载入运行',
+        'C. 结构化契约可以精确约束任务的入参和出参，防止 Worker Agent 的闲聊文本造成 Supervisor 的上下文状态污染与逻辑误判',
+        'D. 结构化交互是为了降低大模型的采样温度 (Temperature)'
+      ],
+      answer: 2,
+      explain: '“好契约造就好的协作”。多 Agent 实质上是分布式的 RPC 调用。如果 Worker 随意返回一长段 Thought 混杂 Observation 的文本，主控 LLM 的解析代价会呈指数级上升，且极易诱发逻辑幻觉。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

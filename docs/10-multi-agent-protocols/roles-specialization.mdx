@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M10L2 · 角色与专业分工
 
@@ -32,7 +33,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 基础：单一职责的角色
 
-每个 Agent 应该有一个<GlossaryTerm term="Agent Role" definition="Agent 角色：一个 Agent 在多 Agent 系统中承担的单一、清晰、不与他人重叠的职责（如研究员、设计者、审查者），配套与该职责匹配的提示、工具和权限。">清晰的角色</GlossaryTerm>——单一职责、边界明确、和其它 Agent 不重叠（[呼应 M4L2 SRP](../design-patterns-lld/solid-srp-ocp)）。像设计团队岗位：研究员负责查资料、架构师负责出方案、审查员负责找风险——每个角色**做什么、不做什么**都清楚。角色清晰了，每个 Agent 的 prompt 才能聚焦（“你是审查员，只找风险，不改方案”），产出才专精、可预期。
+每个 Agent 应该有一个<GlossaryTerm term="Agent Role" definition="Agent 角色：一个 Agent 在多 Agent 系统中承担的单一、清晰、不与他人重叠的职责（如研究员、设计者、审查者），配套与该职责匹配的提示、工具和权限。">清晰的角色</GlossaryTerm>——单一职责、边界明确、和其它 Agent 不重叠（[呼应 M4L2 <GlossaryTerm term="Single Responsibility Principle" definition="单一职责原则：SOLID 设计原则的第一条，主张一个类或模块应该有且仅有一个发生变化的原因。">单一职责原则 (SRP)</GlossaryTerm>](../design-patterns-lld/solid-srp-ocp)）。像设计团队岗位：研究员负责查资料、架构师负责出方案、审查员负责找风险——每个角色**做什么、不做什么**都清楚。角色清晰了，每个 Agent 的 prompt 才能聚焦（“你是审查员，只找风险，不改方案”），产出才专精、可预期。
 
 ### 进阶：最小工具与权限分离
 
@@ -42,7 +43,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - **审查员**：只读 artifacts，无修改权限（审查员不该改答案，只提风险）。
 - **执行者**（如果有）：才有[副作用工具（M9L2 危险工具需审批）](../agent-architectures/tools-and-boundaries)。
 
-按角色做<GlossaryTerm term="Permission Separation" definition="权限分离：给每个 Agent 角色分配刚好完成其职责所需的最小工具和权限，不同角色权限不同。既实现专精，又限制每个 Agent 的爆炸半径（一个角色被攻破/出错，影响有限）。">权限分离</GlossaryTerm>：每个 Agent 只拿到完成它那份工作所需的最小权限。这既保证专精，又[限制每个 Agent 的爆炸半径（M5L8/M9L9）](../core-components/bulkhead-isolation)——一个角色出错或被攻破，影响被关在它的权限范围内。
+按角色做<GlossaryTerm term="Permission Separation" definition="权限分离：给每个 Agent 角色分配刚好完成其职责所需的最小工具和权限，不同角色权限不同。既实现专精，又限制每个 Agent 的爆炸半径（一个角色被攻破/出错，影响有限）。">权限分离</GlossaryTerm>：每个 Agent 实行 <GlossaryTerm term="Principle of Least Privilege" definition="最小特权原则：只授予完成特定工作所必需的最小系统访问和操作权限的安全设计原则。">最小特权原则 (Principle of Least Privilege)</GlossaryTerm>。这既保证专精，又[限制每个 Agent 的爆炸半径（M5L8/M9L9）](../core-components/bulkhead-isolation)——一个角色出错或被攻破，影响被关在它的权限范围内。
 
 ### 深入（选学）：角色设计的工程要点
 
@@ -60,7 +61,83 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="设计多 Agent 角色：像设计团队岗位——单一职责、明确边界、最小工具权限、按角色分离权限（限制爆炸半径）。审查角色保持独立。角色间用 schema 化契约协作。只设必要角色，别爆炸。判断是否拆：合并成一个 Agent 会更糟吗？"
 />
 
-## 三、跟我做一遍：按角色分离权限
+## 三、角色分工与工具绑定图解 (Deep Dive Diagrams)
+
+本节展示专精 Agent 的权限绑定与物理沙箱隔离拓扑、全能角色重叠引发的数据竞态冲突，以及专精 Agent 与编排引擎的交互时序。
+
+### 1. 结构全景：专精 Agent 权限最小化与边界隔离拓扑
+
+```mermaid
+graph TD
+    classDef brain fill:#ffcdd2,stroke:#c62828,stroke-width:1.5px;
+    classDef tools fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef resource fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    subgraph ResearcherNode [研究员 Agent (只读视角)]
+        Researcher["1. 调研智能体 (Researcher)"]:::brain
+        Researcher -->|仅能调用| SearchAPI["Google 搜索 / 向量库检索"]:::tools
+        SearchAPI -->|只读访问| DB[("只读数据库 / 知识库")]:::resource
+    end
+
+    subgraph ArchitectNode [架构师 Agent (只写方案)]
+        Architect["2. 设计智能体 (Architect)"]:::brain
+        Architect -->|仅能调用| DiagramGen["代码/图表生成 API"]:::tools
+        DiagramGen -->|生成| Artifacts["内存草稿区 (Artifacts)"]:::resource
+    end
+
+    subgraph ReviewerNode [审查员 Agent (独立只读审计)]
+        Reviewer["3. 审查智能体 (Reviewer)"]:::brain
+        Reviewer -->|仅能调用| ReadArtifacts["草稿区读取工具"]:::tools
+        ReadArtifacts -->|评估建议| ReviewReport["只读评估报告 (HITL)"]:::resource
+    end
+```
+
+### 2. 行为冲突：角色边界模糊导致的数据竞态冲突
+
+```mermaid
+graph LR
+    classDef bad fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+    classDef role fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+
+    subgraph ConflictingRoles [混乱：全能角色重叠]
+        AgentA["全能型智能体 A"]:::bad
+        AgentB["全能型智能体 B"]:::bad
+        
+        AgentA & AgentB -->|同时读写| SharedDB[("同一个数据库挂载卷")]
+        AgentA & AgentB -->|同时占用| TerminalCmd["Shell 终端 / 执行工具"]
+        
+        AgentA -->|1. 写文件 A| SharedDB
+        AgentB -->|2. 改文件 A (覆盖)| SharedDB
+        
+        Note over AgentA, AgentB: 职责边界模糊造成了竞态条件 (Race Condition)<br/>无法定责，逻辑相互践踏
+    end
+```
+
+### 3. 时序全景：专精角色任务指派与交互时序
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Host as 任务编排引擎 (Host)
+    participant Researcher as 研究员 (Researcher)
+    participant Reviewer as 审查员 (Reviewer)
+    participant Database as 物理数据库
+
+    Host->>Researcher: 1. 派发查询任务: (Query: "DB 连接池异常")
+    Note over Researcher: 仅配置只读工具集
+    Researcher->>Database: 2. 读取连接池监控日志
+    Database-->>Researcher: 3. 返回日志: "Active Connections = Max Limit"
+    Researcher-->>Host: 4. 输出证据: ConnectionPoolExhausted
+    
+    Host->>Reviewer: 5. 送入证据，请求审查风险
+    Note over Reviewer: 仅配置只读草稿权限，无修改权
+    Note over Reviewer: 独立评审，规避自评盲区
+    Reviewer-->>Host: 6. 输出审查结果: "高危, 建议触发限流"
+```
+
+---
+
+## 四、跟我做一遍：按角色分离权限
 
 <PyRunner
   rows={38}
@@ -93,7 +170,7 @@ print("每个角色只拿最小权限")`}
 
 每个角色只能用它职责所需的最小工具——研究员能查不能写、审查员能读不能改、危险工具谁都没有。即使某个 Agent 决策错了或被诱导，它能造成的破坏也被权限框死。**试试**：再加一个 "executor" 角色（有 write_file，但 run_cmd 这种危险工具要[人审批 M9L9](../agent-architectures/agent-guardrails)）；想想审查员如果有了改方案的权限，会破坏什么（独立审查的意义）。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month10/m10l2_roles/`：
 
@@ -157,7 +234,7 @@ python labs/month10/m10l2_roles/test_roles.py
 
 ### 2. 设计多 Agent 角色 = 设计一个团队的组织结构
 
-一个深刻的类比：**设计多 Agent 的角色，本质和设计一个人类团队的组织结构是一回事。** 你要定岗位（角色）、定职责（单一、不重叠）、定权限（谁能动什么）、定协作方式（谁向谁汇报、怎么交接）、设审查（独立的质检岗）。好的多 Agent 系统像一个分工清晰的高效团队，坏的像一群职责不清、互相扯皮的乌合之众。这也是为什么前面的工程原则在这里全用得上——[SRP（M4）](../design-patterns-lld/solid-srp-ocp)、[最小权限（M9L2）](../agent-architectures/tools-and-boundaries)、[爆炸半径/隔离（M5L8）](../core-components/bulkhead-isolation)、[Conway 定律（M2L9，组织即架构）](../system-design-bridge/lld-classes)——它们本就是"如何组织协作"的智慧，无论协作的是代码模块、微服务、人类团队，还是 Agent。架构师设计多 Agent，是在用工程的方式做组织设计。
+一个深刻的类比：**设计多 Agent 的角色，本质和设计一个人类团队的组织结构是一回事。** 你要定岗位（角色）、定职责（单一、不重叠）、定权限（谁能动什么）、定协作方式（谁向谁汇报、怎么交接）、设审查（独立的质检岗）。好的多 Agent 系统像一个分工清晰的高效团队，坏的像一群职责不清、互相扯皮的乌合之众。这也是为什么前面的工程原则在这里全用得上——[SRP（M4）](../design-patterns-lld/solid-srp-ocp)、[最小权限（M9L2）](../agent-architectures/tools-and-boundaries)、[爆炸半径/隔离（M5L8）](../core-components/bulkhead-isolation)、[Conway 定律（M2L9，组织即架构）](../system-design-bridge/lld-classes) —— 这里的 Conway 定律可以被视为大模型时代协同机制的同构映射，我们可以通过 <GlossaryTerm term="Conway's Law" definition="康威定律：指出系统设计的物理/逻辑架构与其开发组织的沟通结构同构。应用于 AI 架构，多 Agent 的编排结构本质上是人类团队协作关系的工程镜像。">康威定律 (Conway's Law)</GlossaryTerm> 来思考智能体分工——它们本就是"如何组织协作"的智慧，无论协作的是代码模块、微服务、人类团队，还是 Agent。架构师设计多 Agent，是在用工程的方式做组织设计。
 
 ### 3. 真实案例：专精角色 vs 全能 Agent 群
 
@@ -168,6 +245,46 @@ python labs/month10/m10l2_roles/test_roles.py
 - 你的多 Agent 里每个角色职责清晰、不重叠吗？把某两个角色合并会更糟吗（否则该合并）？
 - 每个角色的工具权限是最小的吗？审查角色是独立、只读的吗？危险工具有没有谁默认能用？
 - 一个角色的 Agent 出错或被攻破，影响被它的权限框住了吗（爆炸半径）？还是能波及全局？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在构建多 Agent 系统时，下面哪种做法最符合“最小特权原则 (PoLP)”与安全性？',
+      options: [
+        'A. 为每一个 Worker Agent 绑定包含全局 Shell 命令执行、数据库 Root 读写的全套工具',
+        'B. 给担任“研究员”的 Agent 只分配只读检索工具（Google API/Vector DB），且对于担任“审查员”的 Agent 仅分配读取 Artifact 的权限，坚决禁止其修改方案',
+        'C. 允许 Worker Agent 在运行期间根据需要，自主向协调器申请临时创建新高权角色',
+        'D. 不进行任何工具限制，完全依赖大模型在思考（Thought）中自我宣称不使用敏感工具'
+      ],
+      answer: 1,
+      explain: '安全性必须建立在代码边界（物理拦截）上，不靠模型承诺。将只读的 Researcher 与有写权限的 Writer 强行在工具绑定上进行隔离，能最大程度收窄单个 Agent 节点失控或被劫持时的系统受损范围（爆炸半径）。'
+    },
+    {
+      q: '为什么在设计“审查/评审类”智能体（Reviewer）时，其工具通常只分配只读，绝不分配修改权？',
+      options: [
+        'A. 因为分配了修改权后，大模型的响应延迟会加倍',
+        'B. 因为审查类 Agent 无法在生成修改内容的同时确保 JSONSchema 校验通过',
+        'C. 为了维护独立评审的工程价值。若 Reviewer 可以直接修改被审方案，系统就退化为了单点作者，极易陷入自我确认偏差，失去第三方独立抓错的闭环屏障',
+        'D. 这是为了减少因为并发数据冲突所导致的 CPU 占用'
+      ],
+      answer: 2,
+      explain: '审查员唯一的职责是“独立纠错与风险评估”。一旦它能亲自修改，它就同时扮演了“作家”与“质检员”的双重角色，这属于 SOLID SRP（单一职责）的严重破产，容易放过隐藏的认知漏洞。'
+    },
+    {
+      q: '以下关于“多智能体角色 specialization (专精)”的收益，描述最合理的是？',
+      options: [
+        'A. 角色越少，专精程度越强，因此应尽量只保留一个全能 Agent',
+        'B. 专精分工让每个 Agent 节点的 Prompt 极度简化与聚焦，并且能大幅减少每个节点挂载的工具数量，从而显著提升该节点在面临特定子问题时的逻辑准确度',
+        'C. 专精是为了让多个 Agent 能够在并行的物理 GPU 显卡中完成指令切片',
+        'D. 专精可以免除全局 TraceID 分布式调用链路的追踪工作'
+      ],
+      answer: 1,
+      explain: '大模型在面对超长 System Prompt 和过多的 Tools 挂载时，推理时的指令遵循力会以非线性方式下降。通过划定单一职责的角色（如拆分为研究、编写、质检），每个微型大脑只需要聚焦一件事，极大地提高了局部精度。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

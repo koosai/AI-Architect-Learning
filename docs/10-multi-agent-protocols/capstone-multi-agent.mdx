@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M10L12 · 综合实战：搭一个可控的多 Agent 系统
 
@@ -21,7 +22,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 />
 
 :::tip 把这个月学的一切，收敛成一个能上生产的多 Agent 系统
-过去 11 课你学了：[何时该用多 Agent（克制）](./why-multi-agent)、[专精角色](./roles-specialization)、[Supervisor 编排](./supervisor-orchestration)、[通信与隔离](./communication-state)、[顺序/并行](./sequential-parallel)、[辩论评审](./debate-review)、[路由](./handoff-routing)、[冲突共识](./conflict-consensus)、[协议](./agent-protocols)、[运维](./multi-agent-ops)、[评估与安全](./multi-agent-eval-safety)。这一课把它们**全部整合**：搭一个真实的多 Agent 系统，但重点不是"堆功能"，而是证明你能做出**既发挥多 Agent 的强大、又守住它的可控**——这正是区分"炫技 demo"和"生产系统"的分水岭。
+过去 11 课你学了：[何时该用多 Agent（克制）](./why-multi-agent)、[专精角色](./roles-specialization)、[Supervisor 编排](./supervisor-orchestration)、[通信与隔离](./communication-state)、[顺序/并行](./sequential-parallel)、[辩论评审](./debate-review)、[路由](./handoff-routing)、[冲突共识](./conflict-consensus)、[协议](./agent-protocols)、[运维](./multi-agent-ops)、[评估与安全](./multi-agent-eval-safety)。这一课把它们**全部整合**：搭一个真实的多 Agent 系统，但重点不是"堆功能"，而是证明你能做出在发挥 <GlossaryTerm term="Multi-Agent Orchestration" definition="多智能体编排：多智能体系统中，通过确定性工作流或自主型主管，对各个执行节点的控制流跳转、状态读写和生命周期进行统一调配与限制的工程机制。">多智能体编排 (Multi-Agent Orchestration)</GlossaryTerm> 的强大的同时，采用清晰的 <GlossaryTerm term="Orchestration Topology" definition="编排拓扑：定义了系统中智能体节点间连接和交互的数据与控制通路拓扑结构，如星型拓扑（Supervisor模式）或网状拓扑（Swarm模式）。">编排拓扑 (Orchestration Topology)</GlossaryTerm> 并借助统一的 <GlossaryTerm term="State Convergence" definition="状态收敛：多智能体协作中，将各个节点的冲突观点、异构输出或分散事实逐步汇总并合并为单一确定性结论的演进过程。">状态收敛 (State Convergence)</GlossaryTerm> 和物理 <GlossaryTerm term="Safety Interceptor" definition="安全拦截器：设立在多智能体系统对外出站或关键物理副作用操作前置卡点上的物理过滤网，用于强制拦截脏指令并要求人工审批授权。">安全拦截器 (Safety Interceptor)</GlossaryTerm> 守住其可控底线——这正是区分"炫技 demo"和"生产系统"的分水岭。
 :::
 
 ## 一、项目需求：一个"研究简报"多 Agent 系统
@@ -35,7 +36,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 4. 独立审查简报的事实性与质量（critic）。
 5. 不达标就返工，达标才交付。
 
-**这就是一个天然适合多 Agent 的任务**（[对照 M10L1 的判断](./why-multi-agent)）：子任务性质不同（检索/分析/写作/审查各需不同能力）、且**独立审查**能显著提质。但你要先证明它确实值得多 Agent，而不是默认就用。
+**这就是一个天然适合多 Agent 的任务**（[对照 M10L1 的判断](./why-multi-agent)）：子任务性质不同（检索/分析/写作/审查各需不同能力）、且由专精的 <GlossaryTerm term="Research Agent" definition="研究智能体：在简报生成或 SRE 运维中，挂载了专有搜索引擎或只读数据库检索工具，负责获取第一手事实证据的专精智能体节点。">研究智能体 (Research Agent)</GlossaryTerm> 牵头进行独立审查能显著提质。但你要先证明它确实值得多 Agent，而不是默认就用。
 
 ## 二、四步搭建：决策 → 设计 → 可靠 → 运维安全
 
@@ -60,7 +61,99 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - **成本控制**：全局预算上限（总 token/轮次），超了就交付当前最优并告警——防成本失控。
 - **安全**：简报"对外发布"这类操作需 human-in-the-loop；评估含事实性/安全维度；能砍的 Agent 就砍（缩小风险面）。
 
-## 三、跟我做一遍：可控多 Agent 系统骨架
+<ResearchNote
+  title="多智能体系统工程挑战与人在回路可控编排"
+  source="LangGraph: Multi-Agent Systems in Production (LangChain, 2024)"
+  href="https://blog.langchain.dev/langgraph/"
+  insight="多智能体架构在生产中面临着状态爆炸和非受控发散的根本痛点。相较于去中心化的 Swarm 点对点 Handoff，基于集中式 Supervisor 的控制结构能够将主航道流程用代码固定，而各子任务交给专精 Agent，从而兼顾了确定性与灵活性。物理副作用工具的执行点必须设置人在回路 (HITL) 的状态阻塞和只读降级防护。"
+  application="在设计 Capstone 运维场景与研究简报协作时，利用硬编码状态机固定大流程，通过系统级安全门禁实现物理写操作前的人工卡点，从而最大程度减小爆炸半径。"
+/>
+
+## 三、综合实战：研究简报多智能体架构图解 (Deep Dive Diagrams)
+
+本节展示 Capstone 系统控制流角色拓扑全景、带有提议者-批评者和人在回路审批的时序闭环，以及三级防护栏集成架构。
+
+### 1. 结构全景：研究简报多 Agent 系统控制流与专精角色拓扑全景
+
+```mermaid
+graph TD
+    classDef supervisor fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
+    classDef worker fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef boundary fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+
+    User["用户需求输入"] --> Supervisor["主管 (Supervisor Agent)"]:::supervisor
+    
+    subgraph SpecialWorkers [专精执行智能体角色]
+        Supervisor -->|1. 派发检索| Researcher["研究员 (Researcher Agent)"]:::worker
+        Supervisor -->|2. 派发分析| Analyst["分析师 (Analyst Agent)"]:::worker
+        Supervisor -->|3. 派发编写| Writer["编写者 (Writer Agent)"]:::worker
+        
+        Researcher -->|仅能使用| SearchAPI["Google Search / RAG API"]
+        Analyst -->|读取证据| Researcher
+        Writer -->|获取大纲| Analyst
+    end
+
+    Supervisor -->|4. 申请发布安全审批| Publisher["发布者 (Publisher Agent)"]:::worker
+    Publisher -->|5. 触发物理写| MailAPI["物理发布 API / 外发渠道"]
+```
+
+### 2. 时序全景：多 Agent 排查、互审、合并与安全网时序
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Host as 编排宿主 (Host)
+    participant Supervisor as 主角主管 (Supervisor)
+    participant Writer as 编写者 (Writer)
+    participant Critic as 独立审查员 (Critic)
+    participant SafetyGate as 物理安全闸 (Safety Gate)
+
+    Host->>Supervisor: 1. 送入大任务
+    Supervisor->>Writer: 2. 调度生成第一版草稿
+    Writer-->>Supervisor: 3. 返回 Briefing 草稿 v1
+    
+    rect rgb(255, 240, 245)
+        Note over Supervisor, Critic: 提议者-批评者交互阶段
+        Supervisor->>Critic: 4. 派发独立只读评审 (防自评偏差)
+        Critic-->>Supervisor: 5. 驳回反馈: "缺少具体数据支撑，有描述幻觉"
+        Supervisor->>Writer: 6. 携反馈要求重构 Briefing
+        Writer-->>Supervisor: 7. 返回重写后的 Briefing 草稿 v2
+        Supervisor->>Critic: 8. 再次派发独立评审
+        Critic-->>Supervisor: 9. 评审通过: OK
+    end
+    
+    Supervisor->>SafetyGate: 10. 送审最终文稿并请求外发
+    Note over SafetyGate: 系统级出站脱敏与人在回路审查 (HITL)
+    SafetyGate-->>Host: 11. 审批放行，成功完成交付
+```
+
+### 3. 控制流程：全局控制约束与三级防护栏集成
+
+```mermaid
+graph LR
+    classDef bus fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef gate fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    subgraph StateBus [第一级防护: 状态收敛与隔离]
+        Blackboard["共享结构化黑板"]:::bus
+        Blackboard -->|强制只读隔离| LocalThought["Worker 本地 Thought 缓存"]
+    end
+
+    subgraph CostControl [第二级防护: 运维与预算控制]
+        Tracing["全局 Tracing ID 跟踪"]
+        Budget{"全局 Token 预算校验"}
+        Tracing --> Budget
+    end
+
+    subgraph SideEffects [第三级防护: 副作用拦截网]
+        HITL{"系统级安全闸 (HITL)"}:::gate
+        HITL -->|阻断| Command["敏感命令 / 外发物理动作"]
+    end
+```
+
+---
+
+## 四、跟我做一遍：可控多 Agent 系统骨架
 
 <PyRunner
   rows={48}
@@ -109,7 +202,7 @@ print("研究简报系统:专精+编排+审查收敛+运维安全")`}
 
 一个完整而克制的多 Agent 系统：专精角色各司其职、顺序编排、writer-critic 独立审查驱动返工并收敛、全局预算兜底、每步可追踪、发布走安全闸。**注意它把本月每个概念都用上了、但每个都用得有理由**——这就是目标。**试试**：把 critic 改严格（要两轮才达标），看返工循环；把 budget 调到 400，看预算如何提前交付；想想哪个 Agent 能砍（缩小风险面）。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month10/m10l12_briefing/`：
 
@@ -184,6 +277,46 @@ python labs/month10/m10l12_briefing/test_briefing.py
 - 你能对着这个系统，逐个 Agent 说清"它为什么存在、砍了会怎样"吗？
 - 每一种失败（某 Agent 挂、被注入、超预算、审查不收敛）你都有预案吗？
 - 如果让你把它砍到最简（还能保证事实性），你会砍成什么样？为什么？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在设计本章“研究简报”多 Agent 实战项目时，我们选择使用多 Agent 架构的“唯一硬理由（Hard Rationale）”是什么？',
+      options: [
+        'A. 仅仅是因为该场景需要同时向 5 个外部搜索引擎发送 API 请求',
+        'B. 单 Agent 在扮演“作家”的同时进行自我校对，无法破除确认偏误与自评偏差；只有引入一个“独立的 Critic（评审员）”以第三方只读视角专门挑错，才能保证简报的最终事实性与质量',
+        'C. 因为该系统需要使用 MCP 协议来执行删除物理文件的危险命令',
+        'D. 因为多 Agent 模式会自动将 Token 的消耗成本减半'
+      ],
+      answer: 1,
+      explain: '“架构师做任何选择必须有硬道理”。多 Agent 带来了协调复杂性和成本。只有当任务天然具有角色边界（Writer 负责生成、Critic 负责挑错）且独立互审是提质的不可替代卡点时，多 Agent 方案才值得它翻倍的成本。'
+    },
+    {
+      q: '在本章 Capstone 系统的四步构建流程中，我们是如何实现防止级联越权和非安全发布事故的？',
+      options: [
+        'A. 给 Publisher Agent 授予全局 Root 权限，以使其自动规避 API 限流限制',
+        'B. 在 Publisher 触发外发操作的前置拦截卡点，强行部署“系统级安全闸（HITL 物理卡点）”，并仅为其绑定专有的最小只写发布工具',
+        'C. 允许所有的 Worker Agent 在发现错误时自行回滚物理数据库',
+        'D. 不进行任何物理拦截，完全信赖 Critic Agent 给出 100% 正确的评审意见'
+      ],
+      answer: 1,
+      explain: '“安全性不能寄托在模型的自觉上”。将只读的 Researcher/Writer 与具有写副作用的 Publisher 进行工具隔离，并在 Publisher 执行最终外发动作时加挂人在回路（HITL）的硬拦截，是实现系统可控性、限缩爆炸半径的核心卡闸。'
+    },
+    {
+      q: 'Capstone 系统面对 Researcher 动态采集多路外部源可能产生的事实冲突，是如何实现“共识与状态收敛”的？',
+      options: [
+        'A. 采用简单的多数决投票对文本直接进行拼接，不做任何去重和语义调和',
+        'B. 彻底抛弃 Researcher 的证据，完全依赖 Writer 的幻觉生成 Briefing',
+        'C. 结构化写入黑板，将异构资料依据 schema 规范分类，并在存在分歧时引入 Supervisor 仲裁（Arbitrator），或在分歧巨大时暴露风险标记直接上报人工（HITL）',
+        'D. 将所有交互状态以非结构化 Chat History 历史历史追加，并在瞬间烧尽全局预算'
+      ],
+      answer: 2,
+      explain: '多 Agent 最忌“各说各话、无法收敛”。借助黑板（Blackboard）提供结构化状态总线，将 evidence 与 proposal 进行写入前 schema 强校验，并在分歧出现时由主控 Supervisor 语义调解或升级至人工，是确保最终答案一致性的务实路径。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

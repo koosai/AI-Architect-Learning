@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M10L1 · 何时用多 Agent
 
@@ -47,15 +48,15 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 ### 进阶：判断标准——任务有没有"天然的多角色/边界"
 
 核心判断：**这个任务是否天然包含多个不同的角色、工具边界、知识域，或需要独立审查？**
-- **有** → 多 Agent 可能值（如"调研 + 设计 + 评审"这种角色明显不同、且需要独立视角审查的任务）。
+- **有** → <GlossaryTerm term="Multi-Agent System" definition="多智能体系统：由多个具备专精角色、专属工具并遵循统一协作协议的智能体构成的分布式系统。">多 Agent</GlossaryTerm> 可能值（如"调研 + 设计 + 评审"这种角色明显不同、且需要独立视角审查的任务）。
 - **没有**（角色单一、步骤可顺序完成）→ 用[单 Agent（M9）](../agent-architectures/overview) 或 [workflow（M9L11）](../agent-architectures/when-not-agent)。
-- **关键陷阱**：很多"多 Agent"其实是把一个 Agent 的不同步骤硬拆成多个 Agent——这不是真正的角色分工，只是徒增协调成本。真正的多 Agent，每个角色要**本质不同**（不同视角/不同工具/需要独立判断）。
+- **关键陷阱**：很多"多 Agent"其实是把一个 Agent 的不同步骤硬拆成多个 Agent——这不是真正的角色分工，只是徒增<GlossaryTerm term="Coordination Cost" definition="协调成本：多智能体系统为维持同步、编排跳转和传递状态所付出的额外延迟与 Token 开销。">协调成本</GlossaryTerm>。真正的多 Agent，每个角色要**本质不同**（不同视角/不同工具/需要独立判断），否则容易在 <GlossaryTerm term="Shared Context" definition="共享上下文：在多智能体协同中，多个智能体能够共同访问和修改的上下文缓存。如果管理不当，容易造成 Context 状态污染和注意力稀释。">共享上下文 (Shared Context)</GlossaryTerm> 中引入严重噪音。
 
 ### 深入（选学）：方案谱系与务实选择
 
 - **谱系（从简到繁）**（[延续 M9L11](../agent-architectures/when-not-agent)）：普通代码 → 单次调用 → workflow → 单 Agent → 多 Agent。**每往后一步，能力增、但复杂度/成本/不确定性也增。能用前面的就别用后面的。**
-- **多 Agent 真正的甜区**：任务需要**多个本质不同的专精视角协作 + 互相审查**，且单 Agent 因为"既要又要"而表现不好（一个 Agent 同时当研究员和批评家，容易自我确认偏差）。这时分工 + 独立审查的价值才盖过协调成本。
-- **务实架构常是混合**：**workflow 主干编排几个专精 Agent**——而非"一群 Agent 自由聊天"。即用确定的编排控制流程，只在需要专精/审查的环节用 Agent。这往往比"全自主多 Agent"更可靠。
+- **多 Agent 真正的甜区**：任务需要**多个本质不同的专精视角协作 + 互相审查**，且单 Agent 因为"既要又要"而表现不好（一个 Agent 同时当研究员和批评家，容易产生 <GlossaryTerm term="Self-evaluation bias" definition="自评偏差：单智能体由于认知局限，倾向于合理化自身的逻辑错误而无法客观评估自身输出。">自评偏差</GlossaryTerm>）。这时分工 + 独立审查的价值才盖过协调成本。
+- **务实架构常是混合**：**workflow 主干编排几个专精 Agent**，它们之间基于标准进行 <GlossaryTerm term="A2A Communication" definition="Agent-to-Agent 通信：智能体之间进行数据交换、状态共享和控制权交接的规范化网络通信过程。">A2A 通信 (Agent-to-Agent)</GlossaryTerm>——而非"一群 Agent 自由聊天"。即用确定的编排控制流程，只在需要专精/审查的环节用 Agent。这往往比"全自主多 Agent"更可靠。
 - **"互相审查"是多 Agent 最独特的价值**：单 Agent 的[自我反思（M9L7）](../agent-architectures/reflection-correction) 有自评偏差，而一个**独立的** Agent 来审查，视角真正不同、更能抓错。如果你的任务最需要的是"质量把关/找反例"，多 Agent 的审查模式（[M10L6](./debate-review)）可能是它唯一不可替代的理由。
 - **这是贯穿全课克制原则的顶点**：[M4 别过度设计](../design-patterns-lld/change-driven-design) → [M6L9 别盲目多云](../cloud-enterprise-industrial/multi-cloud) → [M8L10 别上来就高级 RAG](../rag/advanced-rag) → [M9L11 别滥用 Agent](../agent-architectures/when-not-agent) → 别滥用多 Agent。多 Agent 最酷、最易被滥用，是这条克制纪律的终极考验。
 
@@ -67,7 +68,78 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="决策：能用代码/单次/workflow/单 Agent 的就别上多 Agent。判断标准——任务是否有天然的多角色/多边界/需独立审查。真要用，优先 workflow 主干 + 局部专精 Agent，明确角色边界。多 Agent 最独特的价值是独立审查（抓单 Agent 的自评盲点）。"
 />
 
-## 三、跟我做一遍：单/多 Agent 决策
+## 三、多智能体决策与选型图解 (Deep Dive Diagrams)
+
+本节展示单人多角色与多智能体分工对比、多 Agent 方案选型决策漏斗，以及引入多 Agent 后的额外协调成本开销分析。
+
+### 1. 结构全景：单 Agent 模拟多角色 vs. 多 Agent 专精分工
+
+```mermaid
+graph TD
+    classDef brain fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
+    classDef roles fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef bad fill:#ffebee,stroke:#c62828,stroke-width:1px;
+    classDef good fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    subgraph SingleAgentMode [单 Agent 模拟多角色 (过度负荷)]
+        AgentA["单能智能体 (All-in-One Agent)"]:::brain
+        AgentA --> Role1["角色一: 研究员 (Research)"]:::roles
+        AgentA --> Role2["角色二: 批评家 (Critic)"]:::roles
+        AgentA --> Role3["角色三: 格式器 (Formatter)"]:::roles
+        Note over AgentA: 既写又审，容易发生自我确认偏差 (Blind Spot)<br/>且工具绑定过多，上下文极易污染
+    end
+
+    subgraph MultiAgentMode [多 Agent 专精分工 (关注点分离)]
+        Orchestrator["编排协调器 (Host / Workflow)"]:::good
+        Orchestrator --> AgentResearch["1. 研究员智能体"]:::roles
+        Orchestrator --> AgentCritic["2. 评审员智能体"]:::roles
+        Orchestrator --> AgentFormat["3. 排版格式智能体"]:::roles
+        
+        AgentResearch -.->|共享黑板状态| AgentCritic
+        AgentCritic -.->|反馈独立挑错| AgentResearch
+        Note over AgentCritic: 独立视角，完美破除单 Agent 的自评盲区
+    end
+```
+
+### 2. 选型漏斗：多 Agent 方案选型决策流
+
+```mermaid
+graph TD
+    classDef opt fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef select fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+
+    Start["新复杂业务输入"] --> Q1{"1. 步骤能被固定工作流<br/>(Workflow) 写死吗？"}
+    
+    Q1 -- "可以" --> OptWorkflow["方案一：确定性工作流<br/>(100% 预测, 低成本)"]:::opt
+    Q1 -- "不可以" --> Q2{"2. 任务需要多个本质不同<br/>的角色视角或工具边界吗？"}
+    
+    Q2 -- "否: 角色单一" --> OptSingle["方案二：单智能体循环 (Single Agent)<br/>(使用最大步数与预算卡死)"]:::opt
+    Q2 -- "是: 涉及多角色" --> Q3{"3. 这些角色是否只是<br/>同类任务的串行分段？"}
+    
+    Q3 -- "是: 假多角色" --> OptPipeline["方案三：单 Agent + 分段 Pipeline<br/>(避免不必要的协调开销)"]:::opt
+    Q3 -- "否: 需独立互审或高隔离" --> OptMulti["方案四：专精多智能体 (Multi-Agent)<br/>(独立视角, 限制爆炸半径)"]:::select
+```
+
+### 3. 折中谱系：协调成本与系统开销的级联折中
+
+```mermaid
+graph TD
+    classDef limit fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+    classDef value fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+
+    option["引入多智能体系统 (Multi-Agent)"]
+    
+    option -->|获取价值| Benefit1["关注点分离 (SoC)<br/>模型注意力集中度提升"]:::value
+    option -->|获取价值| Benefit2["独立评审防偏差<br/>多视角交叉验证"]:::value
+
+    option -->|付出代价| Cost1["协调成本 (Coordination Cost)<br/>通信协议与状态同步复杂化"]:::limit
+    option -->|付出代价| Cost2["延迟级联 (Cascading Latency)<br/>多步推理延迟叠加"]:::limit
+    option -->|付出代价| Cost3["Token 费用暴涨<br/>多次 LLM 调用消耗翻倍"]:::limit
+```
+
+---
+
+## 四、跟我做一遍：单/多 Agent 决策
 
 <PyRunner
   rows={36}
@@ -97,7 +169,7 @@ print("按任务性质选最简方案")`}
 
 只有"角色本质不同 + 需独立审查/不同工具"的任务（调研+设计+评审）才选多 Agent；单一角色的、或只是把同一角色的工作分段的，都用更简单的方案。**试试**：加一个"代码生成 + 独立的安全审查"任务（角色不同 + 需审查 → 多 Agent）；想想"把长文分段总结"为什么不该硬拆成多 Agent（角色没本质区别）。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month10/m10l1_choose/`：
 
@@ -172,6 +244,46 @@ python labs/month10/m10l1_choose/test_choose.py
 - 你想做/见过的"多 Agent"，角色是本质不同（不同视角/工具/需独立判断），还是只是把一个 Agent 的步骤拆开了？
 - 单 Agent + workflow 能不能解决你的任务？多 Agent 多出来的价值（专精/独立审查）值它翻倍的成本和复杂度吗？
 - 如果真要多 Agent，能不能做成"workflow 主干 + 局部专精 Agent"，而非一群 Agent 自由聊天？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在多智能体系统设计中，“假多角色 (Pseudo-roles)”指的是什么？其主要弊端是什么？',
+      options: [
+        'A. 指不使用角色 Prompt 设定的 Agent，主要弊端是大模型无法理解自身的任务边界',
+        'B. 指把本该由一个 Agent 顺序完成的同质化步骤硬拆为多个 Agent，主要弊端是引入了无意义的跨节点通信协议，徒增了协调成本与 Token 费用',
+        'C. 指在同一个系统里混用开源与闭源模型，主要弊端是系统调试不方便',
+        'D. 指不提供外部工具绑定的智能体，主要弊端是无法执行任何副作用动作'
+      ],
+      answer: 1,
+      explain: '依据 YAGNI 与奥卡姆剃刀原则，不要为没有本质区别的角色（例如：分段摘要、串行改写）创建独立的 Agent，这只会让系统控制流和状态同步变得极度复杂。单 Agent 加上固定工作流才是其最佳解。'
+    },
+    {
+      q: '为什么多智能体系统中的“独立审查 (Independent Review)”不能被单 Agent 的“自我反思 (Self-reflection)”完全替代？',
+      options: [
+        'A. 因为单 Agent 无法同时装配两个不同的工具接口',
+        'B. 自我反思在大模型多步执行后会被上下文窗口自动截断',
+        'C. 模型存在天然的“自评偏差 (Self-evaluation bias)”，倾向于包庇并合理化自己第一步的错误；而独立的审查 Agent 视角不同、上下文干净，更能客观指出逻辑缺陷',
+        'D. 独立审查 Agent 使用了更高的 Sampling Temperature，因此生成的答案随机性更强'
+      ],
+      answer: 2,
+      explain: '单智能体自己审自己（Thought -> Action -> Self-Correct）就像程序员自己找自己的 Bug，很容易陷入思维定势。把 Proposer 和 Critic 分离为两个拥有不同 Prompt 和上下文的智能体，是克服大模型确认偏差、抓出隐蔽错误的金科玉律。'
+    },
+    {
+      q: '面对多智能体系统的“协调成本 (Coordination Cost)”，架构师最务实的系统编排建议是什么？',
+      options: [
+        'A. 允许所有 Agent 之间以自由文本聊天（Chat History）的形式网状自由协作',
+        'B. 彻底废除多 Agent 架构，退回纯传统硬编码系统',
+        'C. 采用“确定性工作流 (Workflow) 主干编排 + 局部专精 Agent”的混合架构，用程序代码控制 Agent 间的控制流和结构化状态传递，拒绝自由散乱的 A2A 闲聊',
+        'D. 将所有 Agent 的 Temperature 都调到最高，以加速网络状态同步'
+      ],
+      answer: 2,
+      explain: '全自主、无中心的 Agent 自由对话虽然 Demo 炫酷，但在生产中是不可控且极昂贵的。最务实的落地方案是主干业务采用硬编码的代码流程，仅在确实需要多视角独立审查、专精工具隔离等特定卡点引入局部 Agent。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

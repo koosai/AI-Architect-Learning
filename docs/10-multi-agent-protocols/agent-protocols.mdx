@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M10L9 · Agent 协议（MCP / A2A）
 
@@ -31,7 +32,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - **接 Agent**：你的 Agent 想调用别的团队/厂商的 Agent，但对方的输入输出格式、能力描述、交互方式都是私有的，对不上。
 - **结果**：N 个 Agent × M 个工具 = N×M 套对接，重复劳动、无法复用、生态割裂。
 
-这正是软件史上无数次出现的**接口碎片化**问题——解法也一样：**定一个标准协议**，大家都遵守，就能即插即用。
+这正是软件史上无数次出现的**接口碎片化**问题——解法也一样：引入一个 <GlossaryTerm term="Tool Schema Protocol" definition="工具模式协议：多智能体中用于统一描述外部工具输入入参、JSON 结构体和出参的序列化标准规范。">工具模式协议 (Tool Schema Protocol)</GlossaryTerm>，大家都遵守，就能即插即用。
 
 ## 二、三个核心概念（分层）
 
@@ -41,11 +42,11 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 进阶：A2A——标准化 Agent↔Agent
 
-<GlossaryTerm term="A2A (Agent-to-Agent)" definition="Agent 间协议：标准化“一个 Agent 如何发现、描述能力、并与另一个 Agent 通信协作”的开放规范。让不同团队/厂商做的 Agent 能互相发现能力、安全地交接任务。">A2A（Agent-to-Agent）</GlossaryTerm>：标准化"Agent 之间怎么发现彼此、描述能力、通信协作"。有了它，[M10L7 路由](./handoff-routing) 里"按能力分派"、[M10L2 专精 Agent 协作](./roles-specialization) 就能跨团队/跨厂商进行——一个 Agent 能发现"哪个 Agent 能干这事"、用统一格式把任务交给它。这是[服务发现（M5L3）](../core-components/service-discovery)、[服务间通信与解耦（M2）](../system-design-bridge/communication-decoupling) 在 Agent 生态的对应物。
+<GlossaryTerm term="A2A (Agent-to-Agent)" definition="Agent 间协议：标准化“一个 Agent 如何发现、描述能力、并与另一个 Agent 通信协作”的开放规范。让不同团队/厂商做的 Agent 能互相发现能力、安全地交接任务。">A2A（Agent-to-Agent）</GlossaryTerm>：标准化"Agent 之间怎么发现彼此、描述能力、通信协作"。有了它，[M10L7 路由](./handoff-routing) 里"按能力分派"、[M10L2 专精 Agent 协作](./roles-specialization) 就能跨团队/跨厂商进行——一个 Agent 能发现"哪个 Agent 能干这事"、用统一格式把任务交给它。这是 <GlossaryTerm term="Service Discovery" definition="服务发现：在分布式微服务架构中，自动检测和发现网络中服务节点物理地址和能力的机制。">服务发现 (Service Discovery)</GlossaryTerm>（[M5L3](../core-components/service-discovery)）、服务间通信与解耦（[M2](../system-design-bridge/communication-decoupling)）在 Agent 生态的对应物。
 
 ### 深入（选学）：协议的价值与边界
 
-- **协议的价值是互操作和生态，不是智能**：MCP/A2A 不会让你的 Agent 更聪明（智能在模型），它们让 Agent **能复用现成的工具/Agent、能和别人协作**——价值在生态层面（[呼应 M9 智能在模型、可靠性/工程在外围](../agent-architectures/agent-loop-basics)）。一个有丰富 MCP 工具生态的 Agent，能做的事远多于孤立的 Agent。
+- **协议的价值是互操作和生态，不是智能**：MCP/A2A 不会让你的 Agent 更聪明（智能在模型），它们让 Agent **能复用现成的工具/Agent、能和别人协作**——价值在生态层面。实现 <GlossaryTerm term="Interoperability" definition="互操作性：指不同的系统、设备或智能体在统一协议或标准规范下，能够顺畅进行数据交换和协同动作的能力。">互操作性 (Interoperability)</GlossaryTerm> 能极大地拓宽 Agent 的能力边界（[呼应 M9 智能在模型、可靠性/工程在外围](../agent-architectures/agent-loop-basics)）。一个有丰富 MCP 工具生态的 Agent，能做的事远多于孤立的 Agent。
 - **别为了用协议而用协议**：如果你只接 2 个内部工具、就一个 Agent，直接写对接代码可能比引入 MCP 更简单（[呼应贯穿全课的克制 M10L1](./why-multi-agent)）。协议的收益随**工具/Agent 数量和复用需求**增长——少量、私有、不复用时，标准协议的开销不一定划算。这和 [M2 通信与解耦的取舍](../system-design-bridge/communication-decoupling) 是同一判断。
 - **协议不消除安全边界**：能即插即用地接工具/Agent，更要管[权限和边界（M9L2/M10L2）](../agent-architectures/tools-and-boundaries)——一个 MCP 工具能访问什么、一个外部 Agent 能调用你什么，必须显式授权和限制（[呼应 M10L2 最小权限、M9L9 护栏](./roles-specialization)）。协议让连接变容易，不等于让连接变安全——安全仍是你的工程责任。
 - **协议会演进**：MCP/A2A 是较新的、仍在发展的标准。架构师要理解的是**它们解决的问题类别（互操作）和判断（何时值得标准化）**，而非死记当前某版本的字段——问题是永恒的，具体协议会变。
@@ -58,7 +59,86 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="多工具/多 Agent、需复用或跨团队协作时用 MCP/A2A 标准化接口，免去 N×M 定制。少量私有不复用时直接对接更简单(克制)。把它认成 API 契约/服务发现的老问题。无论协议多方便，工具/Agent 的权限边界仍要显式授权限制——连接容易不等于连接安全。"
 />
 
-## 三、跟我做一遍：协议适配（统一接口的价值）
+## 三、智能体标准协议与互操作图解 (Deep Dive Diagrams)
+
+本节展示硬编码胶水连接与标准协议总线的复杂度对比、MCP 的 Host-Client-Server 三层调用架构，以及跨 Agent A2A 消息封包的流转时序。
+
+### 1. 结构全景：硬编码点对点对接 vs. 基于协议的标准化连接
+
+```mermaid
+graph TD
+    classDef bad fill:#ffebee,stroke:#c62828,stroke-width:1px;
+    classDef good fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef protocol fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+
+    subgraph HardcodedMess [混乱: 传统硬编码对接 (复杂度 N x M)]
+        AgentA["智能体 A"]:::bad
+        AgentB["智能体 B"]:::bad
+        
+        ToolA["SQLite 数据库"]
+        ToolB["Slack 消息推送"]
+        
+        AgentA -->|胶水代码 1| ToolA
+        AgentA -->|胶水代码 2| ToolB
+        AgentB -->|胶水代码 3| ToolA
+        AgentB -->|胶水代码 4| ToolB
+    end
+
+    subgraph StandardizedProtocol [解耦: 基于统一协议 (复杂度 N + M)]
+        HostAgent["Host 智能体宿主"]:::good
+        
+        HostAgent -->|1. 对接标准协议接口| ProtocolBus["标准 MCP 协议总线 (Model Context Protocol)"]:::protocol
+        
+        ProtocolBus -->|2a. 插头 1| ServerSql["Sqlite MCP Server"]
+        ProtocolBus -->|2b. 插头 2| ServerSlack["Slack MCP Server"]
+        
+        Note over ProtocolBus: 一次对接协议，即插即用，彻底解耦
+    end
+```
+
+### 2. 控制流程：MCP 协议三层通信模型
+
+```mermaid
+graph LR
+    classDef host fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef client fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef server fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+
+    subgraph ModelContextProtocol [MCP 架构分层]
+        Host["MCP Host<br/>(Dify / Claude App)"]:::host
+        Client["MCP Client<br/>(宿主进程内部)"]:::client
+        Server["MCP Server<br/>(独立进程 / 远程 API)"]:::server
+        
+        Host <-->|1. 挂载与 API 桥接| Client
+        Client <-->|2. 统一 JSON-RPC over STDIO/HTTP| Server
+    end
+    
+    Server -->|3. 执行副作用| Tool["物理操作系统 / 外部 SaaS"]
+```
+
+### 3. 时序全景：A2A（Agent-to-Agent）通信协议的消息流转时序
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Requester as 请求智能体 (Requester Agent)
+    participant Protocol as A2A 协议封装 (Protocol Envelope)
+    participant Provider as 服务提供智能体 (Provider Agent)
+
+    Requester->>Protocol: 1. 封装 A2A 消息头部 (Message Envelope)
+    Note over Protocol: 包含 {from, to, session_id, intent} 字段
+    
+    Protocol->>Provider: 2. 投递结构化 Payload
+    Note over Provider: 语义对齐：按声明的能力进行任务解析
+    Provider->>Provider: 3. 本地执行 (调用专属工具)
+    Provider-->>Protocol: 4. 返回 A2A 结构化响应
+    
+    Protocol-->>Requester: 5. 解析并递交结果
+```
+
+---
+
+## 四、跟我做一遍：协议适配（统一接口的价值）
 
 <PyRunner
   rows={40}
@@ -101,7 +181,7 @@ print("遵守协议即插即用、无需为每个工具定制")`}
 
 底层工具接口各不相同，但用统一协议包装后，Agent 只需懂"协议"就能用所有工具，新增工具只要注册一下、Agent 代码不用改——这就是协议带来的解耦和即插即用。注意未注册的工具被拒绝：协议让连接变容易，但权限边界仍在。**试试**：再加一个工具，体会 Agent 代码完全不用动；想想如果没有统一 `invoke`，每加一个工具 Agent 要改多少代码。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month10/m10l9_protocol/`：
 
@@ -176,6 +256,46 @@ MCP 最有价值的落地，是让一个 Agent **复用整个工具生态**而�
 - 你接工具/Agent 是逐个定制（N×M 套）还是走标准协议？你的规模和复用需求值得标准化吗？
 - 你能说出 MCP/A2A 解决的"老问题类别"吗？换个新协议出来，你还会被名词唬住吗？
 - 通过协议接进来的工具/Agent，权限边界是显式管的吗？协议让连接变容易，你让连接变安全了吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在多智能体与工具生态整合中，MCP (Model Context Protocol) 协议的核心解决痛点是什么？',
+      options: [
+        'A. 提高大语言模型对多语言文本的机器翻译准确度',
+        'B. 解决接口碎片化问题——统一了 Agent 与外部工具/数据源的连接标准（暴露 tools/resources/prompts），避免了 N 个 Agent 对接 M 个工具时产生 N×M 的定制适配代码',
+        'C. 自动将所有 Python 副作用代码编译为 Rust 二进制文件',
+        'D. 取代大模型的 Tokenization 分词阶段'
+      ],
+      answer: 1,
+      explain: '这和软件史上的 USB 统一接口完全同构。MCP 将“各异工具定制接口”提炼成“统一 JSON-RPC 通信标准”，使宿主可以即插即用地调用社区已有的庞大 MCP 工具生态。'
+    },
+    {
+      q: '以下关于 MCP 协议三层架构（Host, Client, Server）的描述，错误的是？',
+      options: [
+        'A. Host（宿主）通常是 Dify 或 Claude 桌面客户端等智能体应用',
+        'B. Client（客户端）内置在 Host 中，负责解析标准 JSON-RPC 并分派工具请求',
+        'C. Server（服务端）必须运行在宿主的主进程内，不支持跨机器以网络端口进行连接',
+        'D. Server 是独立进程或远程 API，根据 Client 发送的指令在沙箱内执行具体副作用操作'
+      ],
+      answer: 2,
+      explain: 'MCP Server 与 Client 是完全解耦的，它们可以通过标准 I/O（STDIO）或者是基于 HTTP/SSE 的网络端口通信，支持本地和远程部署，实现极佳的弹性隔离。'
+    },
+    {
+      q: '为什么说“协议本身让连接变得容易，但并不消除安全边界”？',
+      options: [
+        'A. 因为 MCP 协议会自动关闭本地防火墙的端口校验',
+        'B. 即使走标准协议接入，工具和外部 Agent 对系统的读写能力仍必须通过代码显式进行“最小特权授权”，否则协议带来的无缝连接会直接演化为黑客提示词注入的物理级级联攻击面',
+        'C. 因为协议会强行降低大模型的推理遵循力',
+        'D. 协议会让所有数据存储都降级为非结构化 Chat History'
+      ],
+      answer: 1,
+      explain: 'AI 架构师的根本职责是守卫系统边界。MCP 提供了方便的 USB 式连接，但你不能盲信插进来的每个 USB 都没有病毒。针对高危副作用工具，依然要在 Client/Host 侧部署严密的安全护栏与人在回路审查。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

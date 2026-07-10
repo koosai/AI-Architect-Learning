@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M10L5 · 顺序与并行编排
 
@@ -30,7 +31,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - **有依赖却并行**：架构师在研究员还没给出证据时就开始出方案——基于不存在的输入，结果是错的或空的。
 - **无依赖却串行**：三家竞品的调研互不相干，却一个查完再查下一个——白白串行等待，慢了三倍（[呼应 L11 该并行就并行](../foundations/sync-async-timeout)）。
 
-所以编排前要先理清子任务的**依赖关系**：有依赖的必须顺序、无依赖的应该并行。这和 [M9L5 任务分解时识别依赖](../agent-architectures/planning-decomposition) 一脉相承。
+所以编排前要先理清子任务的 <GlossaryTerm term="Data Dependency" definition="数据依赖：子任务之间在输入输出上的强耦合关系。若任务 B 的执行必须将任务 A 的输出结果作为输入参数，则称 B 存在对 A 的数据依赖。">数据依赖 (Data Dependency)</GlossaryTerm>：有依赖的必须顺序、无依赖的应该并行。这和 [M9L5 任务分解时识别依赖](../agent-architectures/planning-decomposition) 一脉相承。
 
 ## 二、三个核心概念（分层）
 
@@ -40,7 +41,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 进阶：并行编排（扇出-聚合）
 
-<GlossaryTerm term="Parallel Orchestration" definition="并行编排：把无依赖的子任务同时分给多个 Agent 并行执行（扇出 fan-out），再把各自结果汇总（聚合 aggregate）。能大幅缩短总耗时，但要处理聚合和部分失败。">并行编排（扇出-聚合）</GlossaryTerm>：把**无依赖**的子任务同时分给多个 Agent 并行做（<GlossaryTerm term="Fan-out / Aggregate" definition="扇出-聚合：扇出（fan-out）把任务分发给多个并行 worker，聚合（aggregate）把它们的结果合并。是并行加速的经典模式，需处理部分失败和结果合并。">扇出 fan-out</GlossaryTerm>），全部完成后汇总结果（聚合 aggregate）。比如同时调研三家竞品、同时让三个 Agent 从不同角度分析。收益：总耗时约等于最慢的那个（而非求和），大幅提速（[呼应 M5L1 扇出、M3L10 feed 扇出](../core-components/load-balancing)）。难点见深入。
+<GlossaryTerm term="Parallel Orchestration" definition="并行编排：把无依赖的子任务同时分给多个 Agent 并行执行（扇出 fan-out），再把各自结果汇总（聚合 aggregate）。能大幅缩短总耗时，但要处理聚合和部分失败。">并行编排（扇出-聚合）</GlossaryTerm>：把**无依赖**的子任务同时分给多个 Agent 并行做（<GlossaryTerm term="Fan-out / Aggregate" definition="扇出-聚合：扇出（fan-out）把任务分发给多个并行 worker，聚合（aggregate）把它们的结果合并。是并行加速的经典模式，需处理部分失败和结果合并。">扇出 fan-out</GlossaryTerm>），全部完成后汇总结果（聚合 aggregate）。比如同时调研三家竞品、同时让三个 Agent 从不同角度分析。收益：系统整体的 <GlossaryTerm term="Parallel Latency" definition="并行延迟：在并行编排（扇出-聚合）中，多路子任务并发执行下的系统累积时间损耗，实质取决于多路中最慢的单点响应延迟（最长路径延迟）。">并行延迟 (Parallel Latency)</GlossaryTerm> 约等于最慢的那个（而非求和），大幅提速（[呼应 M5L1 扇出、M3L10 feed 扇出](../core-components/load-balancing)）。难点见深入。
 
 ### 深入（选学）：编排的工程要点
 
@@ -58,7 +59,76 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="编排前先理清子任务依赖：无依赖并行扇出（设等待策略和聚合逻辑、处理部分失败/超时）、有依赖顺序流水线。复杂任务用混合编排。注意并行放大成本（省时不省钱）。把它当 DAG 工作流编排，由 Supervisor 驱动。"
 />
 
-## 三、跟我做一遍：顺序流水线 + 并行扇出聚合
+## 三、流水线与并行编排图解 (Deep Dive Diagrams)
+
+本节展示顺序编排流水线中因果数据依赖的流转、并行扇出聚合编排中的并发执行模型，以及两者在墙钟延迟与 Token 开销维度的核心折中。
+
+### 1. 结构全景：顺序流水线（Chain）编排模型
+
+```mermaid
+graph LR
+    classDef step fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef done fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    TaskInput["总体需求输入"] --> Stage1["1. 研究员 (Researcher Agent)<br/>职责: 获取原始证据"]:::step
+    
+    Stage1 -->|基于证据的数据依赖| Stage2["2. 架构师 (Architect Agent)<br/>职责: 根据证据起草方案"]:::step
+    
+    Stage2 -->|基于草稿的数据依赖| Stage3["3. 审查员 (Reviewer Agent)<br/>职责: 挑出方案安全漏洞"]:::step
+    
+    Stage3 --> Output["输出已审安全方案"]:::done
+    
+    Note over Stage1, Stage3: 每一阶段强依赖上一步 Observation<br/>时间呈线性累加 (Total Latency = t1 + t2 + t3)
+```
+
+### 2. 控制流程：并行扇出聚合（MapReduce）编排模型
+
+```mermaid
+graph TD
+    classDef fan fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef worker fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef agg fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
+
+    Input["评估竞品大任务"] --> Split["1. 扇出任务拆分 (Fan-out)"]:::fan
+    
+    subgraph ParallelExecution [并发执行层 (互相独立无依赖)]
+        Split -->|子任务 1| AgentA["调研竞品 A (Worker A)"]:::worker
+        Split -->|子任务 2| AgentB["调研竞品 B (Worker B)"]:::worker
+        Split -->|子任务 3| AgentC["调研竞品 C (Worker C)"]:::worker
+    end
+
+    AgentA -->|结果 A| Merge["2. 聚合结果 (Aggregate)"]:::agg
+    AgentB -->|结果 B| Merge
+    AgentC -->|结果 C| Merge
+    
+    Merge --> FinalReport["输出三竞品汇总对比表"]
+    
+    Note over ParallelExecution: 并行执行，系统墙钟延迟 ≈ max(t1, t2, t3)<br/>极大地缩短了耗时，但 Token 开销是串行的总和
+```
+
+### 3. 折中谱系：顺序与并行模式的延迟与 Token 开销折中
+
+```mermaid
+graph TD
+    classDef benefit fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef cost fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    subgraph SequentialChain [顺序链式模式 (Chain Pattern)]
+        SeqLatency["串行延迟 (耗时求和): 慢"]:::cost
+        SeqToken["Token 开销: 相对可控 (步步过滤)"]:::benefit
+        SeqDependencies["处理强因果依赖: 完美支持"]:::benefit
+    end
+
+    subgraph ParallelMapReduce [并行扇出聚合 (MapReduce Pattern)]
+        ParLatency["并行延迟 (最慢单点): 极快"]:::benefit
+        ParToken["Token 开销: 消耗巨大 (N路齐跑)"]:::cost
+        ParFailure["部分失败/聚合难题: 复杂度上升"]:::cost
+    end
+```
+
+---
+
+## 四、跟我做一遍：顺序流水线 + 并行扇出聚合
 
 <PyRunner
   rows={40}
@@ -166,6 +236,46 @@ python labs/month10/m10l5_orchestration/test_orchestration.py
 - 你的多 Agent 子任务有依赖吗？哪些必须顺序（有依赖）、哪些能并行（独立）？画出依赖图了吗？
 - 并行扇出时，某个 Agent 失败/超时怎么办？聚合是等所有、等多数、还是超时降级？
 - 你并行是为了省时间还是省钱？并行省时但不省钱（甚至更贵），这个权衡对你的场景对吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在进行多 Agent 系统任务编排时，“顺序流水线（Sequential Chain）”模式的甜区（Sweet Spot）是什么？',
+      options: [
+        'A. 任务之间没有因果耦合，且要求总执行延迟降到最低',
+        'B. 子任务之间存在强烈的数据依赖（Data Dependency）——后一步的执行输入必须以第一步的输出结果为前提，如先检索、再基于检索证据撰写方案',
+        'C. 适合在完全不了解竞品背景的初次冷启动阶段，让所有 Agent 并行探索',
+        'D. 适合需要规避熔断机制、无限烧 Token 的运维调试场景'
+      ],
+      answer: 1,
+      explain: '流水线编排在应对前后依赖时最为自然和确定。它的局限性是其系统整体延迟是各个单节点推理时间的累加（Total = sum(ti)），通常响应较慢。'
+    },
+    {
+      q: '多 Agent 系统中的“并行扇出-聚合（MapReduce）”编排模式，其最终的总墙钟耗时（Wall-clock Time）由什么决定？面临的最大痛点是什么？',
+      options: [
+        'A. 由最快返回的 Worker 决定，痛点是 GPU 的并发吞吐受限',
+        'B. 由最慢的那个 Worker 节点的推理时间决定（最长路径），痛点是异构产物的语义聚合难度高，以及面临“尾延迟”和节点部分失败的处理',
+        'C. 由 Token 的解码序列长度决定，痛点是无法支持自定义工具的并发挂载',
+        'D. 由 API 网关的连接队列上限决定，痛点是必须将所有结果转化为自由文本聊天记录'
+      ],
+      answer: 1,
+      explain: '这和传统分布式系统的 MapReduce 完全一致。并行编排将总耗时缩短至 max(ti)，能极大提升吞吐和体验；但其最大工程卡点是对异构输出的“语义对齐合并”难度大，且容易因单个 Agent 节点崩溃/超时导致整个请求流卡死。'
+    },
+    {
+      q: '从“成本vs延迟”的角度思考，关于多 Agent 并行扇出的描述，最正确的是？',
+      options: [
+        'A. 并行通过在多 GPU 卡上分布式切片，能够大幅降低总体账单费用',
+        'B. 并行因为去除了 Supervisor 集中调度，因而能节省约 50% 的 Token 开销',
+        'C. “并行省的是时间，不是钱”。并行扇出同时跑 N 个 Worker 意味着需要在瞬间消耗 N 份 Token 额度，成本甚至可能比按需串行过滤更昂贵',
+        'D. 在成本敏感的批处理（Batch Processing）场景，也应该始终默认选择并行扇出'
+      ],
+      answer: 2,
+      explain: 'AI 架构师必须保持商业财务敏感度。并行编排是为了缩短交互延迟、提升用户体验。但不管你是串行跑还是并行跑，大模型处理和生成的总 token 量是刚性的（甚至聚合可能耗费额外 token）。不要把并行提速误当成省钱手段。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

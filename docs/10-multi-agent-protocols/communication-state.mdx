@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M10L4 · 通信与共享状态
 
@@ -27,7 +28,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 ## 一、把对话记录当共享状态，会污染
 
 一个常见的失败：让多个 Agent 共享一个不断增长的对话历史，每个 Agent 读全部历史、往里追加自己的输出。问题：
-- **污染**：一个 Agent 的错误/幻觉结论进了共享历史，后面的 Agent 当真、层层放大（[错误传播](./multi-agent-ops)）。
+- **污染**：一个 Agent 的错误/幻觉结论进了共享历史，后面的 Agent 当真、层层放大，形成严重的 <GlossaryTerm term="State Pollution" definition="状态污染：在多智能体协同中，由于某个 Agent 产生幻觉或输出错误事实，导致该坏数据进入共享上下文/数据库，污染整个系统的执行状态并被其他 Agent 继承的缺陷。">状态污染 (State Pollution)</GlossaryTerm>（[错误传播](./multi-agent-ops)）。
 - **淹没**：关键信息（证据、决定）淹没在大量中间对话里，[迷失在中间（M7L2）](../llm-systems/tokenization-context)。
 - **爆炸**：共享上下文越堆越长，[token 成本暴涨（M10L10）](./multi-agent-ops)、还超窗口。
 - **误解**：自由文本歧义多，Agent 之间理解不一致。
@@ -46,8 +47,8 @@ Agent 之间传信息，要用<GlossaryTerm term="Structured Message" definition
 
 ### 深入（选学）：防污染与通信设计
 
-- **防状态污染**：共享状态最大的风险是污染。对策：(1) **写入校验**——往黑板写的产物要符合 schema、可校验（[M7L6/M7L9](../llm-systems/structured-output-tools)），不是随便写；(2) **来源标记**——每个产物记下是哪个 Agent 写的、是否被审查过，便于追溯和判断可信度；(3) **隔离/版本**——不可信的中间产物和已确认的结论分开放，避免错误结论被当真（[呼应 M5L8 隔离爆炸半径](../core-components/bulkhead-isolation)）。
-- **谁能读写什么**：和[角色权限（M10L2）](./roles-specialization) 配合——研究员能写 evidence、审查员只读 proposal 写 risks、不能改 proposal。黑板的读写权限即角色边界。
+- **防状态污染**：共享状态最大的风险是污染。对策：(1) **写入校验**——往黑板写的产物要符合 schema、可校验（[M7L6/M7L9](../llm-systems/structured-output-tools)），不是随便写；(2) **来源标记**——每个产物记下是哪个 Agent 写的、是否被审查过，便于追溯和判断可信度；(3) **对数据做 <GlossaryTerm term="Bulkhead Isolation (Data)" definition="舱壁隔离：在数据或智能体交互中，将未经验证的数据与高可信的最终状态进行物理隔离，以防止单个节点的故障或错误输入发生级联扩散的安全和可靠性设计原则。">数据舱壁隔离 (Bulkhead Isolation)</GlossaryTerm>**，避免错误结论被当真（[呼应 M5L8 隔离爆炸半径](../core-components/bulkhead-isolation)）。
+- **谁能读写什么**：和[角色权限（M10L2）](./roles-specialization) 配合——研究员能写 evidence、审查员只读 proposal 写 risks、不能改 proposal。黑板的 <GlossaryTerm term="Access Control List (ACL)" definition="访问控制列表：用于定义和校验各个智能体节点对共享黑板或状态段的读写权限的控制列表，是确保最小特权原则落地的核心工程手段。">读写控制权限 (ACL)</GlossaryTerm> 即角色边界。
 - **通信范式**：(1) **经 Supervisor 中转**（[M10L3](./supervisor-orchestration)，最可控）；(2) **黑板共享**（本课，松耦合协作）；(3) **直接消息传递**（点对点，[像 swarm M10L7](./handoff-routing)，灵活但 N×N 混乱）。多数生产系统用前两种。
 - **只传必要的，不传全部**：每个 Agent 只需要黑板上和它任务相关的部分，不必读全部（[呼应 M7L8 上下文工程、按需取](../llm-systems/context-memory)）——既省 token，又避免被无关信息干扰。
 - 多 Agent 通信本质是 [分布式系统的消息传递（M3L9 队列）](../data-cache-queue/message-queues)：要考虑可靠投递、顺序、幂等、防丢防重——这些分布式通信的老问题，在多 Agent 里同样存在。
@@ -60,7 +61,76 @@ Agent 之间传信息，要用<GlossaryTerm term="Structured Message" definition
   application="多 Agent 用结构化消息（{from,to,type,payload}）和黑板（结构化 artifact 集合）通信，别用一长串自由对话。写入校验 + 来源标记 + 隔离不可信产物防污染。读写权限对齐角色。每个 Agent 只取相关部分省 token。把它当分布式消息传递设计（可靠/幂等/防污染）。"
 />
 
-## 三、跟我做一遍：结构化黑板
+## 三、智能体通信与共享状态图解 (Deep Dive Diagrams)
+
+本节展示对话历史共享导致的严重状态污染与 Context 爆炸、结构化黑板模式的共享工作区架构，以及黑板读写的分离时序。
+
+### 1. 结构全景：共享对话（Chat History）的状态污染与上下文爆炸
+
+```mermaid
+graph TD
+    classDef bad fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+    classDef step fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+
+    UserTask["外部任务: 校验 DB 并输出修复方法"] --> Step1["Agent A (只读排查)"]
+    
+    subgraph ChatHistoryMemory [共享自由文本历史 (Chat History)]
+        Step1 -->|1. 追加中间日志与 Thought| Hist1["对话历史: ['排查中...', 'DB CPU 95%', '疑有死锁(幻觉)...']"]:::bad
+        Hist1 -->|2. Agent B 基于 A 的幻觉结论写方案| Hist2["对话历史: [追加 'A说是死锁', '生成死锁修复脚本']"]:::bad
+        Hist2 -->|3. 冗余文本堆叠| Hist3["对话历史: [追加 '脚本生成完毕', '字数超限...', '上下文爆炸']"]:::bad
+    end
+
+    Hist3 --> FinalAnswer["最终输出 (因 A 幻觉和历史堆叠导致失败)"]:::bad
+```
+
+### 2. 控制流程：结构化黑板模式（Blackboard）共享内存架构
+
+```mermaid
+graph TD
+    classDef blackboard fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
+    classDef agent fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef check fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
+
+    subgraph SharedStorage [共享存储区]
+        Blackboard["共享结构化黑板 (Structured Blackboard)"]:::blackboard
+        Blackboard --- Key1["evidence: 监控证据 (Verified: True/Author: A)"]
+        Blackboard --- Key2["proposal: 修复方案 (Verified: False/Author: B)"]
+        Blackboard --- Key3["risks: 安全风险 (Verified: True/Author: C)"]
+    end
+
+    AgentA["Agent A (Researcher)"]:::agent -->|1. 校验写入 evidence| Blackboard
+    AgentB["Agent B (Coder)"]:::agent -->|2. 读 evidence 并写 proposal| Blackboard
+    AgentC["Agent C (Reviewer)"]:::agent -->|3. 读 proposal 并写 risks| Blackboard
+    
+    Note over Blackboard: 每步读写限定字段，Thought 仅在节点内消化<br/>共享黑板只有高纯度的结构化结果，完全杜绝状态污染
+```
+
+### 3. 时序全景：黑板模式读写冲突与状态对齐时序
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Host as 编排引擎 (Host)
+    participant Blackboard as 共享黑板 (Blackboard DB)
+    participant Researcher as 专精 Worker A (Researcher)
+    participant Writer as 专精 Worker B (Writer)
+
+    Host->>Blackboard: 1. 写入任务初始目标 target="DB-Exhausted"
+    Host->>Researcher: 2. 指派只读排查
+    Researcher->>Blackboard: 3. 读取 target
+    Researcher-->>Host: 4. 输出证据 payload: "Max Limit Reached"
+    Host->>Blackboard: 5. 校验写入 schema 并追加 evidence="Max Limit"
+    
+    Host->>Writer: 6. 指派修复编写，限制只读 evidence 字段
+    Writer->>Blackboard: 7. 读取 evidence
+    Note over Writer: 无法读取 Researcher 的中间 Thought 闲聊
+    Writer-->>Host: 8. 返回方案 payload: "Limit Connection=100"
+    Host->>Blackboard: 9. 校验写入 schema 并追加 proposal="Limit=100"
+```
+
+---
+
+## 四、跟我做一遍：结构化黑板
 
 <PyRunner
   rows={40}
@@ -102,7 +172,7 @@ print("结构化写入、可追溯、防污染")`}
 
 黑板让每个产物结构化、带来源、可标记是否已审查；不合 schema 的写入被拒、未审查的产物在"只读已审查"时被隔离——协作状态清晰、可追溯、不被污染。**试试**：让一个 Agent 想覆盖别人写的 proposal（加写权限检查，对齐角色）；想想错误的 evidence 如果没有"未审查隔离"，会怎样污染后续决策。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month10/m10l4_blackboard/`：
 
@@ -177,6 +247,46 @@ python labs/month10/m10l4_blackboard/test_blackboard.py
 - 你的多 Agent 之间传的是结构化产物还是自由对话？关键信息会不会被淹没、被污染？
 - 共享状态有来源标记和校验吗？一个 Agent 写错了，后面的怎么不被它带偏（隔离/审查）？
 - 你把多 Agent 通信当分布式消息传递设计了吗（可靠投递、幂等、防污染、避免 N×N）？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在多智能体通信中，把“自由文本对话记录（Chat History）”直接作为共享状态，最主要的安全与效能缺陷是什么？',
+      options: [
+        'A. 大模型无法正常解析 Markdown 格式的对话记录',
+        'B. 会导致对话历史被第三方截获，暴露用户 API Key 凭证',
+        'C. 容易导致“状态污染 (State Pollution)”——某一步 Agent 的错误幻觉会作为上下文垃圾传导给其他节点，并发生 Context 长度爆炸和“迷失在中间”现象',
+        'D. 自由文本通信会自动降低大模型的 Sampling Temperature'
+      ],
+      answer: 2,
+      explain: '自由聊天对人类很自然，但对多智能体系统是灾难性的。由于大模型不具备完美的真伪隔离能力，共享对话很容易将中间推理的胡思乱想（Thought）和未验证的推测作为事实证据灌注给下一个 Agent，导致级联错误。'
+    },
+    {
+      q: '在多智能体共享状态设计中，黑板模式（Blackboard）相比共享对话的最核心优势是什么？',
+      options: [
+        'A. 它不需要大模型扮演任何角色设定即可实现直接调用',
+        'B. 它实现了通信对话与系统共享状态的彻底解耦，每个 Agent 仅被授权读写黑板中与本职工作对齐的结构化字段，避免了冗余 Thought 文本的上下文干扰',
+        'C. 它能够成倍提升大模型的 Token 生成速率并缩短单步延迟',
+        'D. 黑板模式能够用做物理容器隔离（Sandboxing）的直接替代品'
+      ],
+      answer: 1,
+      explain: '黑板模式好比人类协作中把草稿纸（各自思考）和白板（最终公开结论）分离开。Agent 的 Thought 过程只保存在它自己的 local context 中，只有被验证合规的结构化 Output 才能写入黑板，消除了噪音扩散。'
+    },
+    {
+      q: '在设计黑板写入防护机制以防御状态污染时，哪种工程手段最务实？',
+      options: [
+        'A. 提高 Agent 调用工具时的显存配置，增加模型并行检索开销',
+        'B. 强制进行 schema 写入校验、保留每个 artifact 的来源标记（Author），并将未验证的中间产物与最终一致性结论进行隔离/版本化存放',
+        'C. 彻底禁止 Researcher 角色读取任何外部只读数据库',
+        'D. 将所有消息都转化为自由文本，由一个全能的 Arbitrator 随时在线审查'
+      ],
+      answer: 1,
+      explain: '这是典型的“把不可靠组件用可靠”的系统设计。大模型输出不可靠，因此写入黑板前必须经过严格的 schema 强校验；同时利用 Author 标记来做追溯，一旦发现错误能够迅速回溯并熔断。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

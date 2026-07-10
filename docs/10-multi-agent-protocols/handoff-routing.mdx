@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M10L7 · 交接与路由
 
@@ -41,14 +42,14 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 ### 进阶：能力发现与 swarm 交接
 
-- **能力发现**：路由要知道"每个 Agent 能干什么"——每个 Agent 声明自己的能力（capability），路由按"请求需要什么能力"匹配（[呼应 M5L3 服务能力注册、M10L9 协议](./agent-protocols)）。
+- **能力发现**：路由需要进行 <GlossaryTerm term="Capability Discovery" definition="能力发现：智能体路由系统中，各个执行节点注册或暴露其工具集、支持指令集及意图分类特征，供中心化路由器进行动态能力匹配的机制。">能力发现 (Capability Discovery)</GlossaryTerm> ——每个 Agent 声明自己的能力（capability），路由按"请求需要什么能力"匹配（[呼应 M5L3 服务能力注册、M10L9 协议](./agent-protocols)）。
 - <GlossaryTerm term="Swarm / Handoff" definition="蜂群/交接：去中心化的多 Agent 模式——没有中央路由，Agent 之间直接“交接”（这个我处理不了，转给最合适的那个）。灵活、无单点，但难追踪、难控制、易混乱。">swarm（蜂群）/ 交接（handoff）</GlossaryTerm>：去中心化模式——没有中央路由，Agent 之间**直接交接**（"这超出我的能力，转给 X"）。灵活、无单点，但难追踪（请求在 Agent 间流转、不知道在哪）、难控制、易混乱（[呼应 M10L3 去中心化的代价](./supervisor-orchestration)）。
 
 ### 深入（选学）：路由 vs swarm 的取舍
 
 - **路由（中心化）更可控，swarm（去中心化）更灵活**：和 [Supervisor vs swarm（M10L3）](./supervisor-orchestration)、[网关 vs mesh（M6L8）](../cloud-enterprise-industrial/service-mesh)、中心化 vs 去中心化是同一个永恒取舍。**多数生产系统用路由（中心化）**——因为可追踪、可控、可加[停止/护栏（M9）](../agent-architectures/stopping-budget)。swarm 只在确实需要去中心化灵活性、且能容忍难控时才用。
-- **路由质量决定一切**：路由错了（把技术问题送给账单 Agent），后面再专精也白搭。路由要准——可以用分类器（快、便宜、确定）或 LLM 判断（灵活、能理解复杂请求），按需选（[呼应 M7L5 路由、M8L7 查询理解](../llm-systems/llm-api-cost-latency)）。
-- **路由要有兜底**：请求不属于任何已知能力怎么办？要有默认 Agent / 转人工 / 弃答（[呼应 M7L9 弃答](../llm-systems/hallucination-guardrails)）——别让无法路由的请求卡死或乱派。
+- **路由质量决定一切**：路由错了（把技术问题送给账单 Agent），后面再专精也白搭。路由要准——可以用特殊的 <GlossaryTerm term="Intent Classifier" definition="意图分类器：用于检测用户输入的底层意图，通常为小参数量微调分类模型或大模型 prompt，以确定需要路由匹配的智能体节点类别。">意图分类器 (Intent Classifier)</GlossaryTerm>（快、便宜、确定）或 LLM 判断（灵活、能理解复杂请求），按需选（[呼应 M7L5 路由、M8L7 查询理解](../llm-systems/llm-api-cost-latency)）。
+- **路由要有兜底**：请求不属于任何已知能力怎么办？必须设计 <GlossaryTerm term="Fallback Mechanism" definition="兜底降级/退避机制：在软件或智能体交互中，当主逻辑、主要路由节点或外部 API 调用失效/匹配不成功时，系统自动跳转执行的安全、静态或人工介入的防御策略。">兜底机制 (Fallback Mechanism)</GlossaryTerm>。要有默认 Agent / 转人工 / 弃答（[呼应 M7L9 弃答](../llm-systems/hallucination-guardrails)）——别让无法路由的请求卡死或乱派。
 - **防止交接死循环**：swarm 里 Agent 互相踢皮球（A 转 B、B 转 A）会死循环——必须有[交接次数上限（M9L4 停止）](../agent-architectures/stopping-budget) 和兜底。这是去中心化的典型风险。
 - **混合**：常见做法是**路由 + Supervisor**——路由决定初始交给谁，Supervisor 编排后续；或路由分派后 Agent 在受限范围内可交接。纯 swarm（完全自由交接）在生产中少见。
 
@@ -60,7 +61,72 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="动态分派优先用路由 Agent（中心化、可控）：按能力匹配、分类器或 LLM 判断、设默认/兜底、可追踪。swarm 仅在需去中心化灵活时用，配交接上限防死循环。常用路由+Supervisor 混合。把它当负载均衡/服务发现来设计。"
 />
 
-## 三、跟我做一遍：能力路由
+## 三、分派路由与 Swarm 交接图解 (Deep Dive Diagrams)
+
+本节展示集中式路由器的结构分派拓扑、网状去中心化 Swarm 交接中存在的循环风险，以及这两种动态分配机制的时序流程对比。
+
+### 1. 结构全景：集中式路由器模式（Router Pattern）拓扑
+
+```mermaid
+graph TD
+    classDef router fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
+    classDef worker fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef target fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
+
+    UserRequest["动态用户输入: '查一下上月的账单并退货'"] --> Router["1. 路由智能体 (Router / Classifier)"]:::router
+    
+    Router -->|2. 提取意图 1: 账单咨询| AgentBilling["专精账单智能体 (Billing Agent)"]:::worker
+    Router -->|2. 提取意图 2: 退货售后| AgentReturn["专精退货智能体 (Return Agent)"]:::worker
+    Router -->|2. 提取意图 3: 技术提问| AgentTech["专精技术智能体 (Tech Agent)"]:::worker
+    
+    AgentBilling -->|完成子任务| Output[("结构化结果汇总")]:::target
+    AgentReturn -->|完成子任务| Output
+```
+
+### 2. 控制流程：网状点对点交接（Swarm Pattern）拓扑
+
+```mermaid
+graph TD
+    classDef agent fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef alert fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    Start(["接收原始请求"]) --> AgentA["智能体 A (售前咨询)"]:::agent
+    
+    AgentA -->|1. 转交控制权 (Handoff)| AgentB["智能体 B (账单处理)"]:::agent
+    AgentB -->|2. 再次转交 (Handoff)| AgentC["智能体 C (售后服务)"]:::agent
+    
+    AgentC -.->|3. 踢皮球循环 (死循环风险)| AgentB
+    
+    Note over AgentB, AgentC: Swarm 模式去中心化，但极易发生循环交接 (踢皮球)<br/>必须用最大 handoff 步数强行熔断限制
+```
+
+### 3. 时序全景：路由分派与 Swarm 动态交接时序对比
+
+```mermaid
+sequenceDiagram
+    autonumber
+    
+    rect rgb(240, 248, 255)
+        Note right of Host: 路由器模式 (Router Pattern): 第一阶段，链路清晰
+        Host->>Router: 1. 发送请求: "我要退货，货号 123"
+        Router-->>Host: 2. 意图分类: "退货服务" (Classifier)
+        Host->>ReturnAgent: 3. 分派任务并提供上下文
+        ReturnAgent-->>Host: 4. 执行结果: 退货成功
+    end
+
+    rect rgb(255, 240, 245)
+        Note right of Host: 蜂群交接模式 (Swarm Pattern): 第二阶段，动态交接
+        Host->>AgentA: 1. 售前 Agent A 承接请求
+        Note over AgentA: 识别无法独立解决，移交控制权
+        AgentA-->>Host: 2. handoff_to(AgentB, payload)
+        Host->>AgentB: 3. 退货 Agent B 承接
+        AgentB-->>Host: 4. 执行结果并结束
+    end
+```
+
+---
+
+## 四、跟我做一遍：能力路由
 
 <PyRunner
   rows={36}
@@ -94,7 +160,7 @@ print("按能力路由到对的 Agent")`}
 
 路由按"请求需要什么能力"匹配最合适的 Agent，匹配不到就兜底转人工（而不是乱派）。这是中心化的可控分派——每个请求去了哪都看得见。**试试**：加一个能力重叠的请求（既像技术又像账单），看路由怎么选；想想如果没有兜底，"天气"这种请求会怎样（被乱派给某个 Agent）。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month10/m10l7_routing/`：
 
@@ -169,6 +235,46 @@ python labs/month10/m10l7_routing/test_routing.py
 - 你的动态分派是可控可追踪的路由，还是让 Agent 自由交接的 swarm？你真的需要去中心化吗？
 - 你的路由准吗？路由错了后面再专精也白搭——路由质量你怎么保证、怎么监控？
 - 无法路由/低置信的请求有兜底（默认 Agent/转人工/弃答）吗？swarm 有交接上限防死循环吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '多智能体系统在动态处理复杂多变的用户输入时，最常用且最可控的路由机制是什么？',
+      options: [
+        'A. Swarm 蜂群式交接，完全不需要任何中央协调器',
+        'B. 中心化路由 Agent (Router Pattern)——通过意图分类器对请求进行快筛，并按专精 Worker 的能力声明进行精确分派',
+        'C. 允许所有 Worker Agent 自由并发读取黑板状态，自行竞价认领任务',
+        'D. 不进行任何分配，完全依赖于物理数据库层面的分布式事务锁'
+      ],
+      answer: 1,
+      explain: '这和传统系统工程中的“API 网关分流”高度一致。路由器模式为系统提供了一个单一控制点，非常便于记录跳转追踪、控制 Token 成本和添加统一的防护护栏。'
+    },
+    {
+      q: '在点对点去中心化的 Swarm（蜂群）模式中，最典型的级联失败风险是什么？如何从系统设计层面解决？',
+      options: [
+        'A. 风险是 GPU 的并发吞吐受限；解决办法是更换更高级的芯片',
+        'B. 风险是模型响应超时；解决办法是增大 PyRunner 运行超时阈值',
+        'C. 风险是智能体之间互相“踢皮球”，陷入循环重定向（死循环）；解决办法是强制引入“最大交接次数上限 (Handoff Limits)”以及设置升级兜底策略',
+        'D. 风险是通信消息变成乱码；解决办法是禁止使用 JSONSchema'
+      ],
+      answer: 2,
+      explain: '去中心化交互中，最怕节点因职责推诿或幻觉决策导致控制流死锁。比如 Agent A 转 B，B 又转 A。必须用程序强行记录 handoff 链深度（如限制最深 5 次跳转），并对低置信度的交互强制阻断升级至转人工网关。'
+    },
+    {
+      q: '如何将传统架构中的“负载均衡 (Load Balancer)”和“服务发现 (Service Discovery)”智慧迁移至智能体路由？',
+      options: [
+        'A. 路由节点需要持续监视每个 Agent 的 Capability 能力契约；并且可以对高并发的 Agent 部署限流熔断墙，防止特定专精节点因超负荷而发生响应幻觉',
+        'B. 彻底用 Swarm 网状交接取代负载均衡机制',
+        'C. 将路由逻辑写死在每一个 Worker 的 prompt 设定中',
+        'D. 把所有请求的路由状态都存储为非结构化的聊天历史文本'
+      ],
+      answer: 0,
+      explain: '“AI 架构的根基依然是传统系统工程”。大模型时代的路由同样面临流量雪崩、单点故障、健康检查和限流问题。在设计路由智能体时，将其当成微服务 API Gateway 来审视与加固，是其能够稳健上生产的重要支撑。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

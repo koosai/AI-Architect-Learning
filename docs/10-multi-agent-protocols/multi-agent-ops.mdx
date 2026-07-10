@@ -10,6 +10,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M10L10 · 多 Agent 运维
 
@@ -42,12 +43,12 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 ### 进阶：成本归因与预算控制
 
 - <GlossaryTerm term="Cost Attribution" definition="成本归因：把多 Agent 系统的总 token/调用成本拆解到每个 Agent、每一步，看清钱花在哪、哪个 Agent 最贵、是否值得，便于优化。">成本归因（cost attribution）</GlossaryTerm>：把总成本拆到每个 Agent、每一步——看清哪个 Agent 最烧钱、是否值得，才能优化（[呼应 M7L5 成本、M9L4 预算](../llm-systems/llm-api-cost-latency)）。
-- **全局预算**：给整个多 Agent 任务设总预算上限（总 token/总调用/总时间），超了就停——单个 Agent 的[停止条件（M9L4）](../agent-architectures/stopping-budget) 不够，多 Agent 要**全局**预算，否则几个 Agent 各自不超、合起来爆炸。
+- **全局预算**：给整个多 Agent 任务设总预算上限（总 token/总调用/总时间），超了就停——单个 Agent 的[停止条件（M9L4）](../agent-architectures/stopping-budget) 不够，多 Agent 要进行 <GlossaryTerm term="Global Budget" definition="全局预算：多智能体协作链条中的最高开销或步骤配额。一旦累积消耗（包括各子智能体的 Token 或 API 调用总成本）超过全局预设阀值，则自动触发熔断。">全局预算 (Global Budget)</GlossaryTerm>，否则几个 Agent 各自不超、合起来爆炸。
 - **降本手段**：贵的 Agent 用强模型、便宜的用小模型（[M7L5 路由](../llm-systems/llm-api-cost-latency)）；能用单 Agent 的别用多 Agent（[M10L1 克制](./why-multi-agent)）；缓存可复用的中间结果（[M7L8 缓存](../llm-systems/llm-api-cost-latency)）。
 
 ### 深入（选学）：错误隔离与传染防控
 
-- <GlossaryTerm term="Error Propagation / Isolation" definition="错误传播与隔离：在多 Agent 链路中，一个 Agent 的错误输出会被下游当输入而放大污染全链。隔离手段包括校验每个 Agent 的输出、不让坏数据流入下游、单个 Agent 失败不拖垮整体。">错误传播与隔离</GlossaryTerm>：多 Agent 里错误会沿链路放大——A 错了，B、C 拿 A 的输出当真，错误被层层放大。必须**隔离**：校验每个 Agent 的输出（schema/合理性）再传给下游（[呼应 M10L4 schema 校验、verified 隔离](./communication-state)）、一个 Agent 失败不拖垮整体。这是 [M5 舱壁隔离（bulkhead）、断路器（circuit breaker）](../core-components/bulkhead-isolation) 在多 Agent 的对应——**故障隔离的老模式直接迁移**。
+- <GlossaryTerm term="Error Propagation / Isolation" definition="错误传播与隔离：在多 Agent 链路中，一个 Agent 的错误输出会被下游当输入而放大污染全链。隔离手段包括校验每个 Agent 的输出、不让坏数据流入下游、单个 Agent 失败不拖垮整体。">错误传播与隔离</GlossaryTerm>：多 Agent 里错误会沿链路放大——A 错了，B、C 拿 A 的输出当真，错误被层层放大。必须**隔离**：校验每个 Agent 的输出（schema/合理性）再传给下游（[呼应 M10L4 schema 校验、verified 隔离](./communication-state)）、一个 Agent 失败不拖垮整体。这是 [M5 舱壁隔离（bulkhead）、<GlossaryTerm term="Circuit Breaker" definition="熔断器/断路器：在微服务或智能体调用中，当前置节点错误率或超时率过高时，自动切断调用并直接返回兜底结果，以保护整体系统稳定性的弹性机制。">断路器 (Circuit Breaker)</GlossaryTerm>（[M5](../core-components/bulkhead-isolation)）在多 Agent 的对应——**故障隔离的老模式直接迁移**。
 - **故障模式更多**：多 Agent 有单 Agent 没有的故障——死锁（互相等）、活锁（反复交接不前进）、级联失败（一个挂全挂）、协调者单点（[M10L3 Supervisor 是单点](./supervisor-orchestration)）。这些全是[分布式系统的经典故障（M2L11 容错）](../system-design-bridge/reliability-fault-tolerance)，不是新东西。
 - **降级与兜底**：某个专精 Agent 挂了，整个系统能不能降级运行（少一个能力但不全停）？要设计[优雅降级（M5 弹性）](../core-components/circuit-breaker)——比如 critic Agent 挂了就跳过审查但记录告警，而非整个任务失败。
 - **运维难度是核心成本**：[M10L1](./why-multi-agent) 说多 Agent "成本和混乱翻倍"，这一课就是那句话的兑现——**多 Agent 真正的长期成本，往往不是 token，而是运维复杂度**：更难调试、更难监控、更难保证可靠。架构师评估"要不要上多 Agent"时，必须把这份运维负担算进去。能用单 Agent 达标就别上多 Agent，不是因为多 Agent 不强，而是因为它的运维代价很实在。
@@ -60,7 +61,80 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="多 Agent 必配:统一 trace 追踪每步、成本归因到每个 Agent + 全局预算上限、每个 Agent 输出校验后再传下游(防传染)、故障隔离与优雅降级。把它当分布式系统运维,套用 M5/M6 的可观测/弹性/容错经验。把运维复杂度算进‘要不要上多 Agent’的决策——能单 Agent 达标就别上。"
 />
 
-## 三、跟我做一遍：追踪 + 全局预算 + 错误隔离
+## 三、多智能体分布式链路追踪与预算隔离图解 (Deep Dive Diagrams)
+
+本节展示多 Agent 分布式 Tracing 调用树模型、全局预算控制熔断网络结构，以及局部智能体故障下的断路器优雅降级时序。
+
+### 1. 结构全景：多 Agent 跨节点调用链路追踪（Distributed Tracing）模型
+
+```mermaid
+graph LR
+    classDef client fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef span fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+
+    UserTask["外部请求 (TraceID = tr-999)"] --> SupervisorSpan["Supervisor Span (ID: sp-001)"]:::span
+    
+    subgraph TracingChain [分布式追踪 span 树]
+        SupervisorSpan -->|1. 派发研究| ResearchSpan["Researcher Span (ID: sp-002)<br/>Cost: 0.05$ / Parent: sp-001"]:::span
+        SupervisorSpan -->|2. 派发编写| WriterSpan["Writer Span (ID: sp-003)<br/>Cost: 0.12$ / Parent: sp-001"]:::span
+        
+        WriterSpan -->|3. 派发纠错| ReviewSpan["Reviewer Span (ID: sp-004)<br/>Cost: 0.03$ / Parent: sp-003"]:::span
+    end
+
+    Note over ResearchSpan, ReviewSpan: 统一 TraceID 贯穿整条调用链，<br/>每个节点包含 ParentID、Token 消耗与耗时明细
+```
+
+### 2. 控制流程：分层级/全局预算控制网与熔断卡点
+
+```mermaid
+graph TD
+    classDef alert fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+    classDef limit fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+
+    Input["接收大任务输入"] --> Init["初始化全局 Trace (Spent=0 / Budget=1.00$)"]
+    
+    subgraph BudgetControlNetwork [全局预算控制网]
+        Init --> RunA["调用 Agent A (Cost=0.20$)"]
+        RunA --> Check1{"累加 spent = 0.20$ > 1.00$ ?"}
+        
+        Check1 -- "未超" --> RunB["调用 Agent B (Cost=0.90$)"]
+        RunB --> Check2{"累加 spent = 1.10$ > 1.00$ ?"}
+        
+        Check2 -- "超预算" --> Terminate["4a. 触发全局物理阻断 (STOP_BUDGET)"]:::alert
+    end
+
+    Check1 -- "超预算" --> Terminate
+    Check2 -- "未超" --> End["4b. 正常输出结果"]
+```
+
+### 3. 时序全景：局部 Agent 节点失效的隔离与弹性降级时序
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Host as 编排宿主 (Host)
+    participant Writer as 编写智能体 (Writer)
+    participant Critic as 审查智能体 (Critic)
+
+    Host->>Writer: 1. 指派生成代码
+    Writer-->>Host: 2. 返回初版代码
+    
+    Host->>Critic: 3. 发送代码进行安全审查
+    Note over Critic: 发生 API 异常 / 物理故障 (Timeout)
+    Critic-->>Host: 4. 返回 500 / 响应超时
+    
+    rect rgb(255, 240, 245)
+        Note over Host: 故障隔离与断路器机制触发 (Circuit Breaker)
+        Note over Host: 不直接把 500 传染给下游，也不挂起整条链路
+        Host-->>Host: 5. 优雅降级: 记录 Tracing 警报，套用静态 Regex 兜底安全策略
+    end
+    
+    Host-->>Host: 6. 导出带警告标记的最终代码
+```
+
+---
+
+## 四、跟我做一遍：追踪 + 全局预算 + 错误隔离
 
 <PyRunner
   rows={44}
@@ -114,7 +188,7 @@ print("可追踪、控预算、隔离错误")`}
 
 每一步都被追踪（谁、花了多少、成功否），analyst 输出了坏数据就被隔离、不传给 writer（防污染），成本能归因到每个 Agent，还有全局预算兜底。这就是多 Agent 运维的三大支柱在一段代码里的缩影。**试试**：把 budget 改成 250，看预算如何提前截停；把 analyst 改成正常输出，看链路正常走完——体会"校验后才传下游"如何挡住错误传染。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month10/m10l10_ops/`：
 
@@ -189,6 +263,46 @@ python labs/month10/m10l10_ops/test_ops.py
 - 你的多 Agent 系统出错时，能在几分钟内定位到是哪个 Agent 哪一步吗？还是个黑盒？
 - 你的成本归因到每个 Agent 了吗？有全局预算上限吗？哪个 Agent 最贵、值不值？
 - 一个 Agent 返回垃圾，下游会被污染吗？有输出校验和故障降级吗？这些运维成本你算进决策了吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '为什么在多智能体系统中，单凭每个 Worker Agent 各自的“局部停止条件与预算上限”是无法防范账单雪崩的？',
+      options: [
+        'A. 因为大模型会自动绕过 Worker 的本地局部预算校验',
+        'B. 因为多智能体链路经常进行跨节点循环交互，每个 Agent 就算单次不超支，累加起来的整条调用链的总 Token 开销依然会呈非线性暴涨。因此，必须在 Host/黑板层设立统一的“全局预算 (Global Budget)”来强行阻断',
+        'C. 局部预算会导致 Python 脚本中的 PyRunner 因格式校验失败而退出',
+        'D. 局部预算会导致 Tracing Span 树无法记录 ParentID'
+      ],
+      answer: 1,
+      explain: '多 Agent 运维最忌讳“散兵游勇各自为政”。主控 Supervisor 必须作为全局资源把闸人，在每一次分派动作前累加整条 TraceID 的总 Token 成本，一旦逼近全局硬顶红线立刻触发熔断，才能守住账单底线。'
+    },
+    {
+      q: '关于多 Agent 的“错误传播（Error Propagation）与隔离”，以下描述最准确的是？',
+      options: [
+        'A. 上游 Agent 返回的畸形或幻觉数据可以直接传递给下游，反正大模型可以自我过滤脏数据',
+        'B. 为了防止错误污染全链，必须在每一阶段 Agent 的输出出口设置强 JSONSchema 校验，并在发生 API 故障时通过“断路器 (Circuit Breaker)”触发降级与兜底策略，将爆炸半径框定在局部',
+        'C. 错误隔离是指将系统直接断网运行以防御恶意指令注入',
+        'D. 错误隔离会导致分布式追踪 (Distributed Tracing) 的 Span ID 混乱'
+      ],
+      answer: 1,
+      explain: '多智能体系统是典型的高耦合级联系统。如果不对每个节点的输出进行严格“物理卡关”，上游的一句幻觉闲聊会被下游盲信，层层放大，导致全盘崩溃。部署微服务式的断路器和降级逻辑是兜底保障。'
+    },
+    {
+      q: '如何将传统的“可观测性 (Observability)”工程经验无缝迁移至智能体运维？',
+      options: [
+        'A. 将智能体看作是一个个分布式微服务节点。利用唯一的 TraceID 在全链条交互中进行传递，记录下每个节点的入参、出参、响应时延及 Token 开销，形成可视的完整调用 span 树',
+        'B. 彻底废除 Tracing 分布式追踪，转而依靠 Agent 在 Thought 中自我记录 Log',
+        'C. 让每个 Agent 都将各自的运行日志追加到共享的自由文本 Chat History 中',
+        'D. 仅在部署到生产环境之后才启动日志记录'
+      ],
+      answer: 0,
+      explain: '“新技术背后的老问题”。多 Agent 本质是一个不可靠进程组成的分布式系统。直接套用 Zipkin/Jaeger 的链路追踪逻辑，用唯一的 TraceID 记录全链路状态，是让黑盒多 Agent 变透明、可调优、可排错的唯一途径。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
