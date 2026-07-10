@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M12L1 · 立项：需求与范围
 
@@ -62,6 +64,97 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="毕业项目先立项后写码:一句话目标 + 主用户场景 + 3 核心用例 + 明确非目标 + 可验收标准(对齐 Capstone Brief 和最终展示)。用‘单用户本地优先’约束简化范围。把‘无 key 可跑 mock’作为一等需求保证可演示。立项一页足矣、两小时想清楚胜过两天写文档。"
 />
 
+## 三、毕业设计立项图解 (Deep Dive Diagrams)
+
+本节展示毕业设计立项阶段的核心图解：需求分层结构模型、范围界定工作流，以及本地优先与云端多租户架构在开发成本与维护代价上的对比。
+
+### 1. 结构全景：毕业项目 Charter 需求要素分层拓扑
+
+```mermaid
+graph TD
+    classDef main fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef goals fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef nogoals fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+    classDef criteria fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+
+    Charter["毕业设计立项书 (Charter)"] --> GoalsGroup["1. 目标与用例 (In-Scope)"]:::goals
+    Charter --> NoGoalsGroup["2. 边界限制 (Non-Goals)"]:::nogoals
+    Charter --> CriteriaGroup["3. 交付标准 (Acceptance)"]:::criteria
+
+    GoalsGroup --> Goal["目标: 本地优先的架构学习助手"]
+    GoalsGroup --> Case1["用例 1: 架构问答与证据引用"]
+    GoalsGroup --> Case2["用例 2: 架构评审清单生成"]
+    GoalsGroup --> Case3["用例 3: 离线 Mock 路径跑通"]
+
+    NoGoalsGroup --> No1["不做多租户权限隔离"]
+    NoGoalsGroup --> No2["不做 Web 前端 UI (CLI 即可)"]
+    NoGoalsGroup --> No3["不做模型微调/预训练"]
+
+    CriteriaGroup --> Acc1["无 API Key 演示可用"]
+    CriteriaGroup --> Acc2["问答准确性评估样本数 >= 10"]
+    CriteriaGroup --> Acc3["Agent 调用具备 Trace"]
+```
+
+### 2. 控制流程：立项需求澄清与收敛工作时序
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Owner as 项目发起人 (架构师)
+    participant Dev as 开发实现 (Dev)
+    participant Gate as 宪法质量门槛
+
+    Owner->>Dev: 1. 提出粗野需求: "做一个厉害的 AI 架构助手"
+    Dev->>Owner: 2. 挑战模糊度: 明确目标用户是谁？
+    Owner-->>Dev: 3. 答: 架构学习者，主要为单用户本地复习
+    Note over Dev: 根据单用户约束，简化掉 Auth/DB 事务
+    Dev->>Owner: 4. 拟定非目标 (Non-Goals): 不做前端、不做微调
+    Owner-->>Dev: 5. 确认边界收敛
+    Dev->>Gate: 6. 录入 Charter 配置，校验目标、用例、验收项
+    Gate-->>Dev: 7. 判定通过，立项锁定 (Baseline)
+```
+
+### 3. 折中谱系：本地优先 vs. 云端 SaaS 架构折中
+
+```mermaid
+graph TD
+    classDef local fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef cloud fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    Strategy["项目物理边界策略"]
+    
+    Strategy -->|本地优先| Local["本地优先运行 (Local-first & Mock Paths)"]:::local
+    Strategy -->|云端SaaS| Cloud["云端多租户 SaaS (Cloud Multi-tenant SaaS)"]:::cloud
+
+    Local --> LocalNote["优点: 0 外部 API 依赖，物理离线，部署成本为 0，展示极速<br/>缺点: 无法在外部环境进行高并发性能与分布式多可用区测试"]
+    Cloud --> CloudNote["优点: 支持生产级的大规模用户并发测试，便于收集真实用户反馈<br/>缺点: 极易遭遇 Token 计费失控与安全越权攻击，开发周期拉长 5 倍"]
+```
+
+### 4. 步骤流演示：需求收敛与范围剪裁生命周期
+
+<StepFlow
+  steps={[
+    {
+      title: '痛点抽取',
+      desc: '从宏大愿景中精准抽离用户的真实核心痛点（例如“海量笔记检索难”和“缺乏自测”）。'
+    },
+    {
+      title: '约束置入',
+      desc: '声明核心边界约束（例如“本地优先”和“CLI 界面”），用以强制抹去 80% 的辅助架构杂质。'
+    },
+    {
+      title: '非目标裁剪',
+      desc: '严厉拉出“不做什么”的非目标红线，冻结范围，防止在开发中途发生需求潜行膨胀。'
+    },
+    {
+      title: '验收公式化',
+      desc: '将“做完”具象化为可量化的测试指标（例如“离线脚本通过”及“拥有 10 条对比数据”）。'
+    }
+  ]}
+/>
+
+---
+
 ## 三、跟我做一遍：把愿景变成可检验的立项
 
 <PyRunner
@@ -106,7 +199,7 @@ print("立项完整、范围收敛、可验收")`}
 
 立项被结构化成一份"契约"：目标、用户、核心用例、**非目标**、验收标准，还能自检是否收敛（没有非目标就报警——因为范围一定会膨胀）。这就是把"做个 AI 助手"变成有边界的工程项目。**试试**：给你自己的版本加/减一个核心用例，感受范围的膨胀与收缩；想想如果去掉"单用户本地优先"这个约束，项目会复杂多少倍。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month12/m12l1_charter/`：
 
@@ -177,6 +270,46 @@ python labs/month12/m12l1_charter/test_charter.py
 - 你的项目目标能用一句话说清"为谁解决什么"吗？还是模糊的"做个 AI 助手"？
 - 你写非目标了吗？你能理直气壮地说出"我刻意不做 X，因为……"吗？
 - 你的验收标准可判定吗？它和你最终要展示的东西对齐吗（以终为始）？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在毕业设计立项阶段，为什么架构师必须花时间写清“非目标 (Non-Goals)”？它能带来什么具体的架构收益？',
+      options: [
+        'A. 它是为了在遇到困难时，能有借口向用户推卸责任',
+        'B. 非目标能明确界定系统不做什么，帮助开发人员冻结项目范围，防止需求无止境蠕变（Scope Creep）。明确“不做多租户、不做 Web UI”可以让工程师在有限时间内将精力聚焦在 RAG 与 Agent 的核心工程设计上，是架构判断力的直接体现',
+        'C. 写非目标可以显著提高模型的回答准确度',
+        'D. 非目标规定了代码中不能声明的变量名称'
+      ],
+      answer: 1,
+      explain: '在大型系统和毕业项目设计中，最常见的失败模式不是做不出来，而是因为范围无限制扩散导致半途而废。非目标和目标一样重要，甚至在立项期更加重要，它起到了过滤杂质、聚焦核心业务逻辑的安全锁作用，用明确的边界实现架构的克制。'
+    },
+    {
+      q: '毕业项目的立项中规定了“即使在无 API Key 的情况下，也必须能使用 Mock / 本地 Mock 路径跑通核心用例”。这一设计的核心架构意图是：',
+      options: [
+        'A. 节约电费与购买大模型 API Key 的费用',
+        'B. 确保系统具备极佳的可演示性与零侵入测试性。依赖外部 API Key 的系统在评审展示或断网环境下常因不可控因素崩溃；将离线 Mock 路径作为一等公民设计，证明了架构师具备“设计模式中的依赖倒置（DIP）”思想，系统天然具备可替换性',
+        'C. 绕过大模型的服务质量条款，实现破解版运行',
+        'D. 让系统在没有内存的情况下依然能通过 PyRunner 完美编译'
+      ],
+      answer: 1,
+      explain: '一个可靠的架构在面对不稳定依赖（如云端 LLM）时，应具备隔离和可替代性。将离线 Mock 路径提到一等需求的高度，不仅大幅提升了演示和部署时的成功率，也强迫开发者在底层数据流设计上实现接口与实现的解耦（如 Month 4 DIP 模式）。'
+    },
+    {
+      q: '在制定毕业项目 Charter 时，以下哪项最不符合一个成熟架构师的非目标界定？',
+      options: [
+        'A. 本项目不提供基于 Web 的可视化前端 UI，仅保留 CLI 交互界面',
+        'B. 本项目不对大模型进行针对特定领域的二次微调或继续预训练',
+        'C. 本项目只使用 CPU 运行，暂不适配多卡 GPU 混合计算',
+        'D. 本项目绝对不写任何单元测试与离线评测集，以求开发速度达到极限'
+      ],
+      answer: 3,
+      explain: '非目标的目的是为了砍掉非核心辅助逻辑以聚焦高质量的核心实现（如评估、可观测和可靠性）。单元测试与离线评测集（Evaluation）是保障系统上线质量与验证架构正确性的底线，属于绝对不能省略的核心工程防护。砍掉测试不仅不是架构的克制，反而是一种低级的妥协。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

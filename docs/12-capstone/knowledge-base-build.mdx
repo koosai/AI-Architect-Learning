@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M12L3 · 知识地基：摄取与检索
 
@@ -60,6 +62,98 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   insight="助手记忆靠摄取管道:读文件→按结构分块(适度重叠)→embedding→存本地向量库→按查询检索top-k。先端到端跑通再优化质量。每块带元数据(来源/标题/位置)才能返回引用(核心用例)。为无key可跑用确定性 mock embedding、真用时换真的(provider可替换)。笔记会更新需增量摄取去重。检索质量是RAG命门直接决定上限,留检索评估钩子。几千条笔记别上分布式向量库(过度工程),内存线扫即可。"
   application="建知识地基:摄取→按结构分块带重叠→embedding(可mock)→本地向量库→top-k检索。每块存元数据供引用和过滤。先跑通再调质量。规模小用内存检索别过度。真实要增量摄取,毕业项目可先全量但文档说明。留检索评估钩子量化召回。"
 />
+
+## 三、摄取与向量检索图解 (Deep Dive Diagrams)
+
+本节展示 RAG 地基的核心图解：知识摄取与清洗加工链路、文档切片与编码持久化时序，以及不同文档分块策略在语义保持度与检索冗余度上的权衡。
+
+### 1. 结构全景：知识库 ingestion 管道与检索分级拓扑
+
+```mermaid
+graph TD
+    classDef file fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef process fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef index fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+
+    FileFolder["md/txt 原始架构笔记"]:::file --> Loader["1. 文本加载器 (Loader)"]:::process
+    
+    Loader --> Chunker["2. 语义分块器 (Structural Chunker)"]:::process
+    
+    subgraph ChunkMetadata [元数据挂载]
+        Chunker --> DocRef["来源文件名 (source)"]
+        Chunker --> DocTitle["标题层级 (title)"]
+        Chunker --> DocPos["块序号 (pos)"]
+    end
+
+    ChunkMetadata --> Embedder["3. Embedding 适配接口 (embed)"]:::process
+    Embedder --> VectorStore["4. 本地向量数据库 (Vector Store)"]:::index
+    
+    UserQuery["用户架构提报查询"] -->|语义化向量| QueryVector["查询向量"] -->|Top-K 相似度检索| VectorStore
+```
+
+### 2. 控制流程：增量摄取与索引数据流转时序
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Watcher as 文件监视器
+    participant Pipeline as 摄取管线 (Pipeline)
+    participant HashDB as 历史哈希库 (Local Cache)
+    participant VectorDB as 向量数据库 (Chroma)
+
+    Watcher->>Pipeline: 1. 监测到文件修改 (WhatsApp.md)
+    Pipeline->>Pipeline: 2. 读取文件并计算 MD5 校验和
+    Pipeline->>HashDB: 3. 查询此文件历史哈希值
+    alt 哈希未改变 (未发生变更)
+        HashDB-->>Pipeline: 4a. 返回“命中缓存”，中断执行
+    else 发生新增/更新
+        HashDB-->>Pipeline: 4b. 返回“内容已修改”
+        Pipeline->>Pipeline: 5. 执行文章切片 (Chunking) 与元数据提取
+        Pipeline->>VectorDB: 6. 清理旧文件的 chunks，写入新向量与元数据
+        Pipeline->>HashDB: 7. 写入最新文件哈希以备下次去重
+    end
+```
+
+### 3. 折中谱系：滑动窗口切片 vs. 语义树状切片
+
+```mermaid
+graph TD
+    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef risk fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    ChunkingStrategy["文档分块剪裁策略"]
+    
+    ChunkingStrategy -->|死板滑窗| Window["字符级滑动窗口 (Fixed-size with overlap)"]:::risk
+    ChunkingStrategy -->|语义结构| Semantic["结构化段落分块 (Paragraph / Header based)"]:::safe
+
+    Window --> WindowNote["优势: 实施极其简单，无模型和规则开销<br/>缺点: 容易将句意从中劈开，导致检索到的边缘碎片语义碎片化"]
+    Semantic --> SemanticNote["优势: 完整保持了概念上下文，检索召回的片段忠实度极高<br/>缺点: 切分逻辑易被文档格式不规范所破坏，编写清洗规则麻烦"]
+```
+
+### 4. 步骤流演示：端到端本地向量检索流程
+
+<StepFlow
+  steps={[
+    {
+      title: '文本载入',
+      desc: '读取本地目录下的 md/txt 架构文章，剔除冗余空格与无意义符号。'
+    },
+    {
+      title: '边界切片',
+      desc: '按两个换行符作为段落边界，把长文章切分成 300~500 字符大小的语义块，且带有 10% 的上下文重叠。'
+    },
+    {
+      title: '向量表征',
+      desc: '调起本地 embedding 模型（或 Mock 哈希）将文本映射为多维浮点数稠密向量。'
+    },
+    {
+      title: '拓扑存储',
+      desc: '将向量与包含文件名和位置的元数据绑定，入库到本地 SQLite/内存数据库。'
+    }
+  ]}
+/>
+
+---
 
 ## 三、跟我做一遍：最小知识地基
 
@@ -114,7 +208,7 @@ print("摄取分块检索跑通、返回带引用的片段")`}
 
 一条最小但完整的 RAG 地基：mock embedding（保证无 key 可跑）、按段落分块并记来源/位置元数据、本地内存向量库、按查询检索并**带引用返回**。这就是助手记忆的底座。**试试**：加一篇你自己的笔记，问一个跨笔记的问题看检索效果；把 embed 换成"真 embedding 接口"的想象——体会 [provider 可替换（M12L4）](./model-provider-layer) 为什么重要。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month12/m12l3_kb/`：
 
@@ -185,6 +279,46 @@ python labs/month12/m12l3_kb/test_kb.py
 - 你的地基能在无 key 时跑通吗？embedding/向量库是藏在可替换接口后面的吗？
 - 你的片段带足够元数据支持引用吗（引用是你的核心用例）？
 - 你的检索质量怎么样、怎么量化？（留了评估钩子吗，还是全凭感觉？）
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在构建 RAG 系统时，“分块（Chunking）”策略直接决定了检索结果的质量。以下关于分块大小（Chunk Size）与重叠度（Overlap）的描述，错误的是：',
+      options: [
+        'A. Chunk Size 过大容易混入过多不相干的噪音信息，且消耗更多大模型的 Context 长度',
+        'B. Chunk Size 过小容易丢失关键的逻辑上下文，导致大模型无法推演出完整的正确答案',
+        'C. 重叠度（Overlap）的目的是为了在分割边界处保留上下文联系，防止概念在分界点被拦腰截断',
+        'D. 应该永远把一整篇几万字的笔记作为一个 Chunk，这样能最大限度节约向量库的索引空间'
+      ],
+      answer: 3,
+      explain: '大模型在处理过长上下文时不仅计费昂贵，而且存在 lost-in-the-middle 现象。整篇文章作为单一 Chunk 会导致检索结果泛化，引入海量无关词语。架构师应当利用分块策略，将知识裁剪为适中的、高内聚的语义分块。'
+    },
+    {
+      q: '为什么要在存储知识分块时，强制将其元数据（Metadata，如来源文件、标题层级）与向量一同写入数据库？',
+      options: [
+        'A. 为了在前端渲染时，能够清晰地展示每一句回答的“证据来源引用（Citations）”，以及支持后续的多维度条件过滤',
+        'B. 因为没有元数据的向量无法在内存中进行 cosine 相似度计算',
+        'C. 元数据可以自动将本地向量库的离线速度提升 100 倍',
+        'D. 元数据是为了将 Python 代码编译进 Docusaurus 的打包产物中'
+      ],
+      answer: 0,
+      explain: '元数据是 RAG 系统支持“事实可溯源”的根本保证。毕业助手的一项核心指标就是“能够引用证据”，元数据保存了块在原始文件中的来源与段落坐标，大模型便能在生成答案时明确指出是在哪篇文档的哪一部分，从而消除幻觉。'
+    },
+    {
+      q: '在进行本地离线测试时，如何设计 Embedding 的 Mock 路径以达成宪法规定的“无 Key 可跑”要求？',
+      options: [
+        'A. 直接将所有文本的向量全部返回为由 0 组成的空数组',
+        'B. 设计一个确定性、基于文本特征（如特定词频哈希）计算的 Mock 向量表征函数。虽不如神经网络模型精确，但能稳定映射语义，无需调用任何云端 API 即可验证检索流程闭环',
+        'C. 必须在系统检测到无 Key 时强制弹窗终止所有 Python 进程',
+        'D. 每次都随机生成 64 维的随机数作为向量存入'
+      ],
+      answer: 1,
+      explain: 'Mock 的核心意图是保证系统流程链路的完整性。基于文本词频或特定哈希的 Mock 向量算法在处理完全相同的输入时能够返回完全相同的稠密向量，从而保持向量 cosine 相似度匹配的基本规律。这使得在离线、无 Key 时系统依然能够执行“检索相似段落”并取得大致符合逻辑的样例，确保系统 100% 可演示。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

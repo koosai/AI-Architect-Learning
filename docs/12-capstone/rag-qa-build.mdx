@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M12L5 · RAG 问答与引用
 
@@ -60,6 +62,94 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="RAG问答:prompt强制grounding、检索片段当数据放context、答案附由代码生成的真引用(source/pos)、证据不足(空/低相似度)弃答。留trace记录检索到什么生成什么以分诊检索vs生成失败。检索内容当不可信为护栏铺垫。mock provider返回基于片段的模板答保证无key可演示。"
 />
 
+## 三、RAG 问答与证据引用图解 (Deep Dive Diagrams)
+
+本节展示 RAG 生成侧核心控制图解：基于证据（Grounding）的主动校验过滤、代码防幻觉自动挂载真实引用时序，以及混合检索策略在质量与复杂度上的权衡。
+
+### 1. 结构全景：带 Grounding 与 Citation 的 RAG 生成架构
+
+```mermaid
+graph TD
+    classDef step fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef check fill:#ffebee,stroke:#c62828,stroke-width:2px;
+    classDef answer fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    UserQuery["用户查询 (Query)"] --> Retriever["1. 语义相似检索 (Retriever)"]:::step
+    
+    Retriever --> HitsCheck{"2. 检索结果得分<br/>是否大于阈值 (>= 0.3)？"}:::check
+    
+    HitsCheck -- "否: 证据不足" --> Refuse["3a. 诚实弃答 (Abstain)<br/>输出: '资料中无相关记录'"]:::answer
+    HitsCheck -- "是: 证据充沛" --> PromptWrapper["3b. Grounding Prompt 包装层"]:::step
+
+    PromptWrapper -->|注入 Context 片段| LLM["4. 模型推理 (LLM)"]:::step
+    LLM --> CitationEngine["5. 代码层真引用生成引擎"]:::step
+    
+    CitationEngine -->|合并引用元数据| FinalResponse["6. 最终可信回答 (带有来源锚点)"]:::answer
+```
+
+### 2. 控制流程：代码生成引用与事实比对序列
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as 业务主控层 (App)
+    participant KB as 本地向量库 (VectorDB)
+    participant LLM as 模型 Provider (Cloud)
+    participant RefCheck as 引用匹配代码器
+
+    App->>KB: 1. 执行向量查询 (CAP原理)
+    KB-->>App: 2. 返回 Top-2 相似度片段 (Cap.md, Pos=0, Score=0.8)
+    App->>LLM: 3. 组装 Prompt (只允许使用提供的资料回答，并禁止瞎报文件名)
+    LLM-->>App: 4. 返回推理文本 "依据定理，分区时只能在 C 与 A 间权衡。"
+    App->>RefCheck: 5. 传入原始 hits 及模型返回文本
+    RefCheck->>RefCheck: 6. 在代码层提取文本用到的实体，与 hits 字段进行比对核实
+    RefCheck-->>App: 7. 绑定真实的物理引用标记: ["cap.md#0"]
+    App-->>User: 8. 返回给用户：文本 + 物理引用
+```
+
+### 3. 折中谱系：向量检索 vs. 倒排文本匹配 vs. 重排混合检索
+
+```mermaid
+graph TD
+    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef risk fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    RetrievalStrategy["RAG 检索管道策略"]
+    
+    RetrievalStrategy -->|纯向量| Dense["稠密向量检索 (Dense Embeddings)"]:::safe
+    RetrievalStrategy -->|倒排检索| Sparse["传统倒排词检索 (Sparse BM25)"]:::safe
+    RetrievalStrategy -->|混合重排| Hybrid["双路混合检索 + 重排 (Hybrid + Reranker)"]:::risk
+
+    Dense --> DenseNote["优势: 善于进行同义词与概念映射，长句泛化能力强<br/>缺点: 极易丢失专业专有名词或特定版本代号的精确匹配能力"]
+    Sparse --> SparseNote["优势: 对专有名词匹配精度 100%，无显存开销，速度极快<br/>缺点: 完全无法进行语义推演，不具备词意同义词关联"]
+    Hybrid --> HybridNote["优势: 准确率天花板，融合语义与字面双重精度<br/>缺点: 流程极其复杂，增加一倍的模型推理开销 (Rerank CPU/GPU)"]
+```
+
+### 4. 步骤流演示：RAG 可信问答防御管线
+
+<StepFlow
+  steps={[
+    {
+      title: '检索分值校验',
+      desc: '对比检索出的 Top-K 文档与查询的相似度得分。如均低于阈值，直接判定“知识库未覆盖此问题”。'
+    },
+    {
+      title: '诚实防御弃答',
+      desc: '系统阻断大模型推理，不予发包。直接在客户端层秒级吐出“我不知道”或引导进入搜索。'
+    },
+    {
+      title: '强约束注入',
+      desc: '在 System Prompt 中置入无情面具（如“如果给出的 Context 与问题无关，直接弃答，不允许说出其他背景”）。'
+    },
+    {
+      title: '外挂引用绑定',
+      desc: '解析大模型返回结果，利用正则表达式与数据库主键在内存比对，重新粘连上真实物理来源链接。'
+    }
+  ]}
+/>
+
+---
+
 ## 三、跟我做一遍：带引用与弃答的 RAG 问答
 
 <PyRunner
@@ -100,7 +190,7 @@ print("基于证据答+引用;无证据则弃答")`}
 
 RAG 问答做齐三件事：检索到足够证据时基于证据回答并附**由代码生成的真引用**、证据不足（问量子计算但笔记里没有）时**诚实弃答**而非瞎编。这就是"可信"的落地。**试试**：把 min_score 调低看弃答变松（可能开始乱答）；想想为什么引用要由代码生成而非让 mock/模型自己报（防编造）。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month12/m12l5_ragqa/`：
 
@@ -171,6 +261,46 @@ python labs/month12/m12l5_ragqa/test_ragqa.py
 - 你的 RAG 答案真的基于检索证据吗，还是模型可能在用训练记忆瞎编？怎么验证？
 - 你的引用是代码基于真实命中生成的，还是让模型自己报（可能编造）？
 - 问一个笔记里没有的问题，你的助手会诚实弃答，还是硬编一个像真的假答案？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在设计生产级 RAG 问答系统时，为什么说“宁可说我不知道（弃答），也绝不盲目瞎编回答”是可信 AI 的核心品质？',
+      options: [
+        'A. 因为弃答能够显著减少云端 API 交互的耗电量',
+        'B. 在严苛的企业和工程决策语境中，错误的幻觉回答（即看似正确但事实完全错误的答案）会直接误导工程师或用户做出高危决策，产生灾难性事故。诚实弃答能够保障系统的信任底线，为人工介入提供清晰边界',
+        'C. 频繁弃答可以在 Docusaurus 静态网站中多显示几行自检 checklist',
+        'D. 模型弃答后会自动将宿主主机的磁盘进行格式化以防范勒索病毒'
+      ],
+      answer: 1,
+      explain: 'AI 上生产最致命的问题是“幻觉”。在医疗、金融、软件架构等专业领域，一个被伪造出来的假证据比直接提示“未检索到相关内容”的破坏力高几个数量级。可信 RAG 必须通过分值阈值、Prompt 约束等手段做好弃答防御。'
+    },
+    {
+      q: '如何防范大语言模型在生成引用来源时，“顺从地”伪造不存在的文档文件名或章节坐标？',
+      options: [
+        'A. 每次回答完后，强制要求模型做 10 次反思重写',
+        'B. 将引用生成的工作权收回到代码层（Code-level Control）。即由系统代码解析向量库返回的真实元数据（Metadata），并在合并回答时由代码绑定物理来源，而不是由大模型在文本里随意书写引用标记',
+        'C. 彻底关闭模型的 Temperature 直至 0，使其无法输出任何数字',
+        'D. 使用 BM25 检索强行覆盖大模型的一切意图'
+      ],
+      answer: 1,
+      explain: '大模型基于概率预测下一个 token，在遇到不确定的数字或文件名时极易为了迎合 Prompt 要求而进行符合格式的胡编。架构师应该秉持“代码侧兜底”的原则，由具备强一致性的逻辑代码控制引用元数据的粘连，这才是高弹性的护栏手段。'
+    },
+    {
+      q: '大模型返回错误的 RAG 回答时，架构师面临的“第一分诊 (First Triage)”问题是：',
+      options: [
+        'A. 大模型到底是编译为 React 18 还是 React 19',
+        'B. 到底是因为检索没找到对的片段（检索失败，属地基问题），还是找到了对的片段但模型没有根据片段生成正确回答（生成失败，属模型与 Prompt 问题）',
+        'C. 宿主主机本地的 python 版本是 3.9 还是 3.10',
+        'D. 应该升级到分布式 Qdrant 集群还是 Faiss 检索'
+      ],
+      answer: 1,
+      explain: '定位问题是解决问题的前提。如果不建立 Trace（跨检索与生成的链路追踪），当用户反馈回答不准时，开发团队将陷入盲目调整 Prompt 的深渊。只有分清“检索错”还是“生成错”，才能对应去优化分块大小/Embedding 或者调整约束 Prompt，实现数据驱动的迭代。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

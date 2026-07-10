@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M12L9 · 成本与性能
 
@@ -61,6 +63,108 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="给助手加成本性能:provider层按难度路由模型、缓存重复问答、设会话/每日预算上限、trace记成本归因。降本用评估验证质量代价。延迟先测瓶颈再优化。按项目风险克制、文档说明真实规模要补什么。所有横切能力集中在provider层这个迷你网关。"
 />
 
+## 三、成本性能与优化图解 (Deep Dive Diagrams)
+
+本节展示成本控制与性能优化的核心图解：网关层成本归因与缓存控制拓扑、带有预算判定的大模型路由时序，以及三大降本手段在质量、延迟和覆盖度上的系统对比。
+
+### 1. 结构全景：带有缓存与路由的 ModelProvider 数据大盘
+
+```mermaid
+graph TD
+    classDef client fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef gate fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef backend fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+
+    UserApp["终端应用 CLI"]:::client -->|发起请求| CostAwareProxy["网关控制代理 (CostAwareProvider)"]:::gate
+    
+    subgraph InsideGateway [网关内部计量组件]
+        CostAwareProxy --> CacheDB["问答缓存区 (Memory Cache)"]
+        CostAwareProxy --> BudgetLimiter["预算控制器 (Budget Limiter)"]
+        CostAwareProxy --> Router["动态模型路由分发器"]
+    end
+
+    CacheDB -->|命中缓存: $0.00| UserApp
+    BudgetLimiter -->|额度耗尽拦截| UserApp
+
+    Router -->|简单任务: 走小模型| SmallModel["本地/便宜小模型"]:::backend
+    Router -->|复杂任务: 走大模型| LargeModel["云端强模型 API"]:::backend
+
+    SmallModel & LargeModel --> CostCounter["成本与 Trace 归因记录"]
+```
+
+### 2. 控制流程：缓存命中与动态路由拦截时序
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as 用户 (CLI)
+    participant GW as 计费网关 (CostAwareProvider)
+    participant Cache as 本地缓存 (Cache)
+    participant LLM as 模型提供商 (LLM API)
+
+    User->>GW: 1. 提问相同问题 "什么是 CAP" (第二遍)
+    GW->>Cache: 2. 查询此 Prompt 缓存
+    alt 缓存命中 (Cache Hit)
+        Cache-->>GW: 3a. 返回已有文本 "[mock] 模板回答: 什么是 CAP"
+        GW-->>User: 4a. 瞬间输出 (延迟 0ms, 计费 $0.00)
+    else 缓存未命中 (Cache Miss)
+        Cache-->>GW: 3b. 返回空
+        GW->>GW: 4b. 校验今日累计费用是否超出全局预算 ($0.029 / $0.030)
+        alt 超过预算 (Out of Budget)
+            GW-->>User: 5c. 拦截请求，返回 HTTP 429 “超出消费限额”
+        else 预算正常
+            GW->>GW: 5d. 执行难度路由，判定“什么是 CAP”难度为 1 (简单) -> 走 small
+            GW->>LLM: 6. 调用 Llama-8B 便宜模型
+            LLM-->>GW: 7. 返回回答并报告 Token 消耗
+            GW->>GW: 8. 计算费用并累加至总账，写入 Cache
+            GW-->>User: 9. 吐出最新回答
+        end
+    end
+```
+
+### 3. 折中谱系：模型动态路由 vs. Prompt 压缩 vs. 前缀缓存
+
+```mermaid
+graph TD
+    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef risk fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    Strategy["FinOps 降本手段分类"]
+    
+    Strategy -->|模型路由| Route["动态模型路由 (Difficulty Router)"]:::safe
+    Strategy -->|语义缓存| Cache["语义/问答缓存 (Memory Caching)"]:::safe
+    Strategy -->|Prompt压缩| Compress["Prompt 压缩剪裁 (Token Compression)"]:::risk
+
+    Route --> RouteNote["优势: 极大削减推理单价（降低 50~80%），无首字延迟影响<br/>缺点: 难度分类判错时，可能会给复杂问题匹配到精度不够的模型"]
+    Cache --> CacheNote["优势: 命中时完全零 Token 开销，延迟降为零<br/>缺点: 仅适用于高频重复的静态问答场景，动态探索任务命中率极低"]
+    Compress --> CompressNote["优势: 通用度极好，普遍缩短模型的 TTFT 首字响应时间<br/>缺点: 裁剪失当会直接丢失上下文，破坏 RAG 地基的准确性"]
+```
+
+### 4. 步骤流演示：FinOps 成本管控四步法
+
+<StepFlow
+  steps={[
+    {
+      title: '难度分析分诊',
+      desc: '读取用户输入文本特征或进行预分类。对于浅显的问题，自动分配低成本的模型标签。'
+    },
+    {
+      title: '高频缓存拦截',
+      desc: '扫描内存哈希表。如包含历史相同提问，立即短路返回，达到 0 成本、毫秒级吐出响应。'
+    },
+    {
+      title: '配额限流防御',
+      desc: '在调用前确认已花 Token 折算总额。若逼近全局配置阈值，网关当场拦截以防止账单失控。'
+    },
+    {
+      title: '账单细粒度归因',
+      desc: '收到 LLM 响应后解析 usage Token，按 RAG 问答和 Agent 评审任务类型，更新可观测追踪数据库。'
+    }
+  ]}
+/>
+
+---
+
 ## 三、跟我做一遍：路由 + 缓存 + 预算（挂在 provider 层）
 
 <PyRunner
@@ -102,7 +206,7 @@ print("路由降本、缓存命中省钱、预算防失控")`}
 
 `CostAwareProvider` 又给你的迷你网关加了一块：简单问题路由到小模型（降本）、重复问答命中缓存（省钱又快）、成本归因到 qa/review（看谁烧钱）、预算上限防失控。加上前面的护栏和弹性，你的 provider 层已是一个功能完整的迷你模型网关。**试试**：把 budget 调到 0.005，看预算上限如何提前限流；观察第二次问"什么是CAP"如何命中缓存（cost=0）——体会缓存和路由这两个降本杠杆。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month12/m12l9_cost/`：
 
@@ -173,6 +277,46 @@ python labs/month12/m12l9_cost/test_cost.py
 - 你的助手每个请求都用最强模型吗？简单问题能不能路由到便宜的？
 - 你有预算上限吗？如果被 bug 或恶意刷爆调用量，有东西踩刹车吗？
 - 如果这个助手规模化到一千用户，你的设计还付得起吗？你算过这笔账吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 AI 系统的 FinOps (财务运营/成本工程) 实践中，“模型路由 (Model Routing)”为什么被视作最强降本杠杆？',
+      options: [
+        'A. 因为路由模型可以完全消灭大语言模型的网络延迟',
+        'B. 大模型与小模型的单价相差通常在 10 到 50 倍以上。在实际业务负载中，往往有 80% 的请求属于不需要复杂推理的简单常识问答或单意图控制。将这部分请求路由给低成本小模型，只让 20% 的高维逻辑推理请求走强模型，可以瞬间拉低 70% 的综合开销',
+        'C. 路由模型能自动降低大模型的 Temperature 从而杜绝幻觉',
+        'D. 路由功能可以使得 React 18 项目编译为 Docusaurus 时不产生 broken links'
+      ],
+      answer: 1,
+      explain: '这就是“模型分级治理”。架构师应根据任务复杂度分发计算，大炮打蚊子不仅极度昂贵，而且浪费宝贵的 GPU 显存吞吐。通过模型路由进行分诊，是用最低成本达成相同质量水平的最佳工程策略。'
+    },
+    {
+      q: '在部署本地优先的毕业助手时，以下哪项最符合“预算上限 (Budget Cap)”的设计意图与安全价值？',
+      options: [
+        'A. 它是为了将本地 Ollama 的线程数限制在单核以内以节约电费',
+        'B. 预算上限是防范“代码死循环bug”和“成本攻击（如恶意的 Prompt 注入 DoS）”的终极安全带。一旦检测到已花费用超出配置额度，网关直接短路拒绝推理，防止系统在无人值守时烧爆高额云端账单',
+        'C. 它是 Docusaurus 静态网站部署所强制要求的编译配置',
+        'D. 预算上限旨在让 Agent 在步数耗尽时能够自动删除本地向量库索引'
+      ],
+      answer: 1,
+      explain: 'AI 时代的系统必须假设代码存在不可控因素。特别是具备 ReAct 循环的 Agent，如果代码写出 Bug 陷入死循环，或者遭遇恶意用户构造长 Prompt 进行 DoS 成本攻击，没有预算拦截相当于开了一张空白支票。'
+    },
+    {
+      q: '为了达成“降本而不折损系统答题质量”的目标，架构师应如何科学使用成本-质量-延迟的三角权衡？',
+      options: [
+        'A. 全凭直觉直接使用最便宜的 Mock 路径',
+        'B. 利用回归评估集（Gold Set）量化不同模型路由与缓存策略在质量上的倒退分数，在测试集通过（无退化）的前提下，逐步压缩 Token 和下切模型，做到数据驱动的性价比优化',
+        'C. 强制把所有的 Prompt 截断至 10 个字符以内以极大缩短延迟',
+        'D. 关掉所有可观测 Span 记录，以追求最极端的网关转发时延'
+      ],
+      answer: 1,
+      explain: '没有量化就没有优化。盲目追求低成本必然砸坏质量招牌。架构师应该利用 Month 11 讲的回归门禁（Evaluation），把降本作为实验变更。如果把 50% 流量切给小模型后评估集准确率未掉，则证明改动可行，这就是三角取舍的科学决策方法。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

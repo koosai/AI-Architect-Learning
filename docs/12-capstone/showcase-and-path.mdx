@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M12L12 · 展示与架构师之路
 
@@ -62,6 +64,91 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="展示讲取舍和理由不罗列功能、诚实讲局限。用ADR/非目标/风险文档/评估从容答辩、被问倒诚实以对。毕业后:挑方向做深、把简化项做真生产级、用判断框架评估新技术。守住‘识别本质+约束下取舍+克制’的永恒判断力。把学的讲出来回馈。"
 />
 
+## 三、展示陈述与答辩防御图解 (Deep Dive Diagrams)
+
+本节展示毕业作品最终展示与评审答辩的核心图解：架构汇报（Pitch）要素分层拓扑、应对专家评审深度质询的反馈序列，以及功能炫技与决策权衡展示的对比。
+
+### 1. 结构全景：15 分钟架构 Pitch 设计与模块划分
+
+```mermaid
+graph TD
+    classDef time fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef content fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef section fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+
+    Presentation["毕业答辩汇报 (15 Mins)"] --> S1["第一幕 (3 Mins)"]:::time
+    Presentation --> S2["第二幕 (5 Mins)"]:::time
+    Presentation --> S3["第三幕 (5 Mins)"]:::time
+    Presentation --> S4["第四幕 (2 Mins)"]:::time
+
+    S1 --> S1Content["业务背景与核心痛点<br/>立项 Charter (非目标边界)"]:::content
+    S2 --> S2Content["全景 HLD 组件图<br/>关键决策 ADR-1/2/3 讲解"]:::content
+    S3 --> S3Content["RAG 带引用演示<br/>Agent ReAct Trace 展示"]:::content
+    S4 --> S4Content["已知局限与残余风险<br/>可度量评估数据大盘展示"]:::content
+
+    S1Content & S2Content & S3Content & S4Content --> ReviewerQ["终极评审答辩 (Q&A Defense)"]:::section
+```
+
+### 2. 控制流程：答辩追问与防御响应序列
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Reviewer as 资深架构师 (评审委员)
+    participant Presenter as 答辩学员 (你)
+    participant ADR as ADR 归档库 (ADR-3)
+    participant Eval as 评估看板 (Eval Dashboard)
+
+    Reviewer->>Presenter: 1. 质问: "你为什么不用多智能体协同，而是用单 Agent 走 ReAct？"
+    Presenter->>ADR: 2. 调出决策记录 ADR-3
+    Presenter->>Reviewer: 3. 回答: "基于 YAGNI 原则，ADR-3 中明确评估过，本用例无并行子任务需求，单 Agent 配合硬上限步数已经能够完美覆盖"
+    Reviewer->>Presenter: 4. 再次追问: "怎么证明换模型后你的性能质量没有倒退？"
+    Presenter->>Eval: 5. 调出 CI 门禁历史数据
+    Presenter-->>Reviewer: 6. 展示: "我们在评估集(Gold Set)上自动跑过回归门禁，新模型得分从 0.88 升至 0.90，证明无退化"
+    Reviewer-->>Presenter: 7. 认可通过，判定合格
+```
+
+### 3. 折中谱系：功能罗列型 Demo 演示 vs. 决策决策型 HLD 陈述
+
+```mermaid
+graph TD
+    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef risk fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    ShowcaseStrategy["汇报讲演模式"]
+    
+    ShowcaseStrategy -->|功能罗列| Features["功能罗列演示 (Feature Listing Demo)"]:::risk
+    ShowcaseStrategy -->|决策讲述| Decisions["取舍决策故事 (Trade-off & Decisions Pitch)"]:::safe
+
+    Features --> FeaturesNote["特征: 极力掩盖错误和幻觉，只演示完美成功路径，充斥‘AI能搞定一切’等空洞承诺<br/>评审观感: 判定为幼稚玩具，严重缺乏工程风险管控意识"]
+    Decisions --> DecisionsNote["特征: 主动列出局限与残余风险，用 ADR 和评估数据论证取舍，坦诚承认尚未解决的问题<br/>评审观感: 判定为具备成熟架构判断力的研发人才，值得信任"]
+```
+
+### 4. 步骤流演示：答辩答题防卫路线
+
+<StepFlow
+  steps={[
+    {
+      title: '痛点溯源',
+      desc: '在陈述决策前，优先将焦点锁定回立项 Charter 阶段制定的单用户本地优先等底层物理约束。'
+    },
+    {
+      title: '调阅决策记录',
+      desc: '被问及组件选型时，有理有据地亮出 ADR-1/2/3 中记录的放弃选项与需要付出的后果代价。'
+    },
+    {
+      title: '展示度量数据',
+      desc: '不要说“我觉得挺准的”，直接亮出 Trace ID 展现排障轨迹，并呈现 10 条评估集黄金对比得分。'
+    },
+    {
+      title: '诚实面对盲区',
+      desc: '若遇到未考虑到的高维分布式架构漏洞，切勿不懂装懂，应坦言目前在局限文档里的定位，并给出设计设想。'
+    }
+  ]}
+/>
+
+---
+
 ## 三、跟我做一遍：把作品浓缩成一页"架构陈述"
 
 <PyRunner
@@ -99,7 +186,7 @@ print("能用一页讲清作品的判断力")`}
 
 一页"架构陈述"浓缩了展示的精华：一句话问题、三个关键取舍（**有理由、有代价**）、刻意不做什么（**克制**）、怎么证明它好（**证据**）、已知局限（**诚实**）——这五样齐了，你的展示讲的就是判断力而非功能罗列。**试试**：为你自己的项目填一份 pitch；对着 `review_pitch` 的四项自检，看你能不能理直气壮地过每一关。
 
-## 四、动手 Lab（选做）+ 毕业总结
+## 五、动手 Lab（必做）+ 毕业总结
 
 打开 `labs/month12/m12l12_pitch/`：
 
@@ -170,6 +257,46 @@ python labs/month12/m12l12_pitch/test_pitch.py
 - 面对一个新技术/新需求，你能先问"它的本质是什么老问题、约束是什么、代价是什么"吗？
 - 你能对自己的每个技术决策，讲清"为什么选它、放弃了什么、代价是什么"吗？
 - 你能在"更强更炫"和"够用就好"之间，一次次选择克制吗？——这是架构师最难也最珍贵的品质。
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在向资深架构评审委员会展示你的毕业作品时，以下哪种汇报重点最能体现你作为“AI 架构师”的素质，而不是初级开发人员？',
+      options: [
+        'A. 花 90% 的时间逐个按钮演示 CLI 命令行的炫酷高亮效果',
+        'B. 主动以“以终为始、取舍决策”的架构故事为主线。重点阐明系统面对的物理约束、在三大关键岔路口（本地优先/RAG/轻量 Agent）做出的决策、放弃了哪些复杂的方案（如多智能体）、承担了哪些代价值，并坦诚亮出已知局限和残余风险',
+        'C. 宣称你的系统 100% 零风险、零幻觉，永远不会在任何极端测试下出错',
+        'D. 仅仅列出模型的所有神经网络参数名称'
+      ],
+      answer: 1,
+      explain: '能跑的 Demo 随处可见，懂取舍的人才最为稀缺。罗列功能只属于程序员视角；而主动披露系统的折中设计（Trade-offs）和边界局限，证明你对于系统具备深刻的认识与掌控感，这是获得资深评审认可的唯一方式。'
+    },
+    {
+      q: '当被评审老师质问“你为什么不用分布式向量数据库（如 Qdrant 集群），而是用本地内存扫描？”时，以下哪种回答是正确的防御响应？',
+      options: [
+        'A. “因为分布式数据库的价格太贵，我个人的信用卡额度不够”',
+        'B. “基于立项 Charter 中单用户、本地优先的物理约束，以及 YAGNI（克制）原则。估算本助手处理的架构笔记只有数千条，内存线性扫描的检索延迟在 10ms 以内，完全能满足性能要求，选用分布式集群属于引入无价值的过度工程”',
+        'C. “我会在今晚连夜改写代码，强行加入分布式向量库”',
+        'D. “分布式向量库经常会导致 React 项目编译失败”'
+      ],
+      answer: 1,
+      explain: '这体现了架构的“克制”。好的设计是匹配具体业务规模的设计，拒绝脱离实际场景的“技术堆砌”。拿出估算数据和立项约束回击不合理的复杂化建议，是架构师最核心的防卫武器。'
+    },
+    {
+      q: '走完 AI Architect 课程的全部 Month，你获得的最核心、能够应对未来模型与技术半年一变（不被技术更新抛弃）的能力是：',
+      options: [
+        'A. 牢记当时最好的某一个第三方模型 API 的调用参数格式',
+        'B. 掌握了“识别问题本质、在约束下做决策取舍、保持架构克制”这套系统判断力，以及用网关隔离变化、用评估度量不确定性等工程基本功。技术栈会变，但思考框架永恒',
+        'C. 知道了如何在 Windows Powershell 下强制禁止所有报错提示',
+        'D. 掌握了将 PyRunner 作为唯一生产运行环境的特殊技术'
+      ],
+      answer: 1,
+      explain: '具体的框架和模型名称是极易折旧的技能。本课程的核心主线从来不是教某一个流行 API 的具体用法，而是通过从 Month 1 编程基石到 Month 11 生产 AI 平台的完整演练，帮你锤炼出“像架构师一样思考”的判断力。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

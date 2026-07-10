@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M12L10 · 治理与风险说明
 
@@ -58,6 +60,95 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="给助手写风险文档:模型卡(用途/局限/不适用)、威胁摘要(威胁->防护->残余风险)、简化说明(简化了什么真实要补什么)、责任边界(辅助工具需人核实)。按项目风险裁剪、一页诚实即可。主动说清局限和简化=展示懂全貌的有意识取舍,是负责任架构师的标志。"
 />
 
+## 三、安全威胁与风险治理图解 (Deep Dive Diagrams)
+
+本节展示毕业设计治理与合规的核心图解：系统安全攻击面（OWASP Top 10）拓扑、模型注册与发布的安全准入审查时序，以及治理强度与业务创新敏捷的取舍对比。
+
+### 1. 结构全景：Architecture Assistant 安全攻击面与防御边界拓扑
+
+```mermaid
+graph TD
+    classDef input fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+    classDef boundary fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef mitigation fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    UserPrompt["用户 Prompt 越狱输入"]:::input -->|边界A: 外部直接输入| Gateway["模型网关拦截面"]:::boundary
+    Note over Gateway: 防御: 输入正则表达式校验 & 长度限制
+
+    Gateway --> RAGPipeline["RAG 检索合成器"]:::boundary
+    LocalDoc["本地笔记库 (可能遭窜改)"]:::input -->|边界B: 间接提示词注入| RAGPipeline
+    Note over RAGPipeline: 防御: Markdown 隔离标签 + System Prompt 约束
+
+    RAGPipeline --> LLMAPI["大模型提供商 API"]:::boundary
+    LLMAPI -->|边界C: 幻觉与泄露输出| OutGuard["输出护栏过滤面"]:::boundary
+    Note over OutGuard: 防御: PII 数据脱敏 & 敏感词屏蔽
+
+    OutGuard --> FinalUser["终端展示"]
+```
+
+### 2. 控制流程：合规准入检测与发布审核序列
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Dev as 模型开发者
+    participant Registry as 模型卡与资产注册表 (Registry)
+    participant Checker as 自动化合规网关 (Compliance Guard)
+    participant Prod as 生产环境 (Production)
+
+    Dev->>Registry: 1. 提交新大模型上线申请 (包含 Model Card 配置说明)
+    Registry->>Checker: 2. 派发自动化风险评估任务
+    Checker->>Checker: 3. 校验卡片必填项 (局限性、不适用场景、残余风险等)
+    alt 风险描述缺失 (不诚实)
+        Checker-->>Registry: 4a. 拒绝接入，驳回报错 "模型卡片必须明确描述残余风险与局限"
+    else 格式与内容完整 (可信)
+        Checker->>Checker: 4b. 在回归评估集运行漏洞模拟注入 (Jailbreak Test)
+        Checker-->>Registry: 5. 校验通过，写入合规指纹
+        Registry-->>Prod: 6. 热部署上线发布
+    end
+```
+
+### 3. 折中谱系：强制集中度治理 vs. 分散式开发者自治
+
+```mermaid
+graph TD
+    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef risk fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    GovernanceStrategy["平台风险治理控制度"]
+    
+    GovernanceStrategy -->|集中制| Centralized["强集中式治理 (Centralized Compliance & Gates)"]:::safe
+    GovernanceStrategy -->|自治制| Distributed["分布式自治 (Distributed Dev Autonomy)"]:::risk
+
+    Centralized --> CentralizedNote["优势: 100% 符合监管与安全合规底线，防止公司遭遇天价罚单或公关灾难<br/>缺点: 显著拉长新模型与功能的测试发布周期，降低团队创新的敏捷度"]
+    Distributed --> DistributedNote["优势: 开发者接入极快，无中间流程，模型尝试门槛低<br/>缺点: 各团队安全水位参差不齐，极易发生 PII 泄露与间接提示注入事故"]
+```
+
+### 4. 步骤流演示：威胁建模与风险分析生命周期
+
+<StepFlow
+  steps={[
+    {
+      title: '识别资产边界',
+      desc: '定义系统数据面、控制面的必经链路，标识出哪些地方接受了不受信的外部输入（如笔记和用户问题）。'
+    },
+    {
+      title: '威胁矩阵分析',
+      desc: '对应 OWASP LLM 漏洞列表，逐项排查“输入越狱”、“敏感词提取”、“越权操作”在系统中的攻击可能性。'
+    },
+    {
+      title: '缓解机制设计',
+      desc: '在网关 Provider 层设计对应的正则检测、PII 屏蔽、只读白名单工具以及指数退避降级兜底。'
+    },
+    {
+      title: '残余风险评定',
+      desc: '诚实记录在现有防御下依旧无法 100% 根除的潜在危险，为用户提供模型卡警示，声明人身责任。'
+    }
+  ]}
+/>
+
+---
+
 ## 三、跟我做一遍：结构化的风险说明
 
 <PyRunner
@@ -103,7 +194,7 @@ print("模型卡+威胁+简化说明,诚实完整")`}
 
 一份结构化的风险文档：模型卡（用途/局限/**不适用场景**）、威胁摘要（威胁→防护→**诚实标注残余风险**）、简化说明（**刻意简化了什么、真实生产要补什么**）、责任边界（辅助工具、需人核实）——还能自检是否诚实完整（缺"不适用""残余风险""简化说明"就报警）。**试试**：给你的项目加一条真实的局限；想想为什么"标注残余风险"比声称"全防住了"更专业（后者不可信）。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month12/m12l10_risk/`：
 
@@ -174,6 +265,46 @@ python labs/month12/m12l10_risk/test_risk.py
 - 你能清楚列出你助手的 5 个局限和 3 个不适用场景吗？还是觉得"它挺好的没什么问题"？
 - 你的威胁有诚实标注残余风险（没根治的），还是声称"全防住了"？
 - 你刻意简化的东西（PII 合规、多用户、人审）都说明了吗？这体现你懂全貌还是回避？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '为什么模型卡片（Model Card）必须强制包含“不适用场景（Not Applicable）”与“已知局限（Limitations）”？',
+      options: [
+        'A. 为了在 Docusaurus 构建出错时能够自动找到替代的 MDX 页面',
+        'B. 确保用户或开发人员在使用 AI 模型时不会产生过度信任（Over-reliance）。明确说明系统在面对医疗、法律等专业决策时的局限，能够划清责任边界，引导用户自行核实证据，是负责任架构的关键',
+        'C. 模型卡片能直接改变云端 API 提供商的推理定价',
+        'D. 不包含这些选项会导致 Python 编译时抛出 broken links 错误'
+      ],
+      answer: 1,
+      explain: 'AI 系统的核心硬约束是“敬畏局限性”。大模型具备概率黑盒特征，无法承诺 100% 准确。诚实公开其在何种特定深度场景下（如断网、未覆盖的笔记库）会失效，有利于保护使用者不做出超出系统承载极限的高危操作。'
+    },
+    {
+      q: '在进行 LLM 应用威胁建模时，关于“残余风险 (Residual Risk)”的正确理解是：',
+      options: [
+        'A. 残余风险是指在配置完同步和异步所有安全组件后，依然无法完全消灭的潜在漏洞。架构师应当客观描述这些漏洞并判定其在单用户本地场景下是否可控，而不是宣称“100% 零风险”',
+        'B. 残余风险是指大模型在推理后残留在本地内存中的向量碎屑，必须每天手动格式化硬盘以清理',
+        'C. 它是指在 Git 上由于 commit 失败而遗留下来的垃圾代码分支',
+        'D. 只要 Prompt 写的长，系统的残余风险就会自动清零'
+      ],
+      answer: 0,
+      explain: '在真实世界中根本不存在绝对的安全防御。即使在网关层部署了最先进的正则分类器，黑客依然可以通过不断变换字词拼写、多语种混淆等“提示注入变体”绕过防线。架构师的目标是“了解并管理风险”，承认并记录残余风险，是技术成熟度的证明。'
+    },
+    {
+      q: '对于一个本地运行的毕业项目助理，主动撰写并公开“简化说明”的核心作用是：',
+      options: [
+        'A. 告诉评审人员该项目功能缺失，需要给予更低的评分',
+        'B. 表明开发人员没有在 Git 上正确拉取 master 依赖',
+        'C. 证明架构师具备全局视角的系统思维。表明为了聚焦于核心的 RAG 与 Agent 架构逻辑，而主动、有意识地将多租户鉴权、完整的 PII 级数据合规等组件进行了裁剪，展现了克制的设计品味',
+        'D. 这样可以使 PyRunner 完全离线运行而无需本地 Python 环境'
+      ],
+      answer: 2,
+      explain: '这就是“刻意简化”。架构的艺术不在于堆积所有功能，而在于根据项目约束进行精准的裁剪。主动阐明“为什么简化了 PII 和人工审批”，能向架构评审人清晰传递出“我知道完整版怎么做，但我选择了最聚焦的核心路线”，这是非常加分的专业沟通技巧。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M12L8 · 评估与可观测
 
@@ -59,6 +61,101 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   insight="没评估和可观测助手处于玄学态:好不好凭感觉、出错不知哪坏、改动不敢动。装请求trace(检索片段/生成/成本/耗时,挂provider层)让答错能分检索vs生成失败。装评估集(>=10条问答含预期证据)量化答对/引对/该弃答弃答没,改动前后跑回归门禁让你敢改。分维度评检索vs生成、评估集含弃答和对抗样本。mock下评估稳定可CI。trace输入输出是评估集和bad case回流来源(评估可观测一体、闭环)。毕业项目评估集10-20条覆盖核心+弃答即可别过度。"
   application="给助手加请求trace(检索/生成/成本挂provider层)、建>=10条评估集(含预期证据、弃答样例、对抗)、改动跑回归门禁。分维度评检索vs生成失败。mock保证评估可重复CI可跑。trace的bad case回流评估集防复发(闭环)。评估集匹配项目规模别过度。展示时用trace和评估数字证明可度量可回归。"
 />
+
+## 三、评估与可观测图解 (Deep Dive Diagrams)
+
+本节展示评估与可观测模块的核心拓扑图解：Trace Span 链路结构设计、CI 持续回归测试门禁的逻辑执行，以及三类经典评估范式的取舍对比。
+
+### 1. 结构全景：OTel Distributed Tracing 语义跨度拓扑 (RAG & Agent Spans)
+
+```mermaid
+graph TD
+    classDef main fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef inner fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef val fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+
+    RootSpan["[Root Span] HTTP POST /ask (客户端总入口)"]:::main
+    
+    RootSpan --> InGuardSpan["[Sub Span] InputGuard (输入护栏核验)"]:::inner
+    RootSpan --> RAGSpan["[Sub Span] RAG_Pipeline (RAG 检索流)"]:::inner
+    RootSpan --> OutGuardSpan["[Sub Span] OutputGuard (输出脱敏与拦截)"]:::inner
+
+    RAGSpan --> RetrieverSpan["[Sub Span] DbQuery (向量召回)"]:::val
+    RAGSpan --> LLMSpan["[Sub Span] LLM_Generate (模型生成推理)"]:::val
+
+    LLMSpan --> TraceAttrs["Attributes 记录:<br/>- token_in / token_out<br/>- input_tokens_cost<br/>- system_fingerprint"]
+    RetrieverSpan --> DBAttrs["Attributes 记录:<br/>- hits_count: 2<br/>- top1_similarity_score: 0.82"]
+```
+
+### 2. 控制流程：CI 自动化回归评估门禁执行序列
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Git as 代码仓库 (Git PR)
+    participant CI as CI 自动化测试器 (GitHub Actions)
+    participant Eval as 评估引擎 (Local Eval Engine)
+    participant Model as 离线 Mock / Ollama LLM
+
+    Git->>CI: 1. 提交代码变更 PR (修改了 RAG Prompt)
+    CI->>Eval: 2. 启动回归门禁评估 (加载 Gold Set >= 10 条样本)
+    loop 逐个样例执行评估
+        Eval->>Model: 3. 调用模型回答 RAG 问题
+        Model-->>Eval: 4. 返回答案与引用
+        Eval->>Eval: 5. 比对: Grounding 准确度、引用符合率、该弃答时弃答率
+    end
+    Eval->>Eval: 6. 聚合计算总准确率得分 (如: 0.90)
+    alt 得分 >= 0.85 (符合基线)
+        Eval-->>CI: 7a. 报告 "通过门禁"
+        CI-->>Git: 8a. 标记 PR 为绿灯可合并状态
+    else 得分 < 0.85 (精度出现衰退)
+        Eval-->>CI: 7b. 报告 "警告：模型在 '缓存击穿' 等样例上准确度出现倒退，已降为 0.70"
+        CI-->>Git: 8b. 强行 Block 此次 PR 合并，提醒开发排查
+    end
+```
+
+### 3. 折中谱系：规则评估 vs. 大模型裁判 (LLM-as-a-Judge) vs. 人工评估
+
+```mermaid
+graph TD
+    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef risk fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    JudgeStrategy["评测裁判策略模式"]
+    
+    JudgeStrategy -->|代码规则| Rule["代码规则评估 (Exact Match / F1 Score / Rouge)"]:::safe
+    JudgeStrategy -->|LLM裁判| LlmJudge["大模型裁判 (LLM-as-a-Judge)"]:::safe
+    JudgeStrategy -->|人工核验| Human["专家人工标注核验 (Human Annotator)"]:::risk
+
+    Rule --> RuleNote["优势: 执行速度毫秒级，成本为 0，100% 确定可重复跑 CI<br/>缺点: 无法检测同义词，无法理解段落深层语义差异"]
+    LlmJudge --> LlmJudgeNote["优势: 语义评估灵活性极佳，能模拟人类喜好评分<br/>缺点: 裁判模型自身同样存在幻觉、偏见与每次得分漂移，费用贵"]
+    Human --> HumanNote["优势: 事实准确性的终极黄金检验，可信度最高<br/>缺点: 耗费大量工程师精力，速度极其缓慢，无法挂载进 CI 自动跑"]
+```
+
+### 4. 步骤流演示：异常请求 Trace 根因排查步骤
+
+<StepFlow
+  steps={[
+    {
+      title: '错误信号捕获',
+      desc: '在线监控拦截到客户端抛出“无内容可达”错误或低分评定。提取当前 Trace ID 以追踪链路。'
+    },
+    {
+      title: '检索状态切片',
+      desc: '展开 Trace 中的 `RAG_Pipeline` 跨度，检查 `DbQuery` 属性中返回的向量 Top-1 得分是否低于阈值。'
+    },
+    {
+      title: '生成输入审查',
+      desc: '如果检索分值正常，进入 `LLM_Generate` 跨度，检查注入的 Prompt 中 Context 片段元数据是否已被切断。'
+    },
+    {
+      title: '模型幻觉标记',
+      desc: '比对 `LLM_Generate` 的 Raw Output。如确认是模型忽略了 Context 强行瞎编，标记为生成幻觉，并回流至 Gold Set。'
+    }
+  ]}
+/>
+
+---
 
 ## 三、跟我做一遍：请求 trace + 评估集回归
 
@@ -110,7 +207,7 @@ print("每请求可追踪、评估量化、回归门禁挡退化")`}
 
 助手装上了两样东西：每个请求的 trace（检索到什么、哪一步失败、生成了什么——答错能分检索 vs 生成失败）、一套含弃答样例的评估集 + 回归门禁（量化质量、改动前后对比防退化）。这就是从"感觉能用"到"可度量可回归"。**试试**：把 good 改成"量子纠缠也硬答"，看评估分下降（弃答维度失分）；想想 trace 里的 `stage_failed` 怎么帮你决定优化检索还是生成。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month12/m12l8_eval/`：
 
@@ -181,6 +278,46 @@ python labs/month12/m12l8_eval/test_eval.py
 - 你的助手答错时，能靠 trace 分清是检索还是生成的锅吗？还是只能猜？
 - 你有评估集吗？它含弃答/对抗样例吗？你改 prompt 时跑回归吗，还是靠祈祷？
 - 展示时，你能用数字和 trace 证明"它答得好、改动不退化、该弃答会弃答"吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: 'AI 系统的研发中，关于“凭感觉进行调试与调优”所面临的核心困境，以下描述正确的是：',
+      options: [
+        'A. 凭感觉可以省去在 Docusaurus 静态网站中跑 Docusaurus build 的时间',
+        'B. 大模型具备高度的不确定性。修改了一个 Prompt 往往会在解决某个问题的同时，引发其他 3 个本来正常问题的准确度大倒退。没有回归评估集（Gold Set）与链路追踪，开发团队无异于“摸黑走路”，无法以数据驱动优化',
+        'C. 感觉能用就可以直接上线，所有的评估和门禁都应该是在线灰度切流后才进行的',
+        'D. 代码编写正确即意味着系统在面对任何外部 Prompt 输入时均不会出现故障'
+      ],
+      answer: 1,
+      explain: '这就是“气球效应（Balloon Effect）”。在复杂的 LLM 应用或 RAG 场景中，调整 Prompt 的边际影响很难靠肉眼试问两三个问题来判定。必须有一套固定的回归测试集（Regression Set）并在 CI 中自动执行，才能在每一次提交代码时自信地证明没有退化。'
+    },
+    {
+      q: '在构建大模型系统的可观测性（Observability）时，相较于传统的服务器 CPU/内存监控，AI 系统的 Trace（链路追踪）需要特别抓取哪些维度的黄金指标（Metrics）？',
+      options: [
+        'A. 网卡物理驱动的版本号与机架号',
+        'B. 检索召回的 Top-K 片段（及 Cosine 得分）、拼装后的 Raw Prompt、LLM 返回的 Raw Text，以及各阶段消耗的输入/输出 Token 数与折算成本',
+        'C. CLI 命令行的窗口宽度与背景颜色参数',
+        'D. 代码提交到 Git 仓库所消耗的时间'
+      ],
+      answer: 1,
+      explain: 'AI 可观测的命脉在于“还原现场”。当回答发生幻觉或违规泄密时，只有完整记录下那次请求到底喂给了模型什么（Context 详情）、模型吐了什么、甚至检索阶段的相似度打分，才能精准分诊出到底是“检索没找到”还是“生成瞎写”，这是进行排障的底线要求。'
+    },
+    {
+      q: '回归评估集（Gold Set）中，为什么必须刻意设计“知识库里根本不存在相关资料的问题”（例如在架构笔记库里提问量子计算原理）？',
+      options: [
+        'A. 用以验证系统的 CPU 主频在处理长单词时是否会发生过载',
+        'B. 用以客观量化和拦截系统应该“诚实弃答（Abstention）”的样本表现，防止大模型在缺乏证据时依旧强行产生幻觉编造假答案',
+        'C. 为了测试 Docusaurus 会话超时机制的 Fail-Safe 上限',
+        'D. 这样能自动降低 Ollama 本地运行时的内存吞吐压力'
+      ],
+      answer: 1,
+      explain: '一个可靠的 RAG 系统最核心的硬指标之一是“知道自己不知道”。如果在评估集中只有正常能回答的问题，我们便无法量化系统对于幻觉注入的“拒绝率”。通过刻意加入无法检索的对抗问答，可验证系统在该弃答时是否真正做到了 Fail-Safe，这也是 Month 11 的核心标准。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

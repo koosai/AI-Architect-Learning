@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M12L6 · Agent 与评审工具
 
@@ -59,6 +61,102 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="评审Agent:agent loop按维度逐项查审、工具限只读白名单、设最大步数停止条件、留每步trace。克制用轻量Agent别过度。评审意见基于真实检索grounding。只产清单不做有副作用操作。用‘RAG问答用workflow、评审用Agent’展示该用才用的判断。"
 />
 
+## 三、Agent 决策与 ReAct 循环图解 (Deep Dive Diagrams)
+
+本节展示架构评审 Agent 的 ReAct (推理-行动-观察) 闭环、工具白名单边界管控时序，以及自主智能体与硬编码状态机的架构权衡。
+
+### 1. 结构全景：架构评审 Agent (Architecture Review Agent) 逻辑拓扑
+
+```mermaid
+graph TD
+    classDef brain fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef tools fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef state fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    TaskInput["评审任务: '审查我的缓存设计'"] --> AgentBrain["Agent 核心大脑 (ReAct Planner)"]:::brain
+    
+    subgraph AgentLoop [ReAct 迭代循环]
+        AgentBrain --> Thought["1. Thought: 思考接下来应审核哪个维度"]:::brain
+        Thought --> Action["2. Action: 决定调用哪个工具并填充参数"]:::brain
+        Action --> Observation["3. Observation: 解析工具返回的物理世界事实"]:::brain
+        Observation -->|反馈输入| AgentBrain
+    end
+
+    subgraph ToolRegistry [工具安全白名单注册表]
+        Action -->|JSON Schema 校验| Router["网关安全防火墙"]
+        Router -->|1. 读操作| SearchNotes["search_notes(dim) 查阅笔记"]:::tools
+        Router -->|2. 比对操作| CheckAspect["check_dimension(aspect) 评估核验"]:::tools
+        Router -->|拒绝非注册动作| SysAlert["安全审计拦截 (Block)"]:::state
+    end
+
+    AgentBrain -->|满足退出条件/最大步数| StopCheck["4. 汇总生成架构评审报告"]
+```
+
+### 2. 控制流程：Agent 交互 ReAct 时序与限制退出序列
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as 评审主调度器
+    participant Agent as Agent 大脑 (LLM Loop)
+    participant Tool as 只读工具箱 (search_notes)
+    participant Limiter as 步数熔断器 (StepLimiter)
+
+    App->>Agent: 1. 启动任务: 评审缓存一致性
+    Note over Agent: 步数计数器 = 1
+    Agent->>Limiter: 2. 检查计数器是否超限？
+    Limiter-->>Agent: 3. 未超限 (1 < 10)
+    Agent->>Agent: 4. 推理: "需要查阅关于缓存更新一致性的笔记"
+    Agent->>Tool: 5. 调 search_notes("一致性")
+    Tool-->>Agent: 6. 返回: "未找到相关笔记内容"
+    Note over Agent: 步数计数器递增为 2
+    Agent->>Limiter: 7. 再次检查计数器
+    Limiter-->>Agent: 8. 未超限
+    Agent->>Agent: 9. 推理: "由于没有检索到一致性设计，判定此维度缺失"
+    Agent->>App: 10. 生成结论: "[缺失] 缓存一致性，建议补充 TTL 并落库"
+```
+
+### 3. 折中谱系：自主 ReAct 智能体 vs. 确定性 DAG 状态机管线
+
+```mermaid
+graph TD
+    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef risk fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    編排策略["Agent 编排控制策略"]
+    
+    編排策略 -->|ReAct循环| React["自主 ReAct 循环 (Autonomous Loop)"]:::risk
+    編排策略 -->|硬编码DAG| Dag["确定性 DAG 工作流 (Hardcoded Workflow / State Machine)"]:::safe
+
+    React --> ReactNote["优势: 适应极其复杂的开放式问题，能根据工具返回做启发式探索<br/>缺点: 存在无限死循环、幻觉跳脱、难以进行白盒回归测试等巨大稳定性漏洞"]
+    Dag --> DagNote["优势: 100% 确定，调用开销低（Token 成本省），调试与 Trace 极其白盒化<br/>缺点: 零柔性，一旦业务场景发生偏离，系统只能报异常或不作处理"]
+```
+
+### 4. 步骤流演示：ReAct 循环单轮推演时序
+
+<StepFlow
+  steps={[
+    {
+      title: 'Thought 思考分析',
+      desc: '结合用户任务与已经执行过的历史动作，分析目前还缺少哪部分架构支撑，决定下一个攻关目标。'
+    },
+    {
+      title: 'Action 工具生成',
+      desc: '生成符合 JSON Schema 的工具请求（如指定调 search_notes 并传参 "缓存穿透" ），准备派发。'
+    },
+    {
+      title: 'Observation 事实收集',
+      desc: '在沙箱中执行该白名单工具，捕获标准输出或返回记录，将其作为新的一条 Observation 存入上下文。'
+    },
+    {
+      title: 'Loop/Stop 判断',
+      desc: '递增当前循环步数计数器。若达成所有审计维度或步数耗尽，立刻中断并生成 Markdown 评审大盘。'
+    }
+  ]}
+/>
+
+---
+
 ## 三、跟我做一遍：有边界的评审 Agent
 
 <PyRunner
@@ -99,7 +197,7 @@ print("Agent 按维度查审、有边界与停止、每步可追踪")`}
 
 一个轻量评审 Agent：逐个架构维度调**只读工具**查笔记、基于真实检索给出"已覆盖/建议补充"的评审（grounding）、有**步数上限**防失控、每步**留 trace** 可展示可调试。它高自主（自己决定审哪些维度、给什么建议）但边界严格（只读、有上限、不改笔记）。**试试**：把 max_steps 设成 2，看停止条件如何截断；想想为什么这里用 Agent 合理、而[RAG 问答用 workflow 就够](./rag-qa-build)。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month12/m12l6_agent/`：
 
@@ -170,6 +268,46 @@ python labs/month12/m12l6_agent/test_agent.py
 - 你的评审 Agent 有严格的工具边界（只读、白名单）和停止条件吗？还是可能失控？
 - 你能清楚说出"为什么评审用 Agent、RAG 问答用 workflow"吗？这是判断力还是随手选的？
 - 你的 Agent 每步有 trace 吗？（展示时能不能让评审看到它的思考轨迹？）
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 AI 架构设计中，“该用 Agent 的地方用 Agent，该用 Workflow 的地方用 Workflow”代表了架构师的克制品味。以下关于这两者选型的描述，正确的是：',
+      options: [
+        'A. RAG 问答包含检索和生成两个步骤，必须使用多 Agent 协同来控制状态转移',
+        'B. RAG 问答因为其步骤固定（检索->填充 Prompt->生成），采用确定性的 Workflow（工作流）更加便宜、可控且延迟低；而架构评审需要根据给定的主题动态选择需要调取的工具与检查步骤，更适合使用 Agent 编排',
+        'C. Workflow 是落后的单体软件模式，AI 时代的系统必须 100% 由 Agent 驱动',
+        'D. 应该用 Agent 去调用另一个 Agent，再调用 Workflow，层级越深系统越高可用'
+      ],
+      answer: 1,
+      explain: '区分“自主性需求”。大部分问答和翻译任务是完全确定和线性的，如果强行套用 Agent 反复进行 Thought-Action 循环，不仅平白无故烧掉几倍的 Token 成本，还会引入失控和不稳定的幻觉行为。架构师应秉持“能用 Workflow 解决的决不用 Agent”原则。'
+    },
+    {
+      q: '在部署一个具备自主规划工具调用能力的 Agent 时，为什么必须强加“停止条件与步数预算（Stopping Budget）”？',
+      options: [
+        'A. 为了保护大语言模型的神经网络权重不被过度读取',
+        'B. Agent 在面对超出其能力的输入、或者工具接口抛错时，极易陷入 ReAct 循环的“死循环”或逻辑死锁。如果不设步数/费用硬上限，Agent 会反复自旋调用 API，瞬间烧干数千美元的预算并打瘫业务数据库',
+        'C. 停止条件是 Docusaurus 所必需的静态编译语法限制',
+        'D. 为了强迫 Agent 每一秒都自动在 Git 上提交一次 commit'
+      ],
+      answer: 1,
+      explain: '没有限额的循环在软件工程中是绝对禁止的。Agent 由于具备自主决定下一步动作的特权，一旦其逻辑推理在某个死角走入死胡同（如模型幻觉），它会以为继续调用工具能够解决，从而陷入高频自旋。步数熔断器是上线 Agent 必须安装的物理保险丝。'
+    },
+    {
+      q: '以下哪项属于对 Agent 进行“工具边界（Tool Boundary）”管控的正确安全实践？',
+      options: [
+        'A. 直接将本地服务器的 Root 权限环境变量透传给大模型',
+        'B. 遵循最小特权原则，仅向 Agent 授予只读（Read-only）的白名单工具（如查询笔记），并由网关层强制拦截任何写、删或执行 shell 命令的非法 JSON 意图',
+        'C. 不对工具参数做任何 Schema 校验，允许大模型随意传参以提高“自主创新度”',
+        'D. 强行删除所有的 Python 只读函数，全部改为直接运行危险命令'
+      ],
+      answer: 1,
+      explain: 'Agent 安全的第一原则是隔离。任何由模型输出生成的参数都有可能在模型被注入（Jailbreak）时变成注入载荷。工具暴露必须实行强白名单控制与网关侧校验，只提供最小限度的只读权限，绝不允许直接把包含执行性质的系统级操作暴露给 Agent。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

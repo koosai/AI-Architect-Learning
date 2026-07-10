@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M12L11 · 集成与端到端
 
@@ -59,6 +61,101 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   insight="组件单测过不等于系统能用:接口可能对不上、依赖顺序没理顺、端到端路径没验、无key偷偷跑不通。集成:把组件依赖注入组装成 Assistant 门面,暴露 ask(RAG问答)和 review(评审Agent)两个核心用例,内部接好地基->provider网关->生成/Agent->带trace返回。加CLI一键跑(无key可跑)和smoke test验端到端(问答带引用/评审出清单/无证据弃答/注入被拦)。坏路径(降级/弃答)也要smoke test别只测happy path。端到端trace串起完整链路是演示亮点。集成暴露早期接口设计问题、是检验架构的试金石。集成方式匹配规模别过度。"
   application="集成:Assistant门面依赖注入组装组件、暴露ask/review、内部接好地基->网关->生成。加CLI一键无key跑。写smoke test验核心路径整体跑通含坏路径(弃答/降级/注入拦)。端到端trace贯穿各步。集成别扭说明接口设计要改。单用户项目门面+CLI即可别上MQ/微服务。"
 />
+
+## 三、集成装配与端到端图解 (Deep Dive Diagrams)
+
+本节展示毕业设计端到端集成的核心图解：全系统装配依赖拓扑、一次完整的问答与评审请求生命流转，以及整体“大爆炸”集成与“渐进式”增量组装在排障复杂度上的架构折中。
+
+### 1. 结构全景：Assistant 门面模式全系统集成装配图
+
+```mermaid
+graph TD
+    classDef facade fill:#e8f5e9,stroke:#2e7d32,stroke-width:2.5px;
+    classDef component fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef client fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+
+    CLI["CLI 客户端入口 (CLI Entry)"]:::client -->|1. 封装命令调用| AssistantFacade["系统大门面 (Assistant Facade)"]:::facade
+    
+    subgraph IntegratedComponents [集成子系统组件]
+        AssistantFacade -->|2. RAG 检索| RAG["RAG 问答服务"]:::component
+        AssistantFacade -->|3. Agent 评审| Agent["评审 Agent"]:::component
+        
+        RAG -->|摄取与查询| VectorDB[("本地向量存储")]:::component
+        Agent -->|调用只读工具| ToolRegistry["工具白名单注册表"]:::component
+        
+        RAG & Agent -->|DIP 接口| GuardedProvider["数据面网关适配层 (GuardedProvider)"]:::component
+    end
+
+    GuardedProvider -->|4. 调用| ModelGateway["统一模型提供商 (Mock/Local/Cloud)"]:::client
+```
+
+### 2. 控制流程：端到端 RAG 问答全链路集成时序
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as 用户 (CLI)
+    participant Facade as 门面层 (Assistant)
+    participant RAG as RAG问答 (RAGService)
+    participant KB as 向量地基 (VectorStore)
+    participant Provider as 迷你网关 (GuardedProvider)
+    participant LLM as 大模型 (LLM API)
+
+    User->>Facade: 1. 执行命令 "assistant ask '什么是CAP'"
+    Facade->>RAG: 2. 调度 RAG 服务
+    RAG->>KB: 3. 执行本地相似度检索
+    KB-->>RAG: 4. 返回片段 "CAP定理：分区时一致性可用性二选一" (source=cap.md, pos=0)
+    RAG->>Provider: 5. 转发 prompt + context 片段 (挂载安全护栏)
+    Provider->>Provider: 6. 校验输入无指令注入
+    Provider->>LLM: 7. 发送最终请求给模型
+    LLM-->>Provider: 8. 返回文本回答
+    Provider->>Provider: 9. 校验输出脱敏，生成 Trace Span 和成本记录
+    Provider-->>RAG: 10. 返回安全回答
+    RAG->>RAG: 11. 代码绑定物理引用：["cap.md#0"]
+    RAG-->>Facade: 12. 返回回答 + 引用 + 链路 Trace
+    Facade-->>User: 13. 在控制台整洁输出 Markdown
+```
+
+### 3. 折中谱系：大爆炸集成 vs. 渐进式增量装配
+
+```mermaid
+graph TD
+    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef risk fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    IntegrationStrategy["集成组装策略"]
+    
+    IntegrationStrategy -->|大爆炸集成| BigBang["大爆炸一步装配 (Big-Bang Integration)"]:::risk
+    IntegrationStrategy -->|渐进式装配| Incremental["渐进式增量组装 (Incremental / Bottom-up)"]:::safe
+
+    BigBang --> BigBangNote["优势: 无需编写任何中间脚手架，直接把所有组件合成进行最终测试<br/>缺点: 调试极其痛苦，遇到报错难以定位是检索、护栏、网关还是 Agent 出的问题"]
+    Incremental --> IncrementalNote["优势: 每新增一个模块（如先地基->加网关->加RAG）就做一次冒烟，排障极其轻松<br/>缺点: 需编写少量临时的 Mock 驱动器与单步验证脚手架"]
+```
+
+### 4. 步骤流演示：端到端 Smoke Test 冒烟验证步骤
+
+<StepFlow
+  steps={[
+    {
+      title: '空 Key 环境重置',
+      desc: '清理 `.env` 中的 API Key，确保系统回退到纯 Mock/本地小模型状态，以此触发一等运行门槛检测。'
+    },
+    {
+      title: 'RAG 问答冒烟',
+      desc: '调用 CLI 命令。验证系统是否吐出带正确元数据引用（如 [cap.md#0] ）的 Markdown 回答。'
+    },
+    {
+      title: '防御性弃答测试',
+      desc: '提问知识库未涵盖的问题。验证网关是否在 0ms 触发相似度短路，诚实返回“无法回答”而非幻觉。'
+    },
+    {
+      title: 'Agent 评审追踪',
+      desc: '执行架构评审指令。拦截并输出 ReAct 单步 Spans，确认最大步数硬上限已生效。'
+    }
+  ]}
+/>
+
+---
 
 ## 三、跟我做一遍：组装 Assistant + 端到端 smoke test
 
@@ -118,7 +215,7 @@ print("端到端跑通两个用例、坏路径也稳")`}
 
 组件被组装成一个 `Assistant` 门面，两个核心用例（`ask`/`review`）端到端接好，用 mock provider 保证无 key 可跑；smoke test 验证的不是组件细节，而是**核心路径整体跑通**——包括弃答、注入拦截这些坏路径。这就是从"一堆零件"到"一台能开的车"。**试试**：把某个组件接口改一下（比如 `_retrieve` 返回格式），看 smoke test 如何抓出集成断裂；想想为什么坏路径（弃答/注入）也要进 smoke test。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month12/m12l11_integration/`：
 
@@ -189,6 +286,46 @@ python labs/month12/m12l11_integration/test_integration.py
 - 你的组件集成顺畅吗？还是要写一堆胶水、改一处动全身（早期设计的账单）？
 - 你的两个核心用例端到端跑通了吗？无 key 真能跑吗？
 - 你的 smoke test 覆盖坏路径（弃答/注入/降级）吗，还是只测了 happy path？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在软件工程中，“集成测试 (Integration Testing)”与“单元测试 (Unit Testing)”最本质的区别是什么？在大模型应用中如何体现？',
+      options: [
+        'A. 单元测试只在 VS Code 里跑，集成测试只能在浏览器里跑',
+        'B. 单元测试验证单个组件（如分块器、网关正则）在隔离状态下的输入输出正确性；而集成测试验证多个组件装配在一起后（如地基+网关+LLM）数据流和控制流是否顺畅。在大模型应用中，集成测试能检验“检索到的片段格式是否能被 Prompt 接收并输出真引用”等整体链路缺陷',
+        'C. 单元测试必须要 API Key 才能跑，集成测试必须断网跑',
+        'D. 集成测试能自动修复大语言模型生成的所有语法幻觉'
+      ],
+      answer: 1,
+      explain: '单元测试是局部的，集成测试是全局的。许多在单元测试里 100% 正确的组件，一旦拼装就会发生接口不兼容（例如元数据格式在传递过程中丢失、网关对 Prompt 的修改破坏了 RAG 逻辑）。因此，集成是检验系统级设计好坏的唯一诚实标准。'
+    },
+    {
+      q: '关于冒烟测试（Smoke Test）在系统发布前的核心价值，以下哪项陈述最符合架构师的认识？',
+      options: [
+        'A. 冒烟测试是为了通过高并发流量打瘫服务器，看机箱是否真的“冒烟”',
+        'B. 冒烟测试旨在以最低开销、最快速度对系统的核心路径（如一键提问能返回答案、高危操作能拦截）进行整体跑通验证，快速确认“电路未发生短路、核心骨架正常”，是系统具备发布就绪（Release Ready）状态的门槛指标',
+        'C. 冒烟测试能彻底替代回归测试，不需要评估集',
+        'D. 冒烟测试只适合多用户云端 SaaS，本地单用户 CLI 没必要做'
+      ],
+      answer: 1,
+      explain: '冒烟测试源自硬件行业（通电看是否冒烟）。在软件里，它是一层轻量但范围极广的“生存测试（Sanity Test）”。它不纠结于小 bug，而是保障系统的咽喉要道 100% 畅通，如“无 Key 时 Mock 是否平稳降级”，确保演示和交付不翻车。'
+    },
+    {
+      q: '如果在将“地基 + 网关 + RAG + Agent”组装集成时，发现需要写数十行复杂的“胶水代码（Glue Code）”或进行大面积重构，这在架构设计上发出了什么信号？',
+      options: [
+        'A. 证明该系统功能极其强大，需要更复杂的组装逻辑',
+        'B. 警示早期组件的接口隔离（M12L4 统一 Provider 接口）和职责划分（M12L2 架构决策）存在缺陷，各模块存在“隐式依赖”或“职责不清”，是架构设计不合理的信号',
+        'C. 证明 Python 的环境变量没有正确安装',
+        'D. 这是 Docusaurus 静态网站中 broken links 的常见编译提醒'
+      ],
+      answer: 1,
+      explain: '集成的痛往往是早期设计的坏账。如果组件间是低耦合、高内聚的，且遵循了依赖倒置（DIP）和门面模式（Facade），那么最终的组装应当像搭积木一样丝滑。胶水代码过多，代表模块间紧密焊死，必须立刻回过头审视接口设计。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

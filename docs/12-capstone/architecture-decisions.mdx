@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M12L2 · 架构设计与决策记录
 
@@ -68,6 +70,100 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="毕业项目设计:立项映射成组件图+数据流,对三大 trade-off 各做决策并写一页 ADR(背景/选项/决定/后果)。选择要呼应立项约束(本地优先、要引用、该用Agent才用)。标信任边界。用能否讲清‘为什么没上更复杂方案’检验架构成熟度。ADR 让你的架构经得起评审追问。"
 />
 
+## 三、架构设计与决策图解 (Deep Dive Diagrams)
+
+本节展示毕业设计核心组件关系、ADR (架构决策记录) 生命周期流程，以及本系统关键选型的取舍关系。
+
+### 1. 结构全景：Architecture Assistant 系统组件全景图
+
+```mermaid
+graph TD
+    classDef app fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef gate fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef logic fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+    classDef storage fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    CLI["CLI / Docs 宿主层"]:::app -->|1. 推理与任务请求| Gateway["网关层 (Model Gateway)"]:::gate
+    
+    subgraph GatewayMiddleware [网关横切关注点]
+        Gateway --> Guard["安全双向护栏"]
+        Gateway --> CostMeter["成本计量与限额"]
+    end
+
+    Gateway -->|2. RAG 查询| RAG["RAG 问答服务"]:::logic
+    Gateway -->|3. Agent 调度| Agent["架构评审 Agent"]:::logic
+
+    RAG -->|摄取与索引查询| VectorDB[("本地向量数据库")]:::storage
+    Agent -->|调阅工具| ToolReg["评审工具注册表 (Tool Registry)"]:::logic
+
+    Gateway -->|4. 统一调用| ModelProvider["模型 Provider 适配器 (Mock/Ollama/Cloud)"]:::gate
+    Gateway -->|5. 日志收集| OTel["OTel Trace / Audit Log 收集"]:::gate
+```
+
+### 2. 控制流程：ADR 决策提报与生命周期流转
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Owner as 架构师 (Author)
+    participant ADR as ADR 归档库 (Markdown)
+    participant Git as 代码库 (Version Control)
+    participant Board as 架构评审委员会 (Reviewer)
+
+    Owner->>ADR: 1. 草拟决策背景与方案比对 (Status: Proposed)
+    Owner->>Board: 2. 提交架构决策讨论与评审
+    alt 评审驳回
+        Board-->>Owner: 3a. 指出后果代价遗漏，驳回修改 (Status: Rejected)
+    else 评审通过
+        Board-->>Owner: 3b. 批准通过决策并签署 (Status: Accepted)
+        Owner->>ADR: 4. 更新 ADR 状态为 Accepted
+        Owner->>Git: 5. 提交 ADR 文本入库
+    end
+    Note over ADR, Git: 若干月后新方案推出...
+    Owner->>ADR: 6. 提报新决策，标记原决策为 (Status: Superseded)
+```
+
+### 3. 折中谱系：本地轻量向量检索 vs. 分布式向量数据库集群
+
+```mermaid
+graph TD
+    classDef local fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef cluster fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    VectorStrategy["向量库部署模式"]
+    
+    VectorStrategy -->|本地轻量| Local["本地内存向量库 (Chroma / Faiss In-Memory)"]:::local
+    VectorStrategy -->|集群分布式| Cluster["分布式向量集群 (Milvus / Qdrant Distributed)"]:::cluster
+
+    Local --> LocalNote["优点: 零运维负担，本地进程运行，无需额外端口，展示性能好<br/>缺点: 无法支撑百万级文档向量的高并发检索，无跨节点冗余"]
+    Cluster --> ClusterNote["优点: 海量水平扩展能力，支持复杂混合条件过滤，高可用保障<br/>缺点: 占用额外显存/内存，依赖网络调用，增加 10 倍运维负担 (违反 YAGNI)"]
+```
+
+### 4. 步骤流演示：ADR 结构化提报标准管线
+
+<StepFlow
+  steps={[
+    {
+      title: 'Context 背景界定',
+      desc: '阐述系统当前面对的业务约束或技术瓶颈（如“毕业设计需在离线且无 API Key 的评审下依然能完美展示”）。'
+    },
+    {
+      title: 'Options 方案分析',
+      desc: '罗列出多种备选解决方案（如“纯 Ollama”或“Mock + 可替换插件适配器”），客观给出优缺点。'
+    },
+    {
+      title: 'Decision 最终拍板',
+      desc: '做出克制、明确的决策，给出强有力的选择依据，并标记该决策在系统中的作用范围。'
+    },
+    {
+      title: 'Consequences 后果承担',
+      desc: '清楚记录接受该决策所需承担的劣势或技术债（例如“选用 Mock 路径将导致问答真实质量下降”），并提供应对建议。'
+    }
+  ]}
+/>
+
+---
+
 ## 三、跟我做一遍：把决策写成可评审的 ADR
 
 <PyRunner
@@ -113,7 +209,7 @@ print("三个关键决策都有理由和代价")`}
 
 三个关键决策各写成一份 ADR：不只记"用了 RAG"，而是记清**考虑过哪些选项、为什么选它、代价是什么**——还能自检（没有理由或没有代价的 ADR 不合格）。这就是让架构经得起评审的方式。**试试**：给你的项目加第四个 ADR（比如向量库选型：内存 vs 持久化）；想想哪个决策如果反过来选，项目会变成什么样。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month12/m12l2_adr/`：
 
@@ -184,6 +280,46 @@ python labs/month12/m12l2_adr/test_adr.py
 - 你的三个关键决策，每个都能说清"选项、为什么选、放弃了什么、代价"吗？
 - 面对"你为什么不上 X（更复杂的方案）"，你有理直气壮的答案，还是会被问倒？
 - 你的架构匹配立项约束吗？还是不自觉地堆了用不上的复杂度？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在进行 AI 系统设计时，“组件框图谁都会画，难的是选型背后的决策及代价”。以下哪项最符合一个架构师编写 ADR (架构决策记录) 时的核心要求？',
+      options: [
+        'A. 详细记录系统采用技术的所有开源证书与代码行数',
+        'B. 不仅要写出“我们选了什么方案”，更要重点阐述“为什么这样选”、“放弃了什么备选方案”以及“我们需要为此承担怎样的架构后果和代价（Consequences）”',
+        'C. 将每次大模型生成的 Prompt 全文原封不动抄进 ADR 文档中',
+        'D. 保证 ADR 越长越好，最好包含全部数据库表的字段设计'
+      ],
+      answer: 1,
+      explain: '架构的本质是在约束下做出取舍。如果一份决策记录只写了“决定使用 RAG”，却没有解释为什么不直接使用“长上下文模型”或“精调模型”，以及选用 RAG 带来的维护检索管道的开销，那么该记录就无法作为未来的追溯依据，未来的人就容易推翻现有决策。'
+    },
+    {
+      q: '在毕业项目的系统架构中，为什么推荐将“本地优先 (Local-first) + 云端可选”作为最基础的架构设计，而不是全盘接入云端 API？',
+      options: [
+        'A. 因为云端 API 已经停止服务，无法支持 React 项目编译',
+        'B. 它兼顾了“可演示性”与“系统能力天花板”。通过抽象模型 Provider，无 API Key 时能自动回退到 Mock 路由；而当填入云端 Key 时又可以无缝切为最强模型。这一设计用最简单的模式消除了外部公网单点故障的致命影响',
+        'C. 纯云端 API 调用没有任何成本，本地运行只为了炫技',
+        'D. 本地优先可以强制绕过 Docusaurus 的 broken links 检测'
+      ],
+      answer: 1,
+      explain: '高可用和解耦是系统设计的基本原则。若系统完全强依赖外部云 API，当在断网或无 Key 环境下演示时，整个系统将直接陷入瘫痪。采用“本地优先 + 云端可选”，能实现本地带伤优雅运行，这也体现了 Month 4 的接口防腐（DIP）和 Month 11 的降级设计。'
+    },
+    {
+      q: '面对“你为什么没在你的架构中采用多智能体 (Multi-Agent) 协同模式”这一锋利的架构追问，以下哪项是架构师最克制、最能体现专业素质的回答？',
+      options: [
+        'A. “因为我还没学会如何使用多智能体”',
+        'B. “因为多智能体框架的编译报错太多，React 18 不兼容”',
+        'C. “基于 YAGNI 和架构克制原则。经过对立项用例的估算，本项目核心用例——评审清单的生成逻辑只需要单个智能体调度即可完全覆盖，引入多智能体不仅无法带来实质价值提升，反而会增加 5 倍的调试难度与 Token 经济开销”',
+        'D. “多智能体是落后的技术，我们只应该使用单次 RAG 调用”'
+      ],
+      answer: 2,
+      explain: '真正的架构师拒绝“为了用技术而用技术”的盲目堆砌。任何架构的复杂化都应该由具体的业务价值驱动。在评审中，清晰陈述“不做什么”的边界与成本考量，远比虚胖的过度工程更能体现你的判断力与全局控制能力。'
+    }
+  ]}
+/>
 
 ## 自检清单
 

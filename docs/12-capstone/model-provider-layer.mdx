@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import QuizCard from '@site/src/components/QuizCard';
+import StepFlow from '@site/src/components/StepFlow';
 
 # M12L4 · 可替换模型层
 
@@ -60,6 +62,114 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
   application="毕业项目建provider层:小接口generate/embed,Mock/Local/Cloud三实现,工厂按配置(有无key)选、无key回落mock。上层RAG/Agent只依赖接口。后续把重试/降级/路由/成本/trace/护栏挂在这层(迷你网关)。换模型只改配置+评估对比。接口小而稳不漏厂商细节,支持实际会用的即可别过度抽象。"
 />
 
+## 三、可替换模型层图解 (Deep Dive Diagrams)
+
+本节展示统一抽象模型层（DIP）的面向对象多态设计、工厂方法运行时的多态路由时序，以及本地执行与云端 API 交互的系统取舍。
+
+### 1. 结构全景：ModelProvider 依赖倒置多态架构
+
+```mermaid
+classDiagram
+    class ModelProvider {
+        <<interface>>
+        +generate(prompt: string) string*
+        +embed(text: string) float[]*
+    }
+
+    class MockProvider {
+        +generate(prompt: string) string
+        +embed(text: string) float[]
+    }
+
+    class LocalProvider {
+        -modelPath: string
+        +generate(prompt: string) string
+        +embed(text: string) float[]
+    }
+
+    class CloudProvider {
+        -apiKey: string
+        +generate(prompt: string) string
+        +embed(text: string) float[]
+    }
+
+    ModelProvider <|.. MockProvider : Implements
+    ModelProvider <|.. LocalProvider : Implements
+    ModelProvider <|.. CloudProvider : Implements
+
+    class RAGService {
+        -provider: ModelProvider
+        +ask(query: string) string
+    }
+
+    RAGService --> ModelProvider : Depends on (DIP)
+```
+
+### 2. 控制流程：运行时依赖注入与 API Key 回退序列
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as 客户端初始化 (Bootstrapper)
+    participant Factory as 提供商工厂 (ProviderFactory)
+    participant Cloud as 云端 ModelProvider
+    participant Mock as 离线 MockProvider
+
+    App->>Factory: 1. 请求创建 Provider (配置: provider=cloud)
+    Factory->>Factory: 2. 检查环境变量 API_KEY 是否存在？
+    alt API_KEY 存在
+        Factory->>Cloud: 3a. 实例化 CloudProvider (填入秘钥)
+        Cloud-->>Factory: 4a. 返回云端实例
+        Factory-->>App: 5a. 交付 CloudProvider 实例
+    else API_KEY 缺失 (触发 Failover)
+        Note over Factory: 安全机制：无 Key 回退
+        Factory->>Mock: 3b. 实例化 MockProvider
+        Mock-->>Factory: 4b. 返回离线 Mock 实例
+        Factory-->>App: 5b. 交付 MockProvider (带伤运行，可演示)
+    end
+```
+
+### 3. 折中谱系：本地部署模型 vs. 商业云端 API
+
+```mermaid
+graph TD
+    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef risk fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    RuntimeStrategy["推理运行时选型"]
+    
+    RuntimeStrategy -->|本地执行| Local["本地大模型运行 (Local Ollama / Llama.cpp)"]:::safe
+    RuntimeStrategy -->|云端SaaS| Cloud["云端 API 提供商 (Cloud API: OpenAI / Claude)"]:::risk
+
+    Local --> LocalNote["优点: 100% 数据隐私安全，无 API Key 费用，完全物理离线可用<br/>缺点: 极度吃本地 CPU/显存，推理吞吐受物理机性能制约，回答精度受限"]
+    Cloud --> CloudNote["优点: 模型智能水准高，免显存资源开销，开箱即用<br/>缺点: 存在数据出境安全风险，可能受到提供商突发限流与断网影响"]
+```
+
+### 4. 步骤流演示：模型工厂实例化分流步骤
+
+<StepFlow
+  steps={[
+    {
+      title: '配置读取',
+      desc: '系统在引导阶段优先拉取 `.env` 配置文件中的 `PROVIDER_TYPE` 和 `LLM_API_KEY` 变量。'
+    },
+    {
+      title: '依赖扫描',
+      desc: '工厂校验当前的公网可达性与系统端口（如 Ollama 的 11434 服务端状态），以判定是否支持本地小模型。'
+    },
+    {
+      title: '分支实例化',
+      desc: '进入模式分流：首选实例化 CloudProvider；若校验失败则平滑降级，建立 MockProvider。'
+    },
+    {
+      title: 'DIP 注入',
+      desc: '将实例化出的 Provider 以接口形式注入业务主逻辑（RAG/Agent），屏蔽具体的子类属性。'
+    }
+  ]}
+/>
+
+---
+
 ## 三、跟我做一遍：可切换的 provider 层
 
 <PyRunner
@@ -102,7 +212,7 @@ print("mock/云可切换、上层不变、无 key 回落 mock")`}
 
 一个统一接口下三种 provider 可切换：`answer` 这个上层函数完全不知道背后是 mock/本地/云，换 provider 一行不改；无 key 想用云时自动回落 mock（保证可运行）。这就是[无 key 可跑 + 可升级强模型](./capstone-kickoff) 同时成立的关键。**试试**：把 `answer` 想成你的 RAG 或 Agent——它依赖接口而非具体模型，所以能被 mock 注入测试；想想把"重试/成本记账"加在哪最合适（provider 层，即你的迷你网关）。
 
-## 四、动手 Lab（必做）
+## 五、动手 Lab（必做）
 
 打开 `labs/month12/m12l4_provider/`：
 
@@ -173,6 +283,46 @@ python labs/month12/m12l4_provider/test_provider.py
 - 你的模型调用藏在统一接口后了吗？换模型/无 key，上层要改多少代码？
 - 你的 mock 是一等公民（保证可跑可测）还是事后补丁？CI 能无 key 跑通吗？
 - 你打算把护栏/成本/trace 加在哪？provider 层准备好当这个挂载点了吗？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在软件架构中，依赖倒置原则 (Dependency Inversion Principle, DIP) 核心解决的是什么耦合问题？在大模型接入设计中应如何落地？',
+      options: [
+        'A. 它解决了代码行数过多导致的编译缓慢；应通过把所有 Python 代码写在一个大函数里落地',
+        'B. 它实现了高层逻辑与低层具体实现的解耦。在模型层落地时，应设计一个统一的模型调用基类（如 ModelProvider 接口），让 RAG 和 Agent 只依赖基类的抽象方法（如 generate），而把 Mock/Local/OpenAI 作为具体的底层子类实现进行可拔插切换',
+        'C. 它实现了数据库表与向量索引的自动物理绑定',
+        'D. 它通过在 prompt 里声明 API 秘钥来防止信息泄露'
+      ],
+      answer: 1,
+      explain: '依赖抽象（基类/接口）而非依赖具体实现（特定云 API），是面向对象设计（SOLID）的核心基本功。大语言模型的 API 接口变化极其剧烈。将调用进行 DIP 抽象，能在模型层形成防腐垫（Corruption Guard），确保上层复杂的 Agent 与 RAG 主逻辑不被任何特定的云供应商捆绑锁定。'
+    },
+    {
+      q: '以下关于 Mock Provider 在毕业系统中的设计价值的评估，哪项最为全面、符合架构师视角？',
+      options: [
+        'A. Mock Provider 只是在没有买到 API Key 时用来应付编译的临时漏洞，系统上线后应该将其物理删除',
+        'B. Mock Provider 是一等公民（First-class Citizen）。它不仅能提供低成本、高效率的本地离线自动化单元测试与 CI 门禁，也是保证系统在评审、离线和断网等演示极端环境里能平稳“带伤运行”的终极兜底策略',
+        'C. Mock Provider 可以自动升级本地 Llama 8B 模型的参数精度',
+        'D. Mock Provider 仅在 PyRunner 里可用，无法用于命令行 CLI 演示'
+      ],
+      answer: 1,
+      explain: '一个高弹性的分布式系统不能假设外部依赖永远 100% 稳定在线。Mock 实现不只是“临时拼凑”，它是系统测试性与防御性设计的重要基石。通过 Mock，研发团队能在 0 成本、100% 可重复的前提下运行集成测试，也保证了现场展示的绝对安全。'
+    },
+    {
+      q: '当模型 Provider 层被抽离为独立的适配层后，以下关于它对系统未来演进影响的表述，正确的是：',
+      options: [
+        'A. 它使得后续添加输入/输出护栏、成本计量、Trace 追踪等 Month 11 横切面组件时，有了一个天然且集中的统一挂载点（类似于迷你网关），省去了在每个业务功能里重复编写拦截代码的开销',
+        'B. 它会极大地降低系统的运行并发吞吐，必须尽早将其还原为直连具体 API 模式',
+        'C. 它会强制要求本地必须部署多张 GPU 显卡，导致开发成本暴增',
+        'D. 它会导致 Docusaurus build 时发生 broken links 的静态链接编译错误'
+      ],
+      answer: 0,
+      explain: '集中式代理是架构收敛的经典选择。有了统一的模型适配层，我们便有了“迷你模型网关”的数据面转发控制点，所有出入模型的流量都会通过 generate，这为后续的护栏拦截、Trace ID 注入和限额计量提供了最洁净的埋点区，呼应了 Month 11 网关的核心理念。'
+    }
+  ]}
+/>
 
 ## 自检清单
 
