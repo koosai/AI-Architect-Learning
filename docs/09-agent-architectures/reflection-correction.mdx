@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M9L7 · 反思与自我纠错
 
@@ -31,7 +33,7 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 - **无脑重试**：工具失败了，用**完全一样的参数**再试一遍，当然还是失败（[死循环 M9L4](./stopping-budget)）。
 - **不会换策略**：一种方法行不通，不知道换个思路。
 
-人遇到挫折会“停下来想想哪里错了、换个方法”。让 Agent 也具备这种**检查-诊断-调整**的能力，就是反思。它和 [M5L7 重试](../core-components/retry-backoff-timeout) 的区别很关键：重试是“原样再来”，反思是“想清楚为什么错、调整后再来”。
+人遇到挫折会“停下来想想哪里错了、换个方法”。让 Agent 也具备这种**检查-诊断-调整**的能力，就是反思。它和 [M5L7 重试](../core-components/retry-backoff-timeout) 的区别很关键，这体现了分布式系统中的 **<GlossaryTerm term="Resilience Engineering" definition="韧性工程：系统在面对各种异常、局部故障或非预期冲击时，能够动态响应、吸收错误并优雅恢复到正常工作状态的工程设计思想。">韧性工程 (Resilience Engineering)</GlossaryTerm>** 思想：重试是“原样再来”，反思是“想清楚为什么错、调整后再来”。
 
 ## 二、三个核心概念（分层）
 
@@ -40,15 +42,15 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 <GlossaryTerm term="Reflection" definition="反思：Agent 检查自己的输出或工具结果，判断是否达成目标/是否有错，若有问题则诊断原因并调整策略，再重试。让 Agent 具备自我纠错能力，而非带错前进或无脑重试。">反思（reflection）</GlossaryTerm> 在行动后加一步“自检”：
 1. **行动**：执行一步（[ReAct 的 Action](./react-pattern)）。
 2. **检查（reflect）**：这步结果对吗？达成子目标了吗？有没有错误/不符合预期？
-3. **若有问题 → 诊断 + 调整**：想清楚为什么错（参数错？方法错？信息不足？），**调整策略**后再试——而不是原样重试。
+3. **若有问题 → 诊断 + 调整**：想清楚为什么错（参数错？方法错？信息不足？），**调整策略**后再试——而不是原样重试。例如，在学术界经典的 <GlossaryTerm term="Reflexion" definition="Reflexion 架构：一种通过建立明确语言反思评判器与短期工作记忆（Scratchpad）来让 Agent 在多次尝试间主动学习并纠正动作的自主强化推理框架。">Reflexion 架构</GlossaryTerm> 中，Agent 就是通过在 Scratchpad 中记录失败自省来修正错误。
 4. **若没问题 → 继续**下一步。
 
 关键是第 3 步的“调整”：反思的价值在于**带着对失败原因的理解去改进**，而非机械重复。
 
 ### 进阶：反思的不同形式
 
-- **结果校验式反思**：用规则/工具检查结果是否合法（如代码能不能跑、JSON 格式对不对、答案是否 grounding）——客观、可靠（[呼应 M7L9 校验](../llm-systems/hallucination-guardrails)）。
-- **自我批判式反思**：让 LLM 自己评判“我这步做得好吗、有什么问题”——更灵活，但模型自评有偏差（可能盲目自信或反复纠结），要[配客观信号（M9L10 评测）](./agent-evaluation)。
+- **结果校验式反思**：用规则/工具检查结果是否合法（如代码能不能跑、JSON 格式对不对、答案是否 **<GlossaryTerm term="Grounding" definition="事实锚定 (Grounding)：将模型的输出与现实客观数据（如工具的实际反馈、确切的数据源）进行校验与比对，以防止模型脱离实际凭空编造。">事实对齐 (Grounding)</GlossaryTerm>**）——客观、可靠（[呼应 M7L9 校验](../llm-systems/hallucination-guardrails)）。
+- **自我批判式反思**：让 LLM 自己评判“我这步做得好吗、有什么问题”（这属于 **<GlossaryTerm term="Self-Refine" definition="自我精炼：大模型自发迭代优化其生成内容的机制，通过‘生成 -> 批判 -> 修正’的内部闭环反复打磨输出直到满足特定标准。">Self-Refine (自我精炼)</GlossaryTerm>** 机制）——更灵活，但模型自评有偏差（可能盲目自信或反复纠结），要[配客观信号（M9L10 评测）](./agent-evaluation)。
 - **外部反馈式反思**：把工具的错误、测试的失败、人的反馈作为反思的依据——最可靠（基于真实结果而非模型臆测）。
 
 ### 深入（选学）：反思的代价与边界
@@ -61,10 +63,108 @@ import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 <ResearchNote
   title="反思：让 Agent 带着对失败的理解去改进"
-  source="Shinn et al. (2023), Reflexion；Self-Refine；CRITIC（用工具反馈纠错）"
+  source="Shinn et al. (2023), Reflexion; Self-Refine; CRITIC (用工具反馈纠错)"
   href="https://arxiv.org/abs/2303.11366"
   insight="Reflexion 等表明，让 Agent 反思失败（用语言总结哪里错了、为什么）再重试，比无脑重试显著提升成功率。反思可基于客观校验、自我批判或外部反馈；其中基于可验证信号（工具报错、测试结果）的反思最可靠，纯模型自评有偏差。反思要配停止上限和成本权衡。"
   application="给 Agent 加反思：行动后检查结果（优先用客观信号：工具报错/测试/校验），有问题则诊断原因、调整策略再试，并把教训记进 scratchpad 避免重犯。反思循环要有最大次数和成本预算。简单任务未必需要。别只靠模型自我感觉，能用客观信号就用。"
+/>
+
+### 技术架构图解与生命周期演示 (Deep Dive Diagrams & Lifecycle)
+
+#### 1. 外部客观信号驱动的自纠错系统拓扑 (Objective-Feedback Loop Topology)
+
+```mermaid
+graph LR
+    classDef brain fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef check fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
+    classDef memory fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+
+    LLM["LLM 生成器大脑 (Agent Brain)"]:::brain -->|1. 尝试输出 (代码/查询/JSON)| Sandbox["客观沙箱校验器 (Objective Sandbox)<br/>- 编译器 (Compiler)<br/>- 单元测试 (Test Runner)<br/>- 格式校验 (Schema Validator)"]:::check
+    Sandbox -->|2. 返回客观反馈 (Compiler Trace / Test Result)| Evaluator["反思判定与诊断器 (Reflector)"]:::check
+    Evaluator -->|3. 诊断错误并提炼教训| Scratchpad["结构化草稿纸 (Scratchpad Memory)"]:::memory
+    Scratchpad -->|4. 装配纠错 Prompt 提示词| LLM
+```
+
+#### 2. Reflexion 范式状态机流转 (Reflexion State Machine Loop)
+
+```mermaid
+graph TD
+    classDef state fill:#eceff1,stroke:#607d8b,stroke-width:1px;
+    classDef decision fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+    classDef memory fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    Start["初始目标 (Goal)"] --> GenAction["生成行动 A[t]"]:::state
+    GenAction --> Exec["物理执行并获取观测 O[t]"]:::state
+    
+    Exec --> CheckGoal{"是否达成最终目标<br/>或通过客观校验?"}:::decision
+    
+    CheckGoal -->|是 (PASS)| Finish["任务成功，输出结果"]
+    CheckGoal -->|否 (FAIL)| CheckRetries{"反思尝试次数<br/>是否达到上限 N?"}:::decision
+    
+    CheckRetries -->|是| Terminate["触发异常拦截，转入人工/优雅停机"]
+    CheckRetries -->|否| SelfReflect["启动自我批判诊断 (Self-Reflection)<br/>提炼语言形式的教训: '因为 X 失败了'"]:::state
+    
+    SelfReflect --> WriteMemory["回写至 Scratchpad 记忆区<br/>(存储历史失败教训)"]:::memory
+    WriteMemory --> PrepareNext["基于新记忆与教训重装配 Context"] --> GenAction
+```
+
+#### 3. 无脑重试 vs. 反思调整时序对比 (Blind Retry vs. Reflection-based Correction)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    rect rgb(255, 235, 235)
+        note right of Host: [范式 A] 无脑重试 (导致死循环)
+        Host->>Tool: 调用 API (参数: limit="abc")
+        Tool-->>Host: 返回错误 (Err: "limit value must be integer")
+        Host->>Tool: 调用 API (参数: limit="abc") - 原样再试
+        Tool-->>Host: 返回错误 (Err: "limit value must be integer")
+        note right of Host: 系统卡死/烧钱崩溃
+    end
+
+    rect rgb(235, 255, 235)
+        note right of Host: [范式 B] 反思重试 (实现自愈)
+        Host->>Tool: 调用 API (参数: limit="abc")
+        Tool-->>Host: 返回错误 (Err: "limit value must be integer")
+        Host->>LLM: 诊断错误 ("解析错误日志并建议修正参数")
+        LLM-->>Host: 诊断: "应该将 limit 改为数值 10"
+        Host->>Tool: 调用 API (参数: limit=10) - 调整后重试
+        Tool-->>Host: 返回正确数据 (200 OK)
+    end
+```
+
+#### 4. 交互演示：反思与自我纠错全生命周期
+
+以下展示了 Agent 在执行“编写 Python 数据抓取脚本并确保通过测试”时反思机制的运转过程：
+
+<StepFlow
+  steps={[
+    {
+      title: '1. 初次尝试生成 (Draft)',
+      desc: 'LLM 根据要求首次生成脚本草稿，但代码中存在未导入第三方包（如 requests）的语法隐患。',
+      diagram: '目标: 抓取数据 ──> 生成首版代码 ──> 未 import requests ──> 状态: 未验证'
+    },
+    {
+      title: '2. 物理沙箱跑测拦截 (Assertion)',
+      desc: 'Orchestrator 将代码写入临时沙箱并执行编译。编译器抛出 Traceback：`NameError: name "requests" is not defined`。',
+      diagram: '运行 test.py ──> 抛出 NameError ──> 捕获 Traceback ──> 状态: FAIL'
+    },
+    {
+      title: '3. 根因自省诊断 (Self-Reflection)',
+      desc: '系统没有原样重运行，而是将 NameError 堆栈灌入 LLM。模型反思产生诊断词：“我忘记了 `import requests`，下一轮必须加上它”。',
+      diagram: '错误堆栈注入 ──> LLM 诊断 ──> 提炼语言教训 ──> 状态: 诊断完毕'
+    },
+    {
+      title: '4. 策略回写与代码修正 (Refinement)',
+      desc: '诊断出的教训和错误信息被回写至 Scratchpad 记忆区。大模型根据教训对代码进行二轮精炼（Self-Refine），补齐 import 并重写。',
+      diagram: '教训存入 Scratchpad ──> 二轮精炼 ──> 补齐 import requests ──> 状态: 修正完成'
+    },
+    {
+      title: '5. 沙箱复测与成功对齐 (Verification)',
+      desc: '修正后的代码再次送入沙箱运行，测试全部 PASS，系统取得 Grounding 客观确认，顺利输出最终可用代码，优雅终结反思。',
+      diagram: '二次运行 test.py ──> 编译成功 & 测试 PASS ──> 确认 Grounding ──> 输出完工'
+    }
+  ]}
 />
 
 ## 三、跟我做一遍：反思与调整重试
@@ -185,6 +285,46 @@ python labs/month09/m9l7_reflection/test_reflection.py
 - 你的任务有客观的成功/失败信号吗（测试/校验/返回码）？能不能用它触发反思，而非靠模型自评？
 - 你的反思有上限和成本预算吗？会不会陷入"反复改、永远觉得不够好"的反思死循环？
 
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在设计反思型 Agent（Reflective Agent）时，以下哪一种反馈机制具有最高的工程可靠性？',
+      options: [
+        'A. 模型在单次生成后，由自身的大脑直接进行“自我批判”（如：“我觉得我写得对不对？”）',
+        'B. 将生成的代码或工具参数传入外部物理沙箱（如 Compiler、JSON Schema 校验器、Test Runner）获取客观报错堆栈并作为反思输入',
+        'C. 忽略所有错误，一直原样重试，直到网络发生拥堵为止',
+        'D. 让模型将 Temperature 设为 0 来直接消除编译错误'
+      ],
+      answer: 1,
+      explain: '“自我批判式反思”受限于模型自身的确认偏差（Self-confirmation Bias） and 幻觉，容易盲目自信或卡在死循环中。而“外部客观信号反馈”为 Agent 提供了现实客观真理（Grounding）锚点，能让模型基于确凿的 Traceback 诊断问题，效果最稳定可靠。'
+    },
+    {
+      q: '为什么架构师必须在 Agent 的反思循环中强制设计“最大反思次数（Max Reflections）”与停止上限？',
+      options: [
+        'A. 因为不设上限会导致大模型的浮点数参数因为反思过多而溢出',
+        'B. 为了防止 Agent 陷入“追求完美但毫无意义的反复自我纠错”死循环，从而导致极高的 Token 推理开销和响应延迟',
+        'C. 因为大模型每次反思都会导致本地硬盘扇区损坏',
+        'D. 设上限是为了防止反思数据泄露给竞争对手'
+      ],
+      answer: 1,
+      explain: '自我纠错是一项高成本的推理动作。如果不设防线，模型在面对一些难解或者无解的问题时可能会反复折腾（如“修改了 A 导致 B 报错，修改 B 导致 A 报错”），陷入代价惨重的“反思死循环”。必须设定 Max Reflections，超时/超次即优雅降级或引入人在回路。'
+    },
+    {
+      q: '在 Reflexion 框架中，被提炼出的“语言形式教训”（如：由于缺少参数 X 导致 API 报错）通常会被保存在哪里？',
+      options: [
+        'A. 固化在大模型的预训练权重（Weight）中',
+        'B. 写入短期工作记忆区（Scratchpad Context），作为下一轮生成时的前置约束上下文',
+        'C. 保存在向量数据库的冷备份介质中，本轮不再读取',
+        'D. 直接通过物理内存修改 LLM 的显存偏置'
+      ],
+      answer: 1,
+      explain: 'Reflexion 框架通过外置的工作记忆区（Scratchpad）来充当“草稿本”。当某步失败并完成诊断后，教训以自然语言总结的方式记录进 Scratchpad 并拼装进下一轮推理 Prompt 中，从而使 Agent 带着对失败原因的理解进行改进。'
+    }
+  ]}
+/>
+
 ## 自检清单
 
 - [ ] 我能解释反思（带理解改进）和无脑重试（原样再来）的区别。
@@ -194,9 +334,9 @@ python labs/month09/m9l7_reflection/test_reflection.py
 
 ## 常见误解
 
-- **"失败就重试"**：原样重试基本无效、易死循环；要反思调整。
-- **"让模型自己反思就够了"**：模型自评有偏差；优先用客观信号(测试/校验)。
-- **"反思越多越好"**：反思也是循环、也烧钱，要有上限；简单任务未必需要。
+- **“工具报错了，只要把重试次数设多一点，Agent 迟早能蒙对”**：原样重试对于瞬时网络抖动有效（需配退避机制），但在业务逻辑或工具参数错误的情况下，无论重试多少次，输出结果都将是恒定不变的错误，甚至会因为触发死循环而被防护网熔断（[M9L4](./stopping-budget)）。必须通过反思进行“带着理解的参数调整”。
+- **“既然模型会反思，那只要在 System Prompt 里写上‘做完后自查是否有错’就足够了”**：模型很难发现自己已经存在的盲区——即“不知道自己不知道”。单纯靠大模型闭眼空转来自检，效果十分不稳定。架构师必须尽量为反思构建“客观反馈机制”，将真实的终端报错、断言断路器（Hallucination Guardrails）回灌给大模型。
+- **“应该让 Agent 追求极致，反思修改到没有任何小瑕疵为止”**：反思是一项昂贵的交互操作。对于低价值的简单任务，强行引入反思得不偿失；即使在复杂任务中，也可能因为提示词微弱偏差引发模型在微小细节上反复纠缠、无限重构。反思必须伴随严格的“最大反思门槛”与成本熔断限制。
 
 ## 延伸阅读
 
