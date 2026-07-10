@@ -10,6 +10,8 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import PyRunner from '@site/src/components/PyRunner';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import StepFlow from '@site/src/components/StepFlow';
+import QuizCard from '@site/src/components/QuizCard';
 
 # M9L4 · 停止条件与预算控制
 
@@ -44,7 +46,7 @@ Agent 失控的典型表现：
 
 光有最大步数不够（可能在上限内一直空转）。还要：
 - <GlossaryTerm term="Loop Detection" definition="循环检测：检测 Agent 是否在重复同样的（状态/动作）——比如反复用相同参数调同一工具、或在几个状态间来回。检测到就提前终止或强制换策略，而非等到耗尽最大步数。">循环检测</GlossaryTerm>：检测"重复的状态/动作"——如果模型反复用相同参数调同一工具、或在几个状态间打转，提前终止或强制换策略，别白白耗到最大步数。
-- <GlossaryTerm term="Agent Budget" definition="Agent 预算：限制一次 Agent 运行的总成本（token/钱）或总工具调用数，逼近上限就停止或转人工。把不确定的多步循环的成本封顶。">成本/调用预算</GlossaryTerm>：给整次 Agent 运行设 token/花费/工具调用总上限（[呼应 M5L7 重试预算、M7L11 成本上限](../core-components/retry-backoff-timeout)），逼近就停。把"不确定要跑几步"的循环成本封顶。
+- <GlossaryTerm term="Agent Budget" definition="Agent 预算：限制一次 Agent 运行的总成本（token/钱）或总工具调用数，逼近上限就停止或转人工。把不确定的多步循环的成本封顶。">成本/调用预算 (Agent Budget)</GlossaryTerm>：给整次 Agent 运行设 token/花费/工具调用总上限（[呼应 M5L7 重试预算、M7L11 成本上限](../core-components/retry-backoff-timeout)），逼近就停。把"不确定要跑几步"的循环成本封顶。
 
 ### 深入（选学）：停止条件的设计与"优雅停止"
 
@@ -52,7 +54,7 @@ Agent 失控的典型表现：
 - **优雅停止而非崩溃**：触发停止时，不是直接报错丢弃，而是返回"当前最好的部分结果 + 为什么停了 + 是否需要人工接手"——[呼应 M7L9 弃答、M5 优雅降级](../llm-systems/hallucination-guardrails)。
 - **停止 ≠ 失败**：达到上限可能意味着任务太难、或工具不够、或目标不清——这是有价值的信号，要[记录并评测（M9L10）](./agent-evaluation)，而非简单丢弃。
 - **预算分配**：复杂任务可给更多步数/预算，简单任务给少——按任务难度动态设，别一刀切。
-- **这是 Agent 版的"熔断"**：[M5L6 熔断](../core-components/circuit-breaker) 是"依赖持续失败就停止调用"，Agent 停止条件是"循环持续无进展/超预算就停止"——同一种"防止坏情况无限放大"的安全思想。失控的自主循环，比失控的重试更危险（它还会自主行动），所以兜底更不能省。
+- **这是 Agent 版的“熔断”**：遵循 **<GlossaryTerm term="Circuit Breaker" definition="熔断器：分布式系统中的一种防护机制。当依赖的外部接口发生大量延迟或错误时，前置阻断请求直接返回备用响应，避免雪崩效应。">熔断器 (Circuit Breaker)</GlossaryTerm>** 思想。[M5L6 熔断](../core-components/circuit-breaker) 是“依赖持续失败就停止调用”，Agent 停止条件是“循环持续无进展/超预算就停止”——同一种“防止坏情况无限放大”的安全思想。为了实现高弹性，也应该结合 **<GlossaryTerm term="SRE" definition="SRE (站点可靠性工程)：结合软件开发技术与运维最佳实践，构建、测量和运行具备极高弹性与可靠性的系统工程学科。">SRE (站点可靠性工程)</GlossaryTerm>** 的 **<GlossaryTerm term="Graceful Degradation" definition="优雅降级：系统在部分组件故障或资源（步数/预算）耗尽时，主动放弃部分边缘功能，保证核心流程依然能返回可用回复的容错策略。">优雅降级</GlossaryTerm>** 原则，发生熔断时返回部分结果。失控的自主循环，比失控的重试更危险（它还会自主行动），所以兜底更不能省。
 
 <ResearchNote
   title="停止条件：把不确定的自主循环的成本与风险封顶"
@@ -60,6 +62,117 @@ Agent 失控的典型表现：
   href="https://www.anthropic.com/research/building-effective-agents"
   insight="Agent 循环的最危险失败是不终止：永不完成、反复重试、状态打转、烧穿预算。必须用外层工程强制兜底——最大步数（硬上限）、循环检测（防空转）、成本/调用预算（控花费）、明确的成功/失败条件。触发时优雅停止并返回部分结果 + 是否需人工，而非崩溃。"
   application="给每个 Agent 配齐停止条件：max steps + 循环检测 + 预算 + 成功/失败判定。按任务难度分配预算。停止时返回最好结果和原因、标记是否需人工。把停止条件当 Agent 版熔断——不可省的安全带，因为失控的自主循环比失控重试更危险。"
+/>
+
+### 技术架构图解与生命周期演示 (Deep Dive Diagrams & Lifecycle)
+
+#### 1. 多维防护网：Agent 循环判定流 (Multi-Dimensional Guardrails)
+
+```mermaid
+graph TD
+    classDef check fill:#e1f5fe,stroke:#0288d1,stroke-width:1px;
+    classDef block fill:#ffebee,stroke:#c62828,stroke-width:1px;
+    classDef normal fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    Start["新一轮循环起点 (Step N)"] --> CheckBudget{"1. 成本/Token 预算校验<br/>(spent >= budget?)"}:::check
+    
+    CheckBudget -->|是: 超出预算| BlockBudget["中断: 触发 STOP_BUDGET<br/>(优雅熔断/返回部分结果)"]:::block
+    CheckBudget -->|否: 预算充沛| CheckSteps{"2. 执行步数边界校验<br/>(step >= max_steps?)"}:::check
+    
+    CheckSteps -->|是: 达到上限| BlockSteps["中断: 触发 STOP_MAXSTEPS<br/>(硬兜底停止)"]:::block
+    CheckSteps -->|否: 处于安全窗口| CheckLoop{"3. 动作环路空转检测<br/>(seen_actions.count >= N?)"}:::check
+    
+    CheckLoop -->|是: 发生空转| BlockLoop["中断: 触发 STOP_LOOP<br/>(转人工 / 动态调整策略)"]:::block
+    CheckLoop -->|否: 表现正常| ExecBrain["4. 大脑规划与执行 (Exec)<br/>- 评估状态并调用工具"]:::normal
+    
+    ExecBrain --> Increment["5. 计费与步数计数<br/>- step++<br/>- spent += cost"]
+    Increment -->|启动下轮| Start
+```
+
+#### 2. 循环空转检测原理对比 (Loop Detection Mechanisms)
+
+```mermaid
+graph LR
+    classDef signature fill:#e1f5fe,stroke:#0288d1,stroke-width:1px;
+    classDef state fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+    classDef semantic fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
+
+    subgraph SigMode [签名重复检测 (Signature Repetition)]
+        HashCompare["哈希动作比对:<br/>Hash(Action + Args)"]:::signature
+        HashCompare -->|连续 N 次相同| SigTrigger["触发 STOP_LOOP"]
+    end
+
+    subgraph StateMode [状态循环检测 (State Loop)]
+        GraphCycle["状态转移有向图:<br/>State A -> State B -> State A"]:::state
+        GraphCycle -->|检测到环路闭环| StateTrigger["触发 STOP_LOOP"]
+    end
+
+    subgraph SemanticMode [语义重复检测 (Semantic Loop)]
+        Similarity["Thought 文本向量比对:<br/>Embedding Similarity > 0.95"]:::semantic
+        Similarity -->|语义陷入鬼打墙| SemanticTrigger["触发 STOP_LOOP"]
+    end
+```
+
+#### 3. 异常熔断与人在回路协同 (HITL & Circuit Breaking Integration)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Agent as Agent Loop
+    participant Gate as Gatekeeper (安全网)
+    participant Orchestrator as 协调编排层 (Orchestrator)
+    participant User as 人在回路 (HITL / User)
+
+    Agent->>Gate: 执行下一步 Action (check, same)
+    Note over Gate: 检测到第 3 次连续重复 Action
+    
+    Gate->>Orchestrator: 抛出异常 (STOP_LOOP)
+    rect rgb(255, 235, 238)
+        note over Orchestrator: 触发熔断保护 (Circuit Breaker)<br/>执行优雅降级 (Graceful Degradation)<br/>保存当前推理草稿 (Context Archive)
+    end
+    
+    Orchestrator->>User: 发送报警并挂起任务: 检测到死循环，请确认
+    alt 用户选择强制换策略
+        User-->>Orchestrator: 提供新指引 (例如: "换一个搜索引擎")
+        Orchestrator->>Agent: 修正 Memory 上下文，继续运行
+    else 用户选择优雅停止
+        User-->>Orchestrator: 确认终止任务
+        Orchestrator-->>Agent: 销毁运行实例
+    end
+```
+
+#### 4. 交互演示：停止条件安全防御链
+
+以下展示了安全防御网拦截失控循环与成本超限的五个具体防御步骤：
+
+<StepFlow
+  steps={[
+    {
+      title: '1. 循环起点成本审计',
+      desc: '进入新的一步前，前置累加器计算当前已消耗的 token 额度或 API 物理花费。当 spent 逼近 budget 限制时，立刻拉响警报。',
+      diagram: '累加器: spent: $9.50 ──> 限制值: $10.00 ──> 额度检测通过'
+    },
+    {
+      title: '2. 循环步数硬门槛校验',
+      desc: '比对当前 step 与 max_steps。作为终极底线拦截网，即使模型推理完全跑偏，该门槛也能保证系统有界停机。',
+      diagram: '当前步数: 19 ──> 硬上限: 20 ──> 放行'
+    },
+    {
+      title: '3. 环路签名相似度检查',
+      desc: '检查最近数次行动序列（Action + Argument）。若模型在工具报错后依然以完全一致的参数反复发出重试（鬼打墙），立即将其熔断。',
+      diagram: 'seen_actions: [check(same), check(same), check(same)] ──> 触发 STOP_LOOP'
+    },
+    {
+      title: '4. 动态降级与优雅停机',
+      desc: '当拦截发生时，系统不直接抛出 crash 异常，而是整理已经得到的前置 Observation，生成一份“尽力而为”的半成品结果报告。',
+      diagram: 'STOP_LOOP 拦截 ──> 提取前 18 步有效成果 ──> 生成半成品报告'
+    },
+    {
+      title: '5. 人在回路状态转交',
+      desc: '将半成品报告、拦截原因及当前的上下文上下文快照打包，投递至告警队列或前端页面，挂起线程等待人工介入，实现高可用运维。',
+      diagram: '保存快照 ──> 挂起线程 ──> 投递人工审查面板'
+    }
+  ]}
 />
 
 ## 三、跟我做一遍：循环检测 + 预算的 Agent Loop
@@ -177,6 +290,46 @@ Agent 时代的一类新事故：一个 Agent 因为某个工具持续失败、�
 - 你检测循环/空转吗？模型反复试同一个失败动作时，是会一直试到上限，还是能提前止损/换策略/转人工？
 - 触发停止时，你的 Agent 是崩溃丢弃，还是优雅返回"部分结果 + 为什么停 + 是否需人工"？
 
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '为什么在生产级 Agent 系统中，“最大步数（max_steps）”被视为兜底的“生命线”安全带？',
+      options: [
+        'A. 因为设置最大步数可以提升底层大模型的上下文检索准确率',
+        'B. 大模型是非确定性系统，在遭遇环境异常时极易发生逻辑陷入，如果没有硬性的步数上限限制，Agent 会发生无法预测的持续循环，导致 Token 账单与系统线程资源被无限燃烧',
+        'C. 设置最大步数可以让大模型的思考耗时减半',
+        'D. 为了强行阻止大模型调用只读工具，提高写入性能'
+      ],
+      answer: 1,
+      explain: '最大步数是整个 Agent Loop 的硬界限。无论模型多么聪明，都无法保证 100% 不陷入死循环或鬼打墙。从 SRE 和资源安全的角度看，必须给不确定的执行树规定一个强硬的硬物理上限，这是保护系统资源不被耗尽的最有效兜底。'
+    },
+    {
+      q: '循环检测（Loop Detection）与最大步数（Max Steps）在 Agent 防御设计中有什么关系与取舍？',
+      options: [
+        'A. 循环检测完全可以替代最大步数，不需要设步数上限了',
+        'B. 最大步数属于全局粗粒度的硬上限阻断，而循环检测属于更灵敏的空转提前止损机制。二者应当并存，用循环检测在低步数时捕获“鬼打墙”，用最大步数兜底防范其他无法识别的渐进式长死循环',
+        'C. 循环检测耗费大量计算资源，在实际生产中通常被舍弃',
+        'D. 循环检测主要运行在 Agent 物理工具内部，由外部工具接口自发进行'
+      ],
+      answer: 1,
+      explain: '两者是互补的防御深度。最大步数阻止了最坏的“永不停机”灾难，但可能会白白耗尽全部步数；循环检测则通过动作签名或状态历史识别空转（如连续重复执行），能在第 3-5 步及时熔断，避免无价值的 Token 损耗。'
+    },
+    {
+      q: '触发 Agent 停止条件（如超出预算或发生空转）时，以下哪项设计最符合高弹性架构的“优雅停止（Graceful Degradation）”原则？',
+      options: [
+        'A. 直接在代码中抛出 RunTimeError，使整个宿主应用程序崩溃退出以引起开发人员注意',
+        'B. 静默丢弃所有已有轨迹，直接给用户返回“系统繁忙，请稍后再试”',
+        'C. 封存并打包当前已完成 of 中间 Observation，提供“尽力而为（Best-effort）”的半成品答卷，同时记录异常原因快照，挂起任务等待人在回路（HITL）接管或修正',
+        'D. 自动清空所有已消耗的 Token 计费历史，重置预算并从第 1 步重新开始循环'
+      ],
+      answer: 2,
+      explain: '高弹性系统（Resilient Systems）要求系统优雅降级。当 Agent 被迫中断时，它之前执行的多步动作可能已经拿到了大部分有价值的信息。将这些信息组装并输出，同时归档快照以便于人工审核或挂起，既保留了执行价值，又实现了人机协同。'
+    }
+  ]}
+/>
+
 ## 自检清单
 
 - [ ] 我能列出 Agent 必须的停止条件（max steps/循环检测/预算/成功失败）。
@@ -186,9 +339,9 @@ Agent 时代的一类新事故：一个 Agent 因为某个工具持续失败、�
 
 ## 常见误解
 
-- **"模型会自己判断该停了"**：模型不可靠，可能永不停或空转；必须工程强制兜底。
-- **"有最大步数就够了"**：可能在上限内一直空转、或单步成本就很高；还要循环检测和预算。
-- **"停止就是报错丢弃"**：要优雅停止，返回部分结果和原因、标记是否需人工。
+- **“模型有自知之明，会在发现无法完成任务时主动判定 finish”**：这是极其危险的拟人化误区。面对工具的反复报错，模型经常会产生“只要我换个姿势重试就一定能成功”的幻觉，或者单纯因为指令遵循度不够而无法输出 finish，从而陷入无休止的“尝试-失败”死循环。工程硬核拦截是唯一绝对可信的兜底。
+- **“我们已经设置了 max_steps=30，所以不需要管成本预算了”**：最大步数只限制了“次数”，但无法控制“厚度”。大模型单次交互的 Token 长度（尤其是包含了超长工具反馈或 RAG 检索结果后）可能会呈现爆炸式增长。一个 30 步的循环可能因为单步 Token 暴涨而烧掉极高费用。因此，必须引入基于 Token 数或 API 物理花费的**双重预算熔断机制**。
+- **“触发停止条件就代表任务彻底失败，只能抛异常报错”**：在 SRE 思维中，熔断停止不是崩溃，而是**优雅降级**。Agent 的中间执行轨迹也是极其昂贵的资产。优雅停止应做到“资产保存”（保留部分推理成果并反馈）与“异常隔离”（记录快照，转交给人在回路协同），这也是系统能够弹性运转的精髓。
 
 ## 延伸阅读
 
