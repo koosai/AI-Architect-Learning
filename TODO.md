@@ -33,7 +33,7 @@
 - [x] **B3. Elasticsearch** (Lucene 段结构、倒排列存、分片与近实时) ✅
 - [x] **B5. TikTok/抖音推荐** (Monolith 实时训练、特征哈希与召回排序) ✅
 - [x] **C2. Twitter/X.com** (时间线 Fanout 读写权衡、微服务极简演进) ✅
-- [ ] **C3. 微信 WeChat** (万亿消息与红包高并发单元化架构)
+- [x] **C3. 微信 WeChat** (万亿消息与红包高并发单元化架构) ✅
 - [ ] **D1. Office 365 + Copilot** (Graph 数据层、协作编排与安全控制)
 - [ ] **D3. Google Docs** (OT 协同算法与离线合并机制)
 - [ ] **D5. Figma** (WASM 渲染引擎与 multiplayer 协同服务器)
