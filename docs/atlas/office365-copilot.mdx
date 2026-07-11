@@ -1,0 +1,415 @@
+---
+sidebar_position: 10
+title: Office 365 + Copilot：企业级 Semantic Index 与安全合规 RAG 编排架构
+description: 深度剖析 Microsoft 365 Copilot 的企业级 RAG（检索增强生成）系统架构。拆解 Microsoft Graph 语义索引（Semantic Index）、基于安全修剪 ACL 列表的权限隔离、Azure OpenAI LLM 编排 Grounding 环路，以及基于 Purview 的敏感标签级联继承机制。
+---
+
+import CaseStudyHeader from '@site/src/components/CaseStudyHeader';
+import DesignIntent from '@site/src/components/DesignIntent';
+import EvolutionTimeline from '@site/src/components/EvolutionTimeline';
+import CompareSlider from '@site/src/components/CompareSlider';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+import ResearchNote from '@site/src/components/ResearchNote';
+import GuidedExercise from '@site/src/components/GuidedExercise';
+import QuizCard from '@site/src/components/QuizCard';
+import MindMap from '@site/src/components/MindMap';
+
+# Office 365 + Copilot：企业级 Semantic Index 与安全合规 RAG 编排架构
+
+<CaseStudyHeader
+  oneLiner="Office 365 + Copilot 的架构是全球企业级 RAG（检索增强生成）系统的工程巅峰。它通过 Microsoft Graph 语义索引（Semantic Index）实现万亿企业文档与邮件的向量化映射，利用基于 ACL 访问控制的『安全修剪（Security Trimming）』杜绝数据越权暴露，并借助编排器（Orchestrator）在 Azure OpenAI 模型与企业租户隔离区之间搭建强合规的 Grounding 环路，实现了兼顾企业机密与 AI 智能的工业落地。"
+  stats={[
+    {label: '发布年份', value: '2023 年 (Microsoft 365)'},
+    {label: '检索底层服务', value: 'Microsoft Graph + SharePoint'},
+    {label: '安全合规框架', value: 'Microsoft Purview'},
+    {label: '模型供应宿主', value: 'Azure OpenAI (GPT-4 级)'},
+    {label: '数据隔离边界', value: '逻辑租户边界 (Tenant Boundary)'},
+    {label: '安全审查延迟', value: '毫秒级动态 ACL 剪裁'}
+  ]}
+/>
+
+:::info 对应课程概念
+本案例融合了以下课程核心概念：
+*   **企业级 RAG 检索与召回（Month 8 RAG）**：如何将混合检索（关键字+向量语义）与文档块（Chunking）召回机制完美应用在复杂的 Word、Teams 等多源异构 Office 环境中。
+*   **权限切片与敏感过滤（Month 11 架构安全）**：如何利用现存的 Active Directory ACL 规则在 RAG 管道中实施无感安全修剪（Security Trimming）。
+*   **微服务编排与动态路由（Month 11）**：Orchestrator 编排器如何在用户 Prompt、Graph 检索与 Azure 大模型服务间建立强合规的状态流转。
+:::
+
+---
+
+## 1. 设计初衷：企业 AI 落地的“合规与泄露”天堑
+
+将大语言模型（LLM）引入企业办公（Word、Teams、PowerPoint）的商业价值是巨大的，但对系统架构提出了近乎苛刻的安全挑战：
+1.  **数据越权泄露（Oversharing）**：如果员工 A 提问：“汇总公司当前的薪酬和财务计划”，而这些数据存放在员工 A 并没有权限查看的 SharePoint 文档里。如果 RAG 系统盲目检索并将其喂给 LLM 生成答案，就会造成极其严重的**企业越权信息泄露**。
+2.  **租户隔离墙（Tenant Boundaries）**：企业客户最深切的担忧是“我的数据是否会被 Microsoft 拿去训练大模型”，从而导致商业机密在其他企业使用 AI 时泄露。
+3.  **敏感标签（Sensitivity Labels）级联丢失**：企业文档通常打着“机密（Confidential）”、“内部公开”等 Sensitivity Labels。当 AI 提炼这些文档生成摘要并新建一个文档时，如果这个敏感标签丢失了，合规体系将瞬间失效。
+
+为此，Microsoft 设计了结合 **Microsoft Graph 语义索引**、**Purview 敏感防护** 及 **安全修剪 RAG 环路** 的 Copilot 编排系统。
+
+<DesignIntent
+  problem="如何在彻底隔离企业多租户数据、防止模型训练污染的前提下，实现基于 Microsoft Graph 语义索引的高相关 Grounding 检索，并实施毫秒级 ACL 安全修剪与标签级联继承，保障企业智能办公的极致高可用与零泄露。"
+  users="全球成千上万家企业级客户中的日常办公职员、IT 审计员与安全合规主管。"
+  devices="与 Office 365 客户端（Teams、Word、Excel、Outlook）无缝嵌入，后台挂载于 Microsoft 365 云和 Azure 安全沙箱区。"
+  goals={[
+    '极致合规隔离：任何企业用户的输入（Prompts）与检索出的上下文，绝对不用于公共模型的训练',
+    '敏感标签级联继承（Label Inheritance）：AI 提炼生成的文档，自动继承源头文档中最严苛的 sensitivity label 标签',
+    '动态安全修剪（Security Trimming）：召回阶段直接在搜索引擎和向量库底层过滤用户无权读取的文档块（Chunks）',
+    '超强企业多源检索（Semantic Index）：跨越邮件、会议纪要、聊天记录与 SharePoint 文件，生成关联的语义向量映射'
+  ]}
+  constraints={[
+    '文档权限（ACL）极其复杂，且时刻动态变更，不可在向量库中静态写死，必须在查询时动态求交集过滤',
+    'Azure OpenAI 接口网络 RTT 较长，必须在编排器 Grounding 阶段控制并发检索的延迟，防止超时',
+    '大模型上下文窗口（Context Window）有限，无法将整个企业云盘塞入，必须精准分词并提取 Top K 最优 Chunk'
+  ]}
+  firstStep="在 SharePoint/Exchange 底层建立 Semantic Index 并生成向量；在用户发起 Prompt 时，先将用户身份与 Active Directory 的 ACL 列表做鉴权校验；召回过滤无权文档后，将安全 Chunks 拼装为 Metaprompt 喂入 Azure OpenAI；通过 Purview 进行 DLP 安全阻断审计后返回客户端。"
+/>
+
+---
+
+## 2. 知识全景脑图
+
+<MindMap
+  root={{
+    label: 'Office 365 Copilot 架构',
+    children: [
+      {
+        label: '语义与向量 (Indexing)',
+        children: [
+          { label: 'SharePoint / Exchange 扫描' },
+          { label: 'Microsoft Graph 关系图' },
+          { label: 'Semantic Index 向量化 (Embeddings)' },
+          { label: '实时段落切片 (Chunking)' }
+        ]
+      },
+      {
+        label: '编排与 Grounding (RAG Pipeline)',
+        children: [
+          { label: 'Orchestrator 编排脑' },
+          { label: 'Prompt Grounding (上下文拼接)' },
+          { label: 'Azure OpenAI 租户隔离隔离' },
+          { label: '安全过滤与 DLP 阻断' }
+        ]
+      },
+      {
+        label: '权限防漏 (Security)',
+        children: [
+          { label: 'Active Directory ACL 联动' },
+          { label: '动态安全修剪 (Security Trimming)' },
+          { label: 'Purview 敏感标签级联继承' },
+          { label: '防模型污染 (No Model Training)' }
+        ]
+      }
+    ]
+  }}
+/>
+
+---
+
+## 3. 系统架构总览 (C4 Model)
+
+Office 365 + Copilot 的核心理念是**在租户信任边界内进行数据召回与 LLM 交互**。
+
+### 3a. System Context (系统上下文图)
+
+```mermaid
+graph TB
+    classDef client fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
+    classDef main fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef third fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
+
+    UserApp["Office 365 客户端 (Word/Teams)"]:::client -->|1. 发送提示词 (Prompt)| CopilotGateway["M365 Copilot Gateway"]:::main
+    
+    CopilotGateway -->|2. Grounding 与编排| Orchestration["Copilot Orchestration Engine"]:::main
+    
+    subgraph EnterpriseTenantBoundary [企业租户安全边界 (Tenant Boundary)]
+        Orchestration <-->|3. 语义检索与 ACL 检查| MicrosoftGraph["Microsoft Graph & Semantic Index"]:::main
+        MicrosoftGraph <-->|4. 数据拉取| TenantData[("SharePoint / Outlook 数据存储")]:::third
+    end
+    
+    Orchestration -->|5. 发送合规 Prompt| AzureOpenAI["Azure OpenAI Hosting (GPT-4 模型)"]:::main
+```
+
+### 3b. Container Diagram (容器结构图)
+
+```mermaid
+graph TB
+    classDef serve fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef data fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+    classDef policy fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+
+    UserRequest["User Prompt (Office App)"] --> CopilotEngine["Copilot Orchestration Engine<br/>(状态编排器)"]:::serve
+    
+    subgraph GraphSemanticPlatform [语义索引存储引擎]
+        CopilotEngine -->|1. 召回请求| GraphAPI["Microsoft Graph API"]:::serve
+        GraphAPI -->|2. 检索语义相关性| SemanticIndex["Semantic Index Service<br/>(向量搜索引擎)"]:::data
+        GraphAPI -->|3. 并发提取权限表| ActiveDirectory["Active Directory ACLs<br/>(用户访问控制列表)"]:::data
+    end
+
+    subgraph LLMSecuritySandBox [LLM 交互与安全网关]
+        CopilotEngine -->|4. 权限修剪后的安全上下文| MetapromptMaker["Metaprompt Builder<br/>(提示词与上下文拼接器)"]:::serve
+        MetapromptMaker -->|5. 安全 RPC 发送| AzureOpenAIService["Azure OpenAI Service<br/>(模型权重只读、不回传数据)"]:::serve
+        
+        AzureOpenAIService -->>|6. 返回原始文本| PurviewDLP["Microsoft Purview DLP Filter<br/>(合规安全策略引擎)"]:::policy
+        PurviewDLP -->|7. 敏感标签继承与级联| LabelInheritor["Label Inheritor Engine"]:::policy
+    end
+
+    LabelInheritor -->>|8. 返回带有机密标签的答案| UserRequest
+```
+
+---
+
+## 4. 核心机制拆解
+
+### 4a. 语义索引构建管线 (Semantic Indexing Ingest)
+
+为了让大模型具备在企业内部“博古通今”的检索精度，系统在后台对企业云盘与邮件进行持续的向量化提取：
+1.  **文件监听与切片（Chunking）**：SharePoint / Exchange 监听到文档修改后，自动调用 Parser 将 Word/PPT/邮件 拆分成重叠的小文本块（每个 Chunk 约 200-500 字）。
+2.  **向量嵌入（Vector Embeddings）**：调用 Embedding 模型，将每个文本块转化为固定维度的密集浮点向量。
+3.  **权限列表绑定**：这是关键！对于每一个被索引的文件/Chunk，系统从 Active Directory 中实时提取其对应的 **ACL（Access Control List）**，记录哪些组（Groups）或用户具有只读/读写权限。将这些 ACL IDs 压缩后作为 metadata 与向量数据一起存入分布式向量数据库中。
+
+```mermaid
+graph TD
+    classDef ingest fill:#e3f2fd,stroke:#1565c0,stroke-width:1.5px;
+    classDef store fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    DocChange["企业 SharePoint 文档变更事件"] --> Parser["Document Parser & Text Chunker"]:::ingest
+    Parser -->|分段 Chunk| Embedder["Azure Embedding Model"]:::ingest
+    
+    DocChange -->|提取元数据| AclExtractor["Active Directory ACL 提取器"]:::ingest
+    AclExtractor -->|用户/群组权限 IDs| AclPacker["ACL 压缩打包器"]:::ingest
+    
+    Embedder -->|向量数据 [0.12, -0.89, ...]| VectorStore["Semantic Index 向量数据库 (租户隔离)"]:::store
+    AclPacker -->|元数据 {"Acl": [GroupA, UserB]}| VectorStore
+```
+
+---
+
+### 4b. 安全修剪与 Grounding 闭环 (Security Trimming & Grounding Loop)
+
+安全修剪是防止企业内机密越权泄露的“安全网闸”：
+*   **搜索阶段的安全剪裁（Read-time Security Trimming）**：
+    1.  当用户 A 提问：“公司下一阶段的海外业务部署是什么”时，Orchestrator 接收请求，并并发向 Microsoft Graph 检索。
+    2.  在检索向量库和搜索引擎时，系统强行在底层的 SQL/向量过滤条件中注入用户 A 自身的身份标识和其所属的所有 Active Directory Group IDs。
+    3.  向量检索系统仅在**用户 A 拥有读取权限的文档子集**中执行余弦相似度计算，从物理底层直接丢弃无权查看的 Chunks。
+*   **敏感标签级联继承（Purview Integration）**：
+    1.  如果召回出的前 3 个安全 Chunks，分别来自两个打了 `机密 (Confidential)` 标签的文件和一个打了 `极密 (Highly Confidential)` 标签的文件。
+    2.  LLM 生成摘要答案后，Microsoft Purview 策略引擎会评估这些上下文的源标签，并遵循 **“木桶效应 / 就高原则（Max Restriction Principle）”**，强行把最终返回的结果及新建的文件自动盖上 `极密 (Highly Confidential)` 的数字资产钢印，确保合规体系的完整闭环。
+
+```mermaid
+graph TD
+    classDef query fill:#e3f2fd,stroke:#1565c0,stroke-width:1.5px;
+    classDef trim fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
+    classDef result fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
+
+    UserPrompt["用户 A 发起 Prompt 查询"] --> Orchestrator["Orchestrator 编排器"]:::query
+    Orchestrator -->|并发拉取 A 的权限| AclGet["Active Directory ACL 收集"]:::query
+    
+    AclGet -->|A 的权限 ID 列表: [Group#1, User#A]| VectorSearch["向量检索语义召回"]:::query
+    
+    subgraph SecurityTrimProcess [动态安全修剪 (Security Trimming)]
+        VectorSearch --> MatchAcl{"检查 Chunk 元数据中的 ACL 是否包含 A 的权限 ID?"}:::trim
+        MatchAcl -->|No| Discard["从结果集中彻底丢弃 (物理隔离)"]:::trim
+        MatchAcl -->|Yes| Keep["保留此 Chunk 作为安全背景上下文"]:::trim
+    end
+    
+    Keep --> GetLabels["提取安全 Chunks 的 Sensitivity Labels"]:::result
+    GetLabels --> ModelGen["大模型拼接 Grounding 提示词并生成答案"]:::result
+    
+    ModelGen --> PurviewLabel["Purview 评估: 提取最高敏感级别标签 (Highly Confidential)"]:::trim
+    PurviewLabel --> ReturnDoc["生成带有 Highly Confidential 钢印的最终响应文档"]:::result
+```
+
+<ResearchNote
+  title="Microsoft 365 Copilot：企业数据隐私与大模型合规地基"
+  source="Microsoft Tech Report (2023), Data, Privacy, and Security for Microsoft 365 Copilot (Official Docs)"
+  href="https://learn.microsoft.com/en-us/copilot/microsoft-365/microsoft-365-copilot-privacy"
+  insight="Microsoft 阐明了其企业级 Copilot 的三大底线：租户数据完全本地驻留（Data Residency）、公共基础模型绝对不读取企业运行时产生的数据（No model training on tenant data）、以及严苛实施的安全修剪（Security Trimming）。其核心在于通过 Microsoft Graph 将异构企业数据源统一组织，并在 RAG 检索底层强制交织 Active Directory 的 SID 列表，从而在不修改大模型底座的前提下解决了安全性问题。"
+  application="架构启示：设计面向 B 端的 RAG 应用，千万不要指望通过 LLM 的“角色扮演（Metaprompt Instructions）”或者在 Prompt 里叮嘱“如果用户没有权限请不要回答”来保障安全。大模型极易通过越狱（Jailbreak）绕过指令。唯一的安全防线是**检索层（Retrieval Layer）的物理修剪**——在数据被送到大模型眼前之前，就把无权的内容物理性擦除。这也完美契合了 Month 11 的系统合规安全性。"
+/>
+
+---
+
+## 5. 关键数据结构与算法
+
+### 5a. 余弦相似度 (Cosine Similarity) 向量检索
+
+在 Semantic Index 中，文本块被转化为 $D$ 维稠密浮点向量。查询词 $q$ 与文本块 $d$ 的关联程度通过计算两个向量夹角的余弦值进行打分：
+
+$$Similarity(q, d) = (q \cdot d) / (||q|| \cdot ||d||) = sum(q_i \cdot d_i) / (sqrt(sum(q_i^2)) \cdot sqrt(sum(d_i^2)))$$
+
+#### 工程落地优化：
+在超大企业租户尺度下，如果逐行计算余弦相似度，I/O 耗时将无法承受。因此，Semantic Index 预先对向量进行 **$L_2$ 范数归一化（Normalize）**，使得 ||q|| = ||d|| = 1。
+这样，余弦相似度退化为**向量点积（Dot Product）**：
+$$Similarity(q, d) = sum(q_i \cdot d_i)$$
+点积计算仅包含简单的乘加操作（FMA），能够通过 GPU/CPU 的 AVX-512 向量化指令集得到数百倍加速，实现了亚毫秒级的检索。
+
+---
+
+### 5b. 动态安全修剪 ACL 剪裁位图 (Security Trimming Bitmap)
+
+为了加速每次查询时的权限校验，Active Directory 采用**布隆过滤器（Bloom Filter）** 或 **压缩位图（Roaring Bitmaps）** 记录文档和用户的 SID。
+对于每一个召回的候选 Chunk，其元数据保存一个 ACL Roaring Bitmap：`document_acl`。
+当用户 A 查询时，获取用户自身的群组 SID 组成的 Roaring Bitmap：`user_sids`。
+系统通过极速的**位图求交（Bitwise AND）**运算：
+$$HasAccess = (document\_acl \cap user\_sids) \neq \emptyset$$
+如果交集不为空，说明用户拥有访问该 Chunk 的权限，反之则无权查看。这在大规模高并发检索下，比传统的数据库嵌套 `IN (groups)` 联查性能提升了 3 个数量级。
+
+---
+
+## 6. 架构演进史
+
+微软 Office 办公套件从早期的本地单机排版，到云端协作，再到 AI 助手的演进，是典型的企业级架构进化史：
+
+<EvolutionTimeline
+  events={[
+    {
+      year: '2003',
+      title: '单机局域网时代：本地文件与 SMTP Exchange',
+      why: '早期的 Office 是纯本地单机应用。文档交互依赖局域网物理拷贝或 Outlook Exchange 邮件收发，没有中央数据关联，更没有统一的数据访问层。',
+      change: '文档存储主要基于本地 FAT32/NTFS 文件系统；引入 Active Directory 进行基础的局域网单机域登录权限控制。'
+    },
+    {
+      year: '2016',
+      title: '云端多活与 Microsoft Graph 统一时代',
+      why: 'Office 365 上线，企业走向云端协作。多地机房需要实时同步，Word Online 等需要实时多人协同，亟需一个统一的数据网关来解决异构数据孤岛问题。',
+      change: '推出统一的 API 网关——Microsoft Graph，将邮件、会议、文件、人际关系图谱全部转化为关系实体；底层数据全面托管在逻辑租户隔离的分布式云数据库。'
+    },
+    {
+      year: '2023',
+      title: 'Semantic Index 向量化与 Copilot RAG 编排时代',
+      why: '生成式 AI 爆发，传统的关键字搜索无法胜任基于大语言模型的企业级意图理解，且企业客户对数据隐私与权限隔离有极高敏感度。',
+      change: '引入 Semantic Index 向量化存储，将 Graph 数据实时转换为 Vector Chunks；开发安全修剪（Security Trimming）过滤器；将 M365 接入 Azure OpenAI，实现了合规的 RAG 地基架构。'
+    }
+  ]}
+/>
+
+---
+
+## 7. 架构对比：大模型公共 API 直接交互 vs. Copilot 租户隔离 RAG
+
+<CompareSlider
+  before={
+    <div style={{ padding: '20px', background: '#ffebee', border: '1px solid #c62828', borderRadius: '8px', height: '100%', color: '#333' }}>
+      <strong>大模型公共 API 直接交互 (传统无合规)</strong>
+      <p style={{ marginTop: '10px', fontSize: '0.9rem' }}>用户的提问和企业文件直接发送给外部公共 LLM 接口。大模型在云端缓存或直接将这些私密文本块作为训练样本进行学习。极易导致企业专利、财务报表在外部用户的后续提问中被大模型“吐”出来，引起严重商业泄密。</p>
+    </div>
+  }
+  after={
+    <div style={{ padding: '20px', background: '#e8f5e9', border: '1px solid #2e7d32', borderRadius: '8px', height: '100%', color: '#333' }}>
+      <strong>Copilot 租户隔离 RAG 架构 (企业强合规)</strong>
+      <p style={{ marginTop: '10px', fontSize: '0.9rem' }}>企业文档和 Prompts 严格在本地租户信任边界内进行检索与权限过滤。发往 Azure OpenAI 的请求走强隔离只读通道（不存储、不缓存、不用作模型迭代）。输出端强制 Purview DLP 拦截与标签级联继承，保障企业资产绝对机密。</p>
+    </div>
+  }
+  labels={['公共 API 直接交互', 'Copilot 租户隔离 RAG']}
+/>
+
+---
+
+## 8. 权衡：企业级 AI 架构的核心折中光谱
+
+Office 365 Copilot 在追求极致的安全合规与高效智能时，面临着以下维度的架构取舍：
+
+<TradeoffExplorer
+  title="Copilot 检索精度、合规安全与响应时延折中"
+  dimensions={['企业合规安全性 (零泄露)', 'AI 交互智能度', '首字节延迟 (RTT)', '计算与向量存储成本', '系统接入复杂度']}
+  options={[
+    {
+      name: '动态安全修剪 (Query-time Trim)',
+      scores: [5, 4, 3, 3, 2],
+      note: '每次查询时动态将用户的 Active Directory 所有组 SID 与候选 Chunks 进行位图求交校验。保证了权限的时效性（员工一旦被调出群组，1秒后便无法检索该群组的 AI 资料）。缺点是增加了每次检索的响应耗时，且在向量库底层需要额外的计算损耗。',
+      whenToUse: '权限动态多变、企业安全控制级别极高的中大型企业环境。'
+    },
+    {
+      name: '静态向量库按用户分级路由 (User-level Sharding)',
+      scores: [3, 3, 5, 1, 4],
+      note: '为每个员工独立隔离一部分向量空间。检索时直接访问该员工的专属分区，无需动态求交权限列表，检索极快。但缺点是存储成本呈几何级暴涨（同一份共享文档被 100 个人共享，就要复制 100 次向量），且无法实时响应共享权限的动态修改。',
+      whenToUse: '员工数较少、共享目录高度固定的微型私有云部署。'
+    },
+    {
+      name: '极速 Grounding 上下文限制 (Top 3 Chunks)',
+      scores: [2, 3, 5, 5, 5],
+      note: '限制召回的文本块数量为 3 个。能极大缩减发给 LLM 的 Metaprompt 长度，不仅大幅降低了 OpenAI API 费用，响应延迟也压缩了 40%。代价是召回背景深度不够，模型容易因为缺失必要上下文而胡说八道（幻觉）。',
+      whenToUse: '对实时时延非常敏感、主要处理简单问答和短文摘要的日常协同应用。'
+    }
+  ]}
+/>
+
+---
+
+## 9. 如果是你来设计：带权限安全修剪的 Grounding 编排器
+
+### 场景设想
+在企业级 RAG 系统中，当用户 A 发起 Prompt 提问时，Orchestrator 编排器需要进行 Grounding：
+*   **语义检索**：从向量数据库中召回 Top K 相似的 Chunks。每个 Chunk 都有一个元数据结构记录了授权的 ACL Groups（如：`"acl_groups": ["HR", "Finance"]`）。
+*   **权限过滤**：Orchestrator 从 Active Directory 获取用户 A 所属的群组列表（如：`["Engineering", "Design"]`）。
+*   **安全修剪**：物理过滤掉那些用户 A 不具有对应 Group 权限的 Chunks，并最终将安全 Chunks 拼装成 Metaprompt。
+
+请你用 Python 实现这个带有安全修剪（Security Trimming）的 Grounding 编排器。
+
+<GuidedExercise
+  title="基于 Python 的权限感知 Grounding 编排器实现"
+  goal="编写代码模拟 Active Directory 权限查询、向量召回列表的动态 ACL 过滤，并拼装出安全的 Metaprompt 提示词。"
+  steps={[
+    '步骤 1: 设计初始化数据。用字典定义 `user_groups = {"A": ["Engineering", "AllStaff"], "B": ["HR", "Finance", "AllStaff"]}` 存放用户的 AD 组；定义一个包含多个文档 Chunks 的列表，每个 Chunk 包含 `text`、`similarity`、`acl_groups`（需要哪些组权限）。',
+    '步骤 2: 编写 `security_trimming(user, chunks)` 函数。获取 `user` 所属的 `user_groups` 列表；遍历 `chunks`，计算 `chunk["acl_groups"]` 与用户所属组的交集；若交集为空，则丢弃该 Chunk；若交集不为空，则保留该 Chunk。',
+    '步骤 3: 编写 `ground_prompt(user, query_prompt, trimmed_chunks)` 编排拼接函数。将过滤后留存的最相关的 Chunks 拼装进一个 Metaprompt 模板中，并最终返回安全的 Metaprompt。',
+    '步骤 4: 运行校验。模拟用户 A（Engineering）提问。验证最终生成的 Metaprompt 中包含普通开发文档的 Chunk，但绝对没有出现任何涉及 HR/Finance 敏感文档的 Chunks。'
+  ]}
+  checks={[
+    '确认对于用户 A (Engineering)，即使 HR 敏感文档的余弦相似度极高 (e.g. 0.95)，其文本也不会出现在最终生成的 Metaprompt 里',
+    '确认对于用户 B (HR)，其生成的 Metaprompt 能完美融合 HR 相关的文档信息',
+    '算法能够正确处理空权限组（例如 acl_groups 为空，意味着全员公开）的特殊情况'
+  ]}
+/>
+
+---
+
+## 10. 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 Microsoft 365 Copilot 架构中，为什么强调必须在“检索阶段底层（Retrieval Layer）”实施安全修剪，而不是在大模型生成阶段叮嘱 LLM 过滤？',
+      options: [
+        'A. 因为向 Azure OpenAI 发送的数据包无法通过 HTTPS 加密传输',
+        'B. 大语言模型（LLM）是非确定性的，容易被用户通过精心设计的“越狱提示词（Jailbreak Prompts）”绕过系统 Instruction 的权限叮嘱，导致吐出机密。最可靠的安全防线是在数据发给 LLM 之前，就在检索层将其物理性过滤清除',
+        'C. 检索层的安全修剪能极大提高 Docusaurus 前端 React 静态页面的渲染速度',
+        'D. 这样做是为了强制要求每次 AI 对话都需要扣除用户的 Office 365 账户余额'
+      ],
+      answer: 1,
+      explain: 'AI 系统的安全原则是“不要把秘密告诉可能泄密的人”。大模型对于 Prompt 的越狱绕过极度脆弱，指望 LLM 拥有自觉的“防泄密鉴权意识”是极其危险的。唯一的安全路径是：根本不把无权查看的 Chunk 塞进 Prompt 上下文中。'
+    },
+    {
+      q: '关于 Microsoft Purview 与 Copilot 联合实现的“敏感标签级联继承（Sensitivity Label Inheritance）”，以下哪个说法是正确的？',
+      options: [
+        'A. 级联继承是指新生成的文档在共享时，会自动向所有没有 Office 365 账号的外部邮箱广播',
+        'B. 它遵循“木桶效应 / 就高不就低”的原则，评估生成答案所引用的一系列安全 Chunks 来源文档。如果其中一个文件是“极密（Highly Confidential）”，则自动将生成的文档或答案级别强制设为“极密”，确保资产在流转中不失控',
+        'C. 它会在用户每次刷到明星大 V 的推文时强制弹出验证码',
+        'D. 级联继承仅在 Active Directory 发生时钟回拨时才会被动激活'
+      ],
+      answer: 1,
+      explain: '这是企业资产防丢失的关键合规底线。大模型在加工整合了多份文档生成新内容时，新内容如果变回了普通文档，极易被转发泄漏。级联继承用就高原则，强制打上源头最严苛文件的敏感水印，实现合规流转闭环。'
+    },
+    {
+      q: '在构建大范围的 Semantic Index 语义向量时，如何将余弦相似度（Cosine Similarity）的工程计算开销最小化以支撑亚毫秒级响应？',
+      options: [
+        'A. 丢弃所有的浮点向量，退回到传统纯英文的正则表达式搜索',
+        'B. 每次计算前都将向量重新进行随机分片并强行向所有 Coordinating Nodes 广播',
+        'C. 预先对向量进行 L2 范数归一化（Normalize），使分母向量模长固定为 1。将余弦相似度计算退化为简单的点积（Dot Product），以便利用 CPU/GPU 的向量指令集进行极速点积乘加（FMA）',
+        'D. 强制限制每个 Word 或 Teams 群聊记录的行数不能超过 800 行'
+      ],
+      answer: 2,
+      explain: '余弦相似度的公式中，分母的模长乘积计算（包含平方、累加、开根号）十分昂贵。在写入期对向量预先执行归一化，能够让模长恒等于 1，从而在查询期将公式化简为纯点积。这能极佳地契合现代硬件的 SIMD 向量加速特性，大幅压低延迟。'
+    }
+  ]}
+/>
+
+---
+
+## 来源清单
+
+*   [Microsoft Tech Report (2023), Data, Privacy, and Security for Microsoft 365 Copilot (Official Docs)](https://learn.microsoft.com/en-us/copilot/microsoft-365/microsoft-365-copilot-privacy)
+*   [Microsoft Learn: Semantic Index for Copilot overview](https://learn.microsoft.com/en-us/copilot/microsoft-365/microsoft-365-copilot-semantic-index)
+*   [Azure OpenAI Services: Data, privacy, and security for Azure OpenAI Service](https://learn.microsoft.com/en-us/legal/cognitive-services/openai/data-privacy)
+*   [Microsoft Purview: Protect and govern sensitive data processed by Copilot](https://learn.microsoft.com/en-us/purview/ai-microsoft-purview-security-compliance)
