@@ -40,7 +40,7 @@
 - [x] **E1. Linux 内核** (宏内核、调度器 CFS/EEVDF、VFS、epoll) ✅
 - [x] **E4. Android 操作系统** (ART 运行时、Binder IPC 及 LMK) ✅
 - [x] **F1. AWS S3** (11个9对象存储、分区纠删码与强一致性改造) ✅
-- [ ] **F2. DynamoDB** (一致性哈希、分区自动管理与自适应容量)
+- [x] **F2. DynamoDB** (一致性哈希、分区自动管理与自适应容量) ✅
 - [ ] **F6. Google Spanner** (TrueTime、外部一致性、全球 SQL)
 - [ ] **F7. Kubernetes** (声明式调和循环、控制器模式、etcd 集群)
 - [ ] **G1. PostgreSQL** (MVCC、WAL、B+ 树与扩展 pgvector)
