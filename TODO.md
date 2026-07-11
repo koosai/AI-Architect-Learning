@@ -35,7 +35,7 @@
 - [x] **C2. Twitter/X.com** (时间线 Fanout 读写权衡、微服务极简演进) ✅
 - [x] **C3. 微信 WeChat** (万亿消息与红包高并发单元化架构) ✅
 - [x] **D1. Office 365 + Copilot** (Graph 数据层、协作编排与安全控制) ✅
-- [ ] **D3. Google Docs** (OT 协同算法与离线合并机制)
+- [x] **D3. Google Docs** (OT 协同算法与离线合并机制) ✅
 - [ ] **D5. Figma** (WASM 渲染引擎与 multiplayer 协同服务器)
 - [ ] **E1. Linux 内核** (宏内核、调度器 CFS/EEVDF、VFS、epoll)
 - [ ] **E4. Android 操作系统** (ART 运行时、Binder IPC 及 LMK)
