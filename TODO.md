@@ -38,7 +38,7 @@
 - [x] **D3. Google Docs** (OT 协同算法与离线合并机制) ✅
 - [x] **D5. Figma** (WASM 渲染引擎与 multiplayer 协同服务器) ✅
 - [x] **E1. Linux 内核** (宏内核、调度器 CFS/EEVDF、VFS、epoll) ✅
-- [ ] **E4. Android 操作系统** (ART 运行时、Binder IPC 及 LMK)
+- [x] **E4. Android 操作系统** (ART 运行时、Binder IPC 及 LMK) ✅
 - [ ] **F1. AWS S3** (11个9对象存储、分区纠删码与强一致性改造)
 - [ ] **F2. DynamoDB** (一致性哈希、分区自动管理与自适应容量)
 - [ ] **F6. Google Spanner** (TrueTime、外部一致性、全球 SQL)
