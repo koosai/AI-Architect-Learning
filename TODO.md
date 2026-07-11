@@ -31,7 +31,7 @@
 - [x] **A4. GitHub Copilot** (毫秒级补全上下文收集与缓存) ✅
 - [x] **B1. Google Search** (爬取-索引-服务三平面、倒排与 PageRank 演进) ✅
 - [x] **B3. Elasticsearch** (Lucene 段结构、倒排列存、分片与近实时) ✅
-- [ ] **B5. TikTok/抖音推荐** (Monolith 实时训练、特征哈希与召回排序)
+- [x] **B5. TikTok/抖音推荐** (Monolith 实时训练、特征哈希与召回排序) ✅
 - [ ] **C2. Twitter/X.com** (时间线 Fanout 读写权衡、微服务极简演进)
 - [ ] **C3. 微信 WeChat** (万亿消息与红包高并发单元化架构)
 - [ ] **D1. Office 365 + Copilot** (Graph 数据层、协作编排与安全控制)
