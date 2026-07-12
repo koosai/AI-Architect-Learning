@@ -46,7 +46,7 @@
 - [x] **G1. PostgreSQL** (MVCC、WAL、B+ 树与扩展 pgvector) ✅
 - [x] **G2. Redis** (单线程事件循环、数据结构编码与集群高可用) ✅
 - [x] **G3. Kafka** (顺序写日志、零拷贝、ISR 副本与 KRaft 去 ZK) ✅
-- [ ] **H1. Git** (内容寻址对象库、DAG 结构与零成本分支)
+- [x] **H1. Git** (内容寻址对象库、DAG 结构与零成本分支) ✅
 - [ ] **H4. VS Code** (Electron 多进程、扩展宿主隔离与 LSP 协议)
 - [ ] **H5. Docker** (Namespaces, Cgroups, UnionFS, 镜像分层)
 - [ ] **I1. Netflix** (微服务 Zuul/Eureka 体系与自建 CDN)
