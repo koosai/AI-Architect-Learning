@@ -68,3 +68,8 @@
 - [x] **质量门槛自检**：统计每篇 Mermaid (≥3) / 交互 (≥1) / 测验 (≥3) 达标度。 ✅
 - [x] **术语一致性**：整合 GlossaryTerm 生成汇总术语页 `docs/glossary.mdx`。 ✅
 - [x] **完全离线测试**：断网环境下运行 `npx serve build` 验证所有交互和 Python 运行功能。 ✅
+
+## 阶段五：Atlas 案例增量扩建 (A2)
+
+- [x] **A2. Claude / Gemini**：长上下文工程与 AI Artifacts 容器化沙箱架构 ✅
+
