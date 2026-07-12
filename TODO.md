@@ -50,7 +50,7 @@
 - [x] **H4. VS Code** (Electron 多进程、扩展宿主隔离与 LSP 协议) ✅
 - [x] **H5. Docker** (Namespaces, Cgroups, UnionFS, 镜像分层) ✅
 - [x] **I1. Netflix** (微服务 Zuul/Eureka 体系与自建 CDN) ✅
-- [ ] **J1. Amazon 电商** (SOA 架构与购物车 Dynamo 高可用起源)
+- [x] **J1. Amazon 电商** (SOA 架构与购物车 Dynamo 高可用起源) ✅
 - [ ] **J3. Stripe** (支付状态机、幂等键设计、API 版本控制)
 - [ ] **J5. Uber** (H3 地理索引、派单撮合与 Docstore)
 - [ ] **K1. vLLM** (PagedAttention 显存管理、连续批处理)
