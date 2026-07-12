@@ -17,7 +17,7 @@ export default function SystemSimulator({ type, params }: SystemSimulatorProps):
   // 1. Token Bucket states
   const capacity = params?.capacity || 8;
   const refillRate = params?.refillRate || 1; // token per second
-  const [tokens, setTokens] = useState(capacity);
+  const [tokens, setTokens] = useState<number>(capacity);
 
   useEffect(() => {
     if (type !== 'token-bucket') return;
