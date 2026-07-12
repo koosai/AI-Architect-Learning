@@ -8,7 +8,7 @@
 | A3 | Gemini | ★★ | 原生多模态、与 Google 生态（Search/Workspace）的集成架构 |
 | A4 | GitHub Copilot | ★★★ | 编辑器内毫秒级补全：上下文收集、FIM、请求取消与缓存 |
 | A5 | Perplexity | ★★ | 检索增强问答产品化：搜索编排 + 引用生成 |
-| A6 | Cursor | ★★ | 代码库索引（嵌入+AST）、影子工作区、apply 模型 |
+| A6 | Cursor | ★★ | 代码库索引（嵌入+AST）、影子工作区、apply 模型 ✅ |
 | A7 | Midjourney | ★ | 扩散模型推理服务与 Discord 作为前端的取舍 |
 
 ## B. 搜索与推荐（6）
