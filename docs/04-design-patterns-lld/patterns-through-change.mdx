@@ -53,6 +53,31 @@ flowchart TD
 | 状态变化要通知多个对象 | <GlossaryTerm term="Observer Pattern" definition="观察者模式：一种行为型设计模式。定义对象间的一种一对多的依赖关系，当一个对象的状态发生改变时，所有依赖于它的对象都得到通知并被自动更新，实现观察者与被观察者解耦。">Observer (观察者模式)</GlossaryTerm> | 订单状态通知、Agent event tracing |
 | 外部接口不一致 | <GlossaryTerm term="Adapter Pattern" definition="适配器模式：一种结构型设计模式。将一个类的接口转换成客户希望的另外一个接口，使得原本由于接口不兼容而不能一起工作的那些类可以一起工作。">Adapter (适配器模式)</GlossaryTerm> | OpenAI、Anthropic、本地模型统一接口 |
 
+<TradeoffExplorer
+  title="应对变化的设计策略抉择"
+  dimensions={['扩展性', '开发成本', '运行开销', '代码直观性', '解耦程度']}
+  options={[
+    {
+      name: '极简主义 (KISS - 直接硬编码)',
+      scores: [1, 5, 5, 5, 1],
+      note: '对于绝不改变的小逻辑, 简单硬编码是开发效率最高、运行最快的方式。',
+      whenToUse: '原型开发或非常明确后续不会更改的行为逻辑。'
+    },
+    {
+      name: '面向对象多态与模式 (SOLID)',
+      scores: [5, 3, 4, 3, 5],
+      note: '通过工厂/策略/观察者模式彻底解耦。代码清晰对齐变化，但增加了中间类和心智负担。',
+      whenToUse: '行为有多种可选项, 且未来可能会继续追加新选项（符合开闭原则）。'
+    },
+    {
+      name: '全动态编排 / 元编程',
+      scores: [4, 1, 3, 1, 4],
+      note: '使用动态配置、反射或元编程。极其灵活，可以在不重新编译/发布下调整，但难以调试和维护。',
+      whenToUse: '复杂低代码引擎, 或需要由外部配置动态拼装业务行为的超大型平台。'
+    }
+  ]}
+/>
+
 ## Strategy 示例
 
 ```python

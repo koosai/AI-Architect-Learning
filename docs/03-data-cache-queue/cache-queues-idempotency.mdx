@@ -8,6 +8,7 @@ import GlossaryTerm from '@site/src/components/GlossaryTerm';
 import GuidedExercise from '@site/src/components/GuidedExercise';
 import ResearchNote from '@site/src/components/ResearchNote';
 import {CacheSimulator} from '@site/src/components/InteractiveDemos';
+import QuizCard from '@site/src/components/QuizCard';
 
 # Month 3 - 数据、缓存、队列与幂等
 
@@ -75,7 +76,14 @@ sequenceDiagram
 
 ## 队列解决什么
 
-<GlossaryTerm term="Message Queue" definition="用于在生产者和消费者之间异步传递任务或事件的系统。它能削峰、解耦和重试，但会引入重复消费、顺序和延迟问题。">Message queue</GlossaryTerm> 的作用不是让系统神奇变快，而是把“必须立刻完成”和“可以稍后完成”的工作分开。
+<GlossaryTerm term="Message Queue" definition="用于在生产者和消费者之间异步传递任务或事件的系统。它能削峰、解耦和重试，但会引入重复消费、顺序 and 延迟问题。">Message queue</GlossaryTerm> 的作用不是让系统神奇变快，而是把“必须立刻完成”和“可以稍后完成”的工作分开。
+
+```mermaid
+graph LR
+  Producer[生产者 / Producer] -->|发送事件| Queue[消息队列 / Queue]
+  Queue -->|拉取事件| Consumer[消费者 / Consumer]
+  Consumer -->|处理任务| DB[(数据库 / DB)]
+```
 
 适合放进队列的任务：
 
@@ -93,6 +101,21 @@ sequenceDiagram
 ## 幂等性
 
 <GlossaryTerm term="Idempotency" definition="同一个操作执行一次和执行多次，最终效果一样。它让客户端和服务端可以安全重试。">幂等性</GlossaryTerm> 指同一个操作执行一次和执行多次，最终效果一样。它是重试机制的前提。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  Client->>Server: 发起请求 (带 idempotency_key)
+  Server->>Redis: 查询 Key 是否存在?
+  alt 缓存命中 (重复请求)
+    Redis-->>Server: 返回上一次的处理结果
+    Server-->>Client: 返回结果 (不重复处理)
+  else 缓存未命中 (新请求)
+    Server->>DB: 开启事务，执行业务逻辑
+    Server->>Redis: 存入 Key 及结果，设置过期时间
+    Server-->>Client: 返回结果
+  end
+```
 
 ```python
 def create_order(command, idempotency_key, store):
@@ -135,6 +158,46 @@ def create_order(command, idempotency_key, store):
     '你能说明为什么写路径要小心缓存失效。',
     '你能解释队列为什么可能重复投递。',
     '你能给每条消息设计一个去重 key。'
+  ]}
+/>
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 Cache-Aside 模式中，为什么通常选择“先更新数据库，再删除缓存”而不是“更新数据库，同时更新缓存”？',
+      options: [
+        'A. 因为删除操作在 Redis 中比更新操作执行速度慢，能减少并发冲突',
+        'B. 因为如果两个写操作并发进行，更新缓存容易因乱序导致缓存中存入脏数据；而删除缓存虽然会导致下一次读 Miss，但能保证后续读取的是数据库最新值',
+        'C. 因为 Redis 不支持直接更新 Key 的值，只能删除后重新插入',
+        'D. 因为删除缓存可以节省 Redis 的内存空间'
+      ],
+      answer: 1,
+      explain: '在高并发下，如果两个写请求 A 和 B 几乎同时发生，更新缓存会导致竞态条件（如 A 先写 DB，B 后写 DB，但 B 先更新缓存，A 后更新缓存，导致缓存里是旧值 A）。删除缓存虽然会引起一次 Cache Miss，但能有效避免这种脏数据竞态。'
+    },
+    {
+      q: '消息队列在引入“异步削峰”和“系统解耦”的同时，最常给下游服务带来的分布式挑战是什么？',
+      options: [
+        'A. 消息百分之百会丢失，导致数据不一致',
+        'B. 导致网络带宽瞬间占满，瘫痪整个集群',
+        'C. 消息重复投递（At Least Once 保证）与消息乱序，要求下游消费者必须具备幂等处理和有序处理的能力',
+        'D. 消息队列会导致数据库所有表锁死'
+      ],
+      answer: 2,
+      explain: '大多数主流 MQ（如 Kafka, RabbitMQ）在保证高可用和高性能时，采用的是“至少投递一次（At Least Once）”语义，这就意味着由于网络波动或确认丢失，下游可能会收到重复的消息。因此，下游消费者必须实现幂等。'
+    },
+    {
+      q: '下列哪项操作在设计上天然是幂等的，不需要额外引入幂等键（Idempotency Key）？',
+      options: [
+        'A. 将用户的账户余额减少 100 元 (update balance = balance - 100)',
+        'B. 在订单表中插入一条新的订单记录 (insert into orders...)',
+        'C. 将用户的状态字段设置为已激活 (update users set status = "active" where id = 123)',
+        'D. 向购物车中添加一件商品 (add item to cart)'
+      ],
+      answer: 2,
+      explain: '将状态设置为固定值 "active" 是一个赋值操作（Set-based），无论执行多少次，结果都是 status 变成 "active"，因此是天然幂等的。而扣减余额、插入记录和添加购物车都是累加或追加操作，非幂等。'
+    }
   ]}
 />
 

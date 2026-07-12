@@ -10,6 +10,7 @@ import ArchitectureEvolution from '@site/src/components/ArchitectureEvolution';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 import GlossaryTerm from '@site/src/components/GlossaryTerm';
 import ResearchNote from '@site/src/components/ResearchNote';
+import QuizCard from '@site/src/components/QuizCard';
 
 # WhatsApp：50 人扛 10 亿用户的极简主义
 
@@ -107,9 +108,38 @@ BEAM 能在单机调度**数百万个**极轻量进程。WhatsApp 把每条用�
 
 还记得 [L4 的"让它崩"](../foundations/error-handling)吗？Erlang 就是这套哲学的发源地。WhatsApp 不靠"到处写防御代码"求稳，而是让出问题的进程**干净地崩溃**，由<GlossaryTerm term="Supervision Tree" definition="Erlang/OTP 的容错结构：监督者进程负责监控子进程，子进程崩溃时按预设策略自动重启到已知良好状态。">监督树</GlossaryTerm>自动把它重启到已知良好状态。几十人能维护这么大系统，很大程度上靠的就是这种"故障自愈"，而不是人去救火。
 
+```mermaid
+graph TD
+  Sup[Supervisor: 根监督者] --> SessionSup[Session Supervisor: 会话监督者]
+  SessionSup --> P1[Erlang Process A: User 1 Session]
+  SessionSup --> P2[Erlang Process B: User 2 Session]
+  
+  P1 -->|Crash/Error| SessionSup
+  SessionSup -->|Let it crash & Restart| P1
+```
+
 ### (c) Store-and-forward：用"投递即删"换隐私与省钱
 
 消息只在送达前暂存，送达后即从服务器删除。这一个决定同时拿下三样东西：**省存储**（不堆历史）、**强隐私**（服务器不长期持有内容）、**简单**（没有庞大的消息数据库要维护）。这是"设计初衷"如何直接塑造架构的典型例子。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  UserA->>Server: 1. 发送消息 (Send Message to UserB)
+  Server->>DB: 2. 检查 UserB 状态
+  alt UserB 在线
+    Server->>UserB: 3a. 投递消息
+    UserB-->>Server: 4a. 返回 ACK 确认收讫
+    Server->>UserA: 5a. 发送送达双蓝勾通知
+  else UserB 离线
+    Server->>DB: 3b. 写入离线消息队列 (Store)
+    Note over UserB,Server: 若干小时后 UserB 上线
+    UserB->>Server: 4b. 连接并拉取离线消息
+    Server->>UserB: 5b. 投递离线消息 (Forward)
+    UserB-->>Server: 6b. 返回 ACK 确认
+    Server->>DB: 7b. 从队列中永久物理删除消息 (Delete)
+  end
+```
 
 ### (d) 把数据库塞进进程：Mnesia 消灭网络跳数
 
@@ -264,6 +294,46 @@ WhatsApp 的每个"优点"背后都有明确的取舍。点选下面的扩展路
 - 如果让你**不用 Erlang**（比如用 Go 或 Java）重做 WhatsApp 的连接层，你会怎么实现"单机百万长连接 + 进程级隔离 + 故障自愈"？会损失什么？
 - "投递即删"的 store-and-forward 很省、很隐私，但用户换手机会丢历史消息。多设备时代要同步历史，这个取舍该怎么重新平衡？（提示：看 2021 的重构。）
 - 画出你自己的"群消息"投递架构：一条群消息发给 500 人，在线/离线混合，你怎么扇出？怎么避免 [L4 的重试风暴](../foundations/error-handling)？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: 'WhatsApp 采用 Erlang 语言支撑其海量长连接服务的最大技术优势是什么？',
+      options: [
+        'A. Erlang 具有卓越的数学计算与矩阵计算性能，能加速音视频转码',
+        'B. Erlang 运行在 BEAM 虚拟机之上，能以极低的内存开销（几 KB）运行数百万个完全隔离的轻量级进程（Actor），且内置了进程级别的强隔离和垃圾回收，这使得单机处理百万长连接时，单用户崩溃不会影响其他用户',
+        'C. Erlang 拥有丰富的原生 Web 前端框架，便于开发复杂的用户界面',
+        'D. Erlang 可以直接对操作系统文件系统进行块级操作'
+      ],
+      answer: 1,
+      explain: 'Erlang 是为电信级高可靠、高并发系统设计的。其 BEAM 虚拟机提供的进程（Process）不是操作系统的物理线程，而是极其轻量的协程（类似于 Go channel 驱动的 goroutine 但具备进程级隔离性，不共享内存）。这种 Actor 并发模型能轻松承载百万并发，且具备强隔离、故障自愈等优点。'
+    },
+    {
+      q: 'Erlang 的“Let it crash（让它崩）”容错哲学指的是什么？',
+      options: [
+        'A. 忽略所有系统警告，允许服务器在高负载下随意宕机',
+        'B. 在开发中尽量不写防御性代码和复杂的 `try-catch` 异常处理；当子进程遇到异常状态时，直接让其干净地崩溃退出，交由监督者进程（Supervisor）根据预设的重启策略（如 One-For-One）将其重置回已知良好状态',
+        'C. 将所有的系统错误直接抛给客户端去处理，降低服务端开发成本',
+        'D. 频繁地手动重启服务器，以清理内存碎片和泄露的连接'
+      ],
+      answer: 1,
+      explain: '“Let it crash” 是 Erlang 的核心容错哲学：与其用大量的 defensive programming 试图掩盖或修复未知的、处于脏状态的异常，不如干脆让进程立即死掉（Crash），由外部的监控进程（Supervisor）将其重启并重置。这能保证程序状态始终处于可预期的健康轨道上，即故障自愈。'
+    },
+    {
+      q: 'WhatsApp 的“Store-and-forward（存储并转发）”模式，在系统架构上做出了何种取舍？',
+      options: [
+        'A. 优先保证强一致性（Consistency），即使消息延迟发送也必须完全同步',
+        'B. 优先考虑高可用性与隐私保护：服务器仅在接收方离线时暂存消息，一旦接收方在线投递成功并返回 ACK，便立即从服务器数据库彻底物理删除该消息',
+        'C. 在服务器永久保留所有消息的历史记录，以便用户随时恢复数据',
+        'D. 强制所有客户端必须将历史聊天记录上传至 Meta 的云端大数据库中进行冷备'
+      ],
+      answer: 1,
+      explain: 'WhatsApp 极度克制的架构哲学之一是“不为用户保存历史聊天记录”（投递即删）。这个决策带来了巨大的系统红利：不需要维护庞大、重度读写的持久化消息库，数据库大小只与未投递消息量相关，从而实现极致的省钱、安全和简单。'
+    }
+  ]}
+/>
 
 ## 来源
 

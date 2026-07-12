@@ -9,6 +9,7 @@ import GuidedExercise from '@site/src/components/GuidedExercise';
 import ResearchNote from '@site/src/components/ResearchNote';
 import ChapterMeta from '@site/src/components/ChapterMeta';
 import QuizCard from '@site/src/components/QuizCard';
+import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 
 # M3L12 · Capstone：mini feed 系统
 
@@ -28,6 +29,31 @@ import QuizCard from '@site/src/components/QuizCard';
 - **功能**：关注、发帖、刷时间线（关注的人的帖子按时间倒序）。
 - **非功能**：刷 feed（读）远多于发帖（写）→ **读多写少 → 写扩散 + 缓存**（[M3L10](./feed-fanout) / [M3L5](./cache-patterns)）。写扩散虽然能换取极致读性能，但可能会在普通人给大量粉丝发帖时引起严重的 <GlossaryTerm term="Write Amplification" definition="写放大：在系统设计中指一次逻辑写请求，在底层数据库或磁盘中引发了成百上千倍物理写入的现象。在 Feed 写扩散中表现为粉丝数等于写放大倍数。">写放大 (Write Amplification)</GlossaryTerm>。
 - **关键取舍**：写扩散（读快、大V写爆）vs 读扩散 vs 混合（[M3L10](./feed-fanout)）。当面临大V粉丝众多时，需要选择混合模式，即普通人写扩散、大V读扩散，并在用户刷新动态时，在业务层内存对多路数据流执行高性能的 <GlossaryTerm term="Merge Sort" definition="归并排序：一种分治算法，在 Feed 系统的读扩散与混合模式中常用于将多个局部有序的帖子流（如各个大V的帖子列表与自身的收件箱）快速合并为一个全局按时间戳倒序排列的时间线流。">归并排序 (Merge Sort)</GlossaryTerm>。
+
+<TradeoffExplorer
+  title="Feed 扇出策略取舍"
+  dimensions={['读延迟', '写延迟', '存储成本', '大V粉丝处理', '实现复杂度']}
+  options={[
+    {
+      name: '写扩散 (Push / 推模式)',
+      scores: [5, 1, 2, 1, 4],
+      note: '发帖时复制到所有粉丝收件箱。读极快，但大V发帖时写延迟或存储开销会爆炸。',
+      whenToUse: '平均粉丝数较少，且读性能要求极高的系统。'
+    },
+    {
+      name: '读扩散 (Pull / 拉模式)',
+      scores: [2, 5, 5, 5, 3],
+      note: '刷Timeline时多路归并合并。写极快，但读延迟较高，特别是关注人数多时。',
+      whenToUse: '写吞吐量极大，或者写延迟必须极低的场景。'
+    },
+    {
+      name: '混合模式 (Hybrid)',
+      scores: [4, 4, 3, 5, 1],
+      note: '普通人推模式，大V拉模式。兼顾两者优势，但业务复杂度极高。',
+      whenToUse: '如微博、Twitter/X 等存在超级大V且用户体量巨大的社交网络。'
+    }
+  ]}
+/>
 
 ```mermaid
 flowchart TB

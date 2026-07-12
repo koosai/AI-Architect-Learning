@@ -10,6 +10,7 @@ import ArchitectureEvolution from '@site/src/components/ArchitectureEvolution';
 import TradeoffExplorer from '@site/src/components/TradeoffExplorer';
 import GlossaryTerm from '@site/src/components/GlossaryTerm';
 import ResearchNote from '@site/src/components/ResearchNote';
+import QuizCard from '@site/src/components/QuizCard';
 
 # ChatGPT：一个模型如何同时回答全世界
 
@@ -306,6 +307,46 @@ flowchart TB
 - 一个用户的对话越来越长，KV cache 越来越大，最终撑爆显存。你有哪些办法应对？（提示：分页、驱逐、卸载、摘要压缩……）
 - 全球用户分布在所有时区，你怎么做就近接入和容量调度，既降低网络延迟又不让某些区域的 GPU 闲置？（回看 [L1 延迟表](../foundations/programming-systems-primer) 与 [WhatsApp 的多机房](./whatsapp.mdx)。）
 - 对比 [WhatsApp](./whatsapp.mdx)：WhatsApp 的瓶颈是"海量长连接"，ChatGPT 的瓶颈是"昂贵的 GPU 算力与显存"。同样是全球高并发，为什么它们的架构长得完全不同？
+
+## 知识自测
+
+<QuizCard
+  questions={[
+    {
+      q: '在 Transformer 自回归解码（Decode）阶段，引入 KV Cache（键值缓存）的最根本目的是解决什么问题？',
+      options: [
+        'A. 大幅度降低模型在 Prefill（首字生成）阶段的延迟',
+        'B. 避免每次生成新 Token 时，对历史已生成的 Token 进行重复的自注意力（Query-Key/Value）计算，将 O(N^2) 的计算量降低到 O(N)',
+        'C. 压缩显存占用，让单个 GPU 可以承载多十倍的并发用户请求',
+        'D. 提升模型生成的文本质量，使其更符合人类语言逻辑'
+      ],
+      answer: 1,
+      explain: '在自回归生成过程中，下一个 Token 的生成只依赖于之前的 Token。如果没有 KV Cache，生成第 N 个 Token 时就需要对前 N-1 个 Token 进行注意力机制的矩阵乘法，造成严重的重复计算。引入 KV Cache 后，将已算过的 Key 和 Value 缓存下来，每次只需计算新 Token 的 KV 并与缓存拼接，极大提升了解码吞吐并降低了延迟，代价是增加了显存的占用。'
+    },
+    {
+      q: '在 LLM 推理优化中，PageAttention（如 vLLM 中实现）的核心设计灵感来源于哪项经典的计算机操作系统（OS）技术？',
+      options: [
+        'A. 虚拟文件系统 (VFS)',
+        'B. 虚拟内存的分页与页表映射机制 (Virtual Memory Paging)',
+        'C. 进程调度器（如 CFS/EEVDF）',
+        'D. 写时复制 (Copy-on-Write) 与匿名内存映射'
+      ],
+      answer: 1,
+      explain: '传统的 KV Cache 在内存分配上需要为每个请求预先分配最大可能长度的连续物理显存，这导致了严重的碎片化（内碎片和外碎片），浪费高达 60%-80% 的显存。vLLM 借鉴了操作系统中的虚拟内存分页思想，将 KV Cache 拆分为固定大小的物理块，通过类似操作系统的页表映射关系将逻辑块映射到物理块上，从而实现非连续、动态的显存分配，几乎消除了所有显存碎片，成倍提升了并发服务上限。'
+    },
+    {
+      q: '为了彻底打满 GPU 算力并提升高并发吞吐，ChatGPT 等推理服务普遍引入了“连续批处理（Continuous Batching）”技术。它与传统批处理（Traditional Batching）的主要区别是？',
+      options: [
+        'A. 传统批处理只在 CPU 上运行，连续批处理全部下沉到 GPU tensor core',
+        'B. 传统批处理要求同一批次中的所有请求必须完全结束才能返回；而连续批处理在 Iteration（迭代）粒度上动态运行，只要有一个请求生成完毕（遇到 EOS）即可立刻退出，并随时插入新的请求进行填充',
+        'C. 连续批处理要求用户输入的 Prompt 长度必须完全一致，否则无法运行',
+        'D. 连续批处理是通过增加温度参数（Temperature）来实现高并发吞吐的'
+      ],
+      answer: 1,
+      explain: '由于不同用户的提问和模型生成的回答长度千差万别，传统的 Batching 必须等待本批次里最长的那个请求结束，这会导致短请求被长请求拖死，GPU 产生大量的无用填充 padding。Continuous Batching 在每次 Token 解码的迭代间隙进行批次重新组装（Iteration-level scheduling），允许已完成的请求提前退出，新请求随时加入，极大压榨了 GPU 吞吐量。'
+    }
+  ]}
+/>
 
 ## 来源
 
