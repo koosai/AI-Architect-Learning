@@ -15,7 +15,7 @@
 | # | 案例 | Tier | 核心看点 |
 |---|---|---|---|
 | B1 | Google Search ✅ | ★★★ | 爬取-索引-服务三平面、倒排索引、排序信号演进（PageRank→学习排序→RankBrain/BERT） |
-| B2 | Bing + Copilot | ★★ | 传统搜索接入 LLM 的编排层（Prometheus 架构） |
+| B2 | Bing + Copilot | ★★ | 传统搜索接入 LLM 的编排层（Prometheus 架构） ✅ |
 | B3 | Elasticsearch ✅ | ★★★ | Lucene 段结构、倒排+列存、分片与副本、近实时刷新 |
 | B4 | Pinterest | ★★ | 视觉发现引擎：PinSage 图神经推荐、home feed 混排 |
 | B5 | TikTok/抖音推荐 ✅ | ★★★ | Monolith 实时训练、特征哈希、兴趣探索 vs 利用 |
