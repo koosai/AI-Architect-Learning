@@ -75,4 +75,5 @@
 - [x] **K7. LangGraph / Agent 框架**：基于状态图的多智能体编排与容错架构 ✅
 - [x] **A3. Gemini**：原生多模态与 Google 搜索/Workspace 生态集成架构 ✅
 - [x] **A5. Perplexity**：RAG 搜索问答产品化与多源并发检索编排架构 ✅
+- [x] **C4. Discord**：Elixir 网关、按 Guild 分片与 ScyllaDB 存储架构 ✅
 
