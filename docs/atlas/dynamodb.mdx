@@ -369,14 +369,14 @@ DynamoDB 通过配置**预配置吞吐容量（Provisioned Capacity）**来限�
 
 1.  **WCU（Write Capacity Units）计算公式**：
     每个 WCU 支持单次最大 1KB 的写入操作：
-    {"$$\\text{WCU\\_Cost} = \\sum_{i=1}^{Req} \\lceil \\frac{\\text{PayloadSize}_i}{1\\text{KB}} \\rceil$$"}
+    $$WCU\_Cost = sum(ceil(PayloadSize_i / 1KB)) (i = 1...Req)$$
     若单次写入 Payload 大小为 1.5KB，则向上取整，消耗 2 个 WCUs。
 
 2.  **RCU（Read Capacity Units）计算公式**：
     *   **强一致读（Strongly Consistent Read）**：每个 RCU 支持单次最大 4KB 数据读取：
-        {"$$\\text{RCU\\_Cost\\_Strong} = \\sum_{i=1}^{Req} \\lceil \\frac{\\text{PayloadSize}_i}{4\\text{KB}} \rceil$$"}
+        $$RCU\_Cost\_Strong = sum(ceil(PayloadSize_i / 4KB)) (i = 1...Req)$$
     *   **最终一致读（Eventually Consistent Read）**：每个 RCU 支持单次最大 4KB 的双次读取（开销减半）：
-        {"$$\\text{RCU\\_Cost\\_Eventual} = 0.5 \\times \\sum_{i=1}^{Req} \lceil \\frac{\\text{PayloadSize}_i}{4\\text{KB}} \\rceil$$"}
+        $$RCU\_Cost\_Eventual = 0.5 \times sum(ceil(PayloadSize_i / 4KB)) (i = 1...Req)$$
 
 ---
 
