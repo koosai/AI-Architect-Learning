@@ -74,4 +74,5 @@
 - [x] **A2. Claude / Gemini**：长上下文工程与 AI Artifacts 容器化沙箱架构 ✅
 - [x] **K7. LangGraph / Agent 框架**：基于状态图的多智能体编排与容错架构 ✅
 - [x] **A3. Gemini**：原生多模态与 Google 搜索/Workspace 生态集成架构 ✅
+- [ ] **A5. Perplexity**：RAG 搜索问答产品化与多源并发检索编排架构
 
