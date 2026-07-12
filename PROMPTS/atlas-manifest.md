@@ -5,7 +5,7 @@
 |---|---|---|---|
 | A1 | ChatGPT ✅ | ★★★ | 模型架构 vs 服务架构双层、KV cache、连续批处理 |
 | A2 | Claude / Gemini | ★★★ | 长上下文工程、Artifacts、agentic 编码环境的沙箱与工具协议 ✅ |
-| A3 | Gemini | ★★ | 原生多模态、与 Google 生态（Search/Workspace）的集成架构 |
+| A3 | Gemini | ★★ | 原生多模态、与 Google 生态（Search/Workspace）的集成架构 ✅ |
 | A4 | GitHub Copilot ✅ | ★★★ | 编辑器内毫秒级补全：上下文收集、FIM、请求取消与缓存 |
 | A5 | Perplexity | ★★ | 检索增强问答产品化：搜索编排 + 引用生成 |
 | A6 | Cursor | ★★ | 代码库索引（嵌入+AST）、影子工作区、apply 模型 ✅ |
