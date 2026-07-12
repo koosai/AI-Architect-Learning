@@ -54,7 +54,7 @@
 - [x] **J3. Stripe** (支付状态机、幂等键设计、API 版本控制) ✅
 - [x] **J5. Uber** (H3 地理索引、派单撮合与 Docstore) ✅
 - [x] **K1. vLLM** (PagedAttention 显存管理、连续批处理) ✅
-- [ ] **K6. MCP 协议** (模型-工具解耦的 Host-Server USB 生态)
+- [x] **K6. MCP 协议** (模型-工具解耦的 Host-Server USB 生态) ✅
 - [ ] **M1. Signal 协议** (双棘轮、前向安全保密通讯协议)
 
 *注：详细 100 案例清单及进度，请至 `PROMPTS/atlas-manifest.md` 查看。*
