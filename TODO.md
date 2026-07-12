@@ -43,7 +43,7 @@
 - [x] **F2. DynamoDB** (一致性哈希、分区自动管理与自适应容量) ✅
 - [x] **F6. Google Spanner** (TrueTime、外部一致性、全球 SQL) ✅
 - [x] **F7. Kubernetes** (声明式调和循环、控制器模式、etcd 集群) ✅
-- [ ] **G1. PostgreSQL** (MVCC、WAL、B+ 树与扩展 pgvector)
+- [x] **G1. PostgreSQL** (MVCC、WAL、B+ 树与扩展 pgvector) ✅
 - [ ] **G2. Redis** (单线程事件循环、数据结构编码与集群高可用)
 - [ ] **G3. Kafka** (顺序写日志、零拷贝、ISR 副本与 KRaft 去 ZK)
 - [ ] **H1. Git** (内容寻址对象库、DAG 结构与零成本分支)
