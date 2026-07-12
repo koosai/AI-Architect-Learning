@@ -1,0 +1,887 @@
+---
+sidebar_position: 100
+title: 全局术语对照表 (Glossary)
+description: 汇总全站架构案例中出现的分布式系统、网络协议、显存管理与安全加密核心术语。
+---
+
+import GlossaryTerm from '@site/src/components/GlossaryTerm';
+
+# 全局术语对照表 (Glossary)
+
+本页自动汇总了全站所有核心课程和 Atlas 系统案例中出现的关键技术术语。您可以点击或悬停任何术语以在页内即时预览其标准释义，方便查阅。
+
+---
+
+
+## #
+
+*   **<GlossaryTerm term="429 Too Many Requests" definition="429 Too Many Requests：HTTP 协议规定的状态码 (RFC 6585)，表示客户端发送的请求速率已超过限制。常伴随 Retry-After 头部告知调用方应该退避多久再重试。">429 Too Many Requests</GlossaryTerm>**：429 Too Many Requests：HTTP 协议规定的状态码 (RFC 6585)，表示客户端发送的请求速率已超过限制。常伴随 Retry-After 头部告知调用方应该退避多久再重试。
+
+## A
+
+*   **<GlossaryTerm term="A/B Testing" definition="A/B 测试：把用户随机分组，一组用旧版本、一组用新版本，用统计对比两组的质量/业务指标，判断新版本是否真的更好。用真实用户行为做有统计意义的决策。">A/B Testing</GlossaryTerm>**：A/B 测试：把用户随机分组，一组用旧版本、一组用新版本，用统计对比两组的质量/业务指标，判断新版本是否真的更好。用真实用户行为做有统计意义的决策。
+*   **<GlossaryTerm term="A2A (Agent-to-Agent)" definition="Agent 间协议：标准化“一个 Agent 如何发现、描述能力、并与另一个 Agent 通信协作”的开放规范。让不同团队/厂商做的 Agent 能互相发现能力、安全地交接任务。">A2A (Agent-to-Agent)</GlossaryTerm>**：Agent 间协议：标准化“一个 Agent 如何发现、描述能力、并与另一个 Agent 通信协作”的开放规范。让不同团队/厂商做的 Agent 能互相发现能力、安全地交接任务。
+*   **<GlossaryTerm term="A2A Communication" definition="Agent-to-Agent 通信：智能体之间进行数据交换、状态共享和控制权交接的规范化网络通信过程。">A2A Communication</GlossaryTerm>**：Agent-to-Agent 通信：智能体之间进行数据交换、状态共享和控制权交接的规范化网络通信过程。
+*   **<GlossaryTerm term="AAA Pattern" definition="测试的三段式结构：Arrange（准备数据）、Act（执行被测操作）、Assert（断言结果）。让测试清晰、可读。">AAA Pattern</GlossaryTerm>**：测试的三段式结构：Arrange（准备数据）、Act（执行被测操作）、Assert（断言结果）。让测试清晰、可读。
+*   **<GlossaryTerm term="ABAC" definition="基于属性的访问控制 (Attribute-Based Access Control)：一种更高级、细粒度的权限控制模型。根据用户属性、资源属性、环境属性（如IP、时间）等多元条件组合，动态决定是否授予操作权限。">ABAC</GlossaryTerm>**：基于属性的访问控制 (Attribute-Based Access Control)：一种更高级、细粒度的权限控制模型。根据用户属性、资源属性、环境属性（如IP、时间）等多元条件组合，动态决定是否授予操作权限。
+*   **<GlossaryTerm term="Abstained" definition="弃答：当系统评估所检索到的外部证据不足以支持生成可信答案时，主动放弃调用大模型或者调用大模型直接返回“无法回答”的防御策略。">Abstained</GlossaryTerm>**：弃答：当系统评估所检索到的外部证据不足以支持生成可信答案时，主动放弃调用大模型或者调用大模型直接返回“无法回答”的防御策略。
+*   **<GlossaryTerm term="Abstention" definition="弃答：当检索不到相关证据、或证据不足以支撑一个可靠回答时，系统诚实地回答‘我不知道/资料中没有’，而不是强行编造。是可信 RAG 的关键，宁可不答也不乱答。">Abstention</GlossaryTerm>**：弃答：当检索不到相关证据、或证据不足以支撑一个可靠回答时，系统诚实地回答‘我不知道/资料中没有’，而不是强行编造。是可信 RAG 的关键，宁可不答也不乱答。
+*   **<GlossaryTerm term="Abstract Factory" definition="抽象工厂（GoF）：提供一个创建“一族相关对象”的接口，让你能整套切换实现（如换一整套 UI 控件、换一整套数据库驱动），而不必逐个改。">Abstract Factory</GlossaryTerm>**：抽象工厂（GoF）：提供一个创建“一族相关对象”的接口，让你能整套切换实现（如换一整套 UI 控件、换一整套数据库驱动），而不必逐个改。
+*   **<GlossaryTerm term="Abstraction Boundary" definition="把可替换实现藏在稳定接口后面的边界。边界设计得好，系统可以从本地模型切到云模型，而上层业务不需要重写。">Abstraction Boundary</GlossaryTerm>**：把可替换实现藏在稳定接口后面的边界。边界设计得好，系统可以从本地模型切到云模型，而上层业务不需要重写。
+*   **<GlossaryTerm term="Abstraction Cost" definition="抽象成本：在系统设计中引入接口、适配层或中间件等解耦手段时所付出的代价。包括代码认知负荷上升、调试复杂度增加、以及间接调用引入的轻微运行性能损耗。">Abstraction Cost</GlossaryTerm>**：抽象成本：在系统设计中引入接口、适配层或中间件等解耦手段时所付出的代价。包括代码认知负荷上升、调试复杂度增加、以及间接调用引入的轻微运行性能损耗。
+*   **<GlossaryTerm term="Acceptance Criteria" definition="验收标准：可判定的、明确的‘完成’定义。让‘做完了’从主观感觉变成客观可检验，是项目有边界的标志。">Acceptance Criteria</GlossaryTerm>**：验收标准：可判定的、明确的‘完成’定义。让‘做完了’从主观感觉变成客观可检验，是项目有边界的标志。
+*   **<GlossaryTerm term="Access Control List (ACL)" definition="访问控制列表：用于定义和校验各个智能体节点对共享黑板或状态段的读写权限的控制列表，是确保最小特权原则落地的核心工程手段。">Access Control List (ACL)</GlossaryTerm>**：访问控制列表：用于定义和校验各个智能体节点对共享黑板或状态段的读写权限的控制列表，是确保最小特权原则落地的核心工程手段。
+*   **<GlossaryTerm term="Accidental Complexity" definition="偶然复杂度：在软件开发中由引入的特定实现手段、编程语言或工具框架带来的非本质开销与复杂度（例如配置 Kubernetes 部署脚本或处理 Spring 框架兼容性）。">Accidental Complexity</GlossaryTerm>**：偶然复杂度：在软件开发中由引入的特定实现手段、编程语言或工具框架带来的非本质开销与复杂度（例如配置 Kubernetes 部署脚本或处理 Spring 框架兼容性）。
+*   **<GlossaryTerm term="ACID" definition="事务的四个保证：Atomicity（原子性，要么全做要么不做）、Consistency（一致性，不破坏约束）、Isolation（隔离性，并发事务互不干扰）、Durability（持久性，提交后不丢）。">ACID</GlossaryTerm>**：事务的四个保证：Atomicity（原子性，要么全做要么不做）、Consistency（一致性，不破坏约束）、Isolation（隔离性，并发事务互不干扰）、Durability（持久性，提交后不丢）。
+*   **<GlossaryTerm term="Acknowledgement" definition="确认（ack）：消费者处理成功后给队列发的信号。队列收到 ack 才删除消息；没收到就在超时后重新投递，保证消息不丢。">Acknowledgement</GlossaryTerm>**：确认（ack）：消费者处理成功后给队列发的信号。队列收到 ack 才删除消息；没收到就在超时后重新投递，保证消息不丢。
+*   **<GlossaryTerm term="ACL" definition="访问控制列表：定义哪些用户或系统进程被授予对特定文档资源访问权限的配置列表。在企业 RAG 中，它是执行元数据过滤硬核隔离的基础。">ACL</GlossaryTerm>**：访问控制列表：定义哪些用户或系统进程被授予对特定文档资源访问权限的配置列表。在企业 RAG 中，它是执行元数据过滤硬核隔离的基础。
+*   **<GlossaryTerm term="Action" definition="行动段 (Action)：模型决策并输出的外部调用意图，包括选定的工具名称（Tool Name）与调用参数（Tool Arguments）。">Action</GlossaryTerm>**：行动段 (Action)：模型决策并输出的外部调用意图，包括选定的工具名称（Tool Name）与调用参数（Tool Arguments）。
+*   **<GlossaryTerm term="Actor Model" definition="一种并发模型：系统由大量互相隔离的 actor 组成，每个 actor 有自己的状态，只通过收发消息交互，不共享内存。天然适合高并发，且一个 actor 崩溃不影响其它。">Actor Model</GlossaryTerm>**：一种并发模型：系统由大量互相隔离的 actor 组成，每个 actor 有自己的状态，只通过收发消息交互，不共享内存。天然适合高并发，且一个 actor 崩溃不影响其它。
+*   **<GlossaryTerm term="Adapter Pattern" definition="适配器模式：一种结构型设计模式。将一个类的接口转换成客户希望的另外一个接口，使得原本由于接口不兼容而不能一起工作的那些类可以一起工作。">Adapter Pattern</GlossaryTerm>**：适配器模式：一种结构型设计模式。将一个类的接口转换成客户希望的另外一个接口，使得原本由于接口不兼容而不能一起工作的那些类可以一起工作。
+*   **<GlossaryTerm term="Adaptive Capacity (自适应容量)" definition="DynamoDB 的流量调度机制。在表总吞吐未超限时，动态将闲置物理分区的 WCU/RCU 令牌配额转移至高流量的热点物理分区，消除静态均摊导致的限流。">Adaptive Capacity (自适应容量)</GlossaryTerm>**：DynamoDB 的流量调度机制。在表总吞吐未超限时，动态将闲置物理分区的 WCU/RCU 令牌配额转移至高流量的热点物理分区，消除静态均摊导致的限流。
+*   **<GlossaryTerm term="ADR" definition="架构决策记录 (Architecture Decision Record)：一种简短的文本文档，用于捕获一个技术决定（如采用某种架构模式）、背景条件及其带来的商业/技术后果，是团队追溯决策历史的黄金工具。">ADR</GlossaryTerm>**：架构决策记录 (Architecture Decision Record)：一种简短的文本文档，用于捕获一个技术决定（如采用某种架构模式）、背景条件及其带来的商业/技术后果，是团队追溯决策历史的黄金工具。
+*   **<GlossaryTerm term="ADR (Architecture Decision Record)" definition="架构决策记录：一份简短文档，记录一个重要架构决策的背景、所考虑的选项、最终选择及理由和后果。让决策可追溯、可评审，未来的人（包括你自己）能看懂‘当时为什么这么选’。">ADR (Architecture Decision Record)</GlossaryTerm>**：架构决策记录：一份简短文档，记录一个重要架构决策的背景、所考虑的选项、最终选择及理由和后果。让决策可追溯、可评审，未来的人（包括你自己）能看懂‘当时为什么这么选’。
+*   **<GlossaryTerm term="ADR Format" definition="ADR 的典型结构：Context(背景/问题)、Options(考虑过的选项)、Decision(选了什么)、Consequences(后果/代价)。简短(一页)、聚焦一个决策、记录‘为什么’而非只记‘是什么’。">ADR Format</GlossaryTerm>**：ADR 的典型结构：Context(背景/问题)、Options(考虑过的选项)、Decision(选了什么)、Consequences(后果/代价)。简短(一页)、聚焦一个决策、记录‘为什么’而非只记‘是什么’。
+*   **<GlossaryTerm term="Agent" definition="智能体：在给定目标下，能观察现状、决定下一步、调用工具、根据结果继续推进任务的系统。LLM 通常是它的“决策大脑”，外面包着循环、工具、记忆、约束等工程。">Agent</GlossaryTerm>**：智能体：在给定目标下，能观察现状、决定下一步、调用工具、根据结果继续推进任务的系统。LLM 通常是它的“决策大脑”，外面包着循环、工具、记忆、约束等工程。
+*   **<GlossaryTerm term="Agent Budget" definition="Agent 预算：限制一次 Agent 运行的总成本（token/钱）或总工具调用数，逼近上限就停止或转人工。把不确定的多步循环的成本封顶。">Agent Budget</GlossaryTerm>**：Agent 预算：限制一次 Agent 运行的总成本（token/钱）或总工具调用数，逼近上限就停止或转人工。把不确定的多步循环的成本封顶。
+*   **<GlossaryTerm term="Agent Loop" definition="Agent 循环：observe（看当前状态/结果）→ decide（决定下一步做什么、调哪个工具）→ act（执行）的反复循环，直到任务完成或触发停止条件。是 Agent 自主完成多步任务的核心机制。">Agent Loop</GlossaryTerm>**：Agent 循环：observe（看当前状态/结果）→ decide（决定下一步做什么、调哪个工具）→ act（执行）的反复循环，直到任务完成或触发停止条件。是 Agent 自主完成多步任务的核心机制。
+*   **<GlossaryTerm term="Agent Role" definition="Agent 角色：一个 Agent 在多 Agent 系统中承担的单一、清晰、不与他人重叠的职责（如研究员、设计者、审查者），配套与该职责匹配的提示、工具和权限。">Agent Role</GlossaryTerm>**：Agent 角色：一个 Agent 在多 Agent 系统中承担的单一、清晰、不与他人重叠的职责（如研究员、设计者、审查者），配套与该职责匹配的提示、工具和权限。
+*   **<GlossaryTerm term="Agentic RAG" definition="智能体式 RAG：让 LLM（作为 Agent）自己决定要不要检索、检索什么、检索几次、用哪个数据源，把检索变成它可调用的工具，而非固定流程。更灵活，但更慢更贵更难控。">Agentic RAG</GlossaryTerm>**：智能体式 RAG：让 LLM（作为 Agent）自己决定要不要检索、检索什么、检索几次、用哪个数据源，把检索变成它可调用的工具，而非固定流程。更灵活，但更慢更贵更难控。
+*   **<GlossaryTerm term="Agentic Retrieval" definition="智能体式检索：把检索作为 Agent 可调用的工具，由 Agent 自主决定是否检索、检索什么、用哪个源、检索几次、何时信息足够可以回答——而非固定检索一次再答的流程。">Agentic Retrieval</GlossaryTerm>**：智能体式检索：把检索作为 Agent 可调用的工具，由 Agent 自主决定是否检索、检索什么、用哪个源、检索几次、何时信息足够可以回答——而非固定检索一次再答的流程。
+*   **<GlossaryTerm term="AI Platform" definition="AI 平台：把多个 AI 应用共需的能力（评估、可观测、护栏安全、成本控制、模型网关等）抽取为共享的服务/基础设施，让各团队复用而非各自重造，并支持统一治理。类似内部开发者平台，但聚焦 AI 特有的共性能力。">AI Platform</GlossaryTerm>**：AI 平台：把多个 AI 应用共需的能力（评估、可观测、护栏安全、成本控制、模型网关等）抽取为共享的服务/基础设施，让各团队复用而非各自重造，并支持统一治理。类似内部开发者平台，但聚焦 AI 特有的共性能力。
+*   **<GlossaryTerm term="Alert Fatigue" definition="告警疲劳：告警过多、噪声过大，导致工程师麻木、忽略告警，真正重要的告警反而被淹没。是监控做得“多而无用”的典型症状。">Alert Fatigue</GlossaryTerm>**：告警疲劳：告警过多、噪声过大，导致工程师麻木、忽略告警，真正重要的告警反而被淹没。是监控做得“多而无用”的典型症状。
+*   **<GlossaryTerm term="Algorithm Family" definition="算法族 (Algorithm Family)：在策略模式中，针对同一个业务目标（如运费计算、重排算法）的一组具有相同接口契约的可互换算法具体实现集合。">Algorithm Family</GlossaryTerm>**：算法族 (Algorithm Family)：在策略模式中，针对同一个业务目标（如运费计算、重排算法）的一组具有相同接口契约的可互换算法具体实现集合。
+*   **<GlossaryTerm term="Amdahl" definition="阿姆达尔定律：程序里串行（不能并行）的部分，决定了加再多处理器也突破不了的加速上限。若 5% 必须串行，加无限核最多也只快 20 倍。">Amdahl</GlossaryTerm>**：阿姆达尔定律：程序里串行（不能并行）的部分，决定了加再多处理器也突破不了的加速上限。若 5% 必须串行，加无限核最多也只快 20 倍。
+*   **<GlossaryTerm term="Answer Relevance" definition="答案相关性：答案是否切题地回应了用户的问题（而非答非所问或答了无关的内容）。低 = 答非所问，可能是 prompt 或问题理解问题。">Answer Relevance</GlossaryTerm>**：答案相关性：答案是否切题地回应了用户的问题（而非答非所问或答了无关的内容）。低 = 答非所问，可能是 prompt 或问题理解问题。
+*   **<GlossaryTerm term="Anti-Corruption Layer" definition="防腐层（ACL）：在你的系统 and 外部/遗留系统之间加一层翻译，把对方混乱或过时的数据模型隔离在外，保护你的领域模型不被污染。本质是适配器（M4L8）。">Anti-Corruption Layer</GlossaryTerm>**：防腐层（ACL）：在你的系统 and 外部/遗留系统之间加一层翻译，把对方混乱或过时的数据模型隔离在外，保护你的领域模型不被污染。本质是适配器（M4L8）。
+*   **<GlossaryTerm term="AP Registry" definition="AP 注册中心：指强调高可用性 (Availability) 与分区容错性 (Partition Tolerance) 的服务目录系统（如 Netflix Eureka）。当网络出现故障分裂时，Eureka 会开启自我保护机制，允许短暂的数据不一致，宁可返回过期的实例表，也不拒绝读写请求。">AP Registry</GlossaryTerm>**：AP 注册中心：指强调高可用性 (Availability) 与分区容错性 (Partition Tolerance) 的服务目录系统（如 Netflix Eureka）。当网络出现故障分裂时，Eureka 会开启自我保护机制，允许短暂的数据不一致，宁可返回过期的实例表，也不拒绝读写请求。
+*   **<GlossaryTerm term="AP System" definition="AP 系统：分区发生时优先保证可用性，继续响应但可能返回旧数据（牺牲强一致）。适合点赞数、feed、购物车等可容忍短暂不一致的场景。">AP System</GlossaryTerm>**：AP 系统：分区发生时优先保证可用性，继续响应但可能返回旧数据（牺牲强一致）。适合点赞数、feed、购物车等可容忍短暂不一致的场景。
+*   **<GlossaryTerm term="API Gateway" definition="API 网关：位于客户端与后端服务之间的统一入口，集中处理认证、路由、限流、日志、协议转换、聚合等横切能力，让后端服务专注业务。">API Gateway</GlossaryTerm>**：API 网关：位于客户端与后端服务之间的统一入口，集中处理认证、路由、限流、日志、协议转换、聚合等横切能力，让后端服务专注业务。
+*   **<GlossaryTerm term="Approximate Nearest Neighbor" definition="近似最近邻（ANN）：用专门的索引结构快速找出“很可能是最相似的”top-k，不保证 100% 精确，用少量召回率损失换数量级的速度提升。是大规模向量检索的标准做法。">Approximate Nearest Neighbor</GlossaryTerm>**：近似最近邻（ANN）：用专门的索引结构快速找出“很可能是最相似的”top-k，不保证 100% 精确，用少量召回率损失换数量级的速度提升。是大规模向量检索的标准做法。
+*   **<GlossaryTerm term="Arbitration" definition="仲裁：当 Agent 们无法通过投票收敛（票数僵持、或问题需要判断而非数票）时，由一个权威者（Supervisor/更强的模型/人）做最终裁决。">Arbitration</GlossaryTerm>**：仲裁：当 Agent 们无法通过投票收敛（票数僵持、或问题需要判断而非数票）时，由一个权威者（Supervisor/更强的模型/人）做最终裁决。
+*   **<GlossaryTerm term="Assumptions" definition="假设：在信息不全时，你对需求做出的、明确写下来的判断（如：假设 DAU 1000 万、读写比 10:1）。写下来让它可被质疑和修正。">Assumptions</GlossaryTerm>**：假设：在信息不全时，你对需求做出的、明确写下来的判断（如：假设 DAU 1000 万、读写比 10:1）。写下来让它可被质疑和修正。
+*   **<GlossaryTerm term="Asynchronous" definition="异步：把任务提交后立即返回，结果稍后通过回调/队列/轮询获得。调用方不被慢操作阻塞。">Asynchronous</GlossaryTerm>**：异步：把任务提交后立即返回，结果稍后通过回调/队列/轮询获得。调用方不被慢操作阻塞。
+*   **<GlossaryTerm term="Asynchronous Communication" definition="异步通信：通过消息/事件传递，发送方不等待接收方处理（如消息队列、事件总线）。解耦、削峰，但增加了最终一致和调试复杂度。">Asynchronous Communication</GlossaryTerm>**：异步通信：通过消息/事件传递，发送方不等待接收方处理（如消息队列、事件总线）。解耦、削峰，但增加了最终一致和调试复杂度。
+*   **<GlossaryTerm term="Asynchronous Replication" definition="异步复制：主写完本地就返回，变更稍后才传给从。写快、主不被从拖累，但主崩溃时尚未同步的写会丢失，从也可能读到旧数据。">Asynchronous Replication</GlossaryTerm>**：异步复制：主写完本地就返回，变更稍后才传给从。写快、主不被从拖累，但主崩溃时尚未同步的写会丢失，从也可能读到旧数据。
+*   **<GlossaryTerm term="At-least-once" definition="至少一次：消息保证被处理至少一次（靠没 ack 就重投），本意是防止数据丢失，但可能在消费者执行成功但网络确认丢失时发生消息重复。配合幂等消费即可达到“效果上一次”。">At-least-once</GlossaryTerm>**：至少一次：消息保证被处理至少一次（靠没 ack 就重投），本意是防止数据丢失，但可能在消费者执行成功但网络确认丢失时发生消息重复。配合幂等消费即可达到“效果上一次”。
+*   **<GlossaryTerm term="At-most-once" definition="至多一次：消息保证最多只被投递/处理一次。允许消息丢失，但绝不重复。适用于数据采样等低安全容忍度场景。">At-most-once</GlossaryTerm>**：至多一次：消息保证最多只被投递/处理一次。允许消息丢失，但绝不重复。适用于数据采样等低安全容忍度场景。
+*   **<GlossaryTerm term="Atomic Operation" definition="原子操作：不可被打断的操作，要么全做完、要么没做，中间状态对别人不可见。是避免竞态的基本武器。">Atomic Operation</GlossaryTerm>**：原子操作：不可被打断的操作，要么全做完、要么没做，中间状态对别人不可见。是避免竞态的基本武器。
+*   **<GlossaryTerm term="Audit Log" definition="审计日志：不可篡改地记录 AI 系统的关键决策与操作——谁在何时、用哪个模型版本、基于什么输入、做出了什么决策/操作。用于事后追溯、追责和合规证明。">Audit Log</GlossaryTerm>**：审计日志：不可篡改地记录 AI 系统的关键决策与操作——谁在何时、用哪个模型版本、基于什么输入、做出了什么决策/操作。用于事后追溯、追责和合规证明。
+*   **<GlossaryTerm term="Autoregressive" definition="自回归：一次只生成一个 token，把它拼回输入，再生成下一个，如此循环。这就是为什么 ChatGPT 是一个字一个字蹦出来的。">Autoregressive</GlossaryTerm>**：自回归：一次只生成一个 token，把它拼回输入，再生成下一个，如此循环。这就是为什么 ChatGPT 是一个字一个字蹦出来的。
+*   **<GlossaryTerm term="Autoregressive Generation" definition="自回归生成：模型基于已有的全部 token 预测下一个 token，把它追加到序列后，再以新序列为输入预测下一个，循环直到结束。LLM 文本生成的基本机制。">Autoregressive Generation</GlossaryTerm>**：自回归生成：模型基于已有的全部 token 预测下一个 token，把它追加到序列后，再以新序列为输入预测下一个，循环直到结束。LLM 文本生成的基本机制。
+*   **<GlossaryTerm term="Availability" definition="可用性：系统正常提供服务的时间比例。99.9%（三个9）≈ 每年停机 8.7 小时；每多一个 9，允许停机时间缩小约 10 倍。">Availability</GlossaryTerm>**：可用性：系统正常提供服务的时间比例。99.9%（三个9）≈ 每年停机 8.7 小时；每多一个 9，允许停机时间缩小约 10 倍。
+
+## B
+
+*   **<GlossaryTerm term="B-tree" definition="B 树：把数据组织成有序的树，更新时原地修改对应的页。读取稳定高效（少数几次磁盘寻址），是关系数据库的主流索引结构。">B-tree</GlossaryTerm>**：B 树：把数据组织成有序的树，更新时原地修改对应的页。读取稳定高效（少数几次磁盘寻址），是关系数据库的主流索引结构。
+*   **<GlossaryTerm term="Back-of-the-Envelope Estimation" definition="信封背面估算：在纸张/信封背面利用极简乘除法进行数量级粗估的方法，不求精确，只求量级对，以便快速筛选技术可行性。">Back-of-the-Envelope Estimation</GlossaryTerm>**：信封背面估算：在纸张/信封背面利用极简乘除法进行数量级粗估的方法，不求精确，只求量级对，以便快速筛选技术可行性。
+*   **<GlossaryTerm term="Backpressure" definition="背压 (Backpressure)：在流处理或消息传输中，当消费端处理速度慢于生产端发送速度时，接收端反向向发送端施加压力以减缓其生产速率的机制。在边缘计算中，当网络离线且本地环形缓冲区写满时，背压策略决定了是直接丢弃最旧数据，还是锁定关键告警以防系统崩溃。">Backpressure</GlossaryTerm>**：背压 (Backpressure)：在流处理或消息传输中，当消费端处理速度慢于生产端发送速度时，接收端反向向发送端施加压力以减缓其生产速率的机制。在边缘计算中，当网络离线且本地环形缓冲区写满时，背压策略决定了是直接丢弃最旧数据，还是锁定关键告警以防系统崩溃。
+*   **<GlossaryTerm term="Bandwidth" definition="带宽：网络在单位时间内传输数据的最大容量，通常在估算中用每秒传输的字节数（Bytes/s）来表示，公式为 QPS × 平均请求/响应载荷大小。">Bandwidth</GlossaryTerm>**：带宽：网络在单位时间内传输数据的最大容量，通常在估算中用每秒传输的字节数（Bytes/s）来表示，公式为 QPS × 平均请求/响应载荷大小。
+*   **<GlossaryTerm term="Base62" definition="用 0-9a-zA-Z 共 62 个字符表示数字。把自增 ID 转成 base62，能得到又短又唯一的短码（如 ID 125 → 21）。62^7 已超 3.5 万亿，7 位足够。">Base62</GlossaryTerm>**：用 0-9a-zA-Z 共 62 个字符表示数字。把自增 ID 转成 base62，能得到又短又唯一的短码（如 ID 125 → 21）。62^7 已超 3.5 万亿，7 位足够。
+*   **<GlossaryTerm term="BEAM" definition="Erlang 的虚拟机。它能在单机上调度数百万个极轻量的进程，每个进程独立崩溃互不影响——这是 WhatsApp 单机扛百万连接的基础。">BEAM</GlossaryTerm>**：Erlang 的虚拟机。它能在单机上调度数百万个极轻量的进程，每个进程独立崩溃互不影响——这是 WhatsApp 单机扛百万连接的基础。
+*   **<GlossaryTerm term="Behavior Delegation" definition="行为委托：一个对象将自身的某个方法调用转交给另一个关联对象进行处理的编程模式。是组合优于继承中实现代码复用的核心机制，可有效避免继承的深层依赖。">Behavior Delegation</GlossaryTerm>**：行为委托：一个对象将自身的某个方法调用转交给另一个关联对象进行处理的编程模式。是组合优于继承中实现代码复用的核心机制，可有效避免继承的深层依赖。
+*   **<GlossaryTerm term="Behavioral Subtyping" definition="行为子类型：面向对象设计中判断继承是否合理的严格理论。要求子类对象除了满足静态的类型签名对齐外，必须在运行时行为上完全遵循父类所声称的契约断言，不可有越轨或收窄的越界行为。">Behavioral Subtyping</GlossaryTerm>**：行为子类型：面向对象设计中判断继承是否合理的严格理论。要求子类对象除了满足静态的类型签名对齐外，必须在运行时行为上完全遵循父类所声称的契约断言，不可有越轨或收窄的越界行为。
+*   **<GlossaryTerm term="BFF" definition="Backend for Frontend：为特定前端（Web/iOS/Android）量身定制的网关层，按该端需求聚合/裁剪后端数据，避免一个通用 API 迁就所有端。">BFF</GlossaryTerm>**：Backend for Frontend：为特定前端（Web/iOS/Android）量身定制的网关层，按该端需求聚合/裁剪后端数据，避免一个通用 API 迁就所有端。
+*   **<GlossaryTerm term="Bi-encoder" definition="双编码器：把查询和文档分别独立编码成向量，再算相似度。文档向量可预先算好、检索快，适合召回阶段。但 query 和 doc 没有交互，精度有限。">Bi-encoder</GlossaryTerm>**：双编码器：把查询和文档分别独立编码成向量，再算相似度。文档向量可预先算好、检索快，适合召回阶段。但 query 和 doc 没有交互，精度有限。
+*   **<GlossaryTerm term="Blackboard Pattern" definition="黑板模式：多个 Agent 共享一个结构化的工作区（黑板），各自往上写自己的产物（带类型/来源/状态），也从上面读需要的。比共享一长串对话更结构化、可控、可追溯。">Blackboard Pattern</GlossaryTerm>**：黑板模式：多个 Agent 共享一个结构化的工作区（黑板），各自往上写自己的产物（带类型/来源/状态），也从上面读需要的。比共享一长串对话更结构化、可控、可追溯。
+*   **<GlossaryTerm term="Blast Radius" definition="爆炸半径：一个故障能波及的范围。好的隔离设计让单点故障的爆炸半径尽可能小——只伤及局部，而非整个系统或所有用户。">Blast Radius</GlossaryTerm>**：爆炸半径：一个故障能波及的范围。好的隔离设计让单点故障的爆炸半径尽可能小——只伤及局部，而非整个系统或所有用户。
+*   **<GlossaryTerm term="Bloom Filter" definition="布隆过滤器：一种空间效率极高的概率型数据结构，用于快速检索一个元素是否在一个集合中。具有 0% 的假阴性率（判定不存在则一定不存在）和少量的假阳性率（判定存在时可能实际不存在），常用来前置拦截无效的穿透查询。">Bloom Filter</GlossaryTerm>**：布隆过滤器：一种空间效率极高的概率型数据结构，用于快速检索一个元素是否在一个集合中。具有 0% 的假阴性率（判定不存在则一定不存在）和少量的假阳性率（判定存在时可能实际不存在），常用来前置拦截无效的穿透查询。
+*   **<GlossaryTerm term="Blue-Green Deployment" definition="蓝绿发布：同时部署旧（蓝）新（绿）两套完整环境，验证绿环境无误后把流量一次性切过去；出问题切回蓝。切换快、回滚快，但要双份资源。">Blue-Green Deployment</GlossaryTerm>**：蓝绿发布：同时部署旧（蓝）新（绿）两套完整环境，验证绿环境无误后把流量一次性切过去；出问题切回蓝。切换快、回滚快，但要双份资源。
+*   **<GlossaryTerm term="BM25" definition="BM25：经典的关键词检索打分算法，基于词频（TF）和逆文档频率（IDF），并对文档长度归一化。擅长精确术语/罕见词匹配，是稀疏检索的代表。">BM25</GlossaryTerm>**：BM25：经典的关键词检索打分算法，基于词频（TF）和逆文档频率（IDF），并对文档长度归一化。擅长精确术语/罕见词匹配，是稀疏检索的代表。
+*   **<GlossaryTerm term="Bottleneck" definition="瓶颈：整条链路里最慢/最受限的那个环节。系统的整体性能由瓶颈决定，优化非瓶颈环节几乎没用。">Bottleneck</GlossaryTerm>**：瓶颈：整条链路里最慢/最受限的那个环节。系统的整体性能由瓶颈决定，优化非瓶颈环节几乎没用。
+*   **<GlossaryTerm term="Boundary" definition="系统或模块对外暴露的输入、输出和责任的边界。边界清楚，坏数据就进不来，模块也更容易被替换或测试。">Boundary</GlossaryTerm>**：系统或模块对外暴露的输入、输出和责任的边界。边界清楚，坏数据就进不来，模块也更容易被替换或测试。
+*   **<GlossaryTerm term="Boy Scout Rule" definition="童子军法则 (Boy Scout Rule)：‘离开时让营地比你来时更干净’。在软件开发中指每次修改代码时，顺手对接触到的周边代码做一点点微小的重构增强，从而依靠团队日常点滴维护来对抗系统软件熵增。">Boy Scout Rule</GlossaryTerm>**：童子军法则 (Boy Scout Rule)：‘离开时让营地比你来时更干净’。在软件开发中指每次修改代码时，顺手对接触到的周边代码做一点点微小的重构增强，从而依靠团队日常点滴维护来对抗系统软件熵增。
+*   **<GlossaryTerm term="Broker-based MQ" definition="代理型消息队列：以 RabbitMQ 或 ActiveMQ 为代表。由 Broker 负责推送消息给消费者，并跟踪每条消息的 ACK 状态，消息一旦被消费确认立即从物理队列中擦除，水位低，但无法重放。">Broker-based MQ</GlossaryTerm>**：代理型消息队列：以 RabbitMQ 或 ActiveMQ 为代表。由 Broker 负责推送消息给消费者，并跟踪每条消息的 ACK 状态，消息一旦被消费确认立即从物理队列中擦除，水位低，但无法重放。
+*   **<GlossaryTerm term="Brute-force / Exact Search" definition="暴力/精确检索：把查询向量与库中每个向量逐一比对、排序取 top-k。结果精确，但耗时随数据量线性增长，百万级以上无法满足低延迟。">Brute-force / Exact Search</GlossaryTerm>**：暴力/精确检索：把查询向量与库中每个向量逐一比对、排序取 top-k。结果精确，但耗时随数据量线性增长，百万级以上无法满足低延迟。
+*   **<GlossaryTerm term="Budget & Quota" definition="预算与配额：给系统/功能/用户设置成本上限（每请求、每用户每天、全局每月），接近或超过时限流、降级或告警，防止成本失控和成本型攻击。是成本的安全阀。">Budget & Quota</GlossaryTerm>**：预算与配额：给系统/功能/用户设置成本上限（每请求、每用户每天、全局每月），接近或超过时限流、降级或告警，防止成本失控和成本型攻击。是成本的安全阀。
+*   **<GlossaryTerm term="Budget constraints" definition="预算约束：通过对智能体的最大执行步数（Max Steps）和消耗的 Token/费用进行计数，一旦超出预设阈值即强行熔断停止，防止死循环或账单烧穿的硬性工程限制。">Budget constraints</GlossaryTerm>**：预算约束：通过对智能体的最大执行步数（Max Steps）和消耗的 Token/费用进行计数，一旦超出预设阈值即强行熔断停止，防止死循环或账单烧穿的硬性工程限制。
+*   **<GlossaryTerm term="Build Once, Deploy Many" definition="一次构建、多处部署：构建出一个不可变的产物（如容器镜像），同一个产物部署到各环境，差异只来自注入的配置。避免“测试的和上线的不是同一个东西”。">Build Once, Deploy Many</GlossaryTerm>**：一次构建、多处部署：构建出一个不可变的产物（如容器镜像），同一个产物部署到各环境，差异只来自注入的配置。避免“测试的和上线的不是同一个东西”。
+*   **<GlossaryTerm term="Build Once, Promote" definition="一次构建、逐级晋级：只在 CI 阶段构建一次不可变制品（镜像），然后让同一个制品依次晋级到 dev/staging/prod，而不是每个环境各自重新构建——保证各环境跑的是同一个二进制。">Build Once, Promote</GlossaryTerm>**：一次构建、逐级晋级：只在 CI 阶段构建一次不可变制品（镜像），然后让同一个制品依次晋级到 dev/staging/prod，而不是每个环境各自重新构建——保证各环境跑的是同一个二进制。
+*   **<GlossaryTerm term="Bulkhead" definition="舱壁隔离：把资源（线程池、连接数、并发配额）按依赖或租户切分成独立的“舱”，每个舱有自己的上限。一个舱被耗尽不影响其它舱，从而限制故障的爆炸半径。">Bulkhead</GlossaryTerm>**：舱壁隔离：把资源（线程池、连接数、并发配额）按依赖或租户切分成独立的“舱”，每个舱有自己的上限。一个舱被耗尽不影响其它舱，从而限制故障的爆炸半径。
+*   **<GlossaryTerm term="Bulkhead Isolation" definition="舱壁隔离 (Bulkhead Isolation)：借鉴轮船水密舱设计，将资源（如线程池、内存、连接池）按依赖服务作隔离划分。当其中一个下游依赖挂起变慢时，只会耗尽分配给它的专用资源池，而不扩散影响到全站其他不相关的正常路由。">Bulkhead Isolation</GlossaryTerm>**：舱壁隔离 (Bulkhead Isolation)：借鉴轮船水密舱设计，将资源（如线程池、内存、连接池）按依赖服务作隔离划分。当其中一个下游依赖挂起变慢时，只会耗尽分配给它的专用资源池，而不扩散影响到全站其他不相关的正常路由。
+*   **<GlossaryTerm term="Bulkhead Isolation (Data)" definition="舱壁隔离：在数据或智能体交互中，将未经验证的数据与高可信的最终状态进行物理隔离，以防止单个节点的故障或错误输入发生级联扩散的安全和可靠性设计原则。">Bulkhead Isolation (Data)</GlossaryTerm>**：舱壁隔离：在数据或智能体交互中，将未经验证的数据与高可信的最终状态进行物理隔离，以防止单个节点的故障或错误输入发生级联扩散的安全和可靠性设计原则。
+
+## C
+
+*   **<GlossaryTerm term="C4 Model" definition="一种分层描述软件架构的方法：Context（系统与外部）、Container（可部署单元）、Component（容器内模块）、Code（类）。逐层放大，避免一张图塞太多。">C4 Model</GlossaryTerm>**：一种分层描述软件架构的方法：Context（系统与外部）、Container（可部署单元）、Component（容器内模块）、Code（类）。逐层放大，避免一张图塞太多。
+*   **<GlossaryTerm term="Cache Avalanche" definition="缓存雪崩：大量 key 在同一时刻集中过期（或缓存集群整体宕机），导致海量请求同时打到数据库。">Cache Avalanche</GlossaryTerm>**：缓存雪崩：大量 key 在同一时刻集中过期（或缓存集群整体宕机），导致海量请求同时打到数据库。
+*   **<GlossaryTerm term="Cache Breakdown" definition="缓存击穿：某个热点 key 过期的瞬间，大量并发请求同时 miss、一起去重建它，集中打到库。也叫 hot key 失效。">Cache Breakdown</GlossaryTerm>**：缓存击穿：某个热点 key 过期的瞬间，大量并发请求同时 miss、一起去重建它，集中打到库。也叫 hot key 失效。
+*   **<GlossaryTerm term="Cache Eviction" definition="缓存逐出/失效：由于空间不足或底层数据变更，将特定缓存项从缓存介质（如 Redis）中主动删除或根据置换算法（LRU/LFU）清理的行为。">Cache Eviction</GlossaryTerm>**：缓存逐出/失效：由于空间不足或底层数据变更，将特定缓存项从缓存介质（如 Redis）中主动删除或根据置换算法（LRU/LFU）清理的行为。
+*   **<GlossaryTerm term="Cache Pattern" definition="缓存模式：缓存与底层数据库协作的标准方式，规定读写时各组件的职责与顺序。常见有 cache-aside、read-through、write-through、write-back。">Cache Pattern</GlossaryTerm>**：缓存模式：缓存与底层数据库协作的标准方式，规定读写时各组件的职责与顺序。常见有 cache-aside、read-through、write-through、write-back。
+*   **<GlossaryTerm term="Cache Penetration" definition="缓存穿透：大量查询一个根本不存在的 key（缓存和库都没有），每次都穿过缓存打到库。常见于恶意攻击或爬虫。">Cache Penetration</GlossaryTerm>**：缓存穿透：大量查询一个根本不存在的 key（缓存和库都没有），每次都穿过缓存打到库。常见于恶意攻击或爬虫。
+*   **<GlossaryTerm term="Cache Purge" definition="缓存清除/刷新：内容更新后主动让 CDN 边缘节点的旧副本失效。常配合内容指纹（文件名带哈希）实现“改了就换 URL”，从根上避免脏缓存。">Cache Purge</GlossaryTerm>**：缓存清除/刷新：内容更新后主动让 CDN 边缘节点的旧副本失效。常配合内容指纹（文件名带哈希）实现“改了就换 URL”，从根上避免脏缓存。
+*   **<GlossaryTerm term="Cache Staleness" definition="缓存陈旧：缓存里的值与数据库不再一致（因为数据库被更新了但缓存没同步）。缓存的核心难题。">Cache Staleness</GlossaryTerm>**：缓存陈旧：缓存里的值与数据库不再一致（因为数据库被更新了但缓存没同步）。缓存的核心难题。
+*   **<GlossaryTerm term="Cache Warm-up" definition="缓存预热：在系统上线或高并发流量来临前，提前将热点数据写入缓存内存，避免海量请求瞬间涌入数据库造成瞬间压垮。">Cache Warm-up</GlossaryTerm>**：缓存预热：在系统上线或高并发流量来临前，提前将热点数据写入缓存内存，避免海量请求瞬间涌入数据库造成瞬间压垮。
+*   **<GlossaryTerm term="Cache-Aside" definition="旁路缓存：应用自己负责读时未命中则回填、写时让缓存失效。最常用、最灵活，但一致性要应用小心处理。">Cache-Aside</GlossaryTerm>**：旁路缓存：应用自己负责读时未命中则回填、写时让缓存失效。最常用、最灵活，但一致性要应用小心处理。
+*   **<GlossaryTerm term="Canary Deployment" definition="金丝雀发布：先把一小部分流量（如 5%）导到新版本，观察指标正常再逐步放大比例，发现问题及时回滚。把发布风险降到最小。">Canary Deployment</GlossaryTerm>**：金丝雀发布：先把一小部分流量（如 5%）导到新版本，观察指标正常再逐步放大比例，发现问题及时回滚。把发布风险降到最小。
+*   **<GlossaryTerm term="CAP Theorem" definition="CAP 定理：分布式系统在 Consistency（一致性）、Availability（可用性）、Partition tolerance（分区容忍）三者中，发生网络分区时最多同时满足两个。由于分区不可避免，实际是在分区发生时于 C 和 A 之间二选一。">CAP Theorem</GlossaryTerm>**：CAP 定理：分布式系统在 Consistency（一致性）、Availability（可用性）、Partition tolerance（分区容忍）三者中，发生网络分区时最多同时满足两个。由于分区不可避免，实际是在分区发生时于 C 和 A 之间二选一。
+*   **<GlossaryTerm term="Capability Discovery" definition="能力发现：智能体路由系统中，各个执行节点注册或暴露其工具集、支持指令集及意图分类特征，供中心化路由器进行动态能力匹配的机制。">Capability Discovery</GlossaryTerm>**：能力发现：智能体路由系统中，各个执行节点注册或暴露其工具集、支持指令集及意图分类特征，供中心化路由器进行动态能力匹配的机制。
+*   **<GlossaryTerm term="Capacity Estimation" definition="容量估算 (Capacity Estimation)：根据业务量指标（日活、写比例、存储保留期等）运用粗略物理估算推算出系统所需的带宽、每秒查询率(QPS)、内存量及磁盘存储空间的量化过程，是决定系统分片数、机器规模的依据。">Capacity Estimation</GlossaryTerm>**：容量估算 (Capacity Estimation)：根据业务量指标（日活、写比例、存储保留期等）运用粗略物理估算推算出系统所需的带宽、每秒查询率(QPS)、内存量及磁盘存储空间的量化过程，是决定系统分片数、机器规模的依据。
+*   **<GlossaryTerm term="Capacity Planning (AI)" definition="AI 容量规划：预估 AI 系统的请求量、token 吞吐、并发和峰值，据此规划模型 API 配额、自托管 GPU 资源、缓存与队列，确保高峰不被限流/拖垮，同时不为闲置资源过度付费。">Capacity Planning (AI)</GlossaryTerm>**：AI 容量规划：预估 AI 系统的请求量、token 吞吐、并发和峰值，据此规划模型 API 配额、自托管 GPU 资源、缓存与队列，确保高峰不被限流/拖垮，同时不为闲置资源过度付费。
+*   **<GlossaryTerm term="Cascade Safety Threat" definition="级联安全威胁：在多智能体系统中，单个节点被恶意提示词注入劫持或产生逻辑失效，利用其正常通信信道和凭证，将恶意指令级联传递给下游其他原本高权限节点的系统级安全漏洞。">Cascade Safety Threat</GlossaryTerm>**：级联安全威胁：在多智能体系统中，单个节点被恶意提示词注入劫持或产生逻辑失效，利用其正常通信信道和凭证，将恶意指令级联传递给下游其他原本高权限节点的系统级安全漏洞。
+*   **<GlossaryTerm term="Cascading Failure" definition="级联故障（雪崩效应）：分布式系统中，由于局部组件发生故障，导致其他依赖它的组件也相继发生资源耗尽或异常崩溃，最终雪崩式拖垮整个系统的现象。">Cascading Failure</GlossaryTerm>**：级联故障（雪崩效应）：分布式系统中，由于局部组件发生故障，导致其他依赖它的组件也相继发生资源耗尽或异常崩溃，最终雪崩式拖垮整个系统的现象。
+*   **<GlossaryTerm term="CDC" definition="变更数据捕获 (Change Data Capture)：一种监测并捕获数据库底层事务变更日志（如 MySQL binlog、PostgreSQL WAL），并将其近实时同步分发至其他目标存储系统（如 Elasticsearch、Redis）的集成技术。">CDC</GlossaryTerm>**：变更数据捕获 (Change Data Capture)：一种监测并捕获数据库底层事务变更日志（如 MySQL binlog、PostgreSQL WAL），并将其近实时同步分发至其他目标存储系统（如 Elasticsearch、Redis）的集成技术。
+*   **<GlossaryTerm term="CDN" definition="内容分发网络 (Content Delivery Network)：分布在全球多地的边缘服务器集群，用于缓存并就近向用户提供图片、视频、静态网页等内容，以降低延迟和主站带宽压力。">CDN</GlossaryTerm>**：内容分发网络 (Content Delivery Network)：分布在全球多地的边缘服务器集群，用于缓存并就近向用户提供图片、视频、静态网页等内容，以降低延迟和主站带宽压力。
+*   **<GlossaryTerm term="Celebrity Problem" definition="大V问题：一个有千万粉丝的用户发一条帖，写扩散要写千万份收件箱，瞬间产生巨大写放大，甚至卡住系统。">Celebrity Problem</GlossaryTerm>**：大V问题：一个有千万粉丝的用户发一条帖，写扩散要写千万份收件箱，瞬间产生巨大写放大，甚至卡住系统。
+*   **<GlossaryTerm term="Cell-based Architecture" definition="单元化架构 (Cell-based Architecture)：将整个大型分布式部署系统，物理隔离切分为多个独立、自闭环、完全对等的部署单元（Cells/单元），用户流量按 ID 进行哈希或按地域划分路由。每个单元独立承载一定比例的用户流量，局部单元故障决不影响全站其他单元的业务安全。">Cell-based Architecture</GlossaryTerm>**：单元化架构 (Cell-based Architecture)：将整个大型分布式部署系统，物理隔离切分为多个独立、自闭环、完全对等的部署单元（Cells/单元），用户流量按 ID 进行哈希或按地域划分路由。每个单元独立承载一定比例的用户流量，局部单元故障决不影响全站其他单元的业务安全。
+*   **<GlossaryTerm term="Centralized Governance" definition="集中治理：通过统一的平台把安全、合规、成本、质量的策略集中实施和监控，而不是依赖每个团队各自遵守。让组织能一致地管控风险、审计和优化。">Centralized Governance</GlossaryTerm>**：集中治理：通过统一的平台把安全、合规、成本、质量的策略集中实施和监控，而不是依赖每个团队各自遵守。让组织能一致地管控风险、审计和优化。
+*   **<GlossaryTerm term="cgroups" definition="控制组（control groups）：Linux 内核机制，限制和统计一组进程能用的 CPU、内存、IO 等资源。容器靠它做到“最多用 2 核 4G”，防止一个容器吃光宿主机资源。">cgroups</GlossaryTerm>**：控制组（control groups）：Linux 内核机制，限制和统计一组进程能用的 CPU、内存、IO 等资源。容器靠它做到“最多用 2 核 4G”，防止一个容器吃光宿主机资源。
+*   **<GlossaryTerm term="Cgroups" definition="Cgroups（Control Groups，控制组）是 Linux 内核用来限制、记录和隔离进程组所使用的物理资源（如 CPU、内存、磁盘 I/O、网络带宽）的机制，它是保障容器不会发生资源争抢与雪崩的核心。">Cgroups</GlossaryTerm>**：Cgroups（Control Groups，控制组）是 Linux 内核用来限制、记录和隔离进程组所使用的物理资源（如 CPU、内存、磁盘 I/O、网络带宽）的机制，它是保障容器不会发生资源争抢与雪崩的核心。
+*   **<GlossaryTerm term="Chain of Thought" definition="思维链 (CoT)：通过让模型生成中间推理步骤来解决复杂推理任务。由于自回归的逐 token 生成性质，它会显著增加输出 token 数，进而带来高延迟与高成本。">Chain of Thought</GlossaryTerm>**：思维链 (CoT)：通过让模型生成中间推理步骤来解决复杂推理任务。由于自回归的逐 token 生成性质，它会显著增加输出 token 数，进而带来高延迟与高成本。
+*   **<GlossaryTerm term="Chaos Engineering" definition="混沌工程：在生产或类生产环境主动注入故障（杀实例、断网络、加延迟），验证系统的容错设计是否真的有效。Netflix 的 Chaos Monkey 是代表。">Chaos Engineering</GlossaryTerm>**：混沌工程：在生产或类生产环境主动注入故障（杀实例、断网络、加延迟），验证系统的容错设计是否真的有效。Netflix 的 Chaos Monkey 是代表。
+*   **<GlossaryTerm term="Characterization Test" definition="特征测试：为一段“现状行为”补的测试，用来锁定它当前的行为（哪怕行为本身不完美），好让你在重构时确保行为不变。">Characterization Test</GlossaryTerm>**：特征测试：为一段“现状行为”补的测试，用来锁定它当前的行为（哪怕行为本身不完美），好让你在重构时确保行为不变。
+*   **<GlossaryTerm term="Chunk Overlap" definition="块重叠：相邻 chunk 之间共享一部分内容（如末尾 N 个 token 也放进下一块开头）。避免把一个完整意思正好切在块边界而被割裂，提升检索召回。">Chunk Overlap</GlossaryTerm>**：块重叠：相邻 chunk 之间共享一部分内容（如末尾 N 个 token 也放进下一块开头）。避免把一个完整意思正好切在块边界而被割裂，提升检索召回。
+*   **<GlossaryTerm term="Chunking" definition="分块：把长文档切成较小的片段（chunk），每块单独向量化和检索。块的大小和切法直接影响检索精度和上下文完整性。">Chunking</GlossaryTerm>**：分块：把长文档切成较小的片段（chunk），每块单独向量化和检索。块的大小和切法直接影响检索精度和上下文完整性。
+*   **<GlossaryTerm term="CI Gate" definition="持续集成门禁：在代码合入干线前自动运行的质量卫士。对 Agent 系统而言，CI 门禁在每次提交代码时运行评测集，自动对比新旧轨迹指标，如果发现成功率退化或违规动作，则拒绝合并代码。">CI Gate</GlossaryTerm>**：持续集成门禁：在代码合入干线前自动运行的质量卫士。对 Agent 系统而言，CI 门禁在每次提交代码时运行评测集，自动对比新旧轨迹指标，如果发现成功率退化或违规动作，则拒绝合并代码。
+*   **<GlossaryTerm term="Circuit Breaker" definition="熔断器：包在远程调用外的一个状态机。统计失败率，失败过多就“跳闸”（Open）快速失败、不再真正调用；过一段时间放几个试探请求（Half-Open）探测依赖是否恢复，恢复则关闭（Closed）。">Circuit Breaker</GlossaryTerm>**：熔断器：包在远程调用外的一个状态机。统计失败率，失败过多就“跳闸”（Open）快速失败、不再真正调用；过一段时间放几个试探请求（Half-Open）探测依赖是否恢复，恢复则关闭（Closed）。
+*   **<GlossaryTerm term="Citation / Attribution" definition="引用/溯源：让 RAG 答案标注它用了哪些检索到的证据片段（如 [1][3]），使答案可被追溯和验证。是 RAG 相比纯生成的关键优势，也是降幻觉的手段。">Citation / Attribution</GlossaryTerm>**：引用/溯源：让 RAG 答案标注它用了哪些检索到的证据片段（如 [1][3]），使答案可被追溯和验证。是 RAG 相比纯生成的关键优势，也是降幻觉的手段。
+*   **<GlossaryTerm term="Client-Server" definition="客户端-服务器模型：客户端发起请求，服务器提供响应。Web 的基本交互结构。">Client-Server</GlossaryTerm>**：客户端-服务器模型：客户端发起请求，服务器提供响应。Web 的基本交互结构。
+*   **<GlossaryTerm term="Client-side Discovery" definition="客户端发现：调用方直接查注册中心拿到实例列表，自己做负载均衡选一个调。少一跳、更灵活，但每个客户端要内置发现逻辑。">Client-side Discovery</GlossaryTerm>**：客户端发现：调用方直接查注册中心拿到实例列表，自己做负载均衡选一个调。少一跳、更灵活，但每个客户端要内置发现逻辑。
+*   **<GlossaryTerm term="Clustered Index" definition="聚集索引：索引结构中的叶子节点直接存放对应表行的实际物理数据。一个表只能有一个聚集索引（通常为主键）。">Clustered Index</GlossaryTerm>**：聚集索引：索引结构中的叶子节点直接存放对应表行的实际物理数据。一个表只能有一个聚集索引（通常为主键）。
+*   **<GlossaryTerm term="Code Smell" definition="坏味道：代码里“看起来不对劲、提示设计有问题”的征兆（如超长函数、重复代码、上帝类、过长参数列表）。它不是 bug，但预示着将来难维护、易出错。">Code Smell</GlossaryTerm>**：坏味道：代码里“看起来不对劲、提示设计有问题”的征兆（如超长函数、重复代码、上帝类、过长参数列表）。它不是 bug，但预示着将来难维护、易出错。
+*   **<GlossaryTerm term="Cohesion" definition="内聚度：模块内部各元素彼此结合的紧密程度。SRP 拆分使得每个小模块只包含紧密相关的逻辑，达成高内聚。">Cohesion</GlossaryTerm>**：内聚度：模块内部各元素彼此结合的紧密程度。SRP 拆分使得每个小模块只包含紧密相关的逻辑，达成高内聚。
+*   **<GlossaryTerm term="Compaction" definition="合并排序 (Compaction)：LSM-Tree 后台将多个无序/重叠的 SSTable 文件合并并输出为按主键排序的、去除了过期/删除标志的更大 SSTable 文件的过程。这是 LSM 维持读性能和回收磁盘空间的关键。">Compaction</GlossaryTerm>**：合并排序 (Compaction)：LSM-Tree 后台将多个无序/重叠的 SSTable 文件合并并输出为按主键排序的、去除了过期/删除标志的更大 SSTable 文件的过程。这是 LSM 维持读性能和回收磁盘空间的关键。
+*   **<GlossaryTerm term="Compile-time Binding" definition="编译期绑定 (静态绑定)：对象的类型关系与方法调用在编译或代码声明阶段就已经完全确定，无法在运行过程中进行动态更改。继承就是典型的编译期绑定。">Compile-time Binding</GlossaryTerm>**：编译期绑定 (静态绑定)：对象的类型关系与方法调用在编译或代码声明阶段就已经完全确定，无法在运行过程中进行动态更改。继承就是典型的编译期绑定。
+*   **<GlossaryTerm term="Compile-time Inheritance" definition="编译期继承：在编译期或代码编写阶段通过 extends 声明的静态子类继承关系。若需叠加多种行为组合，编译期继承会导致类数量呈指数级暴增（类爆炸），极其僵硬。">Compile-time Inheritance</GlossaryTerm>**：编译期继承：在编译期或代码编写阶段通过 extends 声明的静态子类继承关系。若需叠加多种行为组合，编译期继承会导致类数量呈指数级暴增（类爆炸），极其僵硬。
+*   **<GlossaryTerm term="Composite Index" definition="复合索引：在多个列上按顺序建立的索引（如 (country, city)）。查询只能利用它的最左前缀——必须从第一列开始连续匹配。">Composite Index</GlossaryTerm>**：复合索引：在多个列上按顺序建立的索引（如 (country, city)）。查询只能利用它的最左前缀——必须从第一列开始连续匹配。
+*   **<GlossaryTerm term="Composition" definition="组合：一个对象“拥有（has-a）”另一些对象/行为，通过持有并委托它们来实现功能，而不是继承。可灵活拼装、可运行时替换。">Composition</GlossaryTerm>**：组合：一个对象“拥有（has-a）”另一些对象/行为，通过持有并委托它们来实现功能，而不是继承。可灵活拼装、可运行时替换。
+*   **<GlossaryTerm term="Concurrency" definition="并发：多个任务在重叠的时间段内推进（不一定同时在跑），它们会交错访问共享资源。">Concurrency</GlossaryTerm>**：并发：多个任务在重叠的时间段内推进（不一定同时在跑），它们会交错访问共享资源。
+*   **<GlossaryTerm term="Confidence and Abstention" definition="置信与弃答：让系统在证据不足或不确定时选择“拒答/转人工”而非强行作答。承认“不知道”比自信地胡说更安全。">Confidence and Abstention</GlossaryTerm>**：置信与弃答：让系统在证据不足或不确定时选择“拒答/转人工”而非强行作答。承认“不知道”比自信地胡说更安全。
+*   **<GlossaryTerm term="Confidence-based Escalation" definition="基于置信度的升级：AI 对自己的答案/决策评估置信度，低于阈值时不硬答，而是弃答、转人工或走更保守的路径。让系统‘知道自己不知道’，把没把握的交给人。">Confidence-based Escalation</GlossaryTerm>**：基于置信度的升级：AI 对自己的答案/决策评估置信度，低于阈值时不硬答，而是弃答、转人工或走更保守的路径。让系统‘知道自己不知道’，把没把握的交给人。
+*   **<GlossaryTerm term="ConfigMap" definition="ConfigMap：K8s 中存放非敏感配置（如数据库地址、功能开关、日志级别）的对象。以环境变量或文件挂载方式注入容器，使同一镜像可在不同环境用不同配置运行。">ConfigMap</GlossaryTerm>**：ConfigMap：K8s 中存放非敏感配置（如数据库地址、功能开关、日志级别）的对象。以环境变量或文件挂载方式注入容器，使同一镜像可在不同环境用不同配置运行。
+*   **<GlossaryTerm term="Configuration" definition="配置：随部署环境变化的值（数据库地址、超时、密钥、开关）。应与代码分离，通常通过环境变量注入。">Configuration</GlossaryTerm>**：配置：随部署环境变化的值（数据库地址、超时、密钥、开关）。应与代码分离，通常通过环境变量注入。
+*   **<GlossaryTerm term="Configuration Drift" definition="配置漂移：实际基础设施被手动改动后，偏离了 IaC 代码声明的状态。下次 plan 会检测到差异；好的实践是禁止手动改、一切通过代码。">Configuration Drift</GlossaryTerm>**：配置漂移：实际基础设施被手动改动后，偏离了 IaC 代码声明的状态。下次 plan 会检测到差异；好的实践是禁止手动改、一切通过代码。
+*   **<GlossaryTerm term="Confirmation Bias" definition="确认偏差/确认偏误：智能体在自我审查时，由于倾向于寻找支持自己先前结论的证据，而忽略或掩盖反面例证的认知倾向。">Confirmation Bias</GlossaryTerm>**：确认偏差/确认偏误：智能体在自我审查时，由于倾向于寻找支持自己先前结论的证据，而忽略或掩盖反面例证的认知倾向。
+*   **<GlossaryTerm term="Consensus" definition="共识：让分布式系统中的多个节点对某个值（如谁是主、日志的下一条是什么）达成一致，即使部分节点失败或网络延迟，也保证所有正常节点最终认同同一个不矛盾的结果。">Consensus</GlossaryTerm>**：共识：让分布式系统中的多个节点对某个值（如谁是主、日志的下一条是什么）达成一致，即使部分节点失败或网络延迟，也保证所有正常节点最终认同同一个不矛盾的结果。
+*   **<GlossaryTerm term="Consensus Protocol" definition="共识协议：在分布式系统或智能体群中，用于确保各个异构或分散节点对同一关键数据状态/决策结论达成共识的一套规范和算法规则。">Consensus Protocol</GlossaryTerm>**：共识协议：在分布式系统或智能体群中，用于确保各个异构或分散节点对同一关键数据状态/决策结论达成共识的一套规范和算法规则。
+*   **<GlossaryTerm term="Consistent Hashing" definition="一致性哈希：把节点和 key 映射到一个环上，key 归属顺时针最近的节点。增减节点时，只有相邻的一小部分 key 需要迁移，而不是全部。">Consistent Hashing</GlossaryTerm>**：一致性哈希：把节点和 key 映射到一个环上，key 归属顺时针最近的节点。增减节点时，只有相邻的一小部分 key 需要迁移，而不是全部。
+*   **<GlossaryTerm term="Consumer Group" definition="消费者组：多个消费者组成一组分担同一队列/主题的消息，每条消息只被组内一个消费者处理，从而水平扩展消费能力。">Consumer Group</GlossaryTerm>**：消费者组：多个消费者组成一组分担同一队列/主题的消息，每条消息只被组内一个消费者处理，从而水平扩展消费能力。
+*   **<GlossaryTerm term="Container" definition="容器：把应用及其依赖打包、并与宿主机其它进程隔离运行的轻量单元。它共享宿主机内核，靠命名空间和 cgroups 实现隔离，比虚拟机轻得多、启动快得多。">Container</GlossaryTerm>**：容器：把应用及其依赖打包、并与宿主机其它进程隔离运行的轻量单元。它共享宿主机内核，靠命名空间和 cgroups 实现隔离，比虚拟机轻得多、启动快得多。
+*   **<GlossaryTerm term="Container Image" definition="容器镜像：一个只读的、分层的应用打包产物，包含运行应用所需的文件系统和元数据。容器是镜像运行起来的实例。镜像不可变、可版本化、可分发。">Container Image</GlossaryTerm>**：容器镜像：一个只读的、分层的应用打包产物，包含运行应用所需的文件系统和元数据。容器是镜像运行起来的实例。镜像不可变、可版本化、可分发。
+*   **<GlossaryTerm term="Content Hashing" definition="内容指纹：把文件内容的哈希写进文件名（如 app.3f9c.js）。内容一变文件名就变，URL 即新资源，天然绕开旧缓存，无需 purge。">Content Hashing</GlossaryTerm>**：内容指纹：把文件内容的哈希写进文件名（如 app.3f9c.js）。内容一变文件名就变，URL 即新资源，天然绕开旧缓存，无需 purge。
+*   **<GlossaryTerm term="Context" definition="上下文 (Context)：策略模式中的核心类，扮演算法消费者的角色。它持有一个抽象策略的引用，负责接收数据并委托给当前策略去运行，自身不感知具体算法实现。">Context</GlossaryTerm>**：上下文 (Context)：策略模式中的核心类，扮演算法消费者的角色。它持有一个抽象策略的引用，负责接收数据并委托给当前策略去运行，自身不感知具体算法实现。
+*   **<GlossaryTerm term="Context Assembly" definition="上下文拼装：每次 LLM 调用前，按 token 预算把所需信息（系统提示、历史、检索内容、当前输入）组装成一个上下文。因为模型无状态，每次都要现拼。">Context Assembly</GlossaryTerm>**：上下文拼装：每次 LLM 调用前，按 token 预算把所需信息（系统提示、历史、检索内容、当前输入）组装成一个上下文。因为模型无状态，每次都要现拼。
+*   **<GlossaryTerm term="Context Precision" definition="上下文精确率：检索回来的内容里，有多少是真正相关的。低精确率意味着噪声多，会干扰生成、浪费上下文，要改重排/过滤。">Context Precision</GlossaryTerm>**：上下文精确率：检索回来的内容里，有多少是真正相关的。低精确率意味着噪声多，会干扰生成、浪费上下文，要改重排/过滤。
+*   **<GlossaryTerm term="Context Recall" definition="上下文召回率：回答所需的相关证据，有多少被检索到了。低召回意味着“没找到”，要改分块/embedding/混合检索/查询改写。">Context Recall</GlossaryTerm>**：上下文召回率：回答所需的相关证据，有多少被检索到了。低召回意味着“没找到”，要改分块/embedding/混合检索/查询改写。
+*   **<GlossaryTerm term="Context Window" definition="上下文窗口：模型一次推理能接收的最大 token 数（输入 + 输出共享或分别计）。它是模型的“工作记忆”上限，超出部分必须靠截断、摘要或检索来取舍。">Context Window</GlossaryTerm>**：上下文窗口：模型一次推理能接收的最大 token 数（输入 + 输出共享或分别计）。它是模型的“工作记忆”上限，超出部分必须靠截断、摘要或检索来取舍。
+*   **<GlossaryTerm term="Continuous Batching" definition="连续批处理：推理服务动态地把多个请求的生成步骤打包到一起喂给 GPU，且请求可随时加入/完成，而非等一整批同时开始结束。大幅提升 GPU 利用率和吞吐。">Continuous Batching</GlossaryTerm>**：连续批处理：推理服务动态地把多个请求的生成步骤打包到一起喂给 GPU，且请求可随时加入/完成，而非等一整批同时开始结束。大幅提升 GPU 利用率和吞吐。
+*   **<GlossaryTerm term="Continuous Delivery/Deployment" definition="持续交付/部署（CD）：CI 通过后，自动把通过验证的制品部署到各环境。持续交付指“随时可一键发布”，持续部署指“自动一路发到生产”。">Continuous Delivery/Deployment</GlossaryTerm>**：持续交付/部署（CD）：CI 通过后，自动把通过验证的制品部署到各环境。持续交付指“随时可一键发布”，持续部署指“自动一路发到生产”。
+*   **<GlossaryTerm term="Continuous Integration" definition="持续集成（CI）：开发者频繁把代码合并到主干，每次合并都自动触发构建和测试，尽早发现集成问题，避免“合并地狱”。">Continuous Integration</GlossaryTerm>**：持续集成（CI）：开发者频繁把代码合并到主干，每次合并都自动触发构建和测试，尽早发现集成问题，避免“合并地狱”。
+*   **<GlossaryTerm term="Contract" definition="模块对外承诺的输入、输出和行为，通常体现为函数签名或接口。只要契约不变，内部实现可以随意替换。">Contract</GlossaryTerm>**：模块对外承诺的输入、输出和行为，通常体现为函数签名或接口。只要契约不变，内部实现可以随意替换。
+*   **<GlossaryTerm term="Contract Testing" definition="消费者和提供者各自用一份共享的“契约”来测试：消费者验证“我需要的字段在”，提供者验证“我没破坏消费者依赖的契约”。Pact 是代表工具。">Contract Testing</GlossaryTerm>**：消费者和提供者各自用一份共享的“契约”来测试：消费者验证“我需要的字段在”，提供者验证“我没破坏消费者依赖的契约”。Pact 是代表工具。
+*   **<GlossaryTerm term="Control Plane" definition="控制面：K8s 中负责“决定集群该怎么运行”的部分——API Server、调度器、控制器、etcd（存期望状态）。它不处理业务流量。">Control Plane</GlossaryTerm>**：控制面：K8s 中负责“决定集群该怎么运行”的部分——API Server、调度器、控制器、etcd（存期望状态）。它不处理业务流量。
+*   **<GlossaryTerm term="Conversation Summarization" definition="对话摘要：把较早的对话历史用模型压缩成一段简短摘要，替代原始长文本保留在上下文里，既省 token 又保住大意。代价是丢细节、且摘要本身要额外调用。">Conversation Summarization</GlossaryTerm>**：对话摘要：把较早的对话历史用模型压缩成一段简短摘要，替代原始长文本保留在上下文里，既省 token 又保住大意。代价是丢细节、且摘要本身要额外调用。
+*   **<GlossaryTerm term="Conway" definition="康威定律：指出系统设计的物理/逻辑架构与其开发组织的沟通结构同构。应用于 AI 架构，多 Agent 的编排结构本质上是人类团队协作关系的工程镜像。">Conway</GlossaryTerm>**：康威定律：指出系统设计的物理/逻辑架构与其开发组织的沟通结构同构。应用于 AI 架构，多 Agent 的编排结构本质上是人类团队协作关系的工程镜像。
+*   **<GlossaryTerm term="Coordination Cost" definition="协调成本：多智能体系统为维持同步、编排跳转和传递状态所付出的额外延迟与 Token 开销。">Coordination Cost</GlossaryTerm>**：协调成本：多智能体系统为维持同步、编排跳转和传递状态所付出的额外延迟与 Token 开销。
+*   **<GlossaryTerm term="Coordination Service" definition="协调服务：如 ZooKeeper、etcd、Consul，内部用共识算法（ZAB/Raft）维护少量关键元数据（leader、配置、锁、成员），为其它系统提供可靠的选主、配置、服务发现能力。">Coordination Service</GlossaryTerm>**：协调服务：如 ZooKeeper、etcd、Consul，内部用共识算法（ZAB/Raft）维护少量关键元数据（leader、配置、锁、成员），为其它系统提供可靠的选主、配置、服务发现能力。
+*   **<GlossaryTerm term="Cosine Similarity" definition="余弦相似度：用两个向量夹角的余弦衡量方向是否一致，取值 -1~1，越接近 1 越相似。只看方向不看长度，是语义相似度最常用的度量。">Cosine Similarity</GlossaryTerm>**：余弦相似度：用两个向量夹角的余弦衡量方向是否一致，取值 -1~1，越接近 1 越相似。只看方向不看长度，是语义相似度最常用的度量。
+*   **<GlossaryTerm term="Cost Attribution" definition="成本归因：把多 Agent 系统的总 token/调用成本拆解到每个 Agent、每一步，看清钱花在哪、哪个 Agent 最贵、是否值得，便于优化。">Cost Attribution</GlossaryTerm>**：成本归因：把多 Agent 系统的总 token/调用成本拆解到每个 Agent、每一步，看清钱花在哪、哪个 Agent 最贵、是否值得，便于优化。
+*   **<GlossaryTerm term="Cost Budget / Spend Cap" definition="成本预算/支出上限：给 LLM 调用设每用户/每功能/每天的花费上限，逼近上限时降级或拒绝，防止 bug 或流量激增导致账单失控。">Cost Budget / Spend Cap</GlossaryTerm>**：成本预算/支出上限：给 LLM 调用设每用户/每功能/每天的花费上限，逼近上限时降级或拒绝，防止 bug 或流量激增导致账单失控。
+*   **<GlossaryTerm term="Coupling" definition="耦合度：模块与模块之间相互关联 and 依赖的程度。降低耦合可以确保修改一个类时不会波及其他无关的类。">Coupling</GlossaryTerm>**：耦合度：模块与模块之间相互关联 and 依赖的程度。降低耦合可以确保修改一个类时不会波及其他无关的类。
+*   **<GlossaryTerm term="Covering Index" definition="覆盖索引：索引本身包含了查询所需的全部列，于是查到索引就能直接返回结果，无需回表读主数据。是高频查询的强力优化。">Covering Index</GlossaryTerm>**：覆盖索引：索引本身包含了查询所需的全部列，于是查到索引就能直接返回结果，无需回表读主数据。是高频查询的强力优化。
+*   **<GlossaryTerm term="CP Registry" definition="CP 注册中心：指强调强一致性 (Consistency) 与分区容错性 (Partition Tolerance) 的服务目录系统（如 Consul、etcd）。网络分区发生时，如果节点群失去半数以上的多数派 Quorum 投票，将直接拒绝新的服务注册与写入，保证已存读取的实例列表绝对精确无脏读。">CP Registry</GlossaryTerm>**：CP 注册中心：指强调强一致性 (Consistency) 与分区容错性 (Partition Tolerance) 的服务目录系统（如 Consul、etcd）。网络分区发生时，如果节点群失去半数以上的多数派 Quorum 投票，将直接拒绝新的服务注册与写入，保证已存读取的实例列表绝对精确无脏读。
+*   **<GlossaryTerm term="CP System" definition="CP 系统：分区发生时优先保证一致性，宁可拒绝部分请求（牺牲可用性）。适合金融、库存等正确性至上的场景。">CP System</GlossaryTerm>**：CP 系统：分区发生时优先保证一致性，宁可拒绝部分请求（牺牲可用性）。适合金融、库存等正确性至上的场景。
+*   **<GlossaryTerm term="CrashLoopBackOff" definition="崩溃循环退避 (CrashLoopBackOff)：Kubernetes 中的一种 Pod 状态。当容器启动失败或由于探针不通过而反复异常退出并重启时，K8s 为了保护宿主机资源并避免无效重启风暴，会指数级延长每次重启之间的等待间隔时间（从 10s、20s 直至最大 300s 宽限期）。">CrashLoopBackOff</GlossaryTerm>**：崩溃循环退避 (CrashLoopBackOff)：Kubernetes 中的一种 Pod 状态。当容器启动失败或由于探针不通过而反复异常退出并重启时，K8s 为了保护宿主机资源并避免无效重启风暴，会指数级延长每次重启之间的等待间隔时间（从 10s、20s 直至最大 300s 宽限期）。
+*   **<GlossaryTerm term="Critical Path" definition="关键路径：一次请求中必须串行完成、决定总耗时的那条最长链路。优化非关键路径不会让请求更快。">Critical Path</GlossaryTerm>**：关键路径：一次请求中必须串行完成、决定总耗时的那条最长链路。优化非关键路径不会让请求更快。
+*   **<GlossaryTerm term="Cross-cutting Concern" definition="横切关注点 (Cross-cutting Concern)：指在软件系统中普遍存在且散落在多个业务模块中的公共功能（如安全性校验、日志监控、统一限流、事务处理）。如果不做抽取，它们会导致代码重复和高耦合度。">Cross-cutting Concern</GlossaryTerm>**：横切关注点 (Cross-cutting Concern)：指在软件系统中普遍存在且散落在多个业务模块中的公共功能（如安全性校验、日志监控、统一限流、事务处理）。如果不做抽取，它们会导致代码重复和高耦合度。
+*   **<GlossaryTerm term="Cross-encoder" definition="交叉编码器：把查询和文档拼在一起送入模型，让两者充分交互后直接输出相关性分数。精度高得多，但每个候选都要现算、无法预存，慢，只适合对少量候选重排。">Cross-encoder</GlossaryTerm>**：交叉编码器：把查询和文档拼在一起送入模型，让两者充分交互后直接输出相关性分数。精度高得多，但每个候选都要现算、无法预存，慢，只适合对少量候选重排。
+*   **<GlossaryTerm term="Cross-Review" definition="交叉审查：多个智能体之间互为评审对象，打破单向反馈链条，通过双向或网状的互相校验发现盲点的审查协作机制。">Cross-Review</GlossaryTerm>**：交叉审查：多个智能体之间互为评审对象，打破单向反馈链条，通过双向或网状的互相校验发现盲点的审查协作机制。
+*   **<GlossaryTerm term="Cyber-Physical System" definition="信息物理系统：把计算、网络与物理过程深度耦合的系统（如工业控制、自动驾驶、电网）。设计时必须同时考虑实时性、安全性、可靠性和物理后果。">Cyber-Physical System</GlossaryTerm>**：信息物理系统：把计算、网络与物理过程深度耦合的系统（如工业控制、自动驾驶、电网）。设计时必须同时考虑实时性、安全性、可靠性和物理后果。
+
+## D
+
+*   **<GlossaryTerm term="Data Dependency" definition="数据依赖：子任务之间在输入输出上的强耦合关系。若任务 B 的执行必须将任务 A 的输出结果作为输入参数，则称 B 存在对 A 的数据依赖。">Data Dependency</GlossaryTerm>**：数据依赖：子任务之间在输入输出上的强耦合关系。若任务 B 的执行必须将任务 A 的输出结果作为输入参数，则称 B 存在对 A 的数据依赖。
+*   **<GlossaryTerm term="Data Gravity" definition="数据引力：数据越大越“重”，吸引应用和服务向它靠拢，且迁移成本（时间、出口流量费）随数据量急剧上升。是云迁移最大的实际障碍之一。">Data Gravity</GlossaryTerm>**：数据引力：数据越大越“重”，吸引应用和服务向它靠拢，且迁移成本（时间、出口流量费）随数据量急剧上升。是云迁移最大的实际障碍之一。
+*   **<GlossaryTerm term="Data Plane" definition="数据面：真正运行业务负载、处理流量的部分——各工作节点（Node）上的 kubelet 和容器。">Data Plane</GlossaryTerm>**：数据面：真正运行业务负载、处理流量的部分——各工作节点（Node）上的 kubelet 和容器。
+*   **<GlossaryTerm term="Data Skew" definition="数据倾斜 (Data Skew)：在分布式系统分片存储中，由于 Shard Key 选择不佳，导致海量数据极度不均匀地囤积在极少数节点上，导致某些节点存储空间和 CPU 压力暴增，而其他节点却处于闲置状态，违背了分布式扩展的初衷。">Data Skew</GlossaryTerm>**：数据倾斜 (Data Skew)：在分布式系统分片存储中，由于 Shard Key 选择不佳，导致海量数据极度不均匀地囤积在极少数节点上，导致某些节点存储空间和 CPU 压力暴增，而其他节点却处于闲置状态，违背了分布式扩展的初衷。
+*   **<GlossaryTerm term="Database Sharding" definition="数据库分片：将大表水平切分到多个物理数据库节点上，以解决单机存储容量和写入性能瓶颈。">Database Sharding</GlossaryTerm>**：数据库分片：将大表水平切分到多个物理数据库节点上，以解决单机存储容量和写入性能瓶颈。
+*   **<GlossaryTerm term="DAU" definition="日活跃用户数 (Daily Active Users)：一天之内访问或使用系统的不重复（唯一）用户总数，是估算系统并发与容量的基石指标。">DAU</GlossaryTerm>**：日活跃用户数 (Daily Active Users)：一天之内访问或使用系统的不重复（唯一）用户总数，是估算系统并发与容量的基石指标。
+*   **<GlossaryTerm term="Dead Letter Queue" definition="死信队列（DLQ）：消息重试超过上限后被移到的专门队列，供人工排查，而不是无限重试卡住主队列。">Dead Letter Queue</GlossaryTerm>**：死信队列（DLQ）：消息重试超过上限后被移到的专门队列，供人工排查，而不是无限重试卡住主队列。
+*   **<GlossaryTerm term="Declarative API" definition="声明式 API (Declarative API)：指用户通过代码描述系统应该达到的‘期望状态（Desired State）’而不是执行的‘操作过程’，由后台控制器或引擎进行调和收敛。">Declarative API</GlossaryTerm>**：声明式 API (Declarative API)：指用户通过代码描述系统应该达到的‘期望状态（Desired State）’而不是执行的‘操作过程’，由后台控制器或引擎进行调和收敛。
+*   **<GlossaryTerm term="Declarative IaC" definition="声明式 IaC：你描述“期望的最终状态”（要哪些资源、什么配置），工具负责算出从当前到期望需要创建/修改/删除什么并执行——而不是你写一步步的操作命令。">Declarative IaC</GlossaryTerm>**：声明式 IaC：你描述“期望的最终状态”（要哪些资源、什么配置），工具负责算出从当前到期望需要创建/修改/删除什么并执行——而不是你写一步步的操作命令。
+*   **<GlossaryTerm term="Decode" definition="解码阶段：逐 token 生成输出，每步复用 KV cache 只算一个新 token。受显存带宽限制、难并行，决定每 token时延（TPOT）。">Decode</GlossaryTerm>**：解码阶段：逐 token 生成输出，每步复用 KV cache 只算一个新 token。受显存带宽限制、难并行，决定每 token时延（TPOT）。
+*   **<GlossaryTerm term="Decoder-only Transformer" definition="只用 Transformer 解码器一半的结构，配合掩码自注意力（每个 token 只能看到它前面的 token），专门用于自回归地预测下一个 token。GPT 系列都是这种结构。">Decoder-only Transformer</GlossaryTerm>**：只用 Transformer 解码器一半的结构，配合掩码自注意力（每个 token 只能看到它前面的 token），专门用于自回归地预测下一个 token。GPT 系列都是这种结构。
+*   **<GlossaryTerm term="Decorator Pattern" definition="装饰器模式：把一个对象包进另一个实现了相同接口的包装对象里，在委托原对象前后“增强”行为（如加日志、缓存、压缩）。可层层嵌套叠加功能，且不改原类。">Decorator Pattern</GlossaryTerm>**：装饰器模式：把一个对象包进另一个实现了相同接口的包装对象里，在委托原对象前后“增强”行为（如加日志、缓存、压缩）。可层层嵌套叠加功能，且不改原类。
+*   **<GlossaryTerm term="Deduplication" definition="去重：识别并合并/丢弃重复的文档或块（靠内容指纹/哈希），避免同一内容多次进索引，造成检索冗余和名额浪费。">Deduplication</GlossaryTerm>**：去重：识别并合并/丢弃重复的文档或块（靠内容指纹/哈希），避免同一内容多次进索引，造成检索冗余和名额浪费。
+*   **<GlossaryTerm term="Defense in Depth" definition="纵深防御：不依赖单一防线，而是在多个层次（输入、处理、输出、执行）设置多道独立的防护，任何一道被突破还有下一道兜底。安全设计的基本原则，尤其适用于无法根治的 AI 威胁。">Defense in Depth</GlossaryTerm>**：纵深防御：不依赖单一防线，而是在多个层次（输入、处理、输出、执行）设置多道独立的防护，任何一道被突破还有下一道兜底。安全设计的基本原则，尤其适用于无法根治的 AI 威胁。
+*   **<GlossaryTerm term="Delayed Double Delete" definition="延迟双删：一种应对 Cache-Aside 并发读写竞态脏缓存的一致性兜底策略。步骤为：先删缓存，再写数据库，延迟一段时间（等并发读的事务回填完旧值），最后再次删除缓存以清除脏缓存值。">Delayed Double Delete</GlossaryTerm>**：延迟双删：一种应对 Cache-Aside 并发读写竞态脏缓存的一致性兜底策略。步骤为：先删缓存，再写数据库，延迟一段时间（等并发读的事务回填完旧值），最后再次删除缓存以清除脏缓存值。
+*   **<GlossaryTerm term="Denormalization" definition="反规范化：故意冗余存储（同一数据存多份/预计算/嵌入），用写复杂度和空间换读性能。NoSQL 因缺乏 join 常依赖它。">Denormalization</GlossaryTerm>**：反规范化：故意冗余存储（同一数据存多份/预计算/嵌入），用写复杂度和空间换读性能。NoSQL 因缺乏 join 常依赖它。
+*   **<GlossaryTerm term="Dense Retrieval" definition="稠密检索：基于 embedding 向量相似度的检索，文档表示为低维稠密向量。懂语义改写，但对精确术语/罕见词较弱。">Dense Retrieval</GlossaryTerm>**：稠密检索：基于 embedding 向量相似度的检索，文档表示为低维稠密向量。懂语义改写，但对精确术语/罕见词较弱。
+*   **<GlossaryTerm term="Dependency Injection" definition="依赖注入 (DI)：一种将依赖项的创建与使用分离开来的设计模式。具体的服务实现（如 SmtpClient）在运行时被传递给依赖它们的对象（如 OrderService），而不是在对象内部直接实例化它。">Dependency Injection</GlossaryTerm>**：依赖注入 (DI)：一种将依赖项的创建与使用分离开来的设计模式。具体的服务实现（如 SmtpClient）在运行时被传递给依赖它们的对象（如 OrderService），而不是在对象内部直接实例化它。
+*   **<GlossaryTerm term="Dependency Inversion (DIP)" definition="依赖倒置原则：高层模块不依赖低层具体实现，而是双方都依赖抽象（接口）。让具体实现（mock/本地/云模型）可替换而上层不变。">Dependency Inversion (DIP)</GlossaryTerm>**：依赖倒置原则：高层模块不依赖低层具体实现，而是双方都依赖抽象（接口）。让具体实现（mock/本地/云模型）可替换而上层不变。
+*   **<GlossaryTerm term="Dependency Inversion Principle" definition="依赖倒置原则 (DIP)：高层模块不应该依赖低层模块，二者都应该依赖其抽象；抽象不应该依赖细节，细节应该依赖抽象。这里通知核心只依赖统一的 Sender 接口，不依赖具体的 Email/SMS 等物理实现。">Dependency Inversion Principle</GlossaryTerm>**：依赖倒置原则 (DIP)：高层模块不应该依赖低层模块，二者都应该依赖其抽象；抽象不应该依赖细节，细节应该依赖抽象。这里通知核心只依赖统一的 Sender 接口，不依赖具体的 Email/SMS 等物理实现。
+*   **<GlossaryTerm term="Deployment" definition="Deployment：声明“我要 N 个某镜像的 Pod 副本”，由控制器维持该数量、并负责滚动更新/回滚。是无状态服务的标准管理对象。">Deployment</GlossaryTerm>**：Deployment：声明“我要 N 个某镜像的 Pod 副本”，由控制器维持该数量、并负责滚动更新/回滚。是无状态服务的标准管理对象。
+*   **<GlossaryTerm term="Design Pattern" definition="设计模式：针对反复出现的设计问题的可复用解决方案模板（如工厂、策略、观察者）。由 GoF《设计模式》系统化。">Design Pattern</GlossaryTerm>**：设计模式：针对反复出现的设计问题的可复用解决方案模板（如工厂、策略、观察者）。由 GoF《设计模式》系统化。
+*   **<GlossaryTerm term="Deterministic Workflow" definition="确定性工作流：步骤顺序由代码固化，跳转分支完全由程序分支或规则决定（即便步骤内部调用 LLM）。具备高可预测性、高效率且成本低廉。">Deterministic Workflow</GlossaryTerm>**：确定性工作流：步骤顺序由代码固化，跳转分支完全由程序分支或规则决定（即便步骤内部调用 LLM）。具备高可预测性、高效率且成本低廉。
+*   **<GlossaryTerm term="DIP" definition="依赖倒置原则 (Dependency Inversion Principle)：SOLID 软件设计原则之一。高层模块不应该依赖低层模块，两者都应该依赖抽象；抽象不应该依赖细节，细节应该依赖抽象。在多云架构中，指业务代码仅依赖中立接口，不直接依赖具体云厂商的 SDK 细节。">DIP</GlossaryTerm>**：依赖倒置原则 (Dependency Inversion Principle)：SOLID 软件设计原则之一。高层模块不应该依赖低层模块，两者都应该依赖抽象；抽象不应该依赖细节，细节应该依赖抽象。在多云架构中，指业务代码仅依赖中立接口，不直接依赖具体云厂商的 SDK 细节。
+*   **<GlossaryTerm term="Directed Acyclic Graph" definition="有向无环图 (DAG)：一种由顶点和有向边组成的图结构，在其中任意顶点出发都无法沿着有向边回到自身。在任务规划中，用于表示有依赖关系的子任务图。">Directed Acyclic Graph</GlossaryTerm>**：有向无环图 (DAG)：一种由顶点和有向边组成的图结构，在其中任意顶点出发都无法沿着有向边回到自身。在任务规划中，用于表示有依赖关系的子任务图。
+*   **<GlossaryTerm term="Dirty Read" definition="脏读：读到了另一个事务还未提交的数据；若那个事务回滚，你就读到了根本不存在的值。">Dirty Read</GlossaryTerm>**：脏读：读到了另一个事务还未提交的数据；若那个事务回滚，你就读到了根本不存在的值。
+*   **<GlossaryTerm term="Distributed Tracing" definition="分布式追踪：用统一的 trace id 串起一个请求跨多个服务的完整路径，显示每段耗时，定位“慢在哪个服务/依赖”。">Distributed Tracing</GlossaryTerm>**：分布式追踪：用统一的 trace id 串起一个请求跨多个服务的完整路径，显示每段耗时，定位“慢在哪个服务/依赖”。
+*   **<GlossaryTerm term="Distributed Tracing (Multi-Agent)" definition="多 Agent 分布式追踪：用统一的 trace id 串起一次任务里所有 Agent 的每一步调用（谁、做了什么、输入输出、耗时、花了多少 token），形成可视的完整链路，便于定位是哪个 Agent 哪一步出了问题。">Distributed Tracing (Multi-Agent)</GlossaryTerm>**：多 Agent 分布式追踪：用统一的 trace id 串起一次任务里所有 Agent 的每一步调用（谁、做了什么、输入输出、耗时、花了多少 token），形成可视的完整链路，便于定位是哪个 Agent 哪一步出了问题。
+*   **<GlossaryTerm term="Distributed Transaction" definition="分布式事务：跨越多个独立网络节点或存储介质以保障全局ACID特性的事务管理机制。由于需要在多个服务间维持锁定与同步协调，容易产生系统单点故障和严重的性能延迟。">Distributed Transaction</GlossaryTerm>**：分布式事务：跨越多个独立网络节点或存储介质以保障全局ACID特性的事务管理机制。由于需要在多个服务间维持锁定与同步协调，容易产生系统单点故障和严重的性能延迟。
+*   **<GlossaryTerm term="Distribution Drift" definition="分布漂移：生产环境的输入分布（用户问法、话题、上游数据）随时间偏离评估集/训练时的分布，导致模型表现悄悄下降。需监控输入特征分布和质量指标的变化来及时发现。">Distribution Drift</GlossaryTerm>**：分布漂移：生产环境的输入分布（用户问法、话题、上游数据）随时间偏离评估集/训练时的分布，导致模型表现悄悄下降。需监控输入特征分布和质量指标的变化来及时发现。
+*   **<GlossaryTerm term="DNS" definition="域名系统：把人类可读的域名（example.com）解析成服务器 IP。结果会被缓存，所以不是每次请求都解析。">DNS</GlossaryTerm>**：域名系统：把人类可读的域名（example.com）解析成服务器 IP。结果会被缓存，所以不是每次请求都解析。
+*   **<GlossaryTerm term="Document DB" definition="文档数据库：以 JSON 文档为单位存取，schema 灵活。擅长整块读写、快速迭代。">Document DB</GlossaryTerm>**：文档数据库：以 JSON 文档为单位存取，schema 灵活。擅长整块读写、快速迭代。
+*   **<GlossaryTerm term="Document Model" definition="文档模型：以文档形式（通常为 JSON 或 BSON）存储和查询数据的 NoSQL 数据库模型，典型代表为 MongoDB。特别适合自包含、树形嵌套结构的数据。">Document Model</GlossaryTerm>**：文档模型：以文档形式（通常为 JSON 或 BSON）存储和查询数据的 NoSQL 数据库模型，典型代表为 MongoDB。特别适合自包含、树形嵌套结构的数据。
+*   **<GlossaryTerm term="DORA" definition="DORA 度量 (DevOps Research and Assessment)：Google DevOps 研究团队制定的一套旨在科学度量交付团队工程效能的核心评估标准。主要包含部署频率（Deployment Frequency）、变更前置时间（Lead Time for Changes）、服务恢复时间（Time to Restore Service）和变更失败率（Change Failure Rate）四个黄金指标。">DORA</GlossaryTerm>**：DORA 度量 (DevOps Research and Assessment)：Google DevOps 研究团队制定的一套旨在科学度量交付团队工程效能的核心评估标准。主要包含部署频率（Deployment Frequency）、变更前置时间（Lead Time for Changes）、服务恢复时间（Time to Restore Service）和变更失败率（Change Failure Rate）四个黄金指标。
+*   **<GlossaryTerm term="DORA Metrics" definition="DORA 指标 (DevOps Research and Assessment Metrics)：DevOps 领域公认用于衡量软件交付效能的四个关键指标，包括：部署频率 (Deployment Frequency)、变更前置时间 (Lead Time for Changes)、服务恢复时间 (Time to Restore Service) 以及变更失败率 (Change Failure Rate)。前两个衡量速度，后两个衡量稳定性。">DORA Metrics</GlossaryTerm>**：DORA 指标 (DevOps Research and Assessment Metrics)：DevOps 领域公认用于衡量软件交付效能的四个关键指标，包括：部署频率 (Deployment Frequency)、变更前置时间 (Lead Time for Changes)、服务恢复时间 (Time to Restore Service) 以及变更失败率 (Change Failure Rate)。前两个衡量速度，后两个衡量稳定性。
+*   **<GlossaryTerm term="DRY" definition="Don">DRY</GlossaryTerm>**：Don
+*   **<GlossaryTerm term="Dual-Write Problem" definition="双写问题：需要同时更新两个系统（如数据库 + 消息队列），但没有跨系统原子事务，中间崩溃就会导致两者不一致。">Dual-Write Problem</GlossaryTerm>**：双写问题：需要同时更新两个系统（如数据库 + 消息队列），但没有跨系统原子事务，中间崩溃就会导致两者不一致。
+
+## E
+
+*   **<GlossaryTerm term="East-West Traffic" definition="东西向流量：在微服务与容器网络中，指运行在集群内部不同微服务实例、容器 Pod 之间相互调用的网络通信流量。主要关注服务发现、动态负载均衡、安全加密 mTLS、熔断重试等东西向治理。">East-West Traffic</GlossaryTerm>**：东西向流量：在微服务与容器网络中，指运行在集群内部不同微服务实例、容器 Pod 之间相互调用的网络通信流量。主要关注服务发现、动态负载均衡、安全加密 mTLS、熔断重试等东西向治理。
+*   **<GlossaryTerm term="eBPF" definition="eBPF (Extended Berkeley Packet Filter)：Linux 内核的一项革命性技术。它允许在 Linux 内核沙盒中安全、动态地运行沙盒程序，无需修改内核源码或加载内核模块。在服务网格中（如 Ambient Mesh），eBPF 可在内核套接字层直接重定向数据包，彻底免去 Sidecar 代理在用户态与内核态之间频繁上下文切换的性能损耗。">eBPF</GlossaryTerm>**：eBPF (Extended Berkeley Packet Filter)：Linux 内核的一项革命性技术。它允许在 Linux 内核沙盒中安全、动态地运行沙盒程序，无需修改内核源码或加载内核模块。在服务网格中（如 Ambient Mesh），eBPF 可在内核套接字层直接重定向数据包，彻底免去 Sidecar 代理在用户态与内核态之间频繁上下文切换的性能损耗。
+*   **<GlossaryTerm term="Edge Computing" definition="边缘计算：在靠近设备的本地节点（边缘网关）就近处理数据，而不是全送到云。降低延迟、减少带宽、在断网时仍能本地决策。">Edge Computing</GlossaryTerm>**：边缘计算：在靠近设备的本地节点（边缘网关）就近处理数据，而不是全送到云。降低延迟、减少带宽、在断网时仍能本地决策。
+*   **<GlossaryTerm term="Embedding" definition="嵌入：把文本（或图像等）映射成一个固定长度的数值向量，使语义相近的内容在向量空间中距离也相近。是语义检索、聚类、推荐的基础表示。">Embedding</GlossaryTerm>**：嵌入：把文本（或图像等）映射成一个固定长度的数值向量，使语义相近的内容在向量空间中距离也相近。是语义检索、聚类、推荐的基础表示。
+*   **<GlossaryTerm term="End-to-End Evaluation" definition="端到端评估：把整个多 Agent 系统当黑盒，只看最终交付给用户的结果好不好（正确性、质量、成本、延迟）。衡量系统整体价值，是判断‘多 Agent 值不值’的依据。">End-to-End Evaluation</GlossaryTerm>**：端到端评估：把整个多 Agent 系统当黑盒，只看最终交付给用户的结果好不好（正确性、质量、成本、延迟）。衡量系统整体价值，是判断‘多 Agent 值不值’的依据。
+*   **<GlossaryTerm term="Enterprise Service Bus" definition="企业服务总线（ESB）：传统企业集成的中枢，所有系统接到总线上，由它做路由、协议转换、编排。解决点对点爆炸，但本身可能成为重型瓶颈。">Enterprise Service Bus</GlossaryTerm>**：企业服务总线（ESB）：传统企业集成的中枢，所有系统接到总线上，由它做路由、协议转换、编排。解决点对点爆炸，但本身可能成为重型瓶颈。
+*   **<GlossaryTerm term="Environment" definition="环境：相互隔离的运行场景，典型是 dev（开发）、staging（预发）、prod（生产）。同一代码在不同环境用不同配置运行。">Environment</GlossaryTerm>**：环境：相互隔离的运行场景，典型是 dev（开发）、staging（预发）、prod（生产）。同一代码在不同环境用不同配置运行。
+*   **<GlossaryTerm term="Environment Variable" definition="环境变量：操作系统层面注入给进程的键值对（如 DB_HOST）。是把配置从代码里分离出来的标准方式。">Environment Variable</GlossaryTerm>**：环境变量：操作系统层面注入给进程的键值对（如 DB_HOST）。是把配置从代码里分离出来的标准方式。
+*   **<GlossaryTerm term="Erlang" definition="一门为电信级高并发、高可靠系统设计的函数式语言，运行在 BEAM 虚拟机上。支持数百万轻量级进程、抢占式调度、进程隔离、监督树和热代码升级。">Erlang</GlossaryTerm>**：一门为电信级高并发、高可靠系统设计的函数式语言，运行在 BEAM 虚拟机上。支持数百万轻量级进程、抢占式调度、进程隔离、监督树和热代码升级。
+*   **<GlossaryTerm term="ERP" definition="企业资源计划（Enterprise Resource Planning）：整合财务、采购、库存、生产、人力等核心业务流程的企业系统（如 SAP、Oracle）。是大企业的业务中枢，稳定性和数据一致性要求极高。">ERP</GlossaryTerm>**：企业资源计划（Enterprise Resource Planning）：整合财务、采购、库存、生产、人力等核心业务流程的企业系统（如 SAP、Oracle）。是大企业的业务中枢，稳定性和数据一致性要求极高。
+*   **<GlossaryTerm term="Error Accumulation" definition="错误累积：在自回归生成中，一步预测错会导致该错误被作为下一步的输入前文，从而使后面的生成越来越偏离预定轨道。">Error Accumulation</GlossaryTerm>**：错误累积：在自回归生成中，一步预测错会导致该错误被作为下一步的输入前文，从而使后面的生成越来越偏离预定轨道。
+*   **<GlossaryTerm term="Error Budget" definition="错误预算：1 减去 SLO 得到的允许失败额度（如 99.95% 对应每月约 0.05% ≈ 22 分钟）。用完了就冻结上线、专注稳定性，是平衡迭代速度与可靠性的机制。">Error Budget</GlossaryTerm>**：错误预算：1 减去 SLO 得到的允许失败额度（如 99.95% 对应每月约 0.05% ≈ 22 分钟）。用完了就冻结上线、专注稳定性，是平衡迭代速度与可靠性的机制。
+*   **<GlossaryTerm term="Error Budget Burn Rate" definition="错误预算燃尽率：当前错误消耗错误预算的速度。燃得快（短时间内会烧光本月预算）才告警，把告警紧迫度和实际风险挂钩，避免对偶发抖动误报。">Error Budget Burn Rate</GlossaryTerm>**：错误预算燃尽率：当前错误消耗错误预算的速度。燃得快（短时间内会烧光本月预算）才告警，把告警紧迫度和实际风险挂钩，避免对偶发抖动误报。
+*   **<GlossaryTerm term="Error Propagation / Isolation" definition="错误传播与隔离：在多 Agent 链路中，一个 Agent 的错误输出会被下游当输入而放大污染全链。隔离手段包括校验每个 Agent 的输出、不让坏数据流入下游、单个 Agent 失败不拖垮整体。">Error Propagation / Isolation</GlossaryTerm>**：错误传播与隔离：在多 Agent 链路中，一个 Agent 的错误输出会被下游当输入而放大污染全链。隔离手段包括校验每个 Agent 的输出、不让坏数据流入下游、单个 Agent 失败不拖垮整体。
+*   **<GlossaryTerm term="Essential Complexity" definition="本质复杂度：来自问题本身的、无法被工具消除的复杂度（如搞清楚到底要做什么）。与之相对的是偶然复杂度（accidental，来自工具/实现）。">Essential Complexity</GlossaryTerm>**：本质复杂度：来自问题本身的、无法被工具消除的复杂度（如搞清楚到底要做什么）。与之相对的是偶然复杂度（accidental，来自工具/实现）。
+*   **<GlossaryTerm term="etcd" definition="Kubernetes 集群的共享状态存储，基于 Raft 一致性协议的分布式键值数据库。它负责保存所有集群元数据与期望状态，具备强一致性和高可用性。">etcd</GlossaryTerm>**：Kubernetes 集群的共享状态存储，基于 Raft 一致性协议的分布式键值数据库。它负责保存所有集群元数据与期望状态，具备强一致性和高可用性。
+*   **<GlossaryTerm term="Eval Set" definition="评估集：一批代表性的问答样例（问题 + 参考答案/预期证据），用来量化助手的质量（答案是否正确、是否引用了对的证据、该弃答时是否弃答）。是‘答得好不好’从主观变客观的基础。">Eval Set</GlossaryTerm>**：评估集：一批代表性的问答样例（问题 + 参考答案/预期证据），用来量化助手的质量（答案是否正确、是否引用了对的证据、该弃答时是否弃答）。是‘答得好不好’从主观变客观的基础。
+*   **<GlossaryTerm term="Evaluation Set" definition="评估集（eval set）：一批有代表性的输入样本（常配参考答案或评判标准），用来系统衡量 AI 系统的表现。像 AI 的‘考试卷’，覆盖典型、边界和风险场景，是可测量、可回归的基础。">Evaluation Set</GlossaryTerm>**：评估集（eval set）：一批有代表性的输入样本（常配参考答案或评判标准），用来系统衡量 AI 系统的表现。像 AI 的‘考试卷’，覆盖典型、边界和风险场景，是可测量、可回归的基础。
+*   **<GlossaryTerm term="Event" definition="事件：表示某件事已经发生的消息（如 OrderCreated）。发布者不关心谁来消费，消费者各自响应。">Event</GlossaryTerm>**：事件：表示某件事已经发生的消息（如 OrderCreated）。发布者不关心谁来消费，消费者各自响应。
+*   **<GlossaryTerm term="Event Bus" definition="事件总线 (Event Bus)：一种发布订阅模式的集中实现形式。充当所有组件之间传输事件的中央通信枢纽，发布者和订阅者只需与总线对接，实现完全解耦。">Event Bus</GlossaryTerm>**：事件总线 (Event Bus)：一种发布订阅模式的集中实现形式。充当所有组件之间传输事件的中央通信枢纽，发布者和订阅者只需与总线对接，实现完全解耦。
+*   **<GlossaryTerm term="Event-Driven Architecture" definition="事件驱动架构：服务通过发布和订阅事件来协作，而非直接调用。高度解耦、易扩展，代价是最终一致和调试链路变长。">Event-Driven Architecture</GlossaryTerm>**：事件驱动架构：服务通过发布和订阅事件来协作，而非直接调用。高度解耦、易扩展，代价是最终一致和调试链路变长。
+*   **<GlossaryTerm term="Eventual Consistency" definition="最终一致性：分布式系统中的一种弱一致性模型。它不保证在任何时刻所有节点的数据都完全相同，但保证在没有新的更新操作前提下，系统数据最终会达到一致状态。在跨系统的企业级集成中，由于缺乏全局事务锁，通常依靠事件异步通知、对账补件等机制达成最终一致。">Eventual Consistency</GlossaryTerm>**：最终一致性：分布式系统中的一种弱一致性模型。它不保证在任何时刻所有节点的数据都完全相同，但保证在没有新的更新操作前提下，系统数据最终会达到一致状态。在跨系统的企业级集成中，由于缺乏全局事务锁，通常依靠事件异步通知、对账补件等机制达成最终一致。
+*   **<GlossaryTerm term="Exact Cache" definition="精确缓存：完全相同的 Prompt 和参数输入时，直接返回缓存结果。仅在模型输出确定（如温度为0）且对时效性不敏感的场景适用。">Exact Cache</GlossaryTerm>**：精确缓存：完全相同的 Prompt 和参数输入时，直接返回缓存结果。仅在模型输出确定（如温度为0）且对时效性不敏感的场景适用。
+*   **<GlossaryTerm term="Exactly-once" definition="恰好一次投递：消息保证在端到端传输中只被传送且处理有且仅有一次，没有任何丢失或重复。在不可靠网络上纯粹依靠投递无法达成。">Exactly-once</GlossaryTerm>**：恰好一次投递：消息保证在端到端传输中只被传送且处理有且仅有一次，没有任何丢失或重复。在不可靠网络上纯粹依靠投递无法达成。
+*   **<GlossaryTerm term="Exponential Backoff" definition="指数退避：每次重试的等待间隔成倍增长（如 1s、2s、4s、8s），给故障的依赖越来越多的喘息时间，而不是密集冲击。">Exponential Backoff</GlossaryTerm>**：指数退避：每次重试的等待间隔成倍增长（如 1s、2s、4s、8s），给故障的依赖越来越多的喘息时间，而不是密集冲击。
+
+## F
+
+*   **<GlossaryTerm term="Facade Pattern" definition="外观模式：给一组复杂的子系统提供一个简化的统一入口，让调用方不必直接面对内部的多个类。是“简化接口”的包装。">Facade Pattern</GlossaryTerm>**：外观模式：给一组复杂的子系统提供一个简化的统一入口，让调用方不必直接面对内部的多个类。是“简化接口”的包装。
+*   **<GlossaryTerm term="Factory Method" definition="工厂方法（GoF）：在父类里定义一个“创建对象”的方法，把“具体创建哪个子类”延迟到子类去决定。让框架定义流程、子类决定用什么对象。">Factory Method</GlossaryTerm>**：工厂方法（GoF）：在父类里定义一个“创建对象”的方法，把“具体创建哪个子类”延迟到子类去决定。让框架定义流程、子类决定用什么对象。
+*   **<GlossaryTerm term="Factory Pattern" definition="工厂模式：一种创建型设计模式。通过定义公共创建接口，将对象的实例化延迟到子类或工厂函数中进行，使得客户端代码不与具体产品的构造器强耦合，易于扩展新产品类型。">Factory Pattern</GlossaryTerm>**：工厂模式：一种创建型设计模式。通过定义公共创建接口，将对象的实例化延迟到子类或工厂函数中进行，使得客户端代码不与具体产品的构造器强耦合，易于扩展新产品类型。
+*   **<GlossaryTerm term="Fail Fast" definition="快速失败：把最快、最便宜的检查放在流水线前面，一旦失败立即停止、不再跑后面昂贵的阶段，尽早给开发者反馈。">Fail Fast</GlossaryTerm>**：快速失败：把最快、最便宜的检查放在流水线前面，一旦失败立即停止、不再跑后面昂贵的阶段，尽早给开发者反馈。
+*   **<GlossaryTerm term="Fail-Fast" definition="快速失败 (Fail-Fast)：当系统或依赖服务检测到异常或超载时，不尝试长久等待重试，而是立即断开并以错误状态返回，以避免耗尽宝贵的工作线程和计算资源。">Fail-Fast</GlossaryTerm>**：快速失败 (Fail-Fast)：当系统或依赖服务检测到异常或超载时，不尝试长久等待重试，而是立即断开并以错误状态返回，以避免耗尽宝贵的工作线程和计算资源。
+*   **<GlossaryTerm term="Failover" definition="故障转移：当主实例失效时，自动切换到备用实例。配合健康检查实现自动恢复。">Failover</GlossaryTerm>**：故障转移：当主实例失效时，自动切换到备用实例。配合健康检查实现自动恢复。
+*   **<GlossaryTerm term="Failure Mode" definition="系统在某类故障下的具体表现。好的架构为每种失败预先设计了行为：拒绝、重试、降级，还是排队。">Failure Mode</GlossaryTerm>**：系统在某类故障下的具体表现。好的架构为每种失败预先设计了行为：拒绝、重试、降级，还是排队。
+*   **<GlossaryTerm term="Faithfulness" definition="忠实度：评估生成的答案在多大程度上忠实于给定的参考上下文证据，即没有包含证据之外的额外虚假陈述或推理跳跃。是评测生成质量的核心指标。">Faithfulness</GlossaryTerm>**：忠实度：评估生成的答案在多大程度上忠实于给定的参考上下文证据，即没有包含证据之外的额外虚假陈述或推理跳跃。是评测生成质量的核心指标。
+*   **<GlossaryTerm term="Fallback" definition="降级/兜底：当依赖不可用（如熔断打开）时，返回一个合理的替代结果（缓存的旧数据、默认值、空列表），保证核心功能可用，而非整体失败。">Fallback</GlossaryTerm>**：降级/兜底：当依赖不可用（如熔断打开）时，返回一个合理的替代结果（缓存的旧数据、默认值、空列表），保证核心功能可用，而非整体失败。
+*   **<GlossaryTerm term="Fallback Mechanism" definition="兜底降级/退避机制：在软件或智能体交互中，当主逻辑、主要路由节点或外部 API 调用失效/匹配不成功时，系统自动跳转执行的安全、静态或人工介入的防御策略。">Fallback Mechanism</GlossaryTerm>**：兜底降级/退避机制：在软件或智能体交互中，当主逻辑、主要路由节点或外部 API 调用失效/匹配不成功时，系统自动跳转执行的安全、静态或人工介入的防御策略。
+*   **<GlossaryTerm term="Fan-out" definition="扇出/扩散：发布-订阅模型或社交网络中，一条消息产生后分发给多个订阅者/群成员的逻辑路径。分为写扩散（Push，写多份收件箱）与读扩散（Pull，只写一份发件箱，读时动态拉取）。">Fan-out</GlossaryTerm>**：扇出/扩散：发布-订阅模型或社交网络中，一条消息产生后分发给多个订阅者/群成员的逻辑路径。分为写扩散（Push，写多份收件箱）与读扩散（Pull，只写一份发件箱，读时动态拉取）。
+*   **<GlossaryTerm term="Fan-out / Aggregate" definition="扇出-聚合：扇出（fan-out）把任务分发给多个并行 worker，聚合（aggregate）把它们的结果合并。是并行加速的经典模式，需处理部分失败和结果合并。">Fan-out / Aggregate</GlossaryTerm>**：扇出-聚合：扇出（fan-out）把任务分发给多个并行 worker，聚合（aggregate）把它们的结果合并。是并行加速的经典模式，需处理部分失败和结果合并。
+*   **<GlossaryTerm term="Fan-out on Read" definition="读扩散（pull）：用户刷新时，实时拉取所关注的人的帖子并合并排序。写很便宜（只存一份），但读很重。">Fan-out on Read</GlossaryTerm>**：读扩散（pull）：用户刷新时，实时拉取所关注的人的帖子并合并排序。写很便宜（只存一份），但读很重。
+*   **<GlossaryTerm term="Fan-out on Write" definition="写扩散（push）：发帖时就把这条帖子推送到每个粉丝的收件箱（timeline）。读极快（直接读自己的收件箱），但写很重（一条帖要写 N 份）。">Fan-out on Write</GlossaryTerm>**：写扩散（push）：发帖时就把这条帖子推送到每个粉丝的收件箱（timeline）。读极快（直接读自己的收件箱），但写很重（一条帖要写 N 份）。
+*   **<GlossaryTerm term="Fan-out Worker" definition="扇出工作协程/线程：负责从消息队列中拉取‘发帖事件’，并遍历发帖者的粉丝列表，将帖子数据（或 ID 指针）批量复制分发至粉丝收件箱的时间线消费进程。">Fan-out Worker</GlossaryTerm>**：扇出工作协程/线程：负责从消息队列中拉取‘发帖事件’，并遍历发帖者的粉丝列表，将帖子数据（或 ID 指针）批量复制分发至粉丝收件箱的时间线消费进程。
+*   **<GlossaryTerm term="Feedback Signal" definition="反馈信号：从真实用户交互中收集的、关于 AI 输出好坏的信号，分显式（点赞/点踩、纠错、评分）和隐式（重问、放弃、转人工、复制采纳）。是改进系统和扩充评估集的一手数据。">Feedback Signal</GlossaryTerm>**：反馈信号：从真实用户交互中收集的、关于 AI 输出好坏的信号，分显式（点赞/点踩、纠错、评分）和隐式（重问、放弃、转人工、复制采纳）。是改进系统和扩充评估集的一手数据。
+*   **<GlossaryTerm term="Feistel Cipher" definition="Feistel密码混淆：一种对称分组加密结构。在短链生成中常用于将自增的 ID 进行可逆混淆加密成无规律的数字，这样既保留了自增 ID 绝对唯一的防碰撞优点，又使输出结果表现为离散随机，防范他人枚举窥探。">Feistel Cipher</GlossaryTerm>**：Feistel密码混淆：一种对称分组加密结构。在短链生成中常用于将自增的 ID 进行可逆混淆加密成无规律的数字，这样既保留了自增 ID 绝对唯一的防碰撞优点，又使输出结果表现为离散随机，防范他人枚举窥探。
+*   **<GlossaryTerm term="Few-shot Prompting" definition="少样本提示：在 prompt 里给几个“输入→期望输出”的示例，让模型照着示例的格式和风格完成新输入。无需训练即可显著提升格式遵循和任务一致性。">Few-shot Prompting</GlossaryTerm>**：少样本提示：在 prompt 里给几个“输入→期望输出”的示例，让模型照着示例的格式和风格完成新输入。无需训练即可显著提升格式遵循和任务一致性。
+*   **<GlossaryTerm term="Fine-tuning" definition="微调：用领域数据继续训练模型，把知识/风格“固化”进参数。能改变模型行为和风格，但成本高、迭代慢、知识更新要重训、且难引用来源、仍可能幻觉。">Fine-tuning</GlossaryTerm>**：微调：用领域数据继续训练模型，把知识/风格“固化”进参数。能改变模型行为和风格，但成本高、迭代慢、知识更新要重训、且难引用来源、仍可能幻觉。
+*   **<GlossaryTerm term="Finite State Machine" definition="有限状态机（FSM）：系统在任一时刻处于有限个状态之一，只能通过预先定义的“合法转移”从一个状态切换到另一个。把状态和允许的转移集中描述，非法转移被显式拒绝。">Finite State Machine</GlossaryTerm>**：有限状态机（FSM）：系统在任一时刻处于有限个状态之一，只能通过预先定义的“合法转移”从一个状态切换到另一个。把状态和允许的转移集中描述，非法转移被显式拒绝。
+*   **<GlossaryTerm term="First-class Function" definition="一等函数：函数可以像普通值一样被传递、赋值、存进变量或数据结构。在这类语言里，一个简单的策略往往直接用函数就够了，不必为它建一个类。">First-class Function</GlossaryTerm>**：一等函数：函数可以像普通值一样被传递、赋值、存进变量或数据结构。在这类语言里，一个简单的策略往往直接用函数就够了，不必为它建一个类。
+*   **<GlossaryTerm term="Flaky Test" definition="不稳定测试：同样代码有时通过有时失败（常因依赖时间、随机、并发、外部服务）。会让团队不再信任测试。">Flaky Test</GlossaryTerm>**：不稳定测试：同样代码有时通过有时失败（常因依赖时间、随机、并发、外部服务）。会让团队不再信任测试。
+*   **<GlossaryTerm term="Flapping" definition="抖动 (Flapping)：在自动伸缩系统中，由于指标在阈值边界频繁上下波动，导致系统在极短时间内反复执行扩容和缩容操作，造成容器频繁创建与销毁，消耗大量系统资源并影响服务稳定性。">Flapping</GlossaryTerm>**：抖动 (Flapping)：在自动伸缩系统中，由于指标在阈值边界频繁上下波动，导致系统在极短时间内反复执行扩容和缩容操作，造成容器频繁创建与销毁，消耗大量系统资源并影响服务稳定性。
+*   **<GlossaryTerm term="Forward Proxy" definition="正向代理：代表客户端去访问外部，隐藏的是客户端（如公司上网代理、翻墙代理）。服务端看到的是代理的地址。">Forward Proxy</GlossaryTerm>**：正向代理：代表客户端去访问外部，隐藏的是客户端（如公司上网代理、翻墙代理）。服务端看到的是代理的地址。
+*   **<GlossaryTerm term="Fragile Base Class" definition="脆弱基类：修改父类可能意外破坏所有子类的行为，因为子类依赖了父类的实现细节。继承的强耦合导致的问题。">Fragile Base Class</GlossaryTerm>**：脆弱基类：修改父类可能意外破坏所有子类的行为，因为子类依赖了父类的实现细节。继承的强耦合导致的问题。
+*   **<GlossaryTerm term="Freshness" definition="新鲜度：知识库内容与真实来源的同步及时程度。靠定时/事件触发的增量更新、给块打时间戳、检索时按时效过滤旧版本来保证。">Freshness</GlossaryTerm>**：新鲜度：知识库内容与真实来源的同步及时程度。靠定时/事件触发的增量更新、给块打时间戳、检索时按时效过滤旧版本来保证。
+*   **<GlossaryTerm term="Functional Requirement" definition="系统必须提供的功能，例如发送消息、创建短链接、上传文件。它回答“系统做什么”。">Functional Requirement</GlossaryTerm>**：系统必须提供的功能，例如发送消息、创建短链接、上传文件。它回答“系统做什么”。
+*   **<GlossaryTerm term="Functional Requirements" definition="功能需求：系统要做什么——具体的功能和行为，如“用户能报名”“能查看报名列表”。">Functional Requirements</GlossaryTerm>**：功能需求：系统要做什么——具体的功能和行为，如“用户能报名”“能查看报名列表”。
+
+## G
+
+*   **<GlossaryTerm term="Gap Lock" definition="间隙锁：锁定索引记录之间的间隙（即排他区间），防止其他事务在该间隙中插入新数据，从而在可重复读级别下避免幻读异常。">Gap Lock</GlossaryTerm>**：间隙锁：锁定索引记录之间的间隙（即排他区间），防止其他事务在该间隙中插入新数据，从而在可重复读级别下避免幻读异常。
+*   **<GlossaryTerm term="GitOps" definition="GitOps：一种持续交付软件的运作模型。它将 Git 仓库作为基础设施与应用部署声明（Desired State）的唯一事实来源，并通过自动化的同步引擎（如 ArgoCD）监测运行环境（Actual State），当两者发生漂移时自动进行调和逼近。">GitOps</GlossaryTerm>**：GitOps：一种持续交付软件的运作模型。它将 Git 仓库作为基础设施与应用部署声明（Desired State）的唯一事实来源，并通过自动化的同步引擎（如 ArgoCD）监测运行环境（Actual State），当两者发生漂移时自动进行调和逼近。
+*   **<GlossaryTerm term="Global Budget" definition="全局预算：多智能体协作链条中的最高开销或步骤配额。一旦累积消耗（包括各子智能体的 Token 或 API 调用总成本）超过全局预设阀值，则自动触发熔断。">Global Budget</GlossaryTerm>**：全局预算：多智能体协作链条中的最高开销或步骤配额。一旦累积消耗（包括各子智能体的 Token 或 API 调用总成本）超过全局预设阀值，则自动触发熔断。
+*   **<GlossaryTerm term="God Class" definition="上帝类/上帝函数：承担了过多职责的庞大类或函数。任何一个职责变化都要改它，牵一发动全身，是最常见的坏味道。">God Class</GlossaryTerm>**：上帝类/上帝函数：承担了过多职责的庞大类或函数。任何一个职责变化都要改它，牵一发动全身，是最常见的坏味道。
+*   **<GlossaryTerm term="Golden Set" definition="黄金数据集：经过人工校验、高质量、有代表性的基准测试用例集，是评测系统的核心资产。">Golden Set</GlossaryTerm>**：黄金数据集：经过人工校验、高质量、有代表性的基准测试用例集，是评测系统的核心资产。
+*   **<GlossaryTerm term="Graceful Degradation" definition="优雅降级：当 AI 组件失败或不可用时，系统退回到一个较简单但仍可用的状态（如返回缓存/规则结果、转人工、给保守默认），而不是整体崩溃或给出危险输出。">Graceful Degradation</GlossaryTerm>**：优雅降级：当 AI 组件失败或不可用时，系统退回到一个较简单但仍可用的状态（如返回缓存/规则结果、转人工、给保守默认），而不是整体崩溃或给出危险输出。
+*   **<GlossaryTerm term="Graph DB" definition="图数据库：为关系遍历（朋友的朋友、推荐路径）优化的存储。">Graph DB</GlossaryTerm>**：图数据库：为关系遍历（朋友的朋友、推荐路径）优化的存储。
+*   **<GlossaryTerm term="GraphQL" definition="一种查询语言，客户端用单个请求精确指定要哪些字段，避免一次返回过多或过少（over/under-fetching）。">GraphQL</GlossaryTerm>**：一种查询语言，客户端用单个请求精确指定要哪些字段，避免一次返回过多或过少（over/under-fetching）。
+*   **<GlossaryTerm term="GraphRAG" definition="图谱 RAG：把知识组织成知识图谱（实体 + 关系），检索时利用实体间的关联（而非只靠文本相似度），擅长回答需要综合多个关联实体、或全局性的问题。">GraphRAG</GlossaryTerm>**：图谱 RAG：把知识组织成知识图谱（实体 + 关系），检索时利用实体间的关联（而非只靠文本相似度），擅长回答需要综合多个关联实体、或全局性的问题。
+*   **<GlossaryTerm term="GRASP" definition="GRASP (General Responsibility Assignment Software Patterns)：通用职责分配软件模式。一组分配类职责（如信息专家、创造者、低耦合、高内聚、多态）的指导性设计准则。">GRASP</GlossaryTerm>**：GRASP (General Responsibility Assignment Software Patterns)：通用职责分配软件模式。一组分配类职责（如信息专家、创造者、低耦合、高内聚、多态）的指导性设计准则。
+*   **<GlossaryTerm term="Greedy Decoding" definition="贪心解码：每步直接选概率最高的 token。确定性强、可复现，但可能重复、呆板，且“每步最优”不等于“整句最优”。">Greedy Decoding</GlossaryTerm>**：贪心解码：每步直接选概率最高的 token。确定性强、可复现，但可能重复、呆板，且“每步最优”不等于“整句最优”。
+*   **<GlossaryTerm term="Grounding" definition="确定性挂载 / 地面锚定：指使大模型的文本生成过程严格约束在给定的外部检索证据（Context）内，仅根据已知证据进行回答，防止其使用内部参数化记忆进行“天马行空”的幻觉生成。">Grounding</GlossaryTerm>**：确定性挂载 / 地面锚定：指使大模型的文本生成过程严格约束在给定的外部检索证据（Context）内，仅根据已知证据进行回答，防止其使用内部参数化记忆进行“天马行空”的幻觉生成。
+*   **<GlossaryTerm term="gRPC" definition="基于 HTTP/2 和 Protobuf 的高性能 RPC 框架，强类型、二进制、支持流式，常用于服务间内部通信。">gRPC</GlossaryTerm>**：基于 HTTP/2 和 Protobuf 的高性能 RPC 框架，强类型、二进制、支持流式，常用于服务间内部通信。
+*   **<GlossaryTerm term="Guardrails" definition="护栏：在 LLM 输入/输出两端加的检查和约束，过滤有害/越权/不合规/不符事实的内容，拦截或要求重新生成。是把不可靠模型用在生产的安全层。">Guardrails</GlossaryTerm>**：护栏：在 LLM 输入/输出两端加的检查和约束，过滤有害/越权/不合规/不符事实的内容，拦截或要求重新生成。是把不可靠模型用在生产的安全层。
+
+## H
+
+*   **<GlossaryTerm term="Hallucination" definition="幻觉：LLM 生成看似合理、实则错误或虚构的内容（不存在的事实、引用、API 等）。根源是模型优化“最可能的下一个 token”（听起来对），而非“事实正确”。">Hallucination</GlossaryTerm>**：幻觉：LLM 生成看似合理、实则错误或虚构的内容（不存在的事实、引用、API 等）。根源是模型优化“最可能的下一个 token”（听起来对），而非“事实正确”。
+*   **<GlossaryTerm term="Hash Partitioning" definition="哈希分片：对分区键做哈希再决定归属节点，数据分布均匀、不易热点。但范围查询要扫所有分片（数据被打散）。">Hash Partitioning</GlossaryTerm>**：哈希分片：对分区键做哈希再决定归属节点，数据分布均匀、不易热点。但范围查询要扫所有分片（数据被打散）。
+*   **<GlossaryTerm term="Health Check" definition="健康检查：定期探测实例是否存活/就绪，让负载均衡把流量只发给健康实例。">Health Check</GlossaryTerm>**：健康检查：定期探测实例是否存活/就绪，让负载均衡把流量只发给健康实例。
+*   **<GlossaryTerm term="Hierarchical Memory" definition="分层记忆 (Hierarchical Memory)：受操作系统多级缓存启发，将记忆分为短期上下文（缓存）、中期摘要与长期向量库（外存），以在有限的窗口预算内取得信息保真度的最大化。">Hierarchical Memory</GlossaryTerm>**：分层记忆 (Hierarchical Memory)：受操作系统多级缓存启发，将记忆分为短期上下文（缓存）、中期摘要与长期向量库（外存），以在有限的窗口预算内取得信息保真度的最大化。
+*   **<GlossaryTerm term="HITL Gatekeeper" definition="人在回路网关：在智能体执行敏感或不可逆副作用动作前触发拦截，必须由操作员在控制台进行人工审核与二次授权后，方才释放执行权限的拦截器。">HITL Gatekeeper</GlossaryTerm>**：人在回路网关：在智能体执行敏感或不可逆副作用动作前触发拦截，必须由操作员在控制台进行人工审核与二次授权后，方才释放执行权限的拦截器。
+*   **<GlossaryTerm term="HLD" definition="高层设计（High-Level Design）：用框和线表达系统的主要组件及它们之间的数据流，不深入每个组件内部实现。是沟通架构的主要媒介。">HLD</GlossaryTerm>**：高层设计（High-Level Design）：用框和线表达系统的主要组件及它们之间的数据流，不深入每个组件内部实现。是沟通架构的主要媒介。
+*   **<GlossaryTerm term="HNSW" definition="分层导航小世界（Hierarchical Navigable Small World）算法，是一种基于多层图结构的高维向量近似最近邻（ANN）搜索算法，在 pgvector 中被广泛用于加速大模型 Embedding 检索。">HNSW</GlossaryTerm>**：分层导航小世界（Hierarchical Navigable Small World）算法，是一种基于多层图结构的高维向量近似最近邻（ANN）搜索算法，在 pgvector 中被广泛用于加速大模型 Embedding 检索。
+*   **<GlossaryTerm term="Horizontal Pod Autoscaler" definition="水平 Pod 自动伸缩器（HPA）：根据观测到的指标（如 CPU 利用率、QPS）自动调整副本数，使指标维持在目标值附近。属于 K8s 调和循环的一种应用。">Horizontal Pod Autoscaler</GlossaryTerm>**：水平 Pod 自动伸缩器（HPA）：根据观测到的指标（如 CPU 利用率、QPS）自动调整副本数，使指标维持在目标值附近。属于 K8s 调和循环的一种应用。
+*   **<GlossaryTerm term="Horizontal Scaling" definition="水平扩展（scale out）：加更多机器分担负载。理论上可无限扩，但要求服务无状态、需要负载均衡和数据切分。">Horizontal Scaling</GlossaryTerm>**：水平扩展（scale out）：加更多机器分担负载。理论上可无限扩，但要求服务无状态、需要负载均衡和数据切分。
+*   **<GlossaryTerm term="Hotspot" definition="热点：某个分片承担了远超其它分片的负载（如某个大V、某个爆款商品、最新时间段），成为瓶颈，抵消了分片的好处。">Hotspot</GlossaryTerm>**：热点：某个分片承担了远超其它分片的负载（如某个大V、某个爆款商品、最新时间段），成为瓶颈，抵消了分片的好处。
+*   **<GlossaryTerm term="HPA" definition="水平轴自动伸缩 (Horizontal Pod Autoscaler)：Kubernetes 的内置自动控制器，它能够根据实际观测到的 CPU/内存利用率或自定义指标，动态调整 ReplicationController/Deployment 控制的 Pod 副本数量。">HPA</GlossaryTerm>**：水平轴自动伸缩 (Horizontal Pod Autoscaler)：Kubernetes 的内置自动控制器，它能够根据实际观测到的 CPU/内存利用率或自定义指标，动态调整 ReplicationController/Deployment 控制的 Pod 副本数量。
+*   **<GlossaryTerm term="HTTP 301" definition="永久重定向：HTTP 状态码。表示该 URL 映射关系已永久改变，浏览器会将重定向关系缓存在本地内存中，下次点击直接由浏览器进行跳转，不打回源站。省带宽但无法统计点击量。">HTTP 301</GlossaryTerm>**：永久重定向：HTTP 状态码。表示该 URL 映射关系已永久改变，浏览器会将重定向关系缓存在本地内存中，下次点击直接由浏览器进行跳转，不打回源站。省带宽但无法统计点击量。
+*   **<GlossaryTerm term="HTTP 302" definition="临时重定向：HTTP 状态码。表示重定向关系仅当前有效，浏览器不会强缓存此跳转。每次点击短链都必须打回短链服务器解析，方便精确收集 PV/UV 点击分析。">HTTP 302</GlossaryTerm>**：临时重定向：HTTP 状态码。表示重定向关系仅当前有效，浏览器不会强缓存此跳转。每次点击短链都必须打回短链服务器解析，方便精确收集 PV/UV 点击分析。
+*   **<GlossaryTerm term="HTTP Method" definition="表示操作意图的动词：GET 读取、POST 创建、PUT 替换、PATCH 局部更新、DELETE 删除。">HTTP Method</GlossaryTerm>**：表示操作意图的动词：GET 读取、POST 创建、PUT 替换、PATCH 局部更新、DELETE 删除。
+*   **<GlossaryTerm term="HTTP Request" definition="HTTP 请求：客户端发给服务器的一条消息，包含方法（GET/POST…）、路径（/signups）、头（headers）和可选的正文（body）。">HTTP Request</GlossaryTerm>**：HTTP 请求：客户端发给服务器的一条消息，包含方法（GET/POST…）、路径（/signups）、头（headers）和可选的正文（body）。
+*   **<GlossaryTerm term="HTTP Response" definition="HTTP 响应：服务器回给客户端的消息，包含状态码（200/404…）、头和正文。">HTTP Response</GlossaryTerm>**：HTTP 响应：服务器回给客户端的消息，包含状态码（200/404…）、头和正文。
+*   **<GlossaryTerm term="HTTP Status Code" definition="三位数字表示结果类别：2xx 成功，3xx 重定向，4xx 客户端错误（你传错了），5xx 服务端错误（我出错了）。">HTTP Status Code</GlossaryTerm>**：三位数字表示结果类别：2xx 成功，3xx 重定向，4xx 客户端错误（你传错了），5xx 服务端错误（我出错了）。
+*   **<GlossaryTerm term="Human in the Loop" definition="人在回路：高风险决策中，AI 给出建议但由人最终确认/批准，而非全自动执行。用于医疗、金融、法律、删数据、对外发布等不可逆或高后果场景。">Human in the Loop</GlossaryTerm>**：人在回路：高风险决策中，AI 给出建议但由人最终确认/批准，而非全自动执行。用于医疗、金融、法律、删数据、对外发布等不可逆或高后果场景。
+*   **<GlossaryTerm term="Human-in-the-loop" definition="人在回路：智能系统的一种协作模式，在大模型做出高风险决策或执行有副作用的工具前，必须由人类操作员进行审查、批准或修正。">Human-in-the-loop</GlossaryTerm>**：人在回路：智能系统的一种协作模式，在大模型做出高风险决策或执行有副作用的工具前，必须由人类操作员进行审查、批准或修正。
+*   **<GlossaryTerm term="Human-in-the-Loop" definition="人类介入：在高风险/不可逆操作或低置信情形下，把最终决定权交给人类审批，而非让 AI 全自动执行。是护栏体系里最强、最后一道防线。详见 M11L8。">Human-in-the-Loop</GlossaryTerm>**：人类介入：在高风险/不可逆操作或低置信情形下，把最终决定权交给人类审批，而非让 AI 全自动执行。是护栏体系里最强、最后一道防线。详见 M11L8。
+*   **<GlossaryTerm term="Human-in-the-Loop (HITL)" definition="人在环中：AI 给出结果后、执行前，必须由人审批才能生效。人是决策链上的必经关卡。适合高风险/不可逆操作——宁可慢，不可错。">Human-in-the-Loop (HITL)</GlossaryTerm>**：人在环中：AI 给出结果后、执行前，必须由人审批才能生效。人是决策链上的必经关卡。适合高风险/不可逆操作——宁可慢，不可错。
+*   **<GlossaryTerm term="Human-in-the-Loop Approval" definition="人在回路审批：Agent 想执行危险/不可逆动作时，不直接执行，而是暂停、把拟执行的动作交给人确认，人批准后才执行。把高风险动作的最终决定权留给人。">Human-in-the-Loop Approval</GlossaryTerm>**：人在回路审批：Agent 想执行危险/不可逆动作时，不直接执行，而是暂停、把拟执行的动作交给人确认，人批准后才执行。把高风险动作的最终决定权留给人。
+*   **<GlossaryTerm term="Human-on-the-Loop (HOTL)" definition="人在环上：AI 自动执行，但人在旁监督、可随时介入或叫停，并事后审查。适合中风险、需要效率但不能完全放手的场景。">Human-on-the-Loop (HOTL)</GlossaryTerm>**：人在环上：AI 自动执行，但人在旁监督、可随时介入或叫停，并事后审查。适合中风险、需要效率但不能完全放手的场景。
+*   **<GlossaryTerm term="Hybrid Architecture" definition="混合架构：以确定性工作流（Workflow）为主干，仅在其中个别高度不确定、需自主探索的子节点嵌入微型智能体（Agent Loop）的系统设计范式，兼顾了可靠性与灵活性。">Hybrid Architecture</GlossaryTerm>**：混合架构：以确定性工作流（Workflow）为主干，仅在其中个别高度不确定、需自主探索的子节点嵌入微型智能体（Agent Loop）的系统设计范式，兼顾了可靠性与灵活性。
+*   **<GlossaryTerm term="Hybrid Cloud" definition="混合云：公有云与自有数据中心（私有云/本地）结合使用。常见于有合规、数据主权、已有重资产或低延迟本地需求的企业。">Hybrid Cloud</GlossaryTerm>**：混合云：公有云与自有数据中心（私有云/本地）结合使用。常见于有合规、数据主权、已有重资产或低延迟本地需求的企业。
+*   **<GlossaryTerm term="Hybrid Fan-out" definition="混合扇出：普通用户用写扩散（读快），大V用读扩散（避免写爆）。用户刷新时，把“推来的普通人帖子”和“实时拉的大V帖子”合并。兼顾两者。">Hybrid Fan-out</GlossaryTerm>**：混合扇出：普通用户用写扩散（读快），大V用读扩散（避免写爆）。用户刷新时，把“推来的普通人帖子”和“实时拉的大V帖子”合并。兼顾两者。
+*   **<GlossaryTerm term="Hybrid Search" definition="混合检索：同时用稠密（向量）和稀疏（关键词/BM25）两路检索，再把两路结果融合排序，兼顾语义理解和精确匹配，通常比单一方法更稳更准。">Hybrid Search</GlossaryTerm>**：混合检索：同时用稠密（向量）和稀疏（关键词/BM25）两路检索，再把两路结果融合排序，兼顾语义理解和精确匹配，通常比单一方法更稳更准。
+*   **<GlossaryTerm term="HyDE" definition="假设文档嵌入（Hypothetical Document Embeddings）：先让 LLM 针对问题生成一个“假设的答案”，再用这个假设答案（而非原始问题）去做向量检索。因为答案和真正的文档在语义/措辞上更接近，常能提升召回。">HyDE</GlossaryTerm>**：假设文档嵌入（Hypothetical Document Embeddings）：先让 LLM 针对问题生成一个“假设的答案”，再用这个假设答案（而非原始问题）去做向量检索。因为答案和真正的文档在语义/措辞上更接近，常能提升召回。
+
+## I
+
+*   **<GlossaryTerm term="I/O 多路复用" definition="I/O 多路复用是指通过操作系统内核提供的 select/poll/epoll/kqueue 等接口，用单线程/单进程同时监听成百上千个网络套接字（Socket）的就绪事件，从而实现高并发的网络接入。">I/O 多路复用</GlossaryTerm>**：I/O 多路复用是指通过操作系统内核提供的 select/poll/epoll/kqueue 等接口，用单线程/单进程同时监听成百上千个网络套接字（Socket）的就绪事件，从而实现高并发的网络接入。
+*   **<GlossaryTerm term="Idempotence" definition="幂等性：无论对同一操作发起多少次请求，系统都会产生完全相同的影响与状态结果（如不会产生重复扣款、重复扣减库存）。">Idempotence</GlossaryTerm>**：幂等性：无论对同一操作发起多少次请求，系统都会产生完全相同的影响与状态结果（如不会产生重复扣款、重复扣减库存）。
+*   **<GlossaryTerm term="Idempotency" definition="幂等性 (Idempotency)：一个操作不论被执行多少次，其产生的副作用与执行一次都是完全相同的。在重试场景下，只有具备幂等性的写接口或天然只读查询，才能安全发起多次请求而不会引起数据污染或重复扣款。">Idempotency</GlossaryTerm>**：幂等性 (Idempotency)：一个操作不论被执行多少次，其产生的副作用与执行一次都是完全相同的。在重试场景下，只有具备幂等性的写接口或天然只读查询，才能安全发起多次请求而不会引起数据污染或重复扣款。
+*   **<GlossaryTerm term="Idempotency Key" definition="幂等键：客户端为一次操作生成的全局唯一 id，随请求一起发给服务端。服务端记录每个 key 的处理结果；再次见到同一 key 就直接返回上次结果，而不重复执行。">Idempotency Key</GlossaryTerm>**：幂等键：客户端为一次操作生成的全局唯一 id，随请求一起发给服务端。服务端记录每个 key 的处理结果；再次见到同一 key 就直接返回上次结果，而不重复执行。
+*   **<GlossaryTerm term="Idempotent Apply" definition="幂等 apply：反复执行同一份声明，结果一致——已符合期望的资源不动，只对有差异的执行变更。重复 apply 是安全的。">Idempotent Apply</GlossaryTerm>**：幂等 apply：反复执行同一份声明，结果一致——已符合期望的资源不动，只对有差异的执行变更。重复 apply 是安全的。
+*   **<GlossaryTerm term="Idempotent Consumer" definition="幂等消费者：在接收到重复消息时，能够通过唯一流水号或防重表识别并过滤，确保多次处理同一条消息对系统状态产生的影响与处理一次完全相同。">Idempotent Consumer</GlossaryTerm>**：幂等消费者：在接收到重复消息时，能够通过唯一流水号或防重表识别并过滤，确保多次处理同一条消息对系统状态产生的影响与处理一次完全相同。
+*   **<GlossaryTerm term="Immutable Image" definition="不可变镜像：镜像一旦构建就不再修改；要变就构建新版本、重新部署。配合版本标签，让“部署什么”完全确定、可回滚，根治环境漂移。">Immutable Image</GlossaryTerm>**：不可变镜像：镜像一旦构建就不再修改；要变就构建新版本、重新部署。配合版本标签，让“部署什么”完全确定、可回滚，根治环境漂移。
+*   **<GlossaryTerm term="Immutable Infrastructure" definition="不可变基础设施 (Immutable Infrastructure)：一种基础设施部署范式。一旦部署了服务器等资源，就绝不对其进行在线修改或打补丁。当需要更新配置或代码时，直接通过 IaC 构建全新的实例进行替换，并销毁旧实例。这能彻底杜绝配置漂移和雪花服务器的产生。">Immutable Infrastructure</GlossaryTerm>**：不可变基础设施 (Immutable Infrastructure)：一种基础设施部署范式。一旦部署了服务器等资源，就绝不对其进行在线修改或打补丁。当需要更新配置或代码时，直接通过 IaC 构建全新的实例进行替换，并销毁旧实例。这能彻底杜绝配置漂移和雪花服务器的产生。
+*   **<GlossaryTerm term="Incremental Update" definition="增量更新：知识库只对变化的文档做增/改/删，而非全量重建。需要追踪文档版本/指纹，识别新增、变更、删除，并同步更新向量索引。">Incremental Update</GlossaryTerm>**：增量更新：知识库只对变化的文档做增/改/删，而非全量重建。需要追踪文档版本/指纹，识别新增、变更、删除，并同步更新向量索引。
+*   **<GlossaryTerm term="Index" definition="索引：一个额外的数据结构（如哈希表、B 树），把“按某字段查找”从全表扫描 O(n) 降到接近 O(1) 或 O(log n)。代价是额外空间和写入开销。">Index</GlossaryTerm>**：索引：一个额外的数据结构（如哈希表、B 树），把“按某字段查找”从全表扫描 O(n) 降到接近 O(1) 或 O(log n)。代价是额外空间和写入开销。
+*   **<GlossaryTerm term="Index Scan" definition="索引扫描：数据库查询引擎遍历索引树结构查找匹配数据的过程。分为全索引扫描（扫描整棵索引树）与索引范围扫描（利用索引有序性进行边界查找）。">Index Scan</GlossaryTerm>**：索引扫描：数据库查询引擎遍历索引树结构查找匹配数据的过程。分为全索引扫描（扫描整棵索引树）与索引范围扫描（利用索引有序性进行边界查找）。
+*   **<GlossaryTerm term="Indirect Prompt Injection" definition="间接提示注入：攻击者不直接与 LLM 交互，而是通过把恶意指令藏在 Agent 会读取的外部文档、网页或第三方 API 返回数据中，当 Agent 执行检索工具读取这些数据时被动态劫持的攻击方式。">Indirect Prompt Injection</GlossaryTerm>**：间接提示注入：攻击者不直接与 LLM 交互，而是通过把恶意指令藏在 Agent 会读取的外部文档、网页或第三方 API 返回数据中，当 Agent 执行检索工具读取这些数据时被动态劫持的攻击方式。
+*   **<GlossaryTerm term="InfiniBand" definition="一种低延迟、高带宽的网络互联技术，用于把成千上万张 GPU 跨服务器连成一个超算集群。OpenAI 选择 Azure 的关键原因之一就是其 InfiniBand 网络。">InfiniBand</GlossaryTerm>**：一种低延迟、高带宽的网络互联技术，用于把成千上万张 GPU 跨服务器连成一个超算集群。OpenAI 选择 Azure 的关键原因之一就是其 InfiniBand 网络。
+*   **<GlossaryTerm term="Infinite Loop Resolution" definition="死循环冲突解决：在辩论或共识协商中，为防止多个智能体由于观点僵持而陷入永无止境的死循环争吵而引入的强行熔断、打平或超时收敛算法。">Infinite Loop Resolution</GlossaryTerm>**：死循环冲突解决：在辩论或共识协商中，为防止多个智能体由于观点僵持而陷入永无止境的死循环争吵而引入的强行熔断、打平或超时收敛算法。
+*   **<GlossaryTerm term="Information Hiding" definition="把最可能变化的决定藏在模块内部，只通过稳定的接口对外暴露。这样变化被关在模块里，不会外溢。">Information Hiding</GlossaryTerm>**：把最可能变化的决定藏在模块内部，只通过稳定的接口对外暴露。这样变化被关在模块里，不会外溢。
+*   **<GlossaryTerm term="Infrastructure as Code" definition="基础设施即代码（IaC）：用代码/配置文件来定义和管理服务器、网络、数据库等基础设施，而不是手动操作控制台。可版本化、评审、复制、审计、回滚。">Infrastructure as Code</GlossaryTerm>**：基础设施即代码（IaC）：用代码/配置文件来定义和管理服务器、网络、数据库等基础设施，而不是手动操作控制台。可版本化、评审、复制、审计、回滚。
+*   **<GlossaryTerm term="Ingestion Pipeline" definition="摄取管道：把原始数据源转成可检索知识的流水线——解析、清洗、分块、向量化、写入向量库并打元数据。是知识库的上游数据工程，质量决定检索质量。">Ingestion Pipeline</GlossaryTerm>**：摄取管道：把原始数据源转成可检索知识的流水线——解析、清洗、分块、向量化、写入向量库并打元数据。是知识库的上游数据工程，质量决定检索质量。
+*   **<GlossaryTerm term="Input Guardrail" definition="输入护栏：在用户输入/外部内容进入模型前进行检查与处理，如注入模式检测、恶意内容过滤、长度限制、把检索内容明确标注为‘数据而非指令’。是第一道防线，但会被绕过，不能是唯一防线。">Input Guardrail</GlossaryTerm>**：输入护栏：在用户输入/外部内容进入模型前进行检查与处理，如注入模式检测、恶意内容过滤、长度限制、把检索内容明确标注为‘数据而非指令’。是第一道防线，但会被绕过，不能是唯一防线。
+*   **<GlossaryTerm term="Integration Spaghetti" definition="集成意大利面：系统两两点对点直连，连接数随系统数平方增长，形成难以维护、改一处牵连一片的混乱网状结构。">Integration Spaghetti</GlossaryTerm>**：集成意大利面：系统两两点对点直连，连接数随系统数平方增长，形成难以维护、改一处牵连一片的混乱网状结构。
+*   **<GlossaryTerm term="Intent Classifier" definition="意图分类器：用于检测用户输入的底层意图，通常为小参数量微调分类模型或大模型 prompt，以确定需要路由匹配的智能体节点类别。">Intent Classifier</GlossaryTerm>**：意图分类器：用于检测用户输入的底层意图，通常为小参数量微调分类模型或大模型 prompt，以确定需要路由匹配的智能体节点类别。
+*   **<GlossaryTerm term="Interface Segregation Principle" definition="接口隔离原则（ISP）：不要把一大堆方法塞进一个接口，逼实现者实现用不到的方法。宁可多个小而专的接口。">Interface Segregation Principle</GlossaryTerm>**：接口隔离原则（ISP）：不要把一大堆方法塞进一个接口，逼实现者实现用不到的方法。宁可多个小而专的接口。
+*   **<GlossaryTerm term="Interoperability" definition="互操作性：指不同的系统、设备或智能体在统一协议或标准规范下，能够顺畅进行数据交换和协同动作的能力。">Interoperability</GlossaryTerm>**：互操作性：指不同的系统、设备或智能体在统一协议或标准规范下，能够顺畅进行数据交换和协同动作的能力。
+*   **<GlossaryTerm term="ISR" definition="ISR (In-Sync Replicas) 是指与 Leader 副本保持同步的 Follower 副本集合。它是 Kafka 平衡强同步和异步同步、实现高可用和低时延消息写入的核心设计。">ISR</GlossaryTerm>**：ISR (In-Sync Replicas) 是指与 Leader 副本保持同步的 Follower 副本集合。它是 Kafka 平衡强同步和异步同步、实现高可用和低时延消息写入的核心设计。
+
+## J
+
+*   **<GlossaryTerm term="Jitter" definition="抖动：在退避间隔上加入随机扰动，打散原本会同时重试的客户端，避免“重试惊群”（所有客户端在同一时刻一起重试）。">Jitter</GlossaryTerm>**：抖动：在退避间隔上加入随机扰动，打散原本会同时重试的客户端，避免“重试惊群”（所有客户端在同一时刻一起重试）。
+*   **<GlossaryTerm term="JOIN" definition="连接：关系数据库把多张表按关联键拼起来的操作（如 users.id = orders.user_id）。强大灵活，但跨表 join 在大数据量/分片下可能很慢。">JOIN</GlossaryTerm>**：连接：关系数据库把多张表按关联键拼起来的操作（如 users.id = orders.user_id）。强大灵活，但跨表 join 在大数据量/分片下可能很慢。
+*   **<GlossaryTerm term="JSON Web Token" definition="JSON Web Token (JWT)：一种开放标准 (RFC 7519)，用于在各方之间以 JSON 对象安全地传输信息。常用于微服务无状态分布式认证，网关校验签名后将用户 ID 等明文以 Header 传给下游服务。">JSON Web Token</GlossaryTerm>**：JSON Web Token (JWT)：一种开放标准 (RFC 7519)，用于在各方之间以 JSON 对象安全地传输信息。常用于微服务无状态分布式认证，网关校验签名后将用户 ID 等明文以 Header 传给下游服务。
+
+## K
+
+*   **<GlossaryTerm term="Key-Value" definition="键值存储：按 key 极快读写，常用作缓存或会话。结构简单、延迟极低。">Key-Value</GlossaryTerm>**：键值存储：按 key 极快读写，常用作缓存或会话。结构简单、延迟极低。
+*   **<GlossaryTerm term="KISS" definition="Keep It Simple, Stupid：保持简单与愚蠢原则。倡导系统设计应尽可能简单，避免引入无必要的计算开销与不确定性。">KISS</GlossaryTerm>**：Keep It Simple, Stupid：保持简单与愚蠢原则。倡导系统设计应尽可能简单，避免引入无必要的计算开销与不确定性。
+*   **<GlossaryTerm term="KRaft 协议" definition="KRaft（Kafka Raft Metadata Mode）是 Kafka 内置的基于 Raft 协议的元数据管理模式。它彻底去除了对外部 ZooKeeper 的依赖，通过让 Broker 选举出 Active Controller 来统一分发和同步元数据。">KRaft 协议</GlossaryTerm>**：KRaft（Kafka Raft Metadata Mode）是 Kafka 内置的基于 Raft 协议的元数据管理模式。它彻底去除了对外部 ZooKeeper 的依赖，通过让 Broker 选举出 Active Controller 来统一分发和同步元数据。
+*   **<GlossaryTerm term="KV Cache" definition="KV 缓存：在自回归生成中，把已处理 token 的 Key/Value 向量缓存起来，生成下一个 token 时直接复用，无需重新计算整个前文。把每步的计算量从“随序列长度增长”降到“只算新 token”。">KV Cache</GlossaryTerm>**：KV 缓存：在自回归生成中，把已处理 token 的 Key/Value 向量缓存起来，生成下一个 token 时直接复用，无需重新计算整个前文。把每步的计算量从“随序列长度增长”降到“只算新 token”。
+
+## L
+
+*   **<GlossaryTerm term="L4 Load Balancing" definition="四层（传输层）负载均衡：只看 TCP/UDP 的 IP 和端口来转发，不解析应用内容。快、开销小，但不能按 URL/Header 做路由。">L4 Load Balancing</GlossaryTerm>**：四层（传输层）负载均衡：只看 TCP/UDP 的 IP 和端口来转发，不解析应用内容。快、开销小，但不能按 URL/Header 做路由。
+*   **<GlossaryTerm term="L7 Load Balancing" definition="七层（应用层）负载均衡：解析 HTTP 等应用层协议，可按 URL、Header、Cookie 做路由、重写、灰度，还能终止 TLS。功能强但开销略大。">L7 Load Balancing</GlossaryTerm>**：七层（应用层）负载均衡：解析 HTTP 等应用层协议，可按 URL、Header、Cookie 做路由、重写、灰度，还能终止 TLS。功能强但开销略大。
+*   **<GlossaryTerm term="Lapsed Listener" definition="失效监听者问题：订阅者没有取消订阅就被丢弃，发布者仍持有它的引用，导致内存泄漏（对象无法被回收）。是观察者模式最常见的 bug。">Lapsed Listener</GlossaryTerm>**：失效监听者问题：订阅者没有取消订阅就被丢弃，发布者仍持有它的引用，导致内存泄漏（对象无法被回收）。是观察者模式最常见的 bug。
+*   **<GlossaryTerm term="Late Binding" definition="动态绑定 (迟绑定 / Late Binding)：在运行时才确定具体调用的方法实现。组合模式中由于持有的是抽象接口，运行时随时可将内部指向具体实现，实现极佳的灵活性。">Late Binding</GlossaryTerm>**：动态绑定 (迟绑定 / Late Binding)：在运行时才确定具体调用的方法实现。组合模式中由于持有的是抽象接口，运行时随时可将内部指向具体实现，实现极佳的灵活性。
+*   **<GlossaryTerm term="Latency" definition="延迟：单个请求从发出到收到响应的耗时。关注个体体验。">Latency</GlossaryTerm>**：延迟：单个请求从发出到收到响应的耗时。关注个体体验。
+*   **<GlossaryTerm term="Layered Image" definition="镜像分层：镜像由一叠只读层组成（如基础 OS 层、依赖层、应用代码层）。层可被多个镜像共享和缓存；只改动的层需要重建/传输，未变的层直接复用。">Layered Image</GlossaryTerm>**：镜像分层：镜像由一叠只读层组成（如基础 OS 层、依赖层、应用代码层）。层可被多个镜像共享和缓存；只改动的层需要重建/传输，未变的层直接复用。
+*   **<GlossaryTerm term="Leader-Follower Replication" definition="主从复制：一个主副本（leader）接收所有写，把变更按日志同步给多个从副本（follower）；读可以走任意副本。主挂了需选出新主。是最常见的复制拓扑。">Leader-Follower Replication</GlossaryTerm>**：主从复制：一个主副本（leader）接收所有写，把变更按日志同步给多个从副本（follower）；读可以走任意副本。主挂了需选出新主。是最常见的复制拓扑。
+*   **<GlossaryTerm term="Leaderless Replication" definition="无主复制：没有固定主，客户端直接向多个副本读写，用法定人数（quorum）保证一致性（Dynamo 风格）。高可用、抗故障，但一致性较弱，需读修复等机制。">Leaderless Replication</GlossaryTerm>**：无主复制：没有固定主，客户端直接向多个副本读写，用法定人数（quorum）保证一致性（Dynamo 风格）。高可用、抗故障，但一致性较弱，需读修复等机制。
+*   **<GlossaryTerm term="Leaky Bucket" definition="漏桶：请求进入一个固定容量的桶（队列），以恒定速率“漏出”被处理，桶满则丢弃。强制平滑输出速率，不允许突发。">Leaky Bucket</GlossaryTerm>**：漏桶：请求进入一个固定容量的桶（队列），以恒定速率“漏出”被处理，桶满则丢弃。强制平滑输出速率，不允许突发。
+*   **<GlossaryTerm term="Least Connections" definition="最少连接：把新请求发给当前活跃连接数最少的实例。能更好地适应请求耗时不均的场景。">Least Connections</GlossaryTerm>**：最少连接：把新请求发给当前活跃连接数最少的实例。能更好地适应请求耗时不均的场景。
+*   **<GlossaryTerm term="Leftmost Prefix Rule" definition="最左前缀规则：复合索引只能被从最左列开始连续的查询条件利用。(a,b,c) 索引可服务 a、a+b、a+b+c，但不能服务 b 或 c 单独的查询。">Leftmost Prefix Rule</GlossaryTerm>**：最左前缀规则：复合索引只能被从最左列开始连续的查询条件利用。(a,b,c) 索引可服务 a、a+b、a+b+c，但不能服务 b 或 c 单独的查询。
+*   **<GlossaryTerm term="Linearizability" definition="线性一致性（强一致性）：分布式系统中最高级别的一致性保证。要求所有读请求都能读到最近一次成功写入的值，系统在外界看来像只有一个单机单副本节点一样。">Linearizability</GlossaryTerm>**：线性一致性（强一致性）：分布式系统中最高级别的一致性保证。要求所有读请求都能读到最近一次成功写入的值，系统在外界看来像只有一个单机单副本节点一样。
+*   **<GlossaryTerm term="Liskov Substitution Principle" definition="里氏替换原则（LSP）：子类型必须能替换其父类型而不破坏程序的正确性。如果用子类替换父类后行为变怪，说明这个继承关系是错的。">Liskov Substitution Principle</GlossaryTerm>**：里氏替换原则（LSP）：子类型必须能替换其父类型而不破坏程序的正确性。如果用子类替换父类后行为变怪，说明这个继承关系是错的。
+*   **<GlossaryTerm term="List-Watch 机制" definition="Kubernetes 中客户端与 API Server 通信的机制。List 阶段获取资源的全部最新数据，Watch 阶段通过 HTTP 长连接（Chunked Transfer Encoding）持续监听资源的变化事件，避免了频繁轮询。">List-Watch 机制</GlossaryTerm>**：Kubernetes 中客户端与 API Server 通信的机制。List 阶段获取资源的全部最新数据，Watch 阶段通过 HTTP 长连接（Chunked Transfer Encoding）持续监听资源的变化事件，避免了频繁轮询。
+*   **<GlossaryTerm term="Little" definition="利特尔法则：稳态下，系统中的平均请求数 L = 到达率 λ × 平均处理时间 W。一个极简却普适的排队论结论。">Little</GlossaryTerm>**：利特尔法则：稳态下，系统中的平均请求数 L = 到达率 λ × 平均处理时间 W。一个极简却普适的排队论结论。
+*   **<GlossaryTerm term="Liveness Probe" definition="存活探针：检测容器是否还活着。失败（如死锁、卡死）则 K8s 重启该容器。回答的是“要不要重启它”。">Liveness Probe</GlossaryTerm>**：存活探针：检测容器是否还活着。失败（如死锁、卡死）则 K8s 重启该容器。回答的是“要不要重启它”。
+*   **<GlossaryTerm term="LLD" definition="详细设计/低级设计 (LLD/Low Level Design)：面向对象设计与类层面的具体实现方案。重点包括面向对象分析与设计 (OOAD)、类职责划分、设计模式应用及代码级模块关联拓扑。">LLD</GlossaryTerm>**：详细设计/低级设计 (LLD/Low Level Design)：面向对象设计与类层面的具体实现方案。重点包括面向对象分析与设计 (OOAD)、类职责划分、设计模式应用及代码级模块关联拓扑。
+*   **<GlossaryTerm term="LLM Benchmarks" definition="大模型基准测试：如 MMLU、GSM8K、MT-Bench 等公开的、通用的行业标准评测集，用来衡量模型底座的通用能力。">LLM Benchmarks</GlossaryTerm>**：大模型基准测试：如 MMLU、GSM8K、MT-Bench 等公开的、通用的行业标准评测集，用来衡量模型底座的通用能力。
+*   **<GlossaryTerm term="LLM Tracing" definition="LLM 追踪：用统一的 trace id 记录并串起一次 AI 请求内部的每一步（检索、prompt 构造、每次模型调用、工具执行），含输入输出、耗时、token、成本，形成可视链路，便于定位是哪一步出了问题。是分布式追踪在 AI 组件上的应用。">LLM Tracing</GlossaryTerm>**：LLM 追踪：用统一的 trace id 记录并串起一次 AI 请求内部的每一步（检索、prompt 构造、每次模型调用、工具执行），含输入输出、耗时、token、成本，形成可视链路，便于定位是哪一步出了问题。是分布式追踪在 AI 组件上的应用。
+*   **<GlossaryTerm term="LLM-as-Judge" definition="用 LLM 当评判：让一个（通常更强的）模型按给定评分标准（rubric）给被测输出打分或两两比较。可规模化、比纯规则更懂语义，但本身也可能有偏差，需校准和抽样人工核对。">LLM-as-Judge</GlossaryTerm>**：用 LLM 当评判：让一个（通常更强的）模型按给定评分标准（rubric）给被测输出打分或两两比较。可规模化、比纯规则更懂语义，但本身也可能有偏差，需校准和抽样人工核对。
+*   **<GlossaryTerm term="LLM-as-judge" definition="大模型裁判：使用大语言模型（通常是能力更强的闭源模型）作为评估器，根据特定的 Prompt 指引和评分标准，对其他 AI 系统生成的文本或执行轨迹进行自动打分和评估的机制。">LLM-as-judge</GlossaryTerm>**：大模型裁判：使用大语言模型（通常是能力更强的闭源模型）作为评估器，根据特定的 Prompt 指引和评分标准，对其他 AI 系统生成的文本或执行轨迹进行自动打分和评估的机制。
+*   **<GlossaryTerm term="Load Balancer" definition="负载均衡器 (Load Balancer)：用于将网络流量分发到多个后端服务器实例的设备或软件，以提高系统并发吞吐、可用性并消除单点故障。">Load Balancer</GlossaryTerm>**：负载均衡器 (Load Balancer)：用于将网络流量分发到多个后端服务器实例的设备或软件，以提高系统并发吞吐、可用性并消除单点故障。
+*   **<GlossaryTerm term="Load Shedding" definition="负载卸载：系统接近过载时主动丢弃部分请求（通常优先丢低价值/低优先级的），以保住核心请求的服务质量，避免全面崩溃。">Load Shedding</GlossaryTerm>**：负载卸载：系统接近过载时主动丢弃部分请求（通常优先丢低价值/低优先级的），以保住核心请求的服务质量，避免全面崩溃。
+*   **<GlossaryTerm term="Log-based MQ" definition="日志型消息队列：以 Apache Kafka 或 Pulsar 为代表。消息以只读追加日志（Log）物理持久化在磁盘上，消费端以 Pull 形式拉取，消费进度仅靠移动 Offset 偏置指针标记。消息不会因消费而被物理删除，支持历史事件随意重放。">Log-based MQ</GlossaryTerm>**：日志型消息队列：以 Apache Kafka 或 Pulsar 为代表。消息以只读追加日志（Log）物理持久化在磁盘上，消费端以 Pull 形式拉取，消费进度仅靠移动 Offset 偏置指针标记。消息不会因消费而被物理删除，支持历史事件随意重放。
+*   **<GlossaryTerm term="Logical Expiration" definition="逻辑过期：缓存项的物理 TTL 被设置为永不过期，但在其 BSON 数据包内部设置一个 logical_expire_time 字段。当读线程发现已逻辑过期时，返回旧数据并异步启动后台工作线程刷新数据。">Logical Expiration</GlossaryTerm>**：逻辑过期：缓存项的物理 TTL 被设置为永不过期，但在其 BSON 数据包内部设置一个 logical_expire_time 字段。当读线程发现已逻辑过期时，返回旧数据并异步启动后台工作线程刷新数据。
+*   **<GlossaryTerm term="Logits" definition="logits：模型对每个候选 token 输出的原始分数，经 softmax 归一化成概率分布。采样就是在这个分布上选出下一个 token。">Logits</GlossaryTerm>**：logits：模型对每个候选 token 输出的原始分数，经 softmax 归一化成概率分布。采样就是在这个分布上选出下一个 token。
+*   **<GlossaryTerm term="Logs" definition="日志：离散的带时间戳事件记录。最好是结构化的（带字段），便于检索特定请求/错误。信息丰富但量大、成本高。">Logs</GlossaryTerm>**：日志：离散的带时间戳事件记录。最好是结构化的（带字段），便于检索特定请求/错误。信息丰富但量大、成本高。
+*   **<GlossaryTerm term="Long Connection" definition="长连接：客户端与服务器建立的持久化双向通信连接（如 WebSocket、TCP），在此通道上服务器可主动向客户端推送数据，而无需客户端反复轮询。是实时通讯系统（IM）的基石。">Long Connection</GlossaryTerm>**：长连接：客户端与服务器建立的持久化双向通信连接（如 WebSocket、TCP），在此通道上服务器可主动向客户端推送数据，而无需客户端反复轮询。是实时通讯系统（IM）的基石。
+*   **<GlossaryTerm term="Long-term Memory" definition="长期记忆：把跨会话需要记住的信息（用户偏好、关键事实）存到外部存储（数据库/向量库），需要时检索回来拼进上下文，而非塞满每次对话。">Long-term Memory</GlossaryTerm>**：长期记忆：把跨会话需要记住的信息（用户偏好、关键事实）存到外部存储（数据库/向量库），需要时检索回来拼进上下文，而非塞满每次对话。
+*   **<GlossaryTerm term="Loop Detection" definition="循环检测：检测 Agent 是否在重复同样的（状态/动作）——比如反复用相同参数调同一工具、或在几个状态间来回。检测到就提前终止或强制换策略，而非等到耗尽最大步数。">Loop Detection</GlossaryTerm>**：循环检测：检测 Agent 是否在重复同样的（状态/动作）——比如反复用相同参数调同一工具、或在几个状态间来回。检测到就提前终止或强制换策略，而非等到耗尽最大步数。
+*   **<GlossaryTerm term="Loose Coupling" definition="松耦合：系统设计核心追求，模块与模块之间的依赖度极低。在策略模式中表现为 Context 仅依赖 Strategy 抽象接口，即使后续大范围修改或新增具体策略类，Context 代码也完全无感知。">Loose Coupling</GlossaryTerm>**：松耦合：系统设计核心追求，模块与模块之间的依赖度极低。在策略模式中表现为 Context 仅依赖 Strategy 抽象接口，即使后续大范围修改或新增具体策略类，Context 代码也完全无感知。
+*   **<GlossaryTerm term="Loss of Control (Multi-Agent)" definition="多 Agent 失控：多个能自主决策、调工具、相互触发的 Agent 组成的系统，行为更难预测和约束，可能进入无人预期的状态或连锁行动，比单 Agent 更难保证‘不做坏事’。">Loss of Control (Multi-Agent)</GlossaryTerm>**：多 Agent 失控：多个能自主决策、调工具、相互触发的 Agent 组成的系统，行为更难预测和约束，可能进入无人预期的状态或连锁行动，比单 Agent 更难保证‘不做坏事’。
+*   **<GlossaryTerm term="Lost in the Middle" definition="“迷失在中间”：研究发现模型对超长上下文里中间位置的信息利用较差，开头和结尾的信息更容易被用上。所以塞太多无关内容反而稀释了关键信息。">Lost in the Middle</GlossaryTerm>**：“迷失在中间”：研究发现模型对超长上下文里中间位置的信息利用较差，开头和结尾的信息更容易被用上。所以塞太多无关内容反而稀释了关键信息。
+*   **<GlossaryTerm term="LSM-tree" definition="日志结构合并树（Log-Structured Merge-tree）：写入先进内存表（memtable），满了就顺序刷成不可变文件（SSTable）；后台合并（compaction）。写极快（顺序写），读可能要查多个文件。">LSM-tree</GlossaryTerm>**：日志结构合并树（Log-Structured Merge-tree）：写入先进内存表（memtable），满了就顺序刷成不可变文件（SSTable）；后台合并（compaction）。写极快（顺序写），读可能要查多个文件。
+*   **<GlossaryTerm term="LSP" definition="LSP（Language Server Protocol，语言服务协议）是微软制定的一套基于 JSON-RPC 的开放标准协议。它将语法分析、自动补全、跳转定义等重度计算逻辑从编辑器主进程中剥离，交由独立的 Language Server 进程处理，双方通过标准协议通信，大幅降低了编辑器的内存占用与开发门槛。">LSP</GlossaryTerm>**：LSP（Language Server Protocol，语言服务协议）是微软制定的一套基于 JSON-RPC 的开放标准协议。它将语法分析、自动补全、跳转定义等重度计算逻辑从编辑器主进程中剥离，交由独立的 Language Server 进程处理，双方通过标准协议通信，大幅降低了编辑器的内存占用与开发门槛。
+
+## M
+
+*   **<GlossaryTerm term="Majority Voting" definition="多数决/投票：多个 Agent 独立给出答案，取得票最多的作为结论。基于集成思想——多个独立判断投票，比单个判断更可靠（独立错误会被多数稀释）。">Majority Voting</GlossaryTerm>**：多数决/投票：多个 Agent 独立给出答案，取得票最多的作为结论。基于集成思想——多个独立判断投票，比单个判断更可靠（独立错误会被多数稀释）。
+*   **<GlossaryTerm term="Many-to-many" definition="多对多关系：一个用户可报多个活动，一个活动可有多个用户。通常用一张“关联表/连接表”来表达。">Many-to-many</GlossaryTerm>**：多对多关系：一个用户可报多个活动，一个活动可有多个用户。通常用一张“关联表/连接表”来表达。
+*   **<GlossaryTerm term="Master Data Management" definition="主数据管理（MDM）：对企业关键实体（客户、产品、供应商、员工）建立单一、权威、一致的数据来源，解决同一实体在多个系统里数据不一致、重复的问题。">Master Data Management</GlossaryTerm>**：主数据管理（MDM）：对企业关键实体（客户、产品、供应商、员工）建立单一、权威、一致的数据来源，解决同一实体在多个系统里数据不一致、重复的问题。
+*   **<GlossaryTerm term="Max Steps" definition="最大步数：Agent 循环的硬上限，达到就强制停止（返回当前最好结果或失败），防止无限循环。是 Agent 必备的底线安全带。">Max Steps</GlossaryTerm>**：最大步数：Agent 循环的硬上限，达到就强制停止（返回当前最好结果或失败），防止无限循环。是 Agent 必备的底线安全带。
+*   **<GlossaryTerm term="MCP (Model Context Protocol)" definition="模型上下文协议：一个开放标准，规定 Agent/LLM 如何统一地连接外部工具、数据源和能力（暴露 tools、resources、prompts）。让“接工具”从每个都要定制，变成遵守同一协议即插即用。">MCP (Model Context Protocol)</GlossaryTerm>**：模型上下文协议：一个开放标准，规定 Agent/LLM 如何统一地连接外部工具、数据源和能力（暴露 tools、resources、prompts）。让“接工具”从每个都要定制，变成遵守同一协议即插即用。
+*   **<GlossaryTerm term="Mean Time To Repair" definition="平均故障恢复时间 (MTTR - Mean Time To Repair)：服务发生故障或中断，从被检测/报警开始，到服务完全恢复正常（符合 SLO）所需的平均时间。它是衡量系统弹性和团队运维效率的关键 DORA 指标。">Mean Time To Repair</GlossaryTerm>**：平均故障恢复时间 (MTTR - Mean Time To Repair)：服务发生故障或中断，从被检测/报警开始，到服务完全恢复正常（符合 SLO）所需的平均时间。它是衡量系统弹性和团队运维效率的关键 DORA 指标。
+*   **<GlossaryTerm term="Memory Bandwidth" definition="显存带宽 (Memory Bandwidth)：GPU 芯片从显存中读取或写入数据的速度。在 Decode（解码）阶段，频繁读取已保存的 KV cache 使得显存带宽成为推理吞吐的最大性能瓶颈。">Memory Bandwidth</GlossaryTerm>**：显存带宽 (Memory Bandwidth)：GPU 芯片从显存中读取或写入数据的速度。在 Decode（解码）阶段，频繁读取已保存的 KV cache 使得显存带宽成为推理吞吐的最大性能瓶颈。
+*   **<GlossaryTerm term="Memory Scratchpad" definition="记忆草稿纸：智能体运行时维护的结构化上下文存储。用于暂存当前任务的目标、已执行的历史工具动作（done）以及从工具中提取出的最新事实发现（findings）。">Memory Scratchpad</GlossaryTerm>**：记忆草稿纸：智能体运行时维护的结构化上下文存储。用于暂存当前任务的目标、已执行的历史工具动作（done）以及从工具中提取出的最新事实发现（findings）。
+*   **<GlossaryTerm term="Merge Sort" definition="归并排序：一种分治算法，在 Feed 系统的读扩散与混合模式中常用于将多个局部有序的帖子流（如各个大V的帖子列表与自身的收件箱）快速合并为一个全局按时间戳倒序排列的时间线流。">Merge Sort</GlossaryTerm>**：归并排序：一种分治算法，在 Feed 系统的读扩散与混合模式中常用于将多个局部有序的帖子流（如各个大V的帖子列表与自身的收件箱）快速合并为一个全局按时间戳倒序排列的时间线流。
+*   **<GlossaryTerm term="Mesh Control Plane" definition="网格控制面：集中管理和下发配置（路由规则、安全策略、流量切分）给所有 sidecar 的组件。你改一处策略，它推给全网格。">Mesh Control Plane</GlossaryTerm>**：网格控制面：集中管理和下发配置（路由规则、安全策略、流量切分）给所有 sidecar 的组件。你改一处策略，它推给全网格。
+*   **<GlossaryTerm term="Mesh Data Plane" definition="网格数据面：所有 sidecar 代理的集合，真正处理服务间的每一个请求（加密、路由、重试、熔断、采集遥测）。">Mesh Data Plane</GlossaryTerm>**：网格数据面：所有 sidecar 代理的集合，真正处理服务间的每一个请求（加密、路由、重试、熔断、采集遥测）。
+*   **<GlossaryTerm term="Message Queue" definition="消息队列：分布式系统间的异步通信基础设施，使用队列缓冲消息，支持解耦、异步处理、流量削峰与重试容灾（如 Kafka、RabbitMQ）。">Message Queue</GlossaryTerm>**：消息队列：分布式系统间的异步通信基础设施，使用队列缓冲消息，支持解耦、异步处理、流量削峰与重试容灾（如 Kafka、RabbitMQ）。
+*   **<GlossaryTerm term="Metadata" definition="元数据：附加在文档块上的结构化辅助信息（如文档 ID、创建时间、归属部门、文章来源及标题层级等）。既可用于检索时的过滤筛选，也常用于在生成答案时输出引用依据。">Metadata</GlossaryTerm>**：元数据：附加在文档块上的结构化辅助信息（如文档 ID、创建时间、归属部门、文章来源及标题层级等）。既可用于检索时的过滤筛选，也常用于在生成答案时输出引用依据。
+*   **<GlossaryTerm term="Metadata Filtering" definition="元数据过滤：在向量检索的同时按结构化字段（如部门、时间、权限、文档类型）过滤，只在符合条件的子集里找最相似的。是实现权限隔离和精准检索的关键。">Metadata Filtering</GlossaryTerm>**：元数据过滤：在向量检索的同时按结构化字段（如部门、时间、权限、文档类型）过滤，只在符合条件的子集里找最相似的。是实现权限隔离和精准检索的关键。
+*   **<GlossaryTerm term="Metadata Filtering (RAG)" definition="元数据过滤：检索时结合结构化字段（权限、时间、文档类型、部门、版本）过滤，只在符合条件的子集里做向量检索。是实现权限隔离、时效控制、精准检索的基础能力。">Metadata Filtering (RAG)</GlossaryTerm>**：元数据过滤：检索时结合结构化字段（权限、时间、文档类型、部门、版本）过滤，只在符合条件的子集里做向量检索。是实现权限隔离、时效控制、精准检索的基础能力。
+*   **<GlossaryTerm term="Metrics" definition="指标：随时间聚合的数值（QPS、延迟分位、错误率、资源利用率）。便宜、适合趋势和告警，但是聚合的、无法回溯单个请求细节。">Metrics</GlossaryTerm>**：指标：随时间聚合的数值（QPS、延迟分位、错误率、资源利用率）。便宜、适合趋势和告警，但是聚合的、无法回溯单个请求细节。
+*   **<GlossaryTerm term="Mixture of Experts (MoE)" definition="混合专家：模型有很多『专家』子网络，每个 token 只激活其中少数几个，从而在总参数极大的同时，单次计算量可控。GPT-4 被报道（未证实）采用了 MoE。">Mixture of Experts (MoE)</GlossaryTerm>**：混合专家：模型有很多『专家』子网络，每个 token 只激活其中少数几个，从而在总参数极大的同时，单次计算量可控。GPT-4 被报道（未证实）采用了 MoE。
+*   **<GlossaryTerm term="Mnesia" definition="Erlang/OTP 内置的分布式数据库，运行在 BEAM 进程内（与应用同进程），因此读取几乎没有跨网络/跨进程开销。">Mnesia</GlossaryTerm>**：Erlang/OTP 内置的分布式数据库，运行在 BEAM 进程内（与应用同进程），因此读取几乎没有跨网络/跨进程开销。
+*   **<GlossaryTerm term="Mock Provider" definition="Mock provider：模型接口的一个确定性假实现，返回可预测的固定/规则化输出，用于无 key 运行、单元测试和演示。让系统在没有真实模型时也能端到端跑通和被测试。">Mock Provider</GlossaryTerm>**：Mock provider：模型接口的一个确定性假实现，返回可预测的固定/规则化输出，用于无 key 运行、单元测试和演示。让系统在没有真实模型时也能端到端跑通和被测试。
+*   **<GlossaryTerm term="Model Card" definition="模型卡：一份记录 AI 模型/系统关键信息的文档——用途、训练数据、性能、已知局限、风险、适用与不适用场景。让使用者和审计者了解‘这个 AI 能做什么、不能做什么、有什么风险’。">Model Card</GlossaryTerm>**：模型卡：一份记录 AI 模型/系统关键信息的文档——用途、训练数据、性能、已知局限、风险、适用与不适用场景。让使用者和审计者了解‘这个 AI 能做什么、不能做什么、有什么风险’。
+*   **<GlossaryTerm term="Model Context Protocol" definition="模型上下文协议 (MCP)：由 Anthropic 发起的开源标准，旨在统一大模型应用程序 (Host) 与数据源及工具服务 (Server) 之间的双向接口规范。">Model Context Protocol</GlossaryTerm>**：模型上下文协议 (MCP)：由 Anthropic 发起的开源标准，旨在统一大模型应用程序 (Host) 与数据源及工具服务 (Server) 之间的双向接口规范。
+*   **<GlossaryTerm term="Model Fallback Chain" definition="模型降级链：高可用架构设计，当主模型因限流、网络超时或服务异常不可用时，流式引擎自动按顺序尝试调用性能稍弱但更稳定/廉价的备选模型，直至静态安全回复。">Model Fallback Chain</GlossaryTerm>**：模型降级链：高可用架构设计，当主模型因限流、网络超时或服务异常不可用时，流式引擎自动按顺序尝试调用性能稍弱但更稳定/廉价的备选模型，直至静态安全回复。
+*   **<GlossaryTerm term="Model Gateway" definition="模型网关：所有 AI 请求必经的统一入口层，在这里集中实现模型路由、护栏安全、成本控制、可观测、限流失败转移等横切能力，向上给应用统一接口、向下对接各模型提供商。是 API 网关在 AI 场景的对应物，也是 AI 平台的核心。">Model Gateway</GlossaryTerm>**：模型网关：所有 AI 请求必经的统一入口层，在这里集中实现模型路由、护栏安全、成本控制、可观测、限流失败转移等横切能力，向上给应用统一接口、向下对接各模型提供商。是 API 网关在 AI 场景的对应物，也是 AI 平台的核心。
+*   **<GlossaryTerm term="Model Routing" definition="模型路由：根据任务难度把请求分发到不同档位的模型——简单任务用便宜快的小模型，难任务用强模型——在质量、成本、延迟间取平衡。">Model Routing</GlossaryTerm>**：模型路由：根据任务难度把请求分发到不同档位的模型——简单任务用便宜快的小模型，难任务用强模型——在质量、成本、延迟间取平衡。
+*   **<GlossaryTerm term="Module" definition="一段有单一职责、对外只通过明确接口暴露能力的代码单元。模块内部怎么实现，外部不需要知道。">Module</GlossaryTerm>**：一段有单一职责、对外只通过明确接口暴露能力的代码单元。模块内部怎么实现，外部不需要知道。
+*   **<GlossaryTerm term="mTLS" definition="双向 TLS：服务间通信双方都用证书互相验证身份并加密。服务网格可自动为所有服务间流量启用 mTLS，实现“零信任”网络而无需改业务代码。">mTLS</GlossaryTerm>**：双向 TLS：服务间通信双方都用证书互相验证身份并加密。服务网格可自动为所有服务间流量启用 mTLS，实现“零信任”网络而无需改业务代码。
+*   **<GlossaryTerm term="MTTR" definition="平均修复/恢复时间 (Mean Time to Repair/Restore)：系统从发生故障中断到完全恢复正常运行所需的平均时间。MTTR 越短，可用性越高。">MTTR</GlossaryTerm>**：平均修复/恢复时间 (Mean Time to Repair/Restore)：系统从发生故障中断到完全恢复正常运行所需的平均时间。MTTR 越短，可用性越高。
+*   **<GlossaryTerm term="Multi-Agent Debate" definition="多 Agent 辩论：多个 Agent 对一个问题各自给出答案/立场，互相质询、反驳、修正，通过对抗逼出更可靠的结论。比单个答案更能暴露错误和盲点。">Multi-Agent Debate</GlossaryTerm>**：多 Agent 辩论：多个 Agent 对一个问题各自给出答案/立场，互相质询、反驳、修正，通过对抗逼出更可靠的结论。比单个答案更能暴露错误和盲点。
+*   **<GlossaryTerm term="Multi-Agent Orchestration" definition="多智能体编排：多智能体系统中，通过确定性工作流或自主型主管，对各个执行节点的控制流跳转、状态读写和生命周期进行统一调配与限制的工程机制。">Multi-Agent Orchestration</GlossaryTerm>**：多智能体编排：多智能体系统中，通过确定性工作流或自主型主管，对各个执行节点的控制流跳转、状态读写和生命周期进行统一调配与限制的工程机制。
+*   **<GlossaryTerm term="Multi-Agent System" definition="多智能体系统：由多个有不同角色、工具或目标的 Agent 协作完成任务的系统。优势是专业化和关注点分离，代价是协调成本、通信复杂、成本上升、错误传播。">Multi-Agent System</GlossaryTerm>**：多智能体系统：由多个有不同角色、工具或目标的 Agent 协作完成任务的系统。优势是专业化和关注点分离，代价是协调成本、通信复杂、成本上升、错误传播。
+*   **<GlossaryTerm term="Multi-cloud" definition="多云：同时使用多家公有云。可能为了避免锁定、利用各家优势服务、满足合规或就近，也可能只是历史/并购造成。代价是复杂度和运维成本上升。">Multi-cloud</GlossaryTerm>**：多云：同时使用多家公有云。可能为了避免锁定、利用各家优势服务、满足合规或就近，也可能只是历史/并购造成。代价是复杂度和运维成本上升。
+*   **<GlossaryTerm term="Multi-hop Retrieval" definition="多跳检索：一个问题需要多步检索才能回答——用第一次检索的结果构造第二次查询，串联多段证据。常用迭代检索或让模型分解问题。">Multi-hop Retrieval</GlossaryTerm>**：多跳检索：一个问题需要多步检索才能回答——用第一次检索的结果构造第二次查询，串联多段证据。常用迭代检索或让模型分解问题。
+*   **<GlossaryTerm term="Multi-Leader Replication" definition="多主复制：多个副本都能接收写（如多数据中心各有一个主），再互相同步。写延迟低、可跨区域写，但会产生写冲突，需要冲突解决策略。">Multi-Leader Replication</GlossaryTerm>**：多主复制：多个副本都能接收写（如多数据中心各有一个主），再互相同步。写延迟低、可跨区域写，但会产生写冲突，需要冲突解决策略。
+*   **<GlossaryTerm term="Multi-Model Failover" definition="多模型冗余与故障转移：为关键 AI 能力配置多个可替代的模型/提供商，当主模型限流、超时或宕机时自动切换到备用模型，避免单一模型成为单点故障。是 AI 的高可用手段。">Multi-Model Failover</GlossaryTerm>**：多模型冗余与故障转移：为关键 AI 能力配置多个可替代的模型/提供商，当主模型限流、超时或宕机时自动切换到备用模型，避免单一模型成为单点故障。是 AI 的高可用手段。
+*   **<GlossaryTerm term="Multi-Paxos (多 Paxos 共识)" definition="一种用于在分布式系统中达成一致日志序列的共识协议。DynamoDB 用它在跨可用区 (AZ) 的三副本间保持强一致写入与自动选主。">Multi-Paxos (多 Paxos 共识)</GlossaryTerm>**：一种用于在分布式系统中达成一致日志序列的共识协议。DynamoDB 用它在跨可用区 (AZ) 的三副本间保持强一致写入与自动选主。
+*   **<GlossaryTerm term="Multi-query Expansion" definition="多查询扩展：用 LLM 把一个查询改写成多个不同角度的查询，分别检索后合并去重结果。覆盖更多相关文档，提升召回，尤其对有歧义或多意图的问题。">Multi-query Expansion</GlossaryTerm>**：多查询扩展：用 LLM 把一个查询改写成多个不同角度的查询，分别检索后合并去重结果。覆盖更多相关文档，提升召回，尤其对有歧义或多意图的问题。
+*   **<GlossaryTerm term="MVCC" definition="多版本并发控制，指通过保留数据的多个历史版本（附带时间戳），使得只读事务可以指定读取某一历史快照，无需申请锁即可实现非阻塞读取的技术。">MVCC</GlossaryTerm>**：多版本并发控制，指通过保留数据的多个历史版本（附带时间戳），使得只读事务可以指定读取某一历史快照，无需申请锁即可实现非阻塞读取的技术。
+*   **<GlossaryTerm term="MVP" definition="最小可行产品 (Minimum Viable Product)：仅包含能让早期用户使用并收集反馈的最核心功能的产品版本，用于快速验证市场假设。">MVP</GlossaryTerm>**：最小可行产品 (Minimum Viable Product)：仅包含能让早期用户使用并收集反馈的最核心功能的产品版本，用于快速验证市场假设。
+
+## N
+
+*   **<GlossaryTerm term="N+1 Problem" definition="N+1 查询问题：为了拿一个列表，先查 1 次拿到 N 项，再为每项各查 1 次，总共 N+1 次往返。是后端慢的最常见原因之一。">N+1 Problem</GlossaryTerm>**：N+1 查询问题：为了拿一个列表，先查 1 次拿到 N 项，再为每项各查 1 次，总共 N+1 次往返。是后端慢的最常见原因之一。
+*   **<GlossaryTerm term="Namespace" definition="命名空间：Linux 内核机制，让进程看到的资源（进程树、网络、挂载点、主机名、用户）被隔离。容器里 ps 只看到自己的进程、有自己的网络栈，就是命名空间的效果。">Namespace</GlossaryTerm>**：命名空间：Linux 内核机制，让进程看到的资源（进程树、网络、挂载点、主机名、用户）被隔离。容器里 ps 只看到自己的进程、有自己的网络栈，就是命名空间的效果。
+*   **<GlossaryTerm term="Namespaces" definition="Namespaces（命名空间）是 Linux 内核提供的一种系统资源隔离机制。它能使特定进程组只能看到自己命名空间内的资源，而看不到宿主机或其他命名空间内的资源，包括进程树（PID）、网卡（NET）、文件挂载点（MNT）等。">Namespaces</GlossaryTerm>**：Namespaces（命名空间）是 Linux 内核提供的一种系统资源隔离机制。它能使特定进程组只能看到自己命名空间内的资源，而看不到宿主机或其他命名空间内的资源，包括进程树（PID）、网卡（NET）、文件挂载点（MNT）等。
+*   **<GlossaryTerm term="Network Partition" definition="网络分区：分布式系统中节点之间的网络中断，导致它们无法通信但各自仍在运行。在大规模系统里这是必然会发生的，不是会不会，而是何时。">Network Partition</GlossaryTerm>**：网络分区：分布式系统中节点之间的网络中断，导致它们无法通信但各自仍在运行。在大规模系统里这是必然会发生的，不是会不会，而是何时。
+*   **<GlossaryTerm term="NIST AI RMF" definition="美国 NIST 发布的 AI 风险管理框架，用四个核心功能组织 AI 治理：Govern（治理文化与问责）、Map（识别情境与风险）、Measure（评估分析风险）、Manage（处置与监控风险）。是把‘负责任 AI’落地的通用参照框架。">NIST AI RMF</GlossaryTerm>**：美国 NIST 发布的 AI 风险管理框架，用四个核心功能组织 AI 治理：Govern（治理文化与问责）、Map（识别情境与风险）、Measure（评估分析风险）、Manage（处置与监控风险）。是把‘负责任 AI’落地的通用参照框架。
+*   **<GlossaryTerm term="NLI" definition="自然语言推理 (Natural Language Inference, NLI)：一种判断两个句子之间是蕴含、矛盾还是中性关系的语义计算任务。在 Grounding 校验中，常用于自动化验证大模型的回答是否确实被检索到的证据所蕴含。">NLI</GlossaryTerm>**：自然语言推理 (Natural Language Inference, NLI)：一种判断两个句子之间是蕴含、矛盾还是中性关系的语义计算任务。在 Grounding 校验中，常用于自动化验证大模型的回答是否确实被检索到的证据所蕴含。
+*   **<GlossaryTerm term="Noisy Neighbor" definition="吵闹邻居效应 (Noisy Neighbor)：在多租户共享计算资源的环境下，由于某个租户突然爆发海量并发请求，过度耗尽了共享带宽、CPU 或连接池，从而导致同一物理机或集群上的其他租户遭遇严重响应缓慢甚至服务中断的负面影响。">Noisy Neighbor</GlossaryTerm>**：吵闹邻居效应 (Noisy Neighbor)：在多租户共享计算资源的环境下，由于某个租户突然爆发海量并发请求，过度耗尽了共享带宽、CPU 或连接池，从而导致同一物理机或集群上的其他租户遭遇严重响应缓慢甚至服务中断的负面影响。
+*   **<GlossaryTerm term="Non-determinism" definition="非确定性：相同输入可能产生不同输出。LLM 的非确定性主要来自采样的随机性（也有数值/并发等因素）。它影响可测试性、可复现性和缓存。">Non-determinism</GlossaryTerm>**：非确定性：相同输入可能产生不同输出。LLM 的非确定性主要来自采样的随机性（也有数值/并发等因素）。它影响可测试性、可复现性和缓存。
+*   **<GlossaryTerm term="Non-Functional Requirement" definition="系统必须满足的质量属性，例如延迟、吞吐、可用性、安全、成本、可维护性。它回答“系统做得多好、在什么约束下做”。">Non-Functional Requirement</GlossaryTerm>**：系统必须满足的质量属性，例如延迟、吞吐、可用性、安全、成本、可维护性。它回答“系统做得多好、在什么约束下做”。
+*   **<GlossaryTerm term="Non-Functional Requirements" definition="非功能需求：系统要做得多好——性能、可用性、一致性、安全、成本等质量属性。它们往往比功能需求更决定架构。">Non-Functional Requirements</GlossaryTerm>**：非功能需求：系统要做得多好——性能、可用性、一致性、安全、成本等质量属性。它们往往比功能需求更决定架构。
+*   **<GlossaryTerm term="Non-parametric Memory" definition="非参数化记忆：外置于大模型参数之外、可独立读写和实时更新的知识库系统（如向量数据库、文档索引、传统关系型数据库）。">Non-parametric Memory</GlossaryTerm>**：非参数化记忆：外置于大模型参数之外、可独立读写和实时更新的知识库系统（如向量数据库、文档索引、传统关系型数据库）。
+*   **<GlossaryTerm term="Non-repeatable Read" definition="不可重复读：同一事务内读同一行两次，结果不同（因为中间被别的事务改并提交了）。">Non-repeatable Read</GlossaryTerm>**：不可重复读：同一事务内读同一行两次，结果不同（因为中间被别的事务改并提交了）。
+*   **<GlossaryTerm term="Normalization" definition="规范化：把数据拆分、消除冗余，每个事实只存一处。好处是没有更新异常、数据一致；代价是查询常需 join 多张表。">Normalization</GlossaryTerm>**：规范化：把数据拆分、消除冗余，每个事实只存一处。好处是没有更新异常、数据一致；代价是查询常需 join 多张表。
+*   **<GlossaryTerm term="North-South Traffic" definition="南北向流量：在云原生架构中，指从集群外部（如客户端、App 端、浏览器端）通过边缘网关、负载均衡器流向集群内部服务的流量。主要解决边缘路由、限流认证、SSL 卸载等南北向通信问题。">North-South Traffic</GlossaryTerm>**：南北向流量：在云原生架构中，指从集群外部（如客户端、App 端、浏览器端）通过边缘网关、负载均衡器流向集群内部服务的流量。主要解决边缘路由、限流认证、SSL 卸载等南北向通信问题。
+*   **<GlossaryTerm term="NoSQL" definition="非关系型数据库 (Not Only SQL)：一类不同于传统关系型数据库（RDBMS）的通用数据存储系统，它们通常放宽了 ACID 事务要求以换取水平扩展性、高并发吞吐和灵活的多变 Schema。">NoSQL</GlossaryTerm>**：非关系型数据库 (Not Only SQL)：一类不同于传统关系型数据库（RDBMS）的通用数据存储系统，它们通常放宽了 ACID 事务要求以换取水平扩展性、高并发吞吐和灵活的多变 Schema。
+*   **<GlossaryTerm term="Notification Platform" definition="通知平台 (Notification Platform)：一种集中的、高可靠性的微服务架构系统。通常由外部消息队列驱动，提供模板渲染、渠道路由、排队重试、并发控制、多维度限流及全局送达审计等能力的综合通信中枢。">Notification Platform</GlossaryTerm>**：通知平台 (Notification Platform)：一种集中的、高可靠性的微服务架构系统。通常由外部消息队列驱动，提供模板渲染、渠道路由、排队重试、并发控制、多维度限流及全局送达审计等能力的综合通信中枢。
+*   **<GlossaryTerm term="Nucleus Sampling" definition="核采样 (Nucleus Sampling)：即 Top-p 采样。与 Top-k 固定保留前 K 个词不同，它动态保留累计概率之和达到阈值 p 的最小 Token 集合，能根据概率分布的胖瘦自适应调整保留的 Token 数量。">Nucleus Sampling</GlossaryTerm>**：核采样 (Nucleus Sampling)：即 Top-p 采样。与 Top-k 固定保留前 K 个词不同，它动态保留累计概率之和达到阈值 p 的最小 Token 集合，能根据概率分布的胖瘦自适应调整保留的 Token 数量。
+*   **<GlossaryTerm term="NVLink" definition="NVIDIA 的 GPU 间直连高速总线，用于单台服务器内多张 GPU（如 8 卡）之间的超高带宽通信。">NVLink</GlossaryTerm>**：NVIDIA 的 GPU 间直连高速总线，用于单台服务器内多张 GPU（如 8 卡）之间的超高带宽通信。
+
+## O
+
+*   **<GlossaryTerm term="Object Storage" definition="对象存储 (Object Storage)：一种非结构化数据存储架构（如 AWS S3），将数据作为带唯一标识的“对象”进行存取，极利于海量图片、视频等扁平化大文件的廉价高扩展存储。">Object Storage</GlossaryTerm>**：对象存储 (Object Storage)：一种非结构化数据存储架构（如 AWS S3），将数据作为带唯一标识的“对象”进行存取，极利于海量图片、视频等扁平化大文件的廉价高扩展存储。
+*   **<GlossaryTerm term="Observability" definition="可观测性：通过系统对外输出的遥测数据（指标、日志、链路）推断其内部状态的能力，重点是能回答事先没预想到的问题，而不只是监控预设的指标。">Observability</GlossaryTerm>**：可观测性：通过系统对外输出的遥测数据（指标、日志、链路）推断其内部状态的能力，重点是能回答事先没预想到的问题，而不只是监控预设的指标。
+*   **<GlossaryTerm term="Observation" definition="观察段 (Observation)：工具执行完毕后，回馈给大模型的物理真实数据，作为下一轮推理的基础依据。">Observation</GlossaryTerm>**：观察段 (Observation)：工具执行完毕后，回馈给大模型的物理真实数据，作为下一轮推理的基础依据。
+*   **<GlossaryTerm term="Observe-Decide-Act (ODA循环)" definition="观察-决策-行动循环：智能体在运行期间的基础控制模型。观察外界反馈，由大模型大脑进行思维决策，最终调用对应工具产生行动，并把结果作为下一轮观察的输入。">Observe-Decide-Act (ODA循环)</GlossaryTerm>**：观察-决策-行动循环：智能体在运行期间的基础控制模型。观察外界反馈，由大模型大脑进行思维决策，最终调用对应工具产生行动，并把结果作为下一轮观察的输入。
+*   **<GlossaryTerm term="Observer Pattern" definition="观察者模式：一个对象（subject/发布者）维护一组观察者（订阅者），当自身状态变化时逐个通知它们。发布者只依赖“观察者接口”，不认识具体订阅者，实现一对多解耦。">Observer Pattern</GlossaryTerm>**：观察者模式：一个对象（subject/发布者）维护一组观察者（订阅者），当自身状态变化时逐个通知它们。发布者只依赖“观察者接口”，不认识具体订阅者，实现一对多解耦。
+*   **<GlossaryTerm term="OCI" definition="OCI (Open Container Initiative): 开放容器计划，是一个致力于建立容器格式和运行时的开放工业标准的 Linux 基金会项目，确保了不同容器引擎（如 Docker、containerd、Podman）之间的镜像和运行时规范的通用与互操作性。">OCI</GlossaryTerm>**：OCI (Open Container Initiative): 开放容器计划，是一个致力于建立容器格式和运行时的开放工业标准的 Linux 基金会项目，确保了不同容器引擎（如 Docker、containerd、Podman）之间的镜像和运行时规范的通用与互操作性。
+*   **<GlossaryTerm term="OLAP" definition="在线分析处理：大范围聚合分析（报表、统计），扫描海量数据。常用列式存储和反规范化。">OLAP</GlossaryTerm>**：在线分析处理：大范围聚合分析（报表、统计），扫描海量数据。常用列式存储和反规范化。
+*   **<GlossaryTerm term="OLTP" definition="在线事务处理：大量短小的读写（下单、报名），要求低延迟、强一致。典型用规范化的关系模型。">OLTP</GlossaryTerm>**：在线事务处理：大量短小的读写（下单、报名），要求低延迟、强一致。典型用规范化的关系模型。
+*   **<GlossaryTerm term="Online Evaluation" definition="在线评估：在生产环境持续监控 AI 系统的真实表现——用可自动计算的代理指标（拒答率、弃答率、重问率、转人工率、延迟、成本）和抽样人工/LLM 评审，及时发现质量下降。区别于上线前的离线评估。">Online Evaluation</GlossaryTerm>**：在线评估：在生产环境持续监控 AI 系统的真实表现——用可自动计算的代理指标（拒答率、弃答率、重问率、转人工率、延迟、成本）和抽样人工/LLM 评审，及时发现质量下降。区别于上线前的离线评估。
+*   **<GlossaryTerm term="OPC UA" definition="OPC 统一架构 (OPC Unified Architecture)：一种面向跨平台、服务导向（SOA）的工业通信标准协议。它提供了信息模型和机器对机器（M2M）通信规范，使得从现场 PLC/传感器直至云端系统的异构设备之间能够进行安全、语义一致的数据交互。">OPC UA</GlossaryTerm>**：OPC 统一架构 (OPC Unified Architecture)：一种面向跨平台、服务导向（SOA）的工业通信标准协议。它提供了信息模型和机器对机器（M2M）通信规范，使得从现场 PLC/传感器直至云端系统的异构设备之间能够进行安全、语义一致的数据交互。
+*   **<GlossaryTerm term="Open-Closed Principle" definition="开闭原则（OCP）：软件实体应对扩展开放、对修改关闭。加新功能时通过“新增代码”实现，而不是“修改已有代码”。">Open-Closed Principle</GlossaryTerm>**：开闭原则（OCP）：软件实体应对扩展开放、对修改关闭。加新功能时通过“新增代码”实现，而不是“修改已有代码”。
+*   **<GlossaryTerm term="Operator" definition="Operator (自定义控制器)：一种 Kubernetes 设计模式。它将特定领域的复杂应用程序（如数据库、缓存组）的运维管理知识编写为代码，结合自定义资源定义 (CRD) 与调和循环，实现高度定制化的自动化生命周期管理（如自动备份、主从切换等）。">Operator</GlossaryTerm>**：Operator (自定义控制器)：一种 Kubernetes 设计模式。它将特定领域的复杂应用程序（如数据库、缓存组）的运维管理知识编写为代码，结合自定义资源定义 (CRD) 与调和循环，实现高度定制化的自动化生命周期管理（如自动备份、主从切换等）。
+*   **<GlossaryTerm term="Optimistic Concurrency Control" definition="乐观并发控制：假设冲突很少，不加锁；提交时用版本号/CAS 检查数据有没有被别人改过，被改过就拒绝并重试。">Optimistic Concurrency Control</GlossaryTerm>**：乐观并发控制：假设冲突很少，不加锁；提交时用版本号/CAS 检查数据有没有被别人改过，被改过就拒绝并重试。
+*   **<GlossaryTerm term="Optimistic Locking" definition="乐观锁：一种并发控制策略，假定冲突少，读数据时不加锁，仅在更新时检查在此期间是否有其他事务修改了版本/数值。若冲突则重试。">Optimistic Locking</GlossaryTerm>**：乐观锁：一种并发控制策略，假定冲突少，读数据时不加锁，仅在更新时检查在此期间是否有其他事务修改了版本/数值。若冲突则重试。
+*   **<GlossaryTerm term="Orchestration Topology" definition="编排拓扑：定义了系统中智能体节点间连接和交互的数据与控制通路拓扑结构，如星型拓扑（Supervisor模式）或网状拓扑（Swarm模式）。">Orchestration Topology</GlossaryTerm>**：编排拓扑：定义了系统中智能体节点间连接和交互的数据与控制通路拓扑结构，如星型拓扑（Supervisor模式）或网状拓扑（Swarm模式）。
+*   **<GlossaryTerm term="OT/IT" definition="OT（运营技术）指控制物理设备的系统（PLC、SCADA、传感器）；IT 指传统信息系统（服务器、数据库、云）。工业数字化的核心挑战之一是让两者安全融合而不互相危害。">OT/IT</GlossaryTerm>**：OT（运营技术）指控制物理设备的系统（PLC、SCADA、传感器）；IT 指传统信息系统（服务器、数据库、云）。工业数字化的核心挑战之一是让两者安全融合而不互相危害。
+*   **<GlossaryTerm term="Outbox Table" definition="发件箱表：在 Transactional Outbox 模式中，用于在本地数据库中持久化存储待发布事件记录的辅助表，以保证它与核心业务状态更新在同一个事务中原子 commit。">Outbox Table</GlossaryTerm>**：发件箱表：在 Transactional Outbox 模式中，用于在本地数据库中持久化存储待发布事件记录的辅助表，以保证它与核心业务状态更新在同一个事务中原子 commit。
+*   **<GlossaryTerm term="Output Guardrail" definition="输出护栏：在模型输出返回用户或被下游使用前进行检查与处理，如敏感信息/PII 脱敏、有害内容过滤、格式与事实校验、拒绝泄露系统提示。捕捉输入护栏漏掉的问题。">Output Guardrail</GlossaryTerm>**：输出护栏：在模型输出返回用户或被下游使用前进行检查与处理，如敏感信息/PII 脱敏、有害内容过滤、格式与事实校验、拒绝泄露系统提示。捕捉输入护栏漏掉的问题。
+*   **<GlossaryTerm term="Output Schema Validation" definition="输出模式校验：使用 JSON Schema 或强类型库校验模型返回的文本，确保其符合标准的 JSON 格式及约定的字段类型，防止下游系统解析出错。">Output Schema Validation</GlossaryTerm>**：输出模式校验：使用 JSON Schema 或强类型库校验模型返回的文本，确保其符合标准的 JSON 格式及约定的字段类型，防止下游系统解析出错。
+*   **<GlossaryTerm term="Over-engineering" definition="过度工程：在系统设计中引入远超实际业务需求所需的复杂度。例如，在步骤完全可以写死的场景下强行使用自主智能体。">Over-engineering</GlossaryTerm>**：过度工程：在系统设计中引入远超实际业务需求所需的复杂度。例如，在步骤完全可以写死的场景下强行使用自主智能体。
+*   **<GlossaryTerm term="OverlayFS" definition="OverlayFS 是一种现代化联合文件系统（UnionFS）。它将多个物理目录（分为只读低层 lowerdir 和可写高层 upperdir）逻辑重叠合并挂载到一个统一的目录中（mergeddir），为容器提供层次化、写时复制（CoW）的静态文件视图。">OverlayFS</GlossaryTerm>**：OverlayFS 是一种现代化联合文件系统（UnionFS）。它将多个物理目录（分为只读低层 lowerdir 和可写高层 upperdir）逻辑重叠合并挂载到一个统一的目录中（mergeddir），为容器提供层次化、写时复制（CoW）的静态文件视图。
+*   **<GlossaryTerm term="OWASP LLM Top 10" definition="OWASP 针对 LLM 应用整理的十大安全风险清单（提示注入、不安全输出处理、训练数据投毒、模型拒绝服务、供应链、敏感信息泄露、不安全插件、过度代理、过度依赖、模型窃取等）。是 AI 安全威胁识别的行业参照。">OWASP LLM Top 10</GlossaryTerm>**：OWASP 针对 LLM 应用整理的十大安全风险清单（提示注入、不安全输出处理、训练数据投毒、模型拒绝服务、供应链、敏感信息泄露、不安全插件、过度代理、过度依赖、模型窃取等）。是 AI 安全威胁识别的行业参照。
+
+## P
+
+*   **<GlossaryTerm term="PACELC" definition="PACELC 定理：在分区(P)时于可用性(A)和一致性(C)间取舍；否则(E, Else)在延迟(L)和一致性(C)间取舍。比 CAP 更完整，因为它涵盖了没有分区的正常情况。">PACELC</GlossaryTerm>**：PACELC 定理：在分区(P)时于可用性(A)和一致性(C)间取舍；否则(E, Else)在延迟(L)和一致性(C)间取舍。比 CAP 更完整，因为它涵盖了没有分区的正常情况。
+*   **<GlossaryTerm term="PagedAttention" definition="PagedAttention：像操作系统分页管理内存那样管理 KV cache 显存，按需分配小块、减少碎片和浪费，让同样显存能服务更多并发请求（vLLM 提出）。">PagedAttention</GlossaryTerm>**：PagedAttention：像操作系统分页管理内存那样管理 KV cache 显存，按需分配小块、减少碎片和浪费，让同样显存能服务更多并发请求（vLLM 提出）。
+*   **<GlossaryTerm term="Parallel Latency" definition="并行延迟：在并行编排（扇出-聚合）中，多路子任务并发执行下的系统累积时间损耗，实质取决于多路中最慢的单点响应延迟（最长路径延迟）。">Parallel Latency</GlossaryTerm>**：并行延迟：在并行编排（扇出-聚合）中，多路子任务并发执行下的系统累积时间损耗，实质取决于多路中最慢的单点响应延迟（最长路径延迟）。
+*   **<GlossaryTerm term="Parallel Orchestration" definition="并行编排：把无依赖的子任务同时分给多个 Agent 并行执行（扇出 fan-out），再把各自结果汇总（聚合 aggregate）。能大幅缩短总耗时，但要处理聚合和部分失败。">Parallel Orchestration</GlossaryTerm>**：并行编排：把无依赖的子任务同时分给多个 Agent 并行执行（扇出 fan-out），再把各自结果汇总（聚合 aggregate）。能大幅缩短总耗时，但要处理聚合和部分失败。
+*   **<GlossaryTerm term="Parallelism" definition="并行：多个任务真的在同一时刻一起执行（需要多核/多机）。并行一定并发，并发不一定并行。">Parallelism</GlossaryTerm>**：并行：多个任务真的在同一时刻一起执行（需要多核/多机）。并行一定并发，并发不一定并行。
+*   **<GlossaryTerm term="Parametric Memory" definition="参数化记忆：大模型训练完成后，固化在数十亿个浮点权重参数中的语言生成、推理和泛化能力。">Parametric Memory</GlossaryTerm>**：参数化记忆：大模型训练完成后，固化在数十亿个浮点权重参数中的语言生成、推理和泛化能力。
+*   **<GlossaryTerm term="Parse, Don" definition="把校验和转换成更强的类型合并：校验通过后，返回一个保证合法的新类型，而不是放行原始数据。这样“已校验”这个事实被编码进了类型里。">Parse, Don</GlossaryTerm>**：把校验和转换成更强的类型合并：校验通过后，返回一个保证合法的新类型，而不是放行原始数据。这样“已校验”这个事实被编码进了类型里。
+*   **<GlossaryTerm term="Partition" definition="分区：把一个主题切成多个分区，每个分区内部有序、可被独立消费。常按 key 哈希分区，保证“同一 key 的消息有序”。">Partition</GlossaryTerm>**：分区：把一个主题切成多个分区，每个分区内部有序、可被独立消费。常按 key 哈希分区，保证“同一 key 的消息有序”。
+*   **<GlossaryTerm term="Partition Key (分区键)" definition="DynamoDB 用作内部哈希函数输入的属性。它决定了数据被存储在哪个物理分区，是 $O(1)$ 查找的关键。">Partition Key (分区键)</GlossaryTerm>**：DynamoDB 用作内部哈希函数输入的属性。它决定了数据被存储在哪个物理分区，是 $O(1)$ 查找的关键。
+*   **<GlossaryTerm term="Partition Split (分区分裂)" definition="当单个物理分区大小超过 10GB，或读写吞吐上限达到极限时，DynamoDB 后台自动执行等分哈希边界，并重新均衡迁移数据的过程。">Partition Split (分区分裂)</GlossaryTerm>**：当单个物理分区大小超过 10GB，或读写吞吐上限达到极限时，DynamoDB 后台自动执行等分哈希边界，并重新均衡迁移数据的过程。
+*   **<GlossaryTerm term="Paxos Group" definition="在 Spanner 中，每个数据分片（Tablet）的多个副本组成一个 Multi-Paxos 共识组，由其中的 Leader 负责写请求路由与共识提案，多数派（Quorum）确认后持久化，从而提供高可用和强一致副本复制。">Paxos Group</GlossaryTerm>**：在 Spanner 中，每个数据分片（Tablet）的多个副本组成一个 Multi-Paxos 共识组，由其中的 Leader 负责写请求路由与共识提案，多数派（Quorum）确认后持久化，从而提供高可用和强一致副本复制。
+*   **<GlossaryTerm term="Peak Factor" definition="峰值系数：真实流量不均匀，峰值通常是平均值的几倍（常用 2–10 倍粗估）。容量要按峰值规划，不能只按平均。">Peak Factor</GlossaryTerm>**：峰值系数：真实流量不均匀，峰值通常是平均值的几倍（常用 2–10 倍粗估）。容量要按峰值规划，不能只按平均。
+*   **<GlossaryTerm term="Per-Agent Attribution" definition="分步归因：当端到端结果不好时，借助追踪把问题定位到具体是哪个 Agent、哪一步导致的，从而知道该改进谁。区别于只看整体黑盒。">Per-Agent Attribution</GlossaryTerm>**：分步归因：当端到端结果不好时，借助追踪把问题定位到具体是哪个 Agent、哪一步导致的，从而知道该改进谁。区别于只看整体黑盒。
+*   **<GlossaryTerm term="Percentile" definition="百分位：把样本排序后，p95=95% 的请求都不慢于这个值。p50 是中位数，p99 反映最慢的 1% 的体验。">Percentile</GlossaryTerm>**：百分位：把样本排序后，p95=95% 的请求都不慢于这个值。p50 是中位数，p99 反映最慢的 1% 的体验。
+*   **<GlossaryTerm term="Permission Separation" definition="权限分离：给每个 Agent 角色分配刚好完成其职责所需的最小工具和权限，不同角色权限不同。既实现专精，又限制每个 Agent 的爆炸半径（一个角色被攻破/出错，影响有限）。">Permission Separation</GlossaryTerm>**：权限分离：给每个 Agent 角色分配刚好完成其职责所需的最小工具和权限，不同角色权限不同。既实现专精，又限制每个 Agent 的爆炸半径（一个角色被攻破/出错，影响有限）。
+*   **<GlossaryTerm term="Pessimistic Locking" definition="悲观锁：一种并发控制策略，假定冲突高，在读取数据时即对记录加排他锁，直到事务提交才释放。安全但阻碍并发。">Pessimistic Locking</GlossaryTerm>**：悲观锁：一种并发控制策略，假定冲突高，在读取数据时即对记录加排他锁，直到事务提交才释放。安全但阻碍并发。
+*   **<GlossaryTerm term="Phantom Read" definition="幻读：同一事务内按同一条件查两次，第二次多出/少了行（别的事务插入/删除并提交了）。">Phantom Read</GlossaryTerm>**：幻读：同一事务内按同一条件查两次，第二次多出/少了行（别的事务插入/删除并提交了）。
+*   **<GlossaryTerm term="PII Redaction" definition="PII 脱敏：识别并遮蔽个人身份信息（姓名、身份证、手机号、邮箱、卡号等），在数据进入模型/日志/评估前后处理，降低泄露和合规风险。">PII Redaction</GlossaryTerm>**：PII 脱敏：识别并遮蔽个人身份信息（姓名、身份证、手机号、邮箱、卡号等），在数据进入模型/日志/评估前后处理，降低泄露和合规风险。
+*   **<GlossaryTerm term="Pipeline Parallelism" definition="流水线并行：把模型的不同层分到不同 GPU，像流水线一样接力处理，提升整体吞吐。">Pipeline Parallelism</GlossaryTerm>**：流水线并行：把模型的不同层分到不同 GPU，像流水线一样接力处理，提升整体吞吐。
+*   **<GlossaryTerm term="Plan Revision" definition="计划修正：Agent 执行中发现计划不对（子任务失败、信息变化、需要新步骤）时，回头调整剩余计划，而非死守原计划或推倒重来。结合了规划的全局观和反应式的灵活。">Plan Revision</GlossaryTerm>**：计划修正：Agent 执行中发现计划不对（子任务失败、信息变化、需要新步骤）时，回头调整剩余计划，而非死守原计划或推倒重来。结合了规划的全局观和反应式的灵活。
+*   **<GlossaryTerm term="Plan-then-Execute" definition="先规划后执行：Agent 先生成一个完整的子任务计划，再按计划逐个执行（每个子任务内部可用 ReAct）。比纯反应式更有全局观、更少漏步迷路。">Plan-then-Execute</GlossaryTerm>**：先规划后执行：Agent 先生成一个完整的子任务计划，再按计划逐个执行（每个子任务内部可用 ReAct）。比纯反应式更有全局观、更少漏步迷路。
+*   **<GlossaryTerm term="Plan/Diff" definition="plan（计划/diff）：在真正改动前，先对比“期望状态”和“当前状态”，列出将要创建/修改/删除的资源清单，供人审查确认，避免意外破坏。">Plan/Diff</GlossaryTerm>**：plan（计划/diff）：在真正改动前，先对比“期望状态”和“当前状态”，列出将要创建/修改/删除的资源清单，供人审查确认，避免意外破坏。
+*   **<GlossaryTerm term="PLC" definition="可编程逻辑控制器（Programmable Logic Controller）：工业现场控制机器和生产线的专用计算机，强实时、高可靠，是 OT 的核心执行单元。">PLC</GlossaryTerm>**：可编程逻辑控制器（Programmable Logic Controller）：工业现场控制机器和生产线的专用计算机，强实时、高可靠，是 OT 的核心执行单元。
+*   **<GlossaryTerm term="Pod" definition="Pod：K8s 最小调度单元，包含一个或多个共享网络和存储的容器。通常一个 Pod 跑一个主容器。Pod 是临时的、可被随时替换。">Pod</GlossaryTerm>**：Pod：K8s 最小调度单元，包含一个或多个共享网络和存储的容器。通常一个 Pod 跑一个主容器。Pod 是临时的、可被随时替换。
+*   **<GlossaryTerm term="Poison Message" definition="毒消息：因格式错误或 bug 而永远处理失败的消息。若无限重试会卡住队列、浪费资源。">Poison Message</GlossaryTerm>**：毒消息：因格式错误或 bug 而永远处理失败的消息。若无限重试会卡住队列、浪费资源。
+*   **<GlossaryTerm term="Polyglot Persistence" definition="多语言持久化：在同一个系统里，针对不同数据的不同访问模式，分别选用最合适的存储（如关系库 + 缓存 + 搜索 + 对象存储并用）。">Polyglot Persistence</GlossaryTerm>**：多语言持久化：在同一个系统里，针对不同数据的不同访问模式，分别选用最合适的存储（如关系库 + 缓存 + 搜索 + 对象存储并用）。
+*   **<GlossaryTerm term="Polymorphism" definition="多态：面向对象编程的核心特征之一。允许不同子类对象对同一接口/抽象方法做出不同的实现响应，使得调用方只需编写针对接口的通用逻辑，即可在运行时动态绑定具体实现。">Polymorphism</GlossaryTerm>**：多态：面向对象编程的核心特征之一。允许不同子类对象对同一接口/抽象方法做出不同的实现响应，使得调用方只需编写针对接口的通用逻辑，即可在运行时动态绑定具体实现。
+*   **<GlossaryTerm term="Prefill" definition="预填充阶段：一次性处理整个输入 prompt，计算并填充它的 KV cache。计算密集、可高度并行，决定首 token 延迟（TTFT）。">Prefill</GlossaryTerm>**：预填充阶段：一次性处理整个输入 prompt，计算并填充它的 KV cache。计算密集、可高度并行，决定首 token 延迟（TTFT）。
+*   **<GlossaryTerm term="Prefill / Decode" definition="推理分两步：Prefill 一次性处理整个输入 prompt、算出 KV cache，是算力密集型；Decode 之后逐个 token 生成，是显存带宽密集型。两者特性不同，常被分开优化甚至分开部署（disaggregation）。">Prefill / Decode</GlossaryTerm>**：推理分两步：Prefill 一次性处理整个输入 prompt、算出 KV cache，是算力密集型；Decode 之后逐个 token 生成，是显存带宽密集型。两者特性不同，常被分开优化甚至分开部署（disaggregation）。
+*   **<GlossaryTerm term="Prefix Caching" definition="前缀缓存：多个请求若共享相同的前缀（如相同的 system prompt），可复用该前缀已算好的 KV cache，跳过重复的 prefill，节省算力和首 token 延迟。">Prefix Caching</GlossaryTerm>**：前缀缓存：多个请求若共享相同的前缀（如相同的 system prompt），可复用该前缀已算好的 KV cache，跳过重复的 prefill，节省算力和首 token 延迟。
+*   **<GlossaryTerm term="Primary Key" definition="主键：唯一标识一条记录的字段（如 user_id）。是引用和查找一条记录的依据。">Primary Key</GlossaryTerm>**：主键：唯一标识一条记录的字段（如 user_id）。是引用和查找一条记录的依据。
+*   **<GlossaryTerm term="Principle of Least Privilege" definition="最小特权原则 (PoLP)：信息安全基本原则，规定系统中的任何主体（包括智能体、工具）只应被授予其完成特定任务所必需的最小系统访问权限，决不能为了方便授予多余权限。">Principle of Least Privilege</GlossaryTerm>**：最小特权原则 (PoLP)：信息安全基本原则，规定系统中的任何主体（包括智能体、工具）只应被授予其完成特定任务所必需的最小系统访问权限，决不能为了方便授予多余权限。
+*   **<GlossaryTerm term="Privilege Escalation" definition="越权 (Privilege Escalation)：指用户或低权限依赖通过大模型恶意诱导（例如提示词注入），获取本不具备的系统访问与操作权限的攻击行为。系统必须在护栏中加入对越权行为的前置防御。">Privilege Escalation</GlossaryTerm>**：越权 (Privilege Escalation)：指用户或低权限依赖通过大模型恶意诱导（例如提示词注入），获取本不具备的系统访问与操作权限的攻击行为。系统必须在护栏中加入对越权行为的前置防御。
+*   **<GlossaryTerm term="Product Interface" definition="产品接口：工厂模式中定义的产品规范。所有由工厂实例化的对象都必须实现这一相同的接口（如 Exporter 具有 export() 方法），从而让客户端可以无差别地消费而无须感知具体的类。">Product Interface</GlossaryTerm>**：产品接口：工厂模式中定义的产品规范。所有由工厂实例化的对象都必须实现这一相同的接口（如 Exporter 具有 export() 方法），从而让客户端可以无差别地消费而无须感知具体的类。
+*   **<GlossaryTerm term="Program to an Interface" definition="面向接口编程：依赖一个抽象接口而非具体实现类。这样可以替换实现（如内存版换数据库版）而不改调用方。">Program to an Interface</GlossaryTerm>**：面向接口编程：依赖一个抽象接口而非具体实现类。这样可以替换实现（如内存版换数据库版）而不改调用方。
+*   **<GlossaryTerm term="Programmer Error" definition="代码逻辑缺陷导致的错误（如 KeyError、TypeError）。不应该用 try/except 掩盖，而应让它暴露、被修复。">Programmer Error</GlossaryTerm>**：代码逻辑缺陷导致的错误（如 KeyError、TypeError）。不应该用 try/except 掩盖，而应让它暴露、被修复。
+*   **<GlossaryTerm term="Progressive Delivery" definition="渐进式交付 (Progressive Delivery)：通过金丝雀发布、蓝绿部署、特征旗（Feature Flags）和自动化监控指标 feedback，将变更逐步且安全地暴露给用户，以便在出现异常时能够自动回滚并最小化爆炸半径。">Progressive Delivery</GlossaryTerm>**：渐进式交付 (Progressive Delivery)：通过金丝雀发布、蓝绿部署、特征旗（Feature Flags）和自动化监控指标 feedback，将变更逐步且安全地暴露给用户，以便在出现异常时能够自动回滚并最小化爆炸半径。
+*   **<GlossaryTerm term="Prompt Injection" definition="提示注入：攻击者在 Agent 会读到的内容里（用户输入、网页、文档、工具返回）藏入恶意指令，企图劫持 Agent 去执行非预期的危险操作。是 Agent 特有的重要安全威胁。">Prompt Injection</GlossaryTerm>**：提示注入：攻击者在 Agent 会读到的内容里（用户输入、网页、文档、工具返回）藏入恶意指令，企图劫持 Agent 去执行非预期的危险操作。是 Agent 特有的重要安全威胁。
+*   **<GlossaryTerm term="Property-based Testing" definition="属性测试：不写具体用例，而是描述输入应满足的性质（如“解析后再格式化应还原”），由框架自动生成大量随机输入去验证。能发现你没想到的边界。">Property-based Testing</GlossaryTerm>**：属性测试：不写具体用例，而是描述输入应满足的性质（如“解析后再格式化应还原”），由框架自动生成大量随机输入去验证。能发现你没想到的边界。
+*   **<GlossaryTerm term="Proposer-Critic" definition="提议者-批评者：一个 Agent（提议者）产出方案/答案，另一个独立的 Agent（批评者）专门找它的问题和反例，提议者据此改进，循环若干轮。用独立视角提升质量。">Proposer-Critic</GlossaryTerm>**：提议者-批评者：一个 Agent（提议者）产出方案/答案，另一个独立的 Agent（批评者）专门找它的问题和反例，提议者据此改进，循环若干轮。用独立视角提升质量。
+*   **<GlossaryTerm term="Proxy Pattern" definition="代理模式：用一个同接口的代理对象控制对真实对象的访问，可在访问前后插入权限校验、延迟加载、远程调用等控制逻辑。结构同样是“包装 + 委托”。">Proxy Pattern</GlossaryTerm>**：代理模式：用一个同接口的代理对象控制对真实对象的访问，可在访问前后插入权限校验、延迟加载、远程调用等控制逻辑。结构同样是“包装 + 委托”。
+*   **<GlossaryTerm term="Publish-Subscribe" definition="发布订阅：发布者把消息发到主题，多个订阅者独立接收。发布者完全不需要知道有哪些订阅者，实现彻底解耦。">Publish-Subscribe</GlossaryTerm>**：发布订阅：发布者把消息发到主题，多个订阅者独立接收。发布者完全不需要知道有哪些订阅者，实现彻底解耦。
+*   **<GlossaryTerm term="Purdue Model" definition="普渡模型 (Purdue Model)：由普渡大学学者提出、已被采纳为 ISA-95 标准的企业系统分层参考模型。它将工业企业网络结构从下到上划分为 Level 0（物理过程）至 Level 5（企业网络）共 6 层，各层网络通过严密的防火墙及隔离区进行安全边界划分，严防外网安全风险渗透到现场控制设备。">Purdue Model</GlossaryTerm>**：普渡模型 (Purdue Model)：由普渡大学学者提出、已被采纳为 ISA-95 标准的企业系统分层参考模型。它将工业企业网络结构从下到上划分为 Level 0（物理过程）至 Level 5（企业网络）共 6 层，各层网络通过严密的防火墙及隔离区进行安全边界划分，严防外网安全风险渗透到现场控制设备。
+
+## Q
+
+*   **<GlossaryTerm term="QPS" definition="每秒查询/请求数（Queries Per Second）。把每天的操作数除以 86400（一天的秒数）就得到平均 QPS。">QPS</GlossaryTerm>**：每秒查询/请求数（Queries Per Second）。把每天的操作数除以 86400（一天的秒数）就得到平均 QPS。
+*   **<GlossaryTerm term="Quality Gate" definition="质量门禁：流水线中必须通过才能进入下一阶段的检查（如测试全过、覆盖率达标、无高危漏洞、需人工审批）。不达标就阻断发布。">Quality Gate</GlossaryTerm>**：质量门禁：流水线中必须通过才能进入下一阶段的检查（如测试全过、覆盖率达标、无高危漏洞、需人工审批）。不达标就阻断发布。
+*   **<GlossaryTerm term="Queries Per Second" definition="每秒查询率 (QPS - Queries Per Second)：用来衡量系统在 1 秒内所能处理的读写请求/查询量的量化指标。在高并发限流场景中，QPS 常被设为限制的阈值单位。">Queries Per Second</GlossaryTerm>**：每秒查询率 (QPS - Queries Per Second)：用来衡量系统在 1 秒内所能处理的读写请求/查询量的量化指标。在高并发限流场景中，QPS 常被设为限制的阈值单位。
+*   **<GlossaryTerm term="Query Rewriting" definition="查询改写：在检索前用 LLM 把用户的原始问法改写得更利于检索——消除指代、补全上下文、提炼关键词、规范术语。提升检索召回。">Query Rewriting</GlossaryTerm>**：查询改写：在检索前用 LLM 把用户的原始问法改写得更利于检索——消除指代、补全上下文、提炼关键词、规范术语。提升检索召回。
+*   **<GlossaryTerm term="Query Transformation" definition="查询改写 (Query Transformation)：将用户原始口语化查询翻译或改写为更利于向量数据库或搜索引擎索引的精准关键词的检索优化技术。">Query Transformation</GlossaryTerm>**：查询改写 (Query Transformation)：将用户原始口语化查询翻译或改写为更利于向量数据库或搜索引擎索引的精准关键词的检索优化技术。
+*   **<GlossaryTerm term="Quorum/Majority" definition="多数派：N 个节点中超过半数（N/2+1）。任何两个多数派必然有交集，所以“需多数派同意”能保证不会同时存在两个互相矛盾的决议——这是共识避免脑裂的关键。">Quorum/Majority</GlossaryTerm>**：多数派：N 个节点中超过半数（N/2+1）。任何两个多数派必然有交集，所以“需多数派同意”能保证不会同时存在两个互相矛盾的决议——这是共识避免脑裂的关键。
+
+## R
+
+*   **<GlossaryTerm term="Race Condition" definition="竞态条件：程序的正确性依赖于多个操作的执行时序，当它们交错执行时产生错误结果。典型是“读-改-写”不是原子操作时被并发打断。">Race Condition</GlossaryTerm>**：竞态条件：程序的正确性依赖于多个操作的执行时序，当它们交错执行时产生错误结果。典型是“读-改-写”不是原子操作时被并发打断。
+*   **<GlossaryTerm term="Raft" definition="Raft：一种为可理解性设计的共识算法。把共识分解为领导者选举、日志复制、安全性三部分。系统选出一个 leader 统一接收写并复制日志给多数派，term（任期）+ 多数派投票保证任意时刻最多一个有效 leader。">Raft</GlossaryTerm>**：Raft：一种为可理解性设计的共识算法。把共识分解为领导者选举、日志复制、安全性三部分。系统选出一个 leader 统一接收写并复制日志给多数派，term（任期）+ 多数派投票保证任意时刻最多一个有效 leader。
+*   **<GlossaryTerm term="RAG" definition="检索增强生成（Retrieval-Augmented Generation）：回答前先从外部知识源检索最相关的片段，再把这些证据放进上下文让模型基于它生成答案。把“知识”从模型参数里解耦到可更新、可引用的外部检索系统。">RAG</GlossaryTerm>**：检索增强生成（Retrieval-Augmented Generation）：回答前先从外部知识源检索最相关的片段，再把这些证据放进上下文让模型基于它生成答案。把“知识”从模型参数里解耦到可更新、可引用的外部检索系统。
+*   **<GlossaryTerm term="RAGAS" definition="RAGAS：一个 RAG 评测框架，把质量拆成忠实度、答案相关性、上下文精确率、上下文召回率等维度，让你定位问题出在检索还是生成。">RAGAS</GlossaryTerm>**：RAGAS：一个 RAG 评测框架，把质量拆成忠实度、答案相关性、上下文精确率、上下文召回率等维度，让你定位问题出在检索还是生成。
+*   **<GlossaryTerm term="Randomized Election Timeout" definition="随机选举超时 (Randomized Election Timeout)：Raft 算法用来保障活性的一项核心设计。将每个节点的选举超时时间设为随机范围内的非固定值（例如 150ms ~ 300ms）。这样，当旧 leader 宕机时，几乎必然有一个节点最先超时并率先升为候选人发起投票，从而避免了多台机器齐步走发起选举、均分选票（Split Votes）而导致选举死锁。">Randomized Election Timeout</GlossaryTerm>**：随机选举超时 (Randomized Election Timeout)：Raft 算法用来保障活性的一项核心设计。将每个节点的选举超时时间设为随机范围内的非固定值（例如 150ms ~ 300ms）。这样，当旧 leader 宕机时，几乎必然有一个节点最先超时并率先升为候选人发起投票，从而避免了多台机器齐步走发起选举、均分选票（Split Votes）而导致选举死锁。
+*   **<GlossaryTerm term="Range Partitioning" definition="范围分片：按分区键的区间切分（如按时间、按字母段）。范围查询高效（连续数据在同一分片），但容易产生热点（如最新时间段的写全压在一个分片）。">Range Partitioning</GlossaryTerm>**：范围分片：按分区键的区间切分（如按时间、按字母段）。范围查询高效（连续数据在同一分片），但容易产生热点（如最新时间段的写全压在一个分片）。
+*   **<GlossaryTerm term="RBAC" definition="基于角色的访问控制 (Role-Based Access Control)：根据用户在组织中所处的角色来分配数据和操作权限。是企业应用中最基础、最普遍采用的安全控制模型。">RBAC</GlossaryTerm>**：基于角色的访问控制 (Role-Based Access Control)：根据用户在组织中所处的角色来分配数据和操作权限。是企业应用中最基础、最普遍采用的安全控制模型。
+*   **<GlossaryTerm term="RCU (Read Capacity Unit, 读取容量单位)" definition="DynamoDB 计费与限流指标。1 个 RCU 对应每秒 1 次 4KB 强一致性读，或每秒 2 次 4KB 最终一致性读。">RCU (Read Capacity Unit, 读取容量单位)</GlossaryTerm>**：DynamoDB 计费与限流指标。1 个 RCU 对应每秒 1 次 4KB 强一致性读，或每秒 2 次 4KB 最终一致性读。
+*   **<GlossaryTerm term="ReAct" definition="Reasoning + Acting：让 LLM 交替产出“推理（Thought）”和“行动（Action）”，并把工具返回的“观察（Observation）”喂回去，循环推进任务。推理帮决策、行动获取信息，比纯推理或纯行动都更可靠。">ReAct</GlossaryTerm>**：Reasoning + Acting：让 LLM 交替产出“推理（Thought）”和“行动（Action）”，并把工具返回的“观察（Observation）”喂回去，循环推进任务。推理帮决策、行动获取信息，比纯推理或纯行动都更可靠。
+*   **<GlossaryTerm term="ReAct (推理-行动框架)" definition="推理-行动框架：一种将大模型的逻辑推理（Thought）与行动调用（Action）紧密结合的提示词工程范式，使模型能在行动前生成思维链。">ReAct (推理-行动框架)</GlossaryTerm>**：推理-行动框架：一种将大模型的逻辑推理（Thought）与行动调用（Action）紧密结合的提示词工程范式，使模型能在行动前生成思维链。
+*   **<GlossaryTerm term="Read Amplification" definition="读放大：一次读实际要访问几次磁盘/几个文件。LSM 读可能要查 memtable + 多个 SSTable，读放大较高。">Read Amplification</GlossaryTerm>**：读放大：一次读实际要访问几次磁盘/几个文件。LSM 读可能要查 memtable + 多个 SSTable，读放大较高。
+*   **<GlossaryTerm term="Read-Through" definition="读穿透：未命中时由缓存层自己去加载数据库并回填，应用只跟缓存打交道。">Read-Through</GlossaryTerm>**：读穿透：未命中时由缓存层自己去加载数据库并回填，应用只跟缓存打交道。
+*   **<GlossaryTerm term="Read-Your-Writes Consistency" definition="读己之写一致性 (Read-Your-Writes Consistency)：亦称‘写后读一致性’。指系统必须保证，当某个用户发起数据写操作成功后，该用户后续发起的所有读取操作，都必须能读到自己刚刚写入的最新值，而绝不能读到过期的旧版本。">Read-Your-Writes Consistency</GlossaryTerm>**：读己之写一致性 (Read-Your-Writes Consistency)：亦称‘写后读一致性’。指系统必须保证，当某个用户发起数据写操作成功后，该用户后续发起的所有读取操作，都必须能读到自己刚刚写入的最新值，而绝不能读到过期的旧版本。
+*   **<GlossaryTerm term="Read/Write Ratio" definition="读写比：读操作与写操作的数量之比。多数互联网系统读远多于写（如 100:1），这直接决定要不要重缓存、读写分离。">Read/Write Ratio</GlossaryTerm>**：读写比：读操作与写操作的数量之比。多数互联网系统读远多于写（如 100:1），这直接决定要不要重缓存、读写分离。
+*   **<GlossaryTerm term="Readiness Probe" definition="就绪探针：检测容器是否准备好接收流量。失败则把它从 Service 的负载均衡里摘除（不重启），恢复后再加回。回答的是“要不要给它发流量”。">Readiness Probe</GlossaryTerm>**：就绪探针：检测容器是否准备好接收流量。失败则把它从 Service 的负载均衡里摘除（不重启），恢复后再加回。回答的是“要不要给它发流量”。
+*   **<GlossaryTerm term="ReadView" definition="读视图：MVCC 在快照读时创建的一个快照数据结构，记录当前活跃（未提交）的事务 ID 列表。读取线程根据此视图判定行版本链中的每个版本对当前事务是否可见。">ReadView</GlossaryTerm>**：读视图：MVCC 在快照读时创建的一个快照数据结构，记录当前活跃（未提交）的事务 ID 列表。读取线程根据此视图判定行版本链中的每个版本对当前事务是否可见。
+*   **<GlossaryTerm term="Recall (检索)" definition="召回率：ANN 返回的 top-k 中，有多少属于“真正的”top-k（暴力精确结果）。衡量近似检索牺牲了多少精度。常用来和延迟做权衡。">Recall (检索)</GlossaryTerm>**：召回率：ANN 返回的 top-k 中，有多少属于“真正的”top-k（暴力精确结果）。衡量近似检索牺牲了多少精度。常用来和延迟做权衡。
+*   **<GlossaryTerm term="Reciprocal Rank Fusion" definition="倒数排名融合（RRF）：把每个文档在各路结果里的排名转成分数（1/(k+rank)）再相加，排名越靠前贡献越大。无需各路分数可比，简单稳健，是融合多路检索的常用方法。">Reciprocal Rank Fusion</GlossaryTerm>**：倒数排名融合（RRF）：把每个文档在各路结果里的排名转成分数（1/(k+rank)）再相加，排名越靠前贡献越大。无需各路分数可比，简单稳健，是融合多路检索的常用方法。
+*   **<GlossaryTerm term="Reconciliation Loop" definition="调和循环 (Reconciliation Loop)：一种在控制系统和云原生引擎中广泛应用的控制回路算法。它不断观察系统的当前实际状态（Actual State），与声明的期望状态（Desired State）进行比较，如果发现不一致，则触发纠偏或变更操作，最终逼近期望状态。">Reconciliation Loop</GlossaryTerm>**：调和循环 (Reconciliation Loop)：一种在控制系统和云原生引擎中广泛应用的控制回路算法。它不断观察系统的当前实际状态（Actual State），与声明的期望状态（Desired State）进行比较，如果发现不一致，则触发纠偏或变更操作，最终逼近期望状态。
+*   **<GlossaryTerm term="Recoverable Error" definition="可预期、可处理的错误，比如输入非法、依赖暂时不可用。应当被显式捕获并转化为合理响应。">Recoverable Error</GlossaryTerm>**：可预期、可处理的错误，比如输入非法、依赖暂时不可用。应当被显式捕获并转化为合理响应。
+*   **<GlossaryTerm term="RED Method" definition="RED 方法：面向请求型服务的监控三指标——Rate（请求速率）、Errors（错误率）、Duration（延迟分布）。回答“服务对用户表现如何”。">RED Method</GlossaryTerm>**：RED 方法：面向请求型服务的监控三指标——Rate（请求速率）、Errors（错误率）、Duration（延迟分布）。回答“服务对用户表现如何”。
+*   **<GlossaryTerm term="Redundancy" definition="冗余：关键组件部署多个副本，任一副本挂掉其它仍能服务。是高可用的基础。">Redundancy</GlossaryTerm>**：冗余：关键组件部署多个副本，任一副本挂掉其它仍能服务。是高可用的基础。
+*   **<GlossaryTerm term="Refactoring" definition="重构：在不改变软件可观察行为的前提下，调整其内部结构以提升可读性和可维护性。强调小步进行、每步都由测试验证行为未变。">Refactoring</GlossaryTerm>**：重构：在不改变软件可观察行为的前提下，调整其内部结构以提升可读性和可维护性。强调小步进行、每步都由测试验证行为未变。
+*   **<GlossaryTerm term="Reflection" definition="反思：Agent 检查自己的输出或工具结果，判断是否达成目标/是否有错，若有问题则诊断原因并调整策略，再重试。让 Agent 具备自我纠错能力，而非带错前进或无脑重试。">Reflection</GlossaryTerm>**：反思：Agent 检查自己的输出或工具结果，判断是否达成目标/是否有错，若有问题则诊断原因并调整策略，再重试。让 Agent 具备自我纠错能力，而非带错前进或无脑重试。
+*   **<GlossaryTerm term="Reflexion" definition="Reflexion 架构：一种通过建立明确语言反思评判器与短期工作记忆（Scratchpad）来让 Agent 在多次尝试间主动学习并纠正动作的自主强化推理框架。">Reflexion</GlossaryTerm>**：Reflexion 架构：一种通过建立明确语言反思评判器与短期工作记忆（Scratchpad）来让 Agent 在多次尝试间主动学习并纠正动作的自主强化推理框架。
+*   **<GlossaryTerm term="Registry Map" definition="注册表字典 (Registry Map)：动态工厂的核心数据结构（通常是一个键值对哈希表）。通过在程序启动或扫描时，将产品 key（如">Registry Map</GlossaryTerm>**：注册表字典 (Registry Map)：动态工厂的核心数据结构（通常是一个键值对哈希表）。通过在程序启动或扫描时，将产品 key（如
+*   **<GlossaryTerm term="Regression Eval" definition="回归评测：每次改动（prompt、模型、参数、检索）后，在固定评测集上重写打分，和基线对比，确保没让已通过的用例退化。是 LLM 系统的回归测试。">Regression Eval</GlossaryTerm>**：回归评测：每次改动（prompt、模型、参数、检索）后，在固定评测集上重写打分，和基线对比，确保没让已通过的用例退化。是 LLM 系统的回归测试。
+*   **<GlossaryTerm term="Regression Gate" definition="回归门禁：把评估集接入 CI/CD，每次改动（prompt/模型/代码）自动跑评估，分数低于基线阈值就阻止合并/上线，防止悄悄退化。让 AI 迭代像软件工程一样有安全网。">Regression Gate</GlossaryTerm>**：回归门禁：把评估集接入 CI/CD，每次改动（prompt/模型/代码）自动跑评估，分数低于基线阈值就阻止合并/上线，防止悄悄退化。让 AI 迭代像软件工程一样有安全网。
+*   **<GlossaryTerm term="Regression Test" definition="回归测试：重新运行已通过的测试，以确保最近的代码更改没有在现有功能中引入新的缺陷或 Bug。SRP 能将影响面局部化，极大缩短回归测试周期。">Regression Test</GlossaryTerm>**：回归测试：重新运行已通过的测试，以确保最近的代码更改没有在现有功能中引入新的缺陷或 Bug。SRP 能将影响面局部化，极大缩短回归测试周期。
+*   **<GlossaryTerm term="Relational (SQL)" definition="关系型数据库：表 + 行 + 强 schema + 事务 + JOIN。擅长复杂查询和强一致。">Relational (SQL)</GlossaryTerm>**：关系型数据库：表 + 行 + 强 schema + 事务 + JOIN。擅长复杂查询和强一致。
+*   **<GlossaryTerm term="Reliability Pipeline" definition="可靠性管道：通过检索证据、设定模板、限制随机性、执行结构化校验、多级降级等一系列确定性工程手段包裹不确定的语言模型，从而产出高可用、低幻觉、可监控服务的整体架构。">Reliability Pipeline</GlossaryTerm>**：可靠性管道：通过检索证据、设定模板、限制随机性、执行结构化校验、多级降级等一系列确定性工程手段包裹不确定的语言模型，从而产出高可用、低幻觉、可监控服务的整体架构。
+*   **<GlossaryTerm term="Replica Factor" definition="副本因子：数据在分布式集群中保存的物理备份数量。例如副本因子为 3 表示同一份数据会保存在 3 台不同的服务器上。">Replica Factor</GlossaryTerm>**：副本因子：数据在分布式集群中保存的物理备份数量。例如副本因子为 3 表示同一份数据会保存在 3 台不同的服务器上。
+*   **<GlossaryTerm term="Replication" definition="复制：把数据复制到多个副本。主库写、从库读，扩展读吞吐并提供容错。代价是复制延迟与一致性问题。">Replication</GlossaryTerm>**：复制：把数据复制到多个副本。主库写、从库读，扩展读吞吐并提供容错。代价是复制延迟与一致性问题。
+*   **<GlossaryTerm term="Replication Lag" definition="复制延迟：从副本落后于主副本的时间差。异步复制下从可能读到旧数据，导致“读己之写”（刚写完读自己却读到旧值）等异常。">Replication Lag</GlossaryTerm>**：复制延迟：从副本落后于主副本的时间差。异步复制下从可能读到旧数据，导致“读己之写”（刚写完读自己却读到旧值）等异常。
+*   **<GlossaryTerm term="Request Trace" definition="请求级追踪：记录一次助手请求内部每一步——检索到哪些片段、拼了什么 prompt、模型返回什么、花了多少 token/时间——串成可视链路，便于定位问题出在哪一步。">Request Trace</GlossaryTerm>**：请求级追踪：记录一次助手请求内部每一步——检索到哪些片段、拼了什么 prompt、模型返回什么、花了多少 token/时间——串成可视链路，便于定位问题出在哪一步。
+*   **<GlossaryTerm term="Research Agent" definition="研究智能体：在简报生成或 SRE 运维中，挂载了专有搜索引擎或只读数据库检索工具，负责获取第一手事实证据的专精智能体节点。">Research Agent</GlossaryTerm>**：研究智能体：在简报生成或 SRE 运维中，挂载了专有搜索引擎或只读数据库检索工具，负责获取第一手事实证据的专精智能体节点。
+*   **<GlossaryTerm term="Resilience" definition="系统韧性 (Resilience)：系统在面临局部故障（硬件损坏、网络断连、流量超载）时，能够自我防御、阻断故障级联扩散，保障核心业务依然基本可用的自愈和防御能力。">Resilience</GlossaryTerm>**：系统韧性 (Resilience)：系统在面临局部故障（硬件损坏、网络断连、流量超载）时，能够自我防御、阻断故障级联扩散，保障核心业务依然基本可用的自愈和防御能力。
+*   **<GlossaryTerm term="Resilience Engineering" definition="韧性工程：系统在面对各种异常、局部故障或非预期冲击时，能够动态响应、吸收错误并优雅恢复到正常工作状态的工程设计思想。">Resilience Engineering</GlossaryTerm>**：韧性工程：系统在面对各种异常、局部故障或非预期冲击时，能够动态响应、吸收错误并优雅恢复到正常工作状态的工程设计思想。
+*   **<GlossaryTerm term="REST" definition="一种 API 设计风格：把系统建模成资源（名词，如 /signups），用 HTTP 方法（动词）操作它们，无状态、用状态码表达结果。">REST</GlossaryTerm>**：一种 API 设计风格：把系统建模成资源（名词，如 /signups），用 HTTP 方法（动词）操作它们，无状态、用状态码表达结果。
+*   **<GlossaryTerm term="REST API" definition="REST 风格应用程序接口：采用 HTTP 方法（GET/POST/PUT/DELETE）映射标准动作，并使用状态码表达响应状态。">REST API</GlossaryTerm>**：REST 风格应用程序接口：采用 HTTP 方法（GET/POST/PUT/DELETE）映射标准动作，并使用状态码表达响应状态。
+*   **<GlossaryTerm term="Retry Budget" definition="重试预算：限制重试流量占总流量的比例（如重试不超过正常请求的 10%）。一旦故障导致重试激增触顶，就停止重试，防止重试本身把系统压垮。">Retry Budget</GlossaryTerm>**：重试预算：限制重试流量占总流量的比例（如重试不超过正常请求的 10%）。一旦故障导致重试激增触顶，就停止重试，防止重试本身把系统压垮。
+*   **<GlossaryTerm term="Retry Storm" definition="重试风暴 (Retry Storm)：当系统下游发生过载或网络慢抖动时，大量上游客户端同时发起高频重试调用，导致全网请求流量呈倍数甚至指数级暴增，直接将脆弱的下游系统彻底打死崩溃的雪崩灾难。">Retry Storm</GlossaryTerm>**：重试风暴 (Retry Storm)：当系统下游发生过载或网络慢抖动时，大量上游客户端同时发起高频重试调用，导致全网请求流量呈倍数甚至指数级暴增，直接将脆弱的下游系统彻底打死崩溃的雪崩灾难。
+*   **<GlossaryTerm term="Reverse Proxy" definition="反向代理：代表服务端接收请求再转发给后端，隐藏的是后端服务器。客户端以为在跟它对话。常做 TLS 终止、缓存、负载均衡、压缩。">Reverse Proxy</GlossaryTerm>**：反向代理：代表服务端接收请求再转发给后端，隐藏的是后端服务器。客户端以为在跟它对话。常做 TLS 终止、缓存、负载均衡、压缩。
+*   **<GlossaryTerm term="Risk Eval" definition="风险评估：用对抗性/边界样本（恶意注入、越权尝试、证据不足、成本异常等）检查 AI 系统是否安全地处理，而非只测正常输入。衡量‘出坏情况时守不守得住’。">Risk Eval</GlossaryTerm>**：风险评估：用对抗性/边界样本（恶意注入、越权尝试、证据不足、成本异常等）检查 AI 系统是否安全地处理，而非只测正常输入。衡量‘出坏情况时守不守得住’。
+*   **<GlossaryTerm term="RLHF" definition="基于人类反馈的强化学习。先用人工示范做监督微调（SFT），再训练一个奖励模型来打分，最后用强化学习让模型生成更符合人类偏好的回答。是 ChatGPT 听话的关键。">RLHF</GlossaryTerm>**：基于人类反馈的强化学习。先用人工示范做监督微调（SFT），再训练一个奖励模型来打分，最后用强化学习让模型生成更符合人类偏好的回答。是 ChatGPT 听话的关键。
+*   **<GlossaryTerm term="Rolling Update" definition="滚动更新：逐批用新版本 Pod 替换旧版本，每批先就绪再继续，期间服务始终有可用副本，实现零停机升级。出问题可暂停/回滚。">Rolling Update</GlossaryTerm>**：滚动更新：逐批用新版本 Pod 替换旧版本，每批先就绪再继续，期间服务始终有可用副本，实现零停机升级。出问题可暂停/回滚。
+*   **<GlossaryTerm term="Round Robin" definition="轮询：依次把请求轮流发给每个后端实例。实现简单、分发均匀，但不考虑各实例当前负载或请求轻重。">Round Robin</GlossaryTerm>**：轮询：依次把请求轮流发给每个后端实例。实现简单、分发均匀，但不考虑各实例当前负载或请求轻重。
+*   **<GlossaryTerm term="Router Agent" definition="路由 Agent：一个专门判断“这个请求该交给哪个专精 Agent”的 Agent（或分类器）。按请求的性质/所需能力分派，让每个请求被最合适的专精 Agent 处理。是动态分派的可控方式。">Router Agent</GlossaryTerm>**：路由 Agent：一个专门判断“这个请求该交给哪个专精 Agent”的 Agent（或分类器）。按请求的性质/所需能力分派，让每个请求被最合适的专精 Agent 处理。是动态分派的可控方式。
+*   **<GlossaryTerm term="RRF" definition="互惠排名融合：一种通过将多个检索渠道（如关键词检索和稠密向量检索）的排名倒数进行加权累加，以获得全局统一检索排序结果的混合检索融合算法。">RRF</GlossaryTerm>**：互惠排名融合：一种通过将多个检索渠道（如关键词检索和稠密向量检索）的排名倒数进行加权累加，以获得全局统一检索排序结果的混合检索融合算法。
+*   **<GlossaryTerm term="Rubric" definition="评分细则/标准：给 LLM-as-judge 提供的一套明确、多维度的打分说明，限制模型评判的主观性与偏差。">Rubric</GlossaryTerm>**：评分细则/标准：给 LLM-as-judge 提供的一套明确、多维度的打分说明，限制模型评判的主观性与偏差。
+*   **<GlossaryTerm term="Run trace" definition="运行轨迹：智能体在 ODA 循环中执行的 Thought、Action 和 Observation 步骤及其耗时、成本的完整序列记录，用于回归评测和白盒调试。">Run trace</GlossaryTerm>**：运行轨迹：智能体在 ODA 循环中执行的 Thought、Action 和 Observation 步骤及其耗时、成本的完整序列记录，用于回归评测和白盒调试。
+*   **<GlossaryTerm term="runc" definition="runc 是一个轻量级命令行工具，是 OCI 容器运行时规范的事实标准实现。它仅负责读取容器 rootfs 和 config.json，调用系统调用创建 Namespace、挂载目录并配置 cgroups，然后执行目标程序，之后功成身退。">runc</GlossaryTerm>**：runc 是一个轻量级命令行工具，是 OCI 容器运行时规范的事实标准实现。它仅负责读取容器 rootfs 和 config.json，调用系统调用创建 Namespace、挂载目录并配置 cgroups，然后执行目标程序，之后功成身退。
+
+## S
+
+*   **<GlossaryTerm term="Safety Interceptor" definition="安全拦截器：设立在多智能体系统对外出站或关键物理副作用操作前置卡点上的物理过滤网，用于强制拦截脏指令并要求人工审批授权。">Safety Interceptor</GlossaryTerm>**：安全拦截器：设立在多智能体系统对外出站或关键物理副作用操作前置卡点上的物理过滤网，用于强制拦截脏指令并要求人工审批授权。
+*   **<GlossaryTerm term="Saga" definition="Saga：把一个长事务拆成多个本地事务，每步都有对应的“补偿操作”。某步失败就执行已完成步骤的补偿来回滚，达成最终一致（而非跨服务原子）。">Saga</GlossaryTerm>**：Saga：把一个长事务拆成多个本地事务，每步都有对应的“补偿操作”。某步失败就执行已完成步骤的补偿来回滚，达成最终一致（而非跨服务原子）。
+*   **<GlossaryTerm term="Sandboxing" definition="沙箱：把 Agent 的执行环境隔离起来——限制它能访问的文件、网络、系统资源，即使它（被诱导）尝试越权或破坏，影响也被关在沙箱内。是 Agent 安全的纵深防御。">Sandboxing</GlossaryTerm>**：沙箱：把 Agent 的执行环境隔离起来——限制它能访问的文件、网络、系统资源，即使它（被诱导）尝试越权或破坏，影响也被关在沙箱内。是 Agent 安全的纵深防御。
+*   **<GlossaryTerm term="SCADA" definition="数据采集与监控系统（Supervisory Control and Data Acquisition）：监控和控制工业过程的系统，汇集现场 PLC/传感器数据、供操作员监视和下发控制。">SCADA</GlossaryTerm>**：数据采集与监控系统（Supervisory Control and Data Acquisition）：监控和控制工业过程的系统，汇集现场 PLC/传感器数据、供操作员监视和下发控制。
+*   **<GlossaryTerm term="Scenario Eval" definition="场景评估：用典型用户场景的评估集，检查 AI 系统给出的答案是否可接受（正确、相关、有用）。衡量‘正常情况下好不好’。">Scenario Eval</GlossaryTerm>**：场景评估：用典型用户场景的评估集，检查 AI 系统给出的答案是否可接受（正确、相关、有用）。衡量‘正常情况下好不好’。
+*   **<GlossaryTerm term="Schema Validation" definition="模式校验：用预定义的 schema（字段、类型、取值范围）检查 LLM 输出是否合法。不合法则拒绝、重试或修复，绝不能直接信任模型输出。">Schema Validation</GlossaryTerm>**：模式校验：用预定义的 schema（字段、类型、取值范围）检查 LLM 输出是否合法。不合法则拒绝、重试或修复，绝不能直接信任模型输出。
+*   **<GlossaryTerm term="Schema-less" definition="无固定 Schema：指数据库不在物理引擎层强制校验数据表结构。文档与文档之间可以拥有完全不同的字段组合，具备极高的敏捷扩展能力，但一致性校验责任随之转移至应用层。">Schema-less</GlossaryTerm>**：无固定 Schema：指数据库不在物理引擎层强制校验数据表结构。文档与文档之间可以拥有完全不同的字段组合，具备极高的敏捷扩展能力，但一致性校验责任随之转移至应用层。
+*   **<GlossaryTerm term="Scope & Non-Goals" definition="范围与非目标：明确项目‘做什么’和‘刻意不做什么’。非目标和目标一样重要——它防止范围蔓延，让有限的精力集中在核心价值上。">Scope & Non-Goals</GlossaryTerm>**：范围与非目标：明确项目‘做什么’和‘刻意不做什么’。非目标和目标一样重要——它防止范围蔓延，让有限的精力集中在核心价值上。
+*   **<GlossaryTerm term="Scoping" definition="划定范围：明确做什么和不做什么。写清不做的部分，能防止范围蔓延、聚焦核心。">Scoping</GlossaryTerm>**：划定范围：明确做什么和不做什么。写清不做的部分，能防止范围蔓延、聚焦核心。
+*   **<GlossaryTerm term="Scratchpad" definition="草稿本/工作记忆：Agent 在一次任务执行中维护的结构化状态——目标、计划进度、已做的步骤、中间结果。每步决策时把它（或其摘要）放进上下文，让 Agent 记得自己在干嘛。">Scratchpad</GlossaryTerm>**：草稿本/工作记忆：Agent 在一次任务执行中维护的结构化状态——目标、计划进度、已做的步骤、中间结果。每步决策时把它（或其摘要）放进上下文，让 Agent 记得自己在干嘛。
+*   **<GlossaryTerm term="Scratchpad (草稿纸/思考上下文)" definition="草稿纸/思考上下文：智能体用来记录多步执行期间的中间思考过程、工具调用返回与待完成子目标的内存机制。">Scratchpad (草稿纸/思考上下文)</GlossaryTerm>**：草稿纸/思考上下文：智能体用来记录多步执行期间的中间思考过程、工具调用返回与待完成子目标的内存机制。
+*   **<GlossaryTerm term="Search Engine" definition="搜索引擎：为全文检索、相关性排序、聚合分析而生（倒排索引）。">Search Engine</GlossaryTerm>**：搜索引擎：为全文检索、相关性排序、聚合分析而生（倒排索引）。
+*   **<GlossaryTerm term="Secondary Index" definition="二级索引：又称辅助索引。其叶子节点不存储实际行数据，而是存放索引键值与对应的聚集索引主键值。非主键查询必须通过二级索引找到主键，再到聚集索引回表查数据。">Secondary Index</GlossaryTerm>**：二级索引：又称辅助索引。其叶子节点不存储实际行数据，而是存放索引键值与对应的聚集索引主键值。非主键查询必须通过二级索引找到主键，再到聚集索引回表查数据。
+*   **<GlossaryTerm term="Secret" definition="Secret：K8s 中存放敏感数据（密码、token、证书、私钥）的对象，与普通配置分开管理，可限制访问权限、加密存储，并避免写入镜像或代码仓库。">Secret</GlossaryTerm>**：Secret：K8s 中存放敏感数据（密码、token、证书、私钥）的对象，与普通配置分开管理，可限制访问权限、加密存储，并避免写入镜像或代码仓库。
+*   **<GlossaryTerm term="Self-Attention" definition="自注意力：模型在预测下一个 token 时，让当前位置“关注”输入序列中所有相关的 token，按相关性加权地聚合信息。它让模型能捕捉长距离依赖，是 Transformer 的核心。">Self-Attention</GlossaryTerm>**：自注意力：模型在预测下一个 token 时，让当前位置“关注”输入序列中所有相关的 token，按相关性加权地聚合信息。它让模型能捕捉长距离依赖，是 Transformer 的核心。
+*   **<GlossaryTerm term="Self-evaluation bias" definition="自评偏差：单智能体由于认知局限，倾向于合理化自身的逻辑错误而无法客观评估自身输出。">Self-evaluation bias</GlossaryTerm>**：自评偏差：单智能体由于认知局限，倾向于合理化自身的逻辑错误而无法客观评估自身输出。
+*   **<GlossaryTerm term="Self-RAG" definition="Self-RAG 框架：一种自我反思的检索增强生成框架。通过引入特殊的反思标记（Reflection Tokens），让模型能够在运行期间自主决定何时检索，以及自评检索文档的相关性和生成内容的 grounding 事实性。">Self-RAG</GlossaryTerm>**：Self-RAG 框架：一种自我反思的检索增强生成框架。通过引入特殊的反思标记（Reflection Tokens），让模型能够在运行期间自主决定何时检索，以及自评检索文档的相关性和生成内容的 grounding 事实性。
+*   **<GlossaryTerm term="Semantic / Structural Chunking" definition="语义/结构分块：按文档的自然结构（标题、段落、列表、章节）或语义边界切块，而非机械按字数切，使每块是一个相对完整的意思单元，检索更准。">Semantic / Structural Chunking</GlossaryTerm>**：语义/结构分块：按文档的自然结构（标题、段落、列表、章节）或语义边界切块，而非机械按字数切，使每块是一个相对完整的意思单元，检索更准。
+*   **<GlossaryTerm term="Semantic Cache" definition="语义缓存：利用向量相似度（Embedding Matching）匹配当前问题与历史请求，当提问的语义极其接近时直接返回历史答案，从而省去大模型调用、控制延迟 and Token 成本。">Semantic Cache</GlossaryTerm>**：语义缓存：利用向量相似度（Embedding Matching）匹配当前问题与历史请求，当提问的语义极其接近时直接返回历史答案，从而省去大模型调用、控制延迟 and Token 成本。
+*   **<GlossaryTerm term="Semantic Search" definition="语义检索：把查询和文档都转成 embedding，用向量相似度找出语义最相关的内容，而非依赖关键词字面匹配。">Semantic Search</GlossaryTerm>**：语义检索：把查询和文档都转成 embedding，用向量相似度找出语义最相关的内容，而非依赖关键词字面匹配。
+*   **<GlossaryTerm term="Separation of Concerns" definition="关注点分离：软件设计核心原则。将程序划分成互不重叠的模块，每个模块只关注单一职责（如模型创建、模型调用、业务调度），从而降低认知负荷，防止局部修改扩散为全局级灾难。">Separation of Concerns</GlossaryTerm>**：关注点分离：软件设计核心原则。将程序划分成互不重叠的模块，每个模块只关注单一职责（如模型创建、模型调用、业务调度），从而降低认知负荷，防止局部修改扩散为全局级灾难。
+*   **<GlossaryTerm term="Sequential Orchestration" definition="顺序编排：多个 Agent 排成流水线，前一个的输出作为后一个的输入，依次执行。适合子任务有依赖关系（B 需要 A 的结果）的场景。">Sequential Orchestration</GlossaryTerm>**：顺序编排：多个 Agent 排成流水线，前一个的输出作为后一个的输入，依次执行。适合子任务有依赖关系（B 需要 A 的结果）的场景。
+*   **<GlossaryTerm term="Server-side Discovery" definition="服务端发现：调用方只管把请求发给一个固定的负载均衡器/网关，由它查注册中心并转发。客户端简单，但多一跳、LB 要高可用。">Server-side Discovery</GlossaryTerm>**：服务端发现：调用方只管把请求发给一个固定的负载均衡器/网关，由它查注册中心并转发。客户端简单，但多一跳、LB 要高可用。
+*   **<GlossaryTerm term="Serverless" definition="无服务器计算：一种云原生执行模型，云厂商自动管理服务器的分配和缩容，按实际资源消耗计费。在多云架构中，由于各家 Serverless（如 AWS Lambda, Google Cloud Functions）接口和运行方式高度专有且无法跨云对齐，通常会带来极强的厂商绑定效应。">Serverless</GlossaryTerm>**：无服务器计算：一种云原生执行模型，云厂商自动管理服务器的分配和缩容，按实际资源消耗计费。在多云架构中，由于各家 Serverless（如 AWS Lambda, Google Cloud Functions）接口和运行方式高度专有且无法跨云对齐，通常会带来极强的厂商绑定效应。
+*   **<GlossaryTerm term="Service" definition="Service：给一组 Pod 一个稳定的虚拟地址和负载均衡入口。Pod 会变动（重建换 IP），Service 提供不变的访问点（服务端发现，见 M5L3）。">Service</GlossaryTerm>**：Service：给一组 Pod 一个稳定的虚拟地址和负载均衡入口。Pod 会变动（重建换 IP），Service 提供不变的访问点（服务端发现，见 M5L3）。
+*   **<GlossaryTerm term="Service Discovery" definition="服务发现：在分布式微服务架构中，自动检测和发现网络中服务节点物理地址和能力的机制。">Service Discovery</GlossaryTerm>**：服务发现：在分布式微服务架构中，自动检测和发现网络中服务节点物理地址和能力的机制。
+*   **<GlossaryTerm term="Service Level Objective" definition="服务等级目标 (SLO)：根据服务等级指标 (SLI) 设定的具体目标值或范围，用于衡量服务的可靠性。例如‘99.9% 的请求延迟小于 200ms’。">Service Level Objective</GlossaryTerm>**：服务等级目标 (SLO)：根据服务等级指标 (SLI) 设定的具体目标值或范围，用于衡量服务的可靠性。例如‘99.9% 的请求延迟小于 200ms’。
+*   **<GlossaryTerm term="Service Mesh" definition="服务网格：管理服务间通信的专用基础设施层。由一组 sidecar 代理（数据面，处理实际流量）和一个控制面（下发路由/安全/策略配置）组成，把流量治理从业务代码中剥离。">Service Mesh</GlossaryTerm>**：服务网格：管理服务间通信的专用基础设施层。由一组 sidecar 代理（数据面，处理实际流量）和一个控制面（下发路由/安全/策略配置）组成，把流量治理从业务代码中剥离。
+*   **<GlossaryTerm term="Service Registry" definition="注册中心：一个动态维护“服务名 → 健康实例列表”的数据库。实例启动时注册、退出时注销、定期心跳；调用方查询它获得当前可用实例。">Service Registry</GlossaryTerm>**：注册中心：一个动态维护“服务名 → 健康实例列表”的数据库。实例启动时注册、退出时注销、定期心跳；调用方查询它获得当前可用实例。
+*   **<GlossaryTerm term="Shadow Evaluation" definition="影子评估：让新版本（新 prompt/模型）在真实线上流量上并行运行，但结果不返回给用户，只记录下来和线上版本对比。用真实流量安全地验证新版本，零用户风险。">Shadow Evaluation</GlossaryTerm>**：影子评估：让新版本（新 prompt/模型）在真实线上流量上并行运行，但结果不返回给用户，只记录下来和线上版本对比。用真实流量安全地验证新版本，零用户风险。
+*   **<GlossaryTerm term="Sharding" definition="分片/分区：把一个大数据集按某个分区键切成多个子集（shard），分布到不同节点。每个节点只存一部分数据、处理一部分负载，从而突破单机容量和吞吐上限。">Sharding</GlossaryTerm>**：分片/分区：把一个大数据集按某个分区键切成多个子集（shard），分布到不同节点。每个节点只存一部分数据、处理一部分负载，从而突破单机容量和吞吐上限。
+*   **<GlossaryTerm term="Shared Buffers" definition="PostgreSQL 的共享缓冲区，用于在内存中缓存磁盘数据块。读写请求优先在缓冲区进行，写操作将对应块标记为脏页，并由后台进程异步刷盘。">Shared Buffers</GlossaryTerm>**：PostgreSQL 的共享缓冲区，用于在内存中缓存磁盘数据块。读写请求优先在缓冲区进行，写操作将对应块标记为脏页，并由后台进程异步刷盘。
+*   **<GlossaryTerm term="Shared Context" definition="共享上下文：在多智能体协同中，多个智能体能够共同访问和修改的上下文缓存。如果管理不当，容易造成 Context 状态污染和注意力稀释。">Shared Context</GlossaryTerm>**：共享上下文：在多智能体协同中，多个智能体能够共同访问和修改的上下文缓存。如果管理不当，容易造成 Context 状态污染和注意力稀释。
+*   **<GlossaryTerm term="SharedInformer" definition="Kubernetes 客户端库中的缓存与事件分发组件。它监听特定资源类型的事件，并在本地维护一份只读的数据缓存，多个控制器可以共享同一个 SharedInformer 缓存，大幅降低了 API Server 的压力。">SharedInformer</GlossaryTerm>**：Kubernetes 客户端库中的缓存与事件分发组件。它监听特定资源类型的事件，并在本地维护一份只读的数据缓存，多个控制器可以共享同一个 SharedInformer 缓存，大幅降低了 API Server 的压力。
+*   **<GlossaryTerm term="Shift Left" definition="安全/质量左移：把测试、安全扫描、合规检查尽量提前到流水线早期（甚至开发者本地），问题越早发现修复越便宜，而不是等上线前才检查。">Shift Left</GlossaryTerm>**：安全/质量左移：把测试、安全扫描、合规检查尽量提前到流水线早期（甚至开发者本地），问题越早发现修复越便宜，而不是等上线前才检查。
+*   **<GlossaryTerm term="Short-term Memory" definition="短期记忆：在 AI Agent 中，通常指在单次任务执行生命周期内，为了维持上下文连贯而保存在上下文窗口中的结构化草稿纸（Scratchpad）或交互历史。">Short-term Memory</GlossaryTerm>**：短期记忆：在 AI Agent 中，通常指在单次任务执行生命周期内，为了维持上下文连贯而保存在上下文窗口中的结构化草稿纸（Scratchpad）或交互历史。
+*   **<GlossaryTerm term="Shotgun Surgery" definition="霰弹式修改 (Shotgun Surgery)：一种常见的代码坏味道。指每当你要修改某个单一业务规则或增加新特性时，被迫在代码库里像发射霰弹一样，同时修改非常多不同的类或文件。这预示着系统职责划分混乱、高耦合度。">Shotgun Surgery</GlossaryTerm>**：霰弹式修改 (Shotgun Surgery)：一种常见的代码坏味道。指每当你要修改某个单一业务规则或增加新特性时，被迫在代码库里像发射霰弹一样，同时修改非常多不同的类或文件。这预示着系统职责划分混乱、高耦合度。
+*   **<GlossaryTerm term="Sidecar Pattern" definition="边车模式：在每个服务实例旁部署一个伴随容器（sidecar），接管该服务的网络进出流量，处理与业务无关的横切能力（加密、重试、熔断、遥测），业务容器无感。">Sidecar Pattern</GlossaryTerm>**：边车模式：在每个服务实例旁部署一个伴随容器（sidecar），接管该服务的网络进出流量，处理与业务无关的横切能力（加密、重试、熔断、遥测），业务容器无感。
+*   **<GlossaryTerm term="Simple Factory" definition="简单工厂：用一个函数/方法集中负责“根据参数创建并返回合适的对象”，把散落各处的创建逻辑收拢到一处。严格说它不是 GoF 模式，但极常用、极实用。">Simple Factory</GlossaryTerm>**：简单工厂：用一个函数/方法集中负责“根据参数创建并返回合适的对象”，把散落各处的创建逻辑收拢到一处。严格说它不是 GoF 模式，但极常用、极实用。
+*   **<GlossaryTerm term="Single Point of Failure" definition="单点故障 (SPOF - Single Point of Failure)：系统中的某一个组件或节点，一旦失效会导致整个系统完全停止运转。统一的 API 网关极易因为臃肿或配置失误变成全站的 SPOF，因此需要保持轻量化、去业务化及做冗余部署。">Single Point of Failure</GlossaryTerm>**：单点故障 (SPOF - Single Point of Failure)：系统中的某一个组件或节点，一旦失效会导致整个系统完全停止运转。统一的 API 网关极易因为臃肿或配置失误变成全站的 SPOF，因此需要保持轻量化、去业务化及做冗余部署。
+*   **<GlossaryTerm term="Single Responsibility Principle" definition="单一职责原则 (SRP)：在面向对象设计中，规定一个类仅有一个引起它变化的原因；引申到 Agent 设计中，指拆分出的每个子任务的目标和可验证条件应该是单一且明确的。">Single Responsibility Principle</GlossaryTerm>**：单一职责原则 (SRP)：在面向对象设计中，规定一个类仅有一个引起它变化的原因；引申到 Agent 设计中，指拆分出的每个子任务的目标和可验证条件应该是单一且明确的。
+*   **<GlossaryTerm term="Single-Flight" definition="单飞/请求合并：同一个 key 同时有很多请求要重建时，只让第一个真正去加载，其余请求等它的结果。把 N 次重建合并成 1 次。">Single-Flight</GlossaryTerm>**：单飞/请求合并：同一个 key 同时有很多请求要重建时，只让第一个真正去加载，其余请求等它的结果。把 N 次重建合并成 1 次。
+*   **<GlossaryTerm term="SLA" definition="服务等级协议：对外（客户/合同）承诺的等级，违反通常有赔偿。SLA 通常比内部 SLO 宽松，留缓冲。">SLA</GlossaryTerm>**：服务等级协议：对外（客户/合同）承诺的等级，违反通常有赔偿。SLA 通常比内部 SLO 宽松，留缓冲。
+*   **<GlossaryTerm term="SLI" definition="服务等级指标 (Service Level Indicator, SLI)：系统运行状况的关键量化指标，例如请求成功率、响应时间百分位数等，是设定 SLO 的底层观测指标。">SLI</GlossaryTerm>**：服务等级指标 (Service Level Indicator, SLI)：系统运行状况的关键量化指标，例如请求成功率、响应时间百分位数等，是设定 SLO 的底层观测指标。
+*   **<GlossaryTerm term="Sliding Window" definition="滑动窗口 (Sliding Window)：一种对话记忆管理策略。仅保留最新的 N 轮对话作为上下文，将更早的历史直接丢弃，计算开销恒定，但会丢失更早的所有细节。">Sliding Window</GlossaryTerm>**：滑动窗口 (Sliding Window)：一种对话记忆管理策略。仅保留最新的 N 轮对话作为上下文，将更早的历史直接丢弃，计算开销恒定，但会丢失更早的所有细节。
+*   **<GlossaryTerm term="SLO" definition="服务等级目标（Service Level Objective）：对某项 SLI（如成功率、p99 延迟）设定的目标值，如“30 天内 99.95% 请求成功”。它把“高可用”变成可度量、可对赌的具体数字。">SLO</GlossaryTerm>**：服务等级目标（Service Level Objective）：对某项 SLI（如成功率、p99 延迟）设定的目标值，如“30 天内 99.95% 请求成功”。它把“高可用”变成可度量、可对赌的具体数字。
+*   **<GlossaryTerm term="SLO for AI" definition="为 AI 系统定义的服务级目标：不仅有传统的可用性/延迟目标（如 P95 延迟、成功率），还应包含 AI 特有的质量目标（如答案可接受率、弃答率上限）和成本目标。是衡量与保障 AI 服务水平的契约。">SLO for AI</GlossaryTerm>**：为 AI 系统定义的服务级目标：不仅有传统的可用性/延迟目标（如 P95 延迟、成功率），还应包含 AI 特有的质量目标（如答案可接受率、弃答率上限）和成本目标。是衡量与保障 AI 服务水平的契约。
+*   **<GlossaryTerm term="SLO Monitoring" definition="SLO 监控：服务等级目标监控。对生产环境下的 Agent 运行状况进行实时监控，关注成功率、步数波动、Token/延迟开销以及违规告警等核心系统指标，保证其在安全与效率的红线内运行。">SLO Monitoring</GlossaryTerm>**：SLO 监控：服务等级目标监控。对生产环境下的 Agent 运行状况进行实时监控，关注成功率、步数波动、Token/延迟开销以及违规告警等核心系统指标，保证其在安全与效率的红线内运行。
+*   **<GlossaryTerm term="SLO-based Alerting" definition="基于 SLO 的告警：不对“原因指标”（CPU/内存）告警，而是对“用户可感知的症状”和 SLO 违约风险告警。让告警与用户影响直接挂钩，减少噪声。">SLO-based Alerting</GlossaryTerm>**：基于 SLO 的告警：不对“原因指标”（CPU/内存）告警，而是对“用户可感知的症状”和 SLO 违约风险告警。让告警与用户影响直接挂钩，减少噪声。
+*   **<GlossaryTerm term="Small-to-big Retrieval" definition="Small-to-big 检索：一种进阶 RAG 技巧，检索时通过较小的向量分块（语义精确、噪音少）进行精准匹配定位，命中后将与之关联的更大文档父上下文块提取出来喂给模型，兼顾检索精度与语义完整性。">Small-to-big Retrieval</GlossaryTerm>**：Small-to-big 检索：一种进阶 RAG 技巧，检索时通过较小的向量分块（语义精确、噪音少）进行精准匹配定位，命中后将与之关联的更大文档父上下文块提取出来喂给模型，兼顾检索精度与语义完整性。
+*   **<GlossaryTerm term="Smoke Test" definition="冒烟测试：一组快速的端到端测试，验证系统的核心路径能整体跑通（而非单个组件正确）。像给电路通电看冒不冒烟——先确认整体不崩，再谈细节。">Smoke Test</GlossaryTerm>**：冒烟测试：一组快速的端到端测试，验证系统的核心路径能整体跑通（而非单个组件正确）。像给电路通电看冒不冒烟——先确认整体不崩，再谈细节。
+*   **<GlossaryTerm term="Snapshot Isolation" definition="快照隔离：事务读到一个固定时刻的一致快照，期间别人的提交对它不可见。读不阻塞写。但仍可能有写偏斜（write skew）。">Snapshot Isolation</GlossaryTerm>**：快照隔离：事务读到一个固定时刻的一致快照，期间别人的提交对它不可见。读不阻塞写。但仍可能有写偏斜（write skew）。
+*   **<GlossaryTerm term="Snowflake" definition="Twitter 提出的分布式 ID 生成：用「时间戳 + 机器号 + 序列号」拼成一个全局唯一、大致有序 of 64 位 ID，无需中心协调。">Snowflake</GlossaryTerm>**：Twitter 提出的分布式 ID 生成：用「时间戳 + 机器号 + 序列号」拼成一个全局唯一、大致有序 of 64 位 ID，无需中心协调。
+*   **<GlossaryTerm term="Snowflake Server" definition="雪花服务器：经过大量手动调整、配置独一无二且无人能完整复现的服务器。一旦损坏就难以重建，是运维脆弱性的根源。">Snowflake Server</GlossaryTerm>**：雪花服务器：经过大量手动调整、配置独一无二且无人能完整复现的服务器。一旦损坏就难以重建，是运维脆弱性的根源。
+*   **<GlossaryTerm term="Softmax" definition="Softmax：一种将多分类原始分数 (logits) 转化为概率分布的激活函数。它对每个 logits 做指数幂计算后归一化，使所有项概率之和为 1。">Softmax</GlossaryTerm>**：Softmax：一种将多分类原始分数 (logits) 转化为概率分布的激活函数。它对每个 logits 做指数幂计算后归一化，使所有项概率之和为 1。
+*   **<GlossaryTerm term="Software Artifact" definition="软件制品 (Software Artifact)：在软件开发生命周期中，由编译、构建等构建过程所产生的可部署二进制包、归档文件或容器镜像。它是一个特定版本代码编译出的不可变输出产物。">Software Artifact</GlossaryTerm>**：软件制品 (Software Artifact)：在软件开发生命周期中，由编译、构建等构建过程所产生的可部署二进制包、归档文件或容器镜像。它是一个特定版本代码编译出的不可变输出产物。
+*   **<GlossaryTerm term="Space Amplification" definition="空间放大：实际占用磁盘 / 有效数据量。B-tree 有页内碎片，LSM 在 compaction 前有重复/过期数据。">Space Amplification</GlossaryTerm>**：空间放大：实际占用磁盘 / 有效数据量。B-tree 有页内碎片，LSM 在 compaction 前有重复/过期数据。
+*   **<GlossaryTerm term="Sparse Retrieval" definition="稀疏检索：基于词项匹配的检索（如 BM25），文档表示为高维稀疏向量（大部分维度为 0）。擅长精确/罕见词，但不懂语义改写。">Sparse Retrieval</GlossaryTerm>**：稀疏检索：基于词项匹配的检索（如 BM25），文档表示为高维稀疏向量（大部分维度为 0）。擅长精确/罕见词，但不懂语义改写。
+*   **<GlossaryTerm term="Split-brain" definition="脑裂：网络分区导致系统出现两个都认为自己是主的节点，各自接收写入，造成数据冲突和不一致。是故障转移最危险的失败模式。">Split-brain</GlossaryTerm>**：脑裂：网络分区导致系统出现两个都认为自己是主的节点，各自接收写入，造成数据冲突和不一致。是故障转移最危险的失败模式。
+*   **<GlossaryTerm term="SQL Injection" definition="SQL 注入：一种将恶意 SQL 代码拼入输入中，以控制数据库执行非授权操作的攻击手段。大模型的工具参数必须参数化或强校验以防止此类注入风险。">SQL Injection</GlossaryTerm>**：SQL 注入：一种将恶意 SQL 代码拼入输入中，以控制数据库执行非授权操作的攻击手段。大模型的工具参数必须参数化或强校验以防止此类注入风险。
+*   **<GlossaryTerm term="SRE" definition="站点可靠性工程 (Site Reliability Engineering)：将软件工程方法应用于运维领域，用开发思维解决基础设施与稳定性问题的实践。">SRE</GlossaryTerm>**：站点可靠性工程 (Site Reliability Engineering)：将软件工程方法应用于运维领域，用开发思维解决基础设施与稳定性问题的实践。
+*   **<GlossaryTerm term="SRE Agent" definition="运维智能体：专为站点可靠性工程 (SRE) 场景设计的智能体。能够自动执行故障指标查询、日志检索、依赖检查以及敏感变更等任务，以加快故障诊断与自愈。">SRE Agent</GlossaryTerm>**：运维智能体：专为站点可靠性工程 (SRE) 场景设计的智能体。能够自动执行故障指标查询、日志检索、依赖检查以及敏感变更等任务，以加快故障诊断与自愈。
+*   **<GlossaryTerm term="Stabilization Window" definition="稳定窗口：自动伸缩在做缩容（或扩容）决策时，参考最近一段时间窗口内的指标，避免因瞬时波动而频繁伸缩（抖动）。常对缩容设较长窗口、扩容较短。">Stabilization Window</GlossaryTerm>**：稳定窗口：自动伸缩在做缩容（或扩容）决策时，参考最近一段时间窗口内的指标，避免因瞬时波动而频繁伸缩（抖动）。常对缩容设较长窗口、扩容较短。
+*   **<GlossaryTerm term="Startup Probe" definition="启动探针：用于启动慢的应用，在它启动期间暂停 liveness 检查，避免“还没启动完就被误判为卡死而重启”的循环。启动成功后才交给 liveness。">Startup Probe</GlossaryTerm>**：启动探针：用于启动慢的应用，在它启动期间暂停 liveness 检查，避免“还没启动完就被误判为卡死而重启”的循环。启动成功后才交给 liveness。
+*   **<GlossaryTerm term="State" definition="系统在某个时刻保存下来的事实，比如谁已经报过名。状态越重要，越要考虑一致性、去重和恢复。">State</GlossaryTerm>**：系统在某个时刻保存下来的事实，比如谁已经报过名。状态越重要，越要考虑一致性、去重和恢复。
+*   **<GlossaryTerm term="State Convergence" definition="状态收敛：在多智能体协作中，将各个节点的冲突观点、异构输出或分散事实逐步汇总并合并为单一确定性结论的演进过程。">State Convergence</GlossaryTerm>**：状态收敛：在多智能体协作中，将各个节点的冲突观点、异构输出或分散事实逐步汇总并合并为单一确定性结论的演进过程。
+*   **<GlossaryTerm term="State Pattern" definition="状态模式（GoF）：把每个状态做成一个对象，对象自己知道“在本状态下各事件怎么处理、该转到哪个状态”。context 把请求委托给当前状态对象，换状态=换对象，消除大量 if-else。">State Pattern</GlossaryTerm>**：状态模式（GoF）：把每个状态做成一个对象，对象自己知道“在本状态下各事件怎么处理、该转到哪个状态”。context 把请求委托给当前状态对象，换状态=换对象，消除大量 if-else。
+*   **<GlossaryTerm term="State Pollution" definition="状态污染：在多智能体协同中，由于某个 Agent 产生幻觉或输出错误事实，导致该坏数据进入共享上下文/数据库，污染整个系统的执行状态并被其他 Agent 继承的缺陷。">State Pollution</GlossaryTerm>**：状态污染：在多智能体协同中，由于某个 Agent 产生幻觉或输出错误事实，导致该坏数据进入共享上下文/数据库，污染整个系统的执行状态并被其他 Agent 继承的缺陷。
+*   **<GlossaryTerm term="State Schema" definition="状态约束：描述系统或智能体节点间通信交换的数据契约，使用强 schema（例如 JSONSchema）确保可解析与类型安全。">State Schema</GlossaryTerm>**：状态约束：描述系统或智能体节点间通信交换的数据契约，使用强 schema（例如 JSONSchema）确保可解析与类型安全。
+*   **<GlossaryTerm term="State Transition" definition="状态转移 (State Transition)：系统从当前拥有的某个特定状态，响应特定触发事件 (Event) 后切换到新目标状态的行为。状态转移由合法性规则严格管辖。">State Transition</GlossaryTerm>**：状态转移 (State Transition)：系统从当前拥有的某个特定状态，响应特定触发事件 (Event) 后切换到新目标状态的行为。状态转移由合法性规则严格管辖。
+*   **<GlossaryTerm term="Stateful" definition="有状态：组件在自己内部保存了跨请求的状态。它的实例之间不可互换，重启会丢状态，难以水平扩展。">Stateful</GlossaryTerm>**：有状态：组件在自己内部保存了跨请求的状态。它的实例之间不可互换，重启会丢状态，难以水平扩展。
+*   **<GlossaryTerm term="Stateless" definition="无状态 (Stateless)：大模型推理服务不在服务器端保留任何关于客户端历史会话的信息，每次推理都是纯函数式的、仅依赖于单次请求中携带的全部输入。">Stateless</GlossaryTerm>**：无状态 (Stateless)：大模型推理服务不在服务器端保留任何关于客户端历史会话的信息，每次推理都是纯函数式的、仅依赖于单次请求中携带的全部输入。
+*   **<GlossaryTerm term="Stopping Condition" definition="停止条件：限制 Agent 循环的机制——最大步数/轮次、预算上限、或任务完成判定。防止 Agent 无限循环、空转或烧爆成本，是 Agent 可控的关键。">Stopping Condition</GlossaryTerm>**：停止条件：限制 Agent 循环的机制——最大步数/轮次、预算上限、或任务完成判定。防止 Agent 无限循环、空转或烧爆成本，是 Agent 可控的关键。
+*   **<GlossaryTerm term="Storage Engine" definition="存储引擎：数据库中真正负责把数据存到磁盘、再读出来的核心模块。两大主流是 B-tree（原地更新）和 LSM-tree（只追加 + 合并）。">Storage Engine</GlossaryTerm>**：存储引擎：数据库中真正负责把数据存到磁盘、再读出来的核心模块。两大主流是 B-tree（原地更新）和 LSM-tree（只追加 + 合并）。
+*   **<GlossaryTerm term="Store and Forward" definition="存储转发：一种消息投递哲学，接收方在线时由服务器直接路由直发；接收方离线时，消息暂时存放在服务器的离线队列中，一旦接收方上线并确认拉取成功（Delivery ACK），服务器便立即将其物理删除。">Store and Forward</GlossaryTerm>**：存储转发：一种消息投递哲学，接收方在线时由服务器直接路由直发；接收方离线时，消息暂时存放在服务器的离线队列中，一旦接收方上线并确认拉取成功（Delivery ACK），服务器便立即将其物理删除。
+*   **<GlossaryTerm term="Store-and-Forward" definition="存储转发：设备/边缘在网络中断时把数据先存在本地缓冲，待网络恢复后再按序补发，保证断网期间的数据不丢失。">Store-and-Forward</GlossaryTerm>**：存储转发：设备/边缘在网络中断时把数据先存在本地缓冲，待网络恢复后再按序补发，保证断网期间的数据不丢失。
+*   **<GlossaryTerm term="Strategy Pattern" definition="策略模式：一种行为型设计模式。定义一系列算法，把它们一个个封装起来，并且使它们可以相互替换。本模式使得算法可独立于使用它的客户端而变化，满足开闭原则。">Strategy Pattern</GlossaryTerm>**：策略模式：一种行为型设计模式。定义一系列算法，把它们一个个封装起来，并且使它们可以相互替换。本模式使得算法可独立于使用它的客户端而变化，满足开闭原则。
+*   **<GlossaryTerm term="Streaming" definition="流式输出：服务端边生成边把 token 推给客户端，让用户在首 token 后就能逐字看到响应，大幅改善体感延迟（虽然总时长不变）。">Streaming</GlossaryTerm>**：流式输出：服务端边生成边把 token 推给客户端，让用户在首 token 后就能逐字看到响应，大幅改善体感延迟（虽然总时长不变）。
+*   **<GlossaryTerm term="Structured Message" definition="结构化消息：Agent 之间传递的、有明确 schema 的消息（如 [from, to, type, payload]），而非自由文本。让通信可解析、可校验、可路由，避免歧义和污染。">Structured Message</GlossaryTerm>**：结构化消息：Agent 之间传递的、有明确 schema 的消息（如 [from, to, type, payload]），而非自由文本。让通信可解析、可校验、可路由，避免歧义和污染。
+*   **<GlossaryTerm term="Structured Output" definition="结构化输出：让 LLM 按预定义的格式（通常是 JSON，符合某个 schema）输出，使结果能被程序可靠解析和校验，而非自由文本。">Structured Output</GlossaryTerm>**：结构化输出：让 LLM 按预定义的格式（通常是 JSON，符合某个 schema）输出，使结果能被程序可靠解析和校验，而非自由文本。
+*   **<GlossaryTerm term="Subject" definition="发布目标 (Subject)：观察者模式中的核心主题对象（也称 Observable）。负责维护订阅者列表（Observers），并在自身状态发生变化时发出通知（Notify）。">Subject</GlossaryTerm>**：发布目标 (Subject)：观察者模式中的核心主题对象（也称 Observable）。负责维护订阅者列表（Observers），并在自身状态发生变化时发出通知（Notify）。
+*   **<GlossaryTerm term="Supervision Tree" definition="Erlang/OTP 的容错结构：监督者进程负责监控子进程，子进程崩溃时按预设策略自动重启到已知良好状态。">Supervision Tree</GlossaryTerm>**：Erlang/OTP 的容错结构：监督者进程负责监控子进程，子进程崩溃时按预设策略自动重启到已知良好状态。
+*   **<GlossaryTerm term="Supervisor Pattern" definition="主管模式：一个主控（supervisor）Agent 负责编排——把任务分配给合适的专精（worker）Agent、收集它们的结果、决定下一步、并作为唯一的最终出口。是最常用、最可控的多 Agent 协作结构。">Supervisor Pattern</GlossaryTerm>**：主管模式：一个主控（supervisor）Agent 负责编排——把任务分配给合适的专精（worker）Agent、收集它们的结果、决定下一步、并作为唯一的最终出口。是最常用、最可控的多 Agent 协作结构。
+*   **<GlossaryTerm term="Swarm / Handoff" definition="蜂群/交接：去中心化的多 Agent 模式——没有中央路由，Agent 之间直接“交接”（这个我处理不了，转给最合适的那个）。灵活、无单点，但难追踪、难控制、易混乱。">Swarm / Handoff</GlossaryTerm>**：蜂群/交接：去中心化的多 Agent 模式——没有中央路由，Agent 之间直接“交接”（这个我处理不了，转给最合适的那个）。灵活、无单点，但难追踪、难控制、易混乱。
+*   **<GlossaryTerm term="Synchronous" definition="同步：调用方必须等被调用的操作全部完成才能继续。慢操作会直接拖慢调用方。">Synchronous</GlossaryTerm>**：同步：调用方必须等被调用的操作全部完成才能继续。慢操作会直接拖慢调用方。
+*   **<GlossaryTerm term="Synchronous Communication" definition="同步通信：调用方发请求后阻塞等待响应（如 HTTP/RPC 调用）。简单直接，但调用方被被调方的延迟和故障拖累。">Synchronous Communication</GlossaryTerm>**：同步通信：调用方发请求后阻塞等待响应（如 HTTP/RPC 调用）。简单直接，但调用方被被调方的延迟和故障拖累。
+*   **<GlossaryTerm term="Synchronous Replication" definition="同步复制：主必须等从确认收到变更后才向客户端返回成功。不丢数据（从有最新），但写延迟高、从挂了会拖住主。">Synchronous Replication</GlossaryTerm>**：同步复制：主必须等从确认收到变更后才向客户端返回成功。不丢数据（从有最新），但写延迟高、从挂了会拖住主。
+*   **<GlossaryTerm term="System Design" definition="系统设计：定义系统架构、组件、模块、接口及数据以满足特定需求的过程，要求综合权衡功能与非功能指标。">System Design</GlossaryTerm>**：系统设计：定义系统架构、组件、模块、接口及数据以满足特定需求的过程，要求综合权衡功能与非功能指标。
+*   **<GlossaryTerm term="System Prompt" definition="系统提示：设定模型的角色、行为准则、约束和总体目标的指令，通常在对话最前、优先级最高。用来稳定模型的“人设”和边界。">System Prompt</GlossaryTerm>**：系统提示：设定模型的角色、行为准则、约束和总体目标的指令，通常在对话最前、优先级最高。用来稳定模型的“人设”和边界。
+*   **<GlossaryTerm term="Systemic Safety Gate" definition="系统级安全闸：设立在多智能体系统对外出站或关键物理副作用操作前置卡点上的物理拦截器，用于强制执行输入输出脱敏、敏感内容审计与人在回路审查。">Systemic Safety Gate</GlossaryTerm>**：系统级安全闸：设立在多智能体系统对外出站或关键物理副作用操作前置卡点上的物理拦截器，用于强制执行输入输出脱敏、敏感内容审计与人在回路审查。
+
+## T
+
+*   **<GlossaryTerm term="Task Decomposition" definition="任务分解：把一个复杂目标拆成若干更小、更明确、可执行的子任务。让 Agent 有清晰的步骤骨架，便于逐个完成、追踪进度、不漏不重。">Task Decomposition</GlossaryTerm>**：任务分解：把一个复杂目标拆成若干更小、更明确、可执行的子任务。让 Agent 有清晰的步骤骨架，便于逐个完成、追踪进度、不漏不重。
+*   **<GlossaryTerm term="TDD" definition="测试驱动开发：先写一个会失败的测试（红），再写最少的代码让它通过（绿），最后在测试保护下重构。循环往复。">TDD</GlossaryTerm>**：测试驱动开发：先写一个会失败的测试（红），再写最少的代码让它通过（绿），最后在测试保护下重构。循环往复。
+*   **<GlossaryTerm term="Tensor Parallelism" definition="张量并行：把单层内部的大矩阵运算切开，分到多张 GPU 上同时算，再合并。用于让一个大到单卡放不下的层也能运行。">Tensor Parallelism</GlossaryTerm>**：张量并行：把单层内部的大矩阵运算切开，分到多张 GPU 上同时算，再合并。用于让一个大到单卡放不下的层也能运行。
+*   **<GlossaryTerm term="Term" definition="任期：Raft 中单调递增的逻辑时钟。每次选举开启一个新 term。一个 term 内最多选出一个 leader，节点拒绝旧 term 的请求，从而保证不会有两个有效 leader。">Term</GlossaryTerm>**：任期：Raft 中单调递增的逻辑时钟。每次选举开启一个新 term。一个 term 内最多选出一个 leader，节点拒绝旧 term 的请求，从而保证不会有两个有效 leader。
+*   **<GlossaryTerm term="Test Double" definition="测试替身：在单元测试中，用于替换真实外部依赖（如数据库、第三方 API、网络服务）的轻量级对象。包括 Fake, Mock, Stub 等。能有效实现测试运行的幂等性与隔离性。">Test Double</GlossaryTerm>**：测试替身：在单元测试中，用于替换真实外部依赖（如数据库、第三方 API、网络服务）的轻量级对象。包括 Fake, Mock, Stub 等。能有效实现测试运行的幂等性与隔离性。
+*   **<GlossaryTerm term="Test Pyramid" definition="测试金字塔：底层大量快而便宜的单元测试，中层适量集成测试，顶层少量慢而贵的端到端测试。比例像金字塔。">Test Pyramid</GlossaryTerm>**：测试金字塔：底层大量快而便宜的单元测试，中层适量集成测试，顶层少量慢而贵的端到端测试。比例像金字塔。
+*   **<GlossaryTerm term="Thought" definition="推理段 (Thought)：在 ReAct 范式中，模型在执行行动前输出的自然语言，说明其当前的状态理解、面临的子目标以及要执行的操作原因。">Thought</GlossaryTerm>**：推理段 (Thought)：在 ReAct 范式中，模型在执行行动前输出的自然语言，说明其当前的状态理解、面临的子目标以及要执行的操作原因。
+*   **<GlossaryTerm term="Thread Pool Isolation" definition="线程池隔离 (Thread Pool Isolation)：舱壁隔离的具体实现方式之一。为每个依赖服务配置独立且有固定大小的线程池，使调用方的并发执行完全运行在专用线程池中。它提供了物理线程层面的强制超时打断和排队等待能力，但线程上下文切换开销较大。">Thread Pool Isolation</GlossaryTerm>**：线程池隔离 (Thread Pool Isolation)：舱壁隔离的具体实现方式之一。为每个依赖服务配置独立且有固定大小的线程池，使调用方的并发执行完全运行在专用线程池中。它提供了物理线程层面的强制超时打断和排队等待能力，但线程上下文切换开销较大。
+*   **<GlossaryTerm term="Threat Modeling" definition="威胁建模：系统性地分析一个系统可能面临哪些攻击、攻击者能达成什么、后果多严重，从而有针对性地设计防护。常用方法如 STRIDE；核心是‘在攻击者视角下问：最坏会怎样’。">Threat Modeling</GlossaryTerm>**：威胁建模：系统性地分析一个系统可能面临哪些攻击、攻击者能达成什么、后果多严重，从而有针对性地设计防护。常用方法如 STRIDE；核心是‘在攻击者视角下问：最坏会怎样’。
+*   **<GlossaryTerm term="Throughput" definition="吞吐量 (Throughput)：指系统在单位时间内成功处理的请求数或 Token 数量，是评估 LLM 推理服务容量的关键指标。">Throughput</GlossaryTerm>**：吞吐量 (Throughput)：指系统在单位时间内成功处理的请求数或 Token 数量，是评估 LLM 推理服务容量的关键指标。
+*   **<GlossaryTerm term="Thundering Herd" definition="惊群：某资源（如刚过期的热点缓存）可用瞬间，大量等待者同时涌入争抢，瞬间过载。缓存击穿是它的典型。">Thundering Herd</GlossaryTerm>**：惊群：某资源（如刚过期的热点缓存）可用瞬间，大量等待者同时涌入争抢，瞬间过载。缓存击穿是它的典型。
+*   **<GlossaryTerm term="Time Per Output Token" definition="每输出 token 时延（TPOT）：生成阶段平均每个输出 token 的耗时。总生成时间 ≈ TTFT + 输出 token 数 × TPOT。输出越长越慢。">Time Per Output Token</GlossaryTerm>**：每输出 token 时延（TPOT）：生成阶段平均每个输出 token 的耗时。总生成时间 ≈ TTFT + 输出 token 数 × TPOT。输出越长越慢。
+*   **<GlossaryTerm term="Time To First Token" definition="首 token 延迟（TTFT）：从发出请求到收到第一个输出 token 的时间，主要由输入处理（prefill）决定。影响用户“开始看到响应”的体感。">Time To First Token</GlossaryTerm>**：首 token 延迟（TTFT）：从发出请求到收到第一个输出 token 的时间，主要由输入处理（prefill）决定。影响用户“开始看到响应”的体感。
+*   **<GlossaryTerm term="Time to Live" definition="生存时间 (TTL - Time to Live)：指数据记录或心跳在被认定失效前可以存活的秒数。在服务注册中心里，TTL 决定了一个实例失联多久会被自动摘除剔除，是平衡‘探测实时性’与‘抖动防误摘’的核心常数。">Time to Live</GlossaryTerm>**：生存时间 (TTL - Time to Live)：指数据记录或心跳在被认定失效前可以存活的秒数。在服务注册中心里，TTL 决定了一个实例失联多久会被自动摘除剔除，是平衡‘探测实时性’与‘抖动防误摘’的核心常数。
+*   **<GlossaryTerm term="Time-Series DB" definition="时序数据库：为带时间戳的指标/事件（监控、IoT）优化，擅长按时间范围聚合。">Time-Series DB</GlossaryTerm>**：时序数据库：为带时间戳的指标/事件（监控、IoT）优化，擅长按时间范围聚合。
+*   **<GlossaryTerm term="Timeline" definition="时间线 (Timeline)：指用户所能查阅的最新动态流（通常按照时间戳倒序排列）。可分为用户发件箱（User Timeline - 存放个人发的帖子）与用户收件箱（Home Timeline - 存放所关注的所有人的聚合帖子）。">Timeline</GlossaryTerm>**：时间线 (Timeline)：指用户所能查阅的最新动态流（通常按照时间戳倒序排列）。可分为用户发件箱（User Timeline - 存放个人发的帖子）与用户收件箱（Home Timeline - 存放所关注的所有人的聚合帖子）。
+*   **<GlossaryTerm term="Timeout" definition="超时：给一次调用设定最长等待时间，超过就主动放弃。没有超时，慢依赖会无限占住调用方的线程/连接，是级联失败的根源。">Timeout</GlossaryTerm>**：超时：给一次调用设定最长等待时间，超过就主动放弃。没有超时，慢依赖会无限占住调用方的线程/连接，是级联失败的根源。
+*   **<GlossaryTerm term="Timeout Budget" definition="超时预算：给整条调用链分配一个总时间，逐层递减下发，确保失败发生得足够快、资源尽早释放。">Timeout Budget</GlossaryTerm>**：超时预算：给整条调用链分配一个总时间，逐层递减下发，确保失败发生得足够快、资源尽早释放。
+*   **<GlossaryTerm term="Token" definition="token：模型处理文本的基本单位，可能是一个词、词的一部分或符号。模型的输入输出都是 token 序列，按 token 计费、按 token 限制上下文长度。">Token</GlossaryTerm>**：token：模型处理文本的基本单位，可能是一个词、词的一部分或符号。模型的输入输出都是 token 序列，按 token 计费、按 token 限制上下文长度。
+*   **<GlossaryTerm term="Token Bucket" definition="令牌桶：以固定速率往桶里放令牌（桶有上限），每个请求要拿走一个令牌才放行，拿不到就拒绝。平时攒下的令牌允许短时突发，长期速率受放令牌速率约束。">Token Bucket</GlossaryTerm>**：令牌桶：以固定速率往桶里放令牌（桶有上限），每个请求要拿走一个令牌才放行，拿不到就拒绝。平时攒下的令牌允许短时突发，长期速率受放令牌速率约束。
+*   **<GlossaryTerm term="Token Budget" definition="token 预算：为一次调用分配的 token 上限，需在 system prompt、历史、检索内容、用户输入、输出预留之间分配。超预算要靠截断、摘要、检索筛选来取舍。">Token Budget</GlossaryTerm>**：token 预算：为一次调用分配的 token 上限，需在 system prompt、历史、检索内容、用户输入、输出预留之间分配。超预算要靠截断、摘要、检索筛选来取舍。
+*   **<GlossaryTerm term="Token Economics" definition="Token 经济学：LLM 按输入(prompt)和输出 token 数计费，且通常输出比输入贵。成本 ≈ (输入 token×输入单价 + 输出 token×输出单价)×调用次数。理解它才能针对性降本。">Token Economics</GlossaryTerm>**：Token 经济学：LLM 按输入(prompt)和输出 token 数计费，且通常输出比输入贵。成本 ≈ (输入 token×输入单价 + 输出 token×输出单价)×调用次数。理解它才能针对性降本。
+*   **<GlossaryTerm term="Token-based Pricing" definition="按 token 计费：调用成本 = 输入 token 数 × 输入单价 + 输出 token 数 × 输出单价。输出通常比输入贵（因为逐 token 串行生成）。不同模型档位单价差异很大。">Token-based Pricing</GlossaryTerm>**：按 token 计费：调用成本 = 输入 token 数 × 输入单价 + 输出 token 数 × 输出单价。输出通常比输入贵（因为逐 token 串行生成）。不同模型档位单价差异很大。
+*   **<GlossaryTerm term="Tokenization" definition="分词：把文本切分成模型能处理的 token 序列的过程。主流用子词（subword）算法如 BPE，在“词表大小”和“序列长度”间取平衡：常见词整体成 token，罕见词拆成子词片段。">Tokenization</GlossaryTerm>**：分词：把文本切分成模型能处理的 token 序列的过程。主流用子词（subword）算法如 BPE，在“词表大小”和“序列长度”间取平衡：常见词整体成 token，罕见词拆成子词片段。
+*   **<GlossaryTerm term="Tokenizer" definition="分词器：把文本切成 token 序列（再映射成数字 ID）的组件。常用子词算法（如 BPE），常见词是一个 token，生僻词被拆成多个，英文一个 token 约 4 个字符，中文常一字一或多 token。">Tokenizer</GlossaryTerm>**：分词器：把文本切成 token 序列（再映射成数字 ID）的组件。常用子词算法（如 BPE），常见词是一个 token，生僻词被拆成多个，英文一个 token 约 4 个字符，中文常一字一或多 token。
+*   **<GlossaryTerm term="Tool Boundary" definition="工具边界：Agent 只能调用被显式授予的、白名单内的工具，每个工具有明确的输入 schema 和权限范围。防止 Agent 做越权或危险操作，是 Agent 安全的基础。">Tool Boundary</GlossaryTerm>**：工具边界：Agent 只能调用被显式授予的、白名单内的工具，每个工具有明确的输入 schema 和权限范围。防止 Agent 做越权或危险操作，是 Agent 安全的基础。
+*   **<GlossaryTerm term="Tool Budget" definition="工具预算：限制某工具的调用次数/花费上限，防止 Agent 在循环里反复调用某工具导致烧钱或副作用累积。">Tool Budget</GlossaryTerm>**：工具预算：限制某工具的调用次数/花费上限，防止 Agent 在循环里反复调用某工具导致烧钱或副作用累积。
+*   **<GlossaryTerm term="Tool Calling" definition="工具调用 / 函数调用：你向模型描述一组可用的工具（函数名、参数 schema），模型在需要时输出“调用哪个工具、传什么参数”，由你的代码执行后把结果回传给模型。让 LLM 能查数据、做动作。">Tool Calling</GlossaryTerm>**：工具调用 / 函数调用：你向模型描述一组可用的工具（函数名、参数 schema），模型在需要时输出“调用哪个工具、传什么参数”，由你的代码执行后把结果回传给模型。让 LLM 能查数据、做动作。
+*   **<GlossaryTerm term="Tool Permission" definition="工具权限：限定工具能访问的数据/资源范围、是否只读、能否产生副作用。基于最小权限原则——给 Agent 的工具默认只读、范围最小。">Tool Permission</GlossaryTerm>**：工具权限：限定工具能访问的数据/资源范围、是否只读、能否产生副作用。基于最小权限原则——给 Agent 的工具默认只读、范围最小。
+*   **<GlossaryTerm term="Tool Schema" definition="工具 schema：工具的名字、用途、参数类型和约束。既是给模型的说明书（让它知道何时用、怎么传参），也是执行前校验参数的依据。">Tool Schema</GlossaryTerm>**：工具 schema：工具的名字、用途、参数类型和约束。既是给模型的说明书（让它知道何时用、怎么传参），也是执行前校验参数的依据。
+*   **<GlossaryTerm term="Tool Schema Protocol" definition="工具模式协议：多智能体中用于统一描述外部工具输入入参、JSON 结构体和出参的序列化标准规范。">Tool Schema Protocol</GlossaryTerm>**：工具模式协议：多智能体中用于统一描述外部工具输入入参、JSON 结构体和出参的序列化标准规范。
+*   **<GlossaryTerm term="Top-p Sampling" definition="Top-p 采样：只在累计概率达到 p 的最小 token 集合里采样，动态截掉长尾的低概率 token。">Top-p Sampling</GlossaryTerm>**：Top-p 采样：只在累计概率达到 p 的最小 token 集合里采样，动态截掉长尾的低概率 token。
+*   **<GlossaryTerm term="Trace ID" definition="Trace ID (链路追踪标识)：在分布式追踪系统中，用于唯一标识单个逻辑请求的唯一字符串标识符。当请求进入系统边界时生成，并通过进程内和进程间通信（如 HTTP Header）向下游所有微服务透传，使得跨越多个独立服务的调用链得以串联成一个完整的调用拓扑图。">Trace ID</GlossaryTerm>**：Trace ID (链路追踪标识)：在分布式追踪系统中，用于唯一标识单个逻辑请求的唯一字符串标识符。当请求进入系统边界时生成，并通过进程内和进程间通信（如 HTTP Header）向下游所有微服务透传，使得跨越多个独立服务的调用链得以串联成一个完整的调用拓扑图。
+*   **<GlossaryTerm term="Trace Log" definition="轨迹日志：智能体在运行期间产生的、详尽记录每一步 Reasoning (推理)、Action (行动参数) 与 Observation (外部反馈) 的结构化执行日志，是进行轨迹评测与异常排错的基础数据。">Trace Log</GlossaryTerm>**：轨迹日志：智能体在运行期间产生的、详尽记录每一步 Reasoning (推理)、Action (行动参数) 与 Observation (外部反馈) 的结构化执行日志，是进行轨迹评测与异常排错的基础数据。
+*   **<GlossaryTerm term="Traces" definition="追踪：用一个 trace_id 把一次请求在所有服务里的步骤串成一条时间线，看清它经过哪些跳、各花多久。">Traces</GlossaryTerm>**：追踪：用一个 trace_id 把一次请求在所有服务里的步骤串成一条时间线，看清它经过哪些跳、各花多久。
+*   **<GlossaryTerm term="Traces / Metrics / Logs" definition="可观测三支柱：Traces（追踪，一次请求的完整调用链）、Metrics（指标，可聚合的时间序列如 P95 延迟/成本/质量分）、Logs（日志，具体事件的详细记录如某次调用的完整 prompt 和输出）。三者互补：指标发现异常、追踪定位到步、日志看清细节。">Traces / Metrics / Logs</GlossaryTerm>**：可观测三支柱：Traces（追踪，一次请求的完整调用链）、Metrics（指标，可聚合的时间序列如 P95 延迟/成本/质量分）、Logs（日志，具体事件的详细记录如某次调用的完整 prompt 和输出）。三者互补：指标发现异常、追踪定位到步、日志看清细节。
+*   **<GlossaryTerm term="Tradeoff" definition="折中/权衡：系统设计中不存在完美技术，必须在两个相互竞争的指标（如一致性 vs 延迟，成本 vs 冗余）之间做出妥协取舍。">Tradeoff</GlossaryTerm>**：折中/权衡：系统设计中不存在完美技术，必须在两个相互竞争的指标（如一致性 vs 延迟，成本 vs 冗余）之间做出妥协取舍。
+*   **<GlossaryTerm term="Trajectory Evaluation" definition="轨迹评测：评测 Agent 完成任务的整个过程（每一步的推理、动作、观察），而不只是最终结果。衡量是否达成目标、过程是否合理高效、有无违规步骤。">Trajectory Evaluation</GlossaryTerm>**：轨迹评测：评测 Agent 完成任务的整个过程（每一步的推理、动作、观察），而不只是最终结果。衡量是否达成目标、过程是否合理高效、有无违规步骤。
+*   **<GlossaryTerm term="Transactional Outbox" definition="Transactional Outbox 是一种确保关系型数据库更新与异步消息发布具备最终一致性的设计模式。它通过在同一个本地事务中更新业务表并插入事件记录表（Outbox表），由独立的后台线程扫描 Outbox 表以保证消息至少一次投递成功。">Transactional Outbox</GlossaryTerm>**：Transactional Outbox 是一种确保关系型数据库更新与异步消息发布具备最终一致性的设计模式。它通过在同一个本地事务中更新业务表并插入事件记录表（Outbox表），由独立的后台线程扫描 Outbox 表以保证消息至少一次投递成功。
+*   **<GlossaryTerm term="Transition Table" definition="转移表：用一张数据结构（如字典）集中描述“(当前状态, 事件) → 新状态”的所有合法转移。查表即转移，非法转移直接拒绝。">Transition Table</GlossaryTerm>**：转移表：用一张数据结构（如字典）集中描述“(当前状态, 事件) → 新状态”的所有合法转移。查表即转移，非法转移直接拒绝。
+*   **<GlossaryTerm term="TrueTime API" definition="Google Spanner 基于 GPS 和原子钟硬件提供的授时 API，它返回一个包含误差范围的闭区间 [earliest, latest]，将全球服务器之间的时钟误差硬限制在 ε (通常为 1-7ms) 内。">TrueTime API</GlossaryTerm>**：Google Spanner 基于 GPS 和原子钟硬件提供的授时 API，它返回一个包含误差范围的闭区间 [earliest, latest]，将全球服务器之间的时钟误差硬限制在 ε (通常为 1-7ms) 内。
+*   **<GlossaryTerm term="Trust Boundary" definition="信任边界：系统中数据/控制从‘不可信’跨入‘可信’区域的界线（如用户输入进入系统、外部文档进入 prompt、Agent 触发真实操作）。威胁建模要识别每条信任边界并在其上设防（校验、过滤、授权）。">Trust Boundary</GlossaryTerm>**：信任边界：系统中数据/控制从‘不可信’跨入‘可信’区域的界线（如用户输入进入系统、外部文档进入 prompt、Agent 触发真实操作）。威胁建模要识别每条信任边界并在其上设防（校验、过滤、授权）。
+*   **<GlossaryTerm term="TTFT" definition="首 token 延迟 (Time to First Token, TTFT)：从用户发送请求到模型输出第一个 token 的时间，取决于 Prefill 阶段处理全部输入 prompt 的并行计算时间。">TTFT</GlossaryTerm>**：首 token 延迟 (Time to First Token, TTFT)：从用户发送请求到模型输出第一个 token 的时间，取决于 Prefill 阶段处理全部输入 prompt 的并行计算时间。
+*   **<GlossaryTerm term="TTFT / TPOT" definition="TTFT（Time To First Token，首 token 延迟）和 TPOT（Time Per Output Token，每输出 token 耗时）是 LLM 特有的延迟指标。流式输出下用户体感取决于 TTFT 和生成速度，而非只看总耗时。">TTFT / TPOT</GlossaryTerm>**：TTFT（Time To First Token，首 token 延迟）和 TPOT（Time Per Output Token，每输出 token 耗时）是 LLM 特有的延迟指标。流式输出下用户体感取决于 TTFT 和生成速度，而非只看总耗时。
+*   **<GlossaryTerm term="TTL" definition="存活时间（Time To Live）：缓存项的过期时间。到期自动失效、下次读重新从库加载。是最简单的最终一致手段：陈旧最多持续一个 TTL。">TTL</GlossaryTerm>**：存活时间（Time To Live）：缓存项的过期时间。到期自动失效、下次读重新从库加载。是最简单的最终一致手段：陈旧最多持续一个 TTL。
+*   **<GlossaryTerm term="Twelve-Factor App" definition="一套广泛采用的云原生应用方法论。其中一条核心原则：应用进程应当无状态，任何需要持久化的数据都交给『后端服务』（数据库、缓存等）。">Twelve-Factor App</GlossaryTerm>**：一套广泛采用的云原生应用方法论。其中一条核心原则：应用进程应当无状态，任何需要持久化的数据都交给『后端服务』（数据库、缓存等）。
+*   **<GlossaryTerm term="Two-Phase Commit" definition="二阶段提交 (2PC)：一种在分布式系统中实现强一致性/原子性的经典协议。分为准备阶段和提交阶段，通过协调者确保所有参与者要么全部提交事务，要么全部回滚。缺点是在准备阶段所有资源会被长期锁定，容易发生单点故障和严重的吞吐率衰退。">Two-Phase Commit</GlossaryTerm>**：二阶段提交 (2PC)：一种在分布式系统中实现强一致性/原子性的经典协议。分为准备阶段和提交阶段，通过协调者确保所有参与者要么全部提交事务，要么全部回滚。缺点是在准备阶段所有资源会被长期锁定，容易发生单点故障和严重的吞吐率衰退。
+*   **<GlossaryTerm term="Two-stage Retrieval" definition="两阶段检索：第一阶段用快速方法（向量/BM25）召回较多候选（高召回），第二阶段用更准但更慢的重排模型对候选精排，取 top-k 进上下文（高精度）。兼顾速度和质量。">Two-stage Retrieval</GlossaryTerm>**：两阶段检索：第一阶段用快速方法（向量/BM25）召回较多候选（高召回），第二阶段用更准但更慢的重排模型对候选精排，取 top-k 进上下文（高精度）。兼顾速度和质量。
+
+## U
+
+*   **<GlossaryTerm term="Unique Constraint" definition="唯一约束：保证某字段（或字段组合）不重复，比如同一用户不能报名同一活动两次。是数据完整性的保障。">Unique Constraint</GlossaryTerm>**：唯一约束：保证某字段（或字段组合）不重复，比如同一用户不能报名同一活动两次。是数据完整性的保障。
+*   **<GlossaryTerm term="Universal Scalability Law" definition="通用扩展律（USL）：在 Amdahl 的串行开销之上，再加入“节点间协调/一致性”的开销。节点多到一定程度，协调成本会让总吞吐不升反降。">Universal Scalability Law</GlossaryTerm>**：通用扩展律（USL）：在 Amdahl 的串行开销之上，再加入“节点间协调/一致性”的开销。节点多到一定程度，协调成本会让总吞吐不升反降。
+*   **<GlossaryTerm term="USE Method" definition="USE 方法：面向资源的监控三指标——Utilization（利用率）、Saturation（饱和度/排队）、Errors（错误）。回答“资源是不是瓶颈”。">USE Method</GlossaryTerm>**：USE 方法：面向资源的监控三指标——Utilization（利用率）、Saturation（饱和度/排队）、Errors（错误）。回答“资源是不是瓶颈”。
+
+## V
+
+*   **<GlossaryTerm term="Vacuum" definition="PostgreSQL 特有的垃圾回收与空间压实机制。由于 MVCC 采用追加写，更新和删除会在堆中留存大量死亡元组，Vacuum 负责扫描并清理这些死亡元组，释放空闲空间供新数据写入，并防止事务ID环绕（Wrapround）风险。">Vacuum</GlossaryTerm>**：PostgreSQL 特有的垃圾回收与空间压实机制。由于 MVCC 采用追加写，更新和删除会在堆中留存大量死亡元组，Vacuum 负责扫描并清理这些死亡元组，释放空闲空间供新数据写入，并防止事务ID环绕（Wrapround）风险。
+*   **<GlossaryTerm term="Vector Database" definition="向量数据库：专门存储和检索向量的数据库，提供 ANN 索引、元数据过滤、增删改、持久化、分片扩展等能力。如 pgvector、Qdrant、Milvus、Pinecone 等。">Vector Database</GlossaryTerm>**：向量数据库：专门存储和检索向量的数据库，提供 ANN 索引、元数据过滤、增删改、持久化、分片扩展等能力。如 pgvector、Qdrant、Milvus、Pinecone 等。
+*   **<GlossaryTerm term="Vendor Lock-in" definition="厂商锁定：因深度依赖某云厂商的专有服务/API，迁移到别家成本极高，导致议价能力弱、受制于该厂商的价格、可用性和路线图。">Vendor Lock-in</GlossaryTerm>**：厂商锁定：因深度依赖某云厂商的专有服务/API，迁移到别家成本极高，导致议价能力弱、受制于该厂商的价格、可用性和路线图。
+*   **<GlossaryTerm term="Vertical Pod Autoscaler" definition="纵向 Pod 自动伸缩器 (VPA)：根据容器的实际 CPU 和内存使用率，自动调整 Pod 容器的资源请求（Requests）和限制（Limits）设定，实现单节点内的资源垂直伸缩，通常需要重启 Pod 生效。">Vertical Pod Autoscaler</GlossaryTerm>**：纵向 Pod 自动伸缩器 (VPA)：根据容器的实际 CPU 和内存使用率，自动调整 Pod 容器的资源请求（Requests）和限制（Limits）设定，实现单节点内的资源垂直伸缩，通常需要重启 Pod 生效。
+*   **<GlossaryTerm term="Vertical Scaling" definition="垂直扩展（scale up）：换更强的单机（更多 CPU/内存）。简单、无需改架构，但有物理上限、且单点风险。">Vertical Scaling</GlossaryTerm>**：垂直扩展（scale up）：换更强的单机（更多 CPU/内存）。简单、无需改架构，但有物理上限、且单点风险。
+*   **<GlossaryTerm term="Virtual Machine" definition="虚拟机：通过 hypervisor 虚拟出完整硬件、运行独立操作系统内核。隔离更强但更重（每台带一个完整 OS），启动慢、占资源多。">Virtual Machine</GlossaryTerm>**：虚拟机：通过 hypervisor 虚拟出完整硬件、运行独立操作系统内核。隔离更强但更重（每台带一个完整 OS），启动慢、占资源多。
+*   **<GlossaryTerm term="Virtual Nodes" definition="虚拟节点：让每个物理实例在哈希环上对应多个虚拟点，使键分布更均匀，避免少数实例承担过多键（数据倾斜）。">Virtual Nodes</GlossaryTerm>**：虚拟节点：让每个物理实例在哈希环上对应多个虚拟点，使键分布更均匀，避免少数实例承担过多键（数据倾斜）。
+*   **<GlossaryTerm term="vLLM" definition="vLLM：一款高性能开源大模型推理引擎，通过提出 PagedAttention 显存物理分页分配机制，极大地消存在显存碎片，大幅拉高了系统的并发吞吐量。">vLLM</GlossaryTerm>**：vLLM：一款高性能开源大模型推理引擎，通过提出 PagedAttention 显存物理分页分配机制，极大地消存在显存碎片，大幅拉高了系统的并发吞吐量。
+
+## W
+
+*   **<GlossaryTerm term="WAL" definition="WAL (Write-Ahead Logging) 预写日志是关系型数据库保证持久性与一致性的关键技术。在数据页脏数据写入磁盘前，必须先将对应的变更日志（WAL）强行刷盘，以保证即使断电重启，也能通过日志重放恢复状态。">WAL</GlossaryTerm>**：WAL (Write-Ahead Logging) 预写日志是关系型数据库保证持久性与一致性的关键技术。在数据页脏数据写入磁盘前，必须先将对应的变更日志（WAL）强行刷盘，以保证即使断电重启，也能通过日志重放恢复状态。
+*   **<GlossaryTerm term="WCU (Write Capacity Unit, 写入容量单位)" definition="DynamoDB 计费与限流指标。1 个 WCU 对应每秒 1 次最大 1KB 的写入操作。">WCU (Write Capacity Unit, 写入容量单位)</GlossaryTerm>**：DynamoDB 计费与限流指标。1 个 WCU 对应每秒 1 次最大 1KB 的写入操作。
+*   **<GlossaryTerm term="Weak Reference" definition="弱引用 (Weak Reference)：一种不阻碍对象被垃圾回收器 (GC) 自动回收的特殊引用。在观察者模式中，Subject 可通过弱引用集合持有 Observer，从而即使忘记显式注销订阅，Observer 依然能在外部无引用时被 GC 回收，防止失效监听者内存泄露。">Weak Reference</GlossaryTerm>**：弱引用 (Weak Reference)：一种不阻碍对象被垃圾回收器 (GC) 自动回收的特殊引用。在观察者模式中，Subject 可通过弱引用集合持有 Observer，从而即使忘记显式注销订阅，Observer 依然能在外部无引用时被 GC 回收，防止失效监听者内存泄露。
+*   **<GlossaryTerm term="Weighted Voting" definition="加权投票：不同 Agent 的票权重不同——更可信/更专业/置信度更高的 Agent 票更重。比简单多数决更合理地综合不同质量的意见。">Weighted Voting</GlossaryTerm>**：加权投票：不同 Agent 的票权重不同——更可信/更专业/置信度更高的 Agent 票更重。比简单多数决更合理地综合不同质量的意见。
+*   **<GlossaryTerm term="Wide-Column" definition="宽列存储：为海量写入和水平扩展设计的 NoSQL（如 Cassandra）。擅长超大写吞吐、按分区键查询。">Wide-Column</GlossaryTerm>**：宽列存储：为海量写入和水平扩展设计的 NoSQL（如 Cassandra）。擅长超大写吞吐、按分区键查询。
+*   **<GlossaryTerm term="Worker Agent" definition="执行者/从属智能体：多智能体系统（尤其是主管模式）中专门承担某一项具体子任务的轻量智能体节点，只接受上层 Supervisor 的调配。">Worker Agent</GlossaryTerm>**：执行者/从属智能体：多智能体系统（尤其是主管模式）中专门承担某一项具体子任务的轻量智能体节点，只接受上层 Supervisor 的调配。
+*   **<GlossaryTerm term="Workflow" definition="工作流：预先用代码写死步骤顺序的多步流程（步骤 A→B→C 固定）。可能每步调 LLM，但“下一步是什么”由代码决定，不由模型自主决定。确定、可控、可测。">Workflow</GlossaryTerm>**：工作流：预先用代码写死步骤顺序的多步流程（步骤 A→B→C 固定）。可能每步调 LLM，但“下一步是什么”由代码决定，不由模型自主决定。确定、可控、可测。
+*   **<GlossaryTerm term="Wrapper" definition="包装器 (Wrapper)：一类结构型设计模式的统称。它们通过持有一个被包装对象的引用，并将外层的方法调用委托执行，从而在不修改原对象代码的基础上调整其接口长相、控制访问权限或叠加增强功能。">Wrapper</GlossaryTerm>**：包装器 (Wrapper)：一类结构型设计模式的统称。它们通过持有一个被包装对象的引用，并将外层的方法调用委托执行，从而在不修改原对象代码的基础上调整其接口长相、控制访问权限或叠加增强功能。
+*   **<GlossaryTerm term="Write Amplification" definition="写放大：在系统设计中指一次逻辑写请求，在底层数据库或磁盘中引发了成百上千倍物理写入的现象。在 Feed 写扩散中表现为粉丝数等于写放大倍数。">Write Amplification</GlossaryTerm>**：写放大：在系统设计中指一次逻辑写请求，在底层数据库或磁盘中引发了成百上千倍物理写入的现象。在 Feed 写扩散中表现为粉丝数等于写放大倍数。
+*   **<GlossaryTerm term="Write Skew" definition="写偏斜：两个事务各自基于同一份快照做决定并写不同的行，单独都合法，合起来却破坏了约束（如两个医生同时请假，各自看到还有人值班）。可串行化才能完全防住。">Write Skew</GlossaryTerm>**：写偏斜：两个事务各自基于同一份快照做决定并写不同的行，单独都合法，合起来却破坏了约束（如两个医生同时请假，各自看到还有人值班）。可串行化才能完全防住。
+*   **<GlossaryTerm term="Write-Back" definition="写回/写behind：写时只写缓存、立即返回，异步批量刷到数据库。写极快，但缓存挂了可能丢未刷的数据。">Write-Back</GlossaryTerm>**：写回/写behind：写时只写缓存、立即返回，异步批量刷到数据库。写极快，但缓存挂了可能丢未刷的数据。
+*   **<GlossaryTerm term="Write-Behind" definition="异步写回 (Write-Behind)：一种极速写优化缓存策略。写操作仅作用于缓存内存，并立即向客户端返回成功；后台工作协程以异步分批（Batching）形式将脏数据合并落盘写入数据库。">Write-Behind</GlossaryTerm>**：异步写回 (Write-Behind)：一种极速写优化缓存策略。写操作仅作用于缓存内存，并立即向客户端返回成功；后台工作协程以异步分批（Batching）形式将脏数据合并落盘写入数据库。
+*   **<GlossaryTerm term="Write-Through" definition="写穿透：写时同步写缓存和数据库（都成功才算成功）。缓存始终最新，但写变慢。">Write-Through</GlossaryTerm>**：写穿透：写时同步写缓存和数据库（都成功才算成功）。缓存始终最新，但写变慢。
+
+## Y
+
+*   **<GlossaryTerm term="YAGNI" definition="YAGNI 原则：You Aren">YAGNI</GlossaryTerm>**：YAGNI 原则：You Aren
+
+## Z
+
+*   **<GlossaryTerm term="Zero-shot" definition="零样本提示 (Zero-shot Prompting)：直接向模型描述任务并给出输入，不提供任何具体的事例或范例，完全依赖模型已有的知识和泛化能力进行作答。">Zero-shot</GlossaryTerm>**：零样本提示 (Zero-shot Prompting)：直接向模型描述任务并给出输入，不提供任何具体的事例或范例，完全依赖模型已有的知识和泛化能力进行作答。
+
+## 一
+
+*   **<GlossaryTerm term="一致性哈希" definition="一致性哈希是一种特殊的哈希算法。它将哈希值空间组织为一个虚拟的圆环（Token Ring），所有数据的主键和物理节点均哈希后映射到环上，数据沿顺时针方向寻找最近的物理节点进行存储，这极大地降低了节点变更时的数据搬迁开销。">一致性哈希</GlossaryTerm>**：一致性哈希是一种特殊的哈希算法。它将哈希值空间组织为一个虚拟的圆环（Token Ring），所有数据的主键和物理节点均哈希后映射到环上，数据沿顺时针方向寻找最近的物理节点进行存储，这极大地降低了节点变更时的数据搬迁开销。
+
+## 两
+
+*   **<GlossaryTerm term="两阶段提交" definition="一种用于保证跨多个分布式节点/分片原子性写入的协议。包含准备（Prepare）和提交（Commit）两个阶段。经典 2PC 存在单点协调器崩溃导致事务卡死的问题，Spanner 通过将参与者和协调器均用 Paxos 组承载来解决此问题。">两阶段提交</GlossaryTerm>**：一种用于保证跨多个分布式节点/分片原子性写入的协议。包含准备（Prepare）和提交（Commit）两个阶段。经典 2PC 存在单点协调器崩溃导致事务卡死的问题，Spanner 通过将参与者和协调器均用 Paxos 组承载来解决此问题。
+
+## 乐
+
+*   **<GlossaryTerm term="乐观锁" definition="通过资源版本号 (resourceVersion) 规避并发冲突的机制。API Server 在写入资源前会校验提交的版本是否与 etcd 中当前最新版本一致，若不一致则拒绝写入并提示冲突，由客户端重试。">乐观锁</GlossaryTerm>**：通过资源版本号 (resourceVersion) 规避并发冲突的机制。API Server 在写入资源前会校验提交的版本是否与 etcd 中当前最新版本一致，若不一致则拒绝写入并提示冲突，由客户端重试。
+
+## 事
+
+*   **<GlossaryTerm term="事务快照" definition="事务快照是读事务启动时系统活跃事务的视图，包含当前活跃事务列表、已提交的最大事务号等，用以在 MVCC 下判断哪些数据版本对当前事务可见。">事务快照</GlossaryTerm>**：事务快照是读事务启动时系统活跃事务的视图，包含当前活跃事务列表、已提交的最大事务号等，用以在 MVCC 下判断哪些数据版本对当前事务可见。
+
+## 写
+
+*   **<GlossaryTerm term="写时复制" definition="写时复制 (Copy-on-Write / COW) 是一种操作系统层面的物理内存管理机制。在 fork() 子进程后，父子进程共享相同的物理内存页。只有在父进程尝试修改某页数据时，内核才会把该页物理拷贝一份给父进程，从而实现了在不阻塞父进程写入的前提下，让子进程安全读取静态内存快照。">写时复制</GlossaryTerm>**：写时复制 (Copy-on-Write / COW) 是一种操作系统层面的物理内存管理机制。在 fork() 子进程后，父子进程共享相同的物理内存页。只有在父进程尝试修改某页数据时，内核才会把该页物理拷贝一份给父进程，从而实现了在不阻塞父进程写入的前提下，让子进程安全读取静态内存快照。
+
+## 向
+
+*   **<GlossaryTerm term="向量时钟" definition="向量时钟（Vector Clock）是一种用于建立分布式系统中事件因果关系（Causal Order）的模型。它是一个由 [节点ID, 计数器] 组成的向量，通过对比两个时钟里各个节点的计数器大小，可以精准判断两个版本是属于前后因果演进关系，还是并发冲突关系。">向量时钟</GlossaryTerm>**：向量时钟（Vector Clock）是一种用于建立分布式系统中事件因果关系（Causal Order）的模型。它是一个由 [节点ID, 计数器] 组成的向量，通过对比两个时钟里各个节点的计数器大小，可以精准判断两个版本是属于前后因果演进关系，还是并发冲突关系。
+
+## 哈
+
+*   **<GlossaryTerm term="哈希槽" definition="哈希槽 (Hash Slot) 是 Redis Cluster 进行分布式水平分片的物理逻辑单元。集群固定划分了 16384 个哈希槽，所有 Key 通过 CRC16 算法哈希后对 16384 取模，映射到具体的槽位上，各 Redis 节点各自负责一部分槽位以实现水平伸缩。">哈希槽</GlossaryTerm>**：哈希槽 (Hash Slot) 是 Redis Cluster 进行分布式水平分片的物理逻辑单元。集群固定划分了 16384 个哈希槽，所有 Key 通过 CRC16 算法哈希后对 16384 取模，映射到具体的槽位上，各 Redis 节点各自负责一部分槽位以实现水平伸缩。
+
+## 外
+
+*   **<GlossaryTerm term="外部一致性" definition="外部一致性即线性一致性，指在分布式系统中，如果事务 T2 在事务 T1 提交返回后才开始发起，则 T2 的时间戳和生效顺序必须在 T1 之后，确保全局时序与真实物理时间严格一致。">外部一致性</GlossaryTerm>**：外部一致性即线性一致性，指在分布式系统中，如果事务 T2 在事务 T1 提交返回后才开始发起，则 T2 的时间戳和生效顺序必须在 T1 之后，确保全局时序与真实物理时间严格一致。
+
+## 容
+
+*   **<GlossaryTerm term="容器运行时接口 (CRI)" definition="Kubernetes 定义的节点代理 Kubelet 与底层容器运行时（如 containerd、CRI-O）之间的 gRPC 协议标准，用于解耦特定的容器实现细节。">容器运行时接口 (CRI)</GlossaryTerm>**：Kubernetes 定义的节点代理 Kubelet 与底层容器运行时（如 containerd、CRI-O）之间的 gRPC 协议标准，用于解耦特定的容器实现细节。
+
+## 幂
+
+*   **<GlossaryTerm term="幂等键" definition="幂等键（Idempotency Key）是一个由客户端生成的唯一 UUID 标头。Stripe 网关以此作为唯一标识，如果发现相同的 Key 已经执行过扣款，将直接跳过后续的银行网卡调用，原地重放上次在数据库中记录的响应报文。">幂等键</GlossaryTerm>**：幂等键（Idempotency Key）是一个由客户端生成的唯一 UUID 标头。Stripe 网关以此作为唯一标识，如果发现相同的 Key 已经执行过扣款，将直接跳过后续的银行网卡调用，原地重放上次在数据库中记录的响应报文。
+
+## 扩
+
+*   **<GlossaryTerm term="扩展宿主" definition="扩展宿主（Extension Host）是 VS Code 专门为运行第三方插件而启动的独立 Node.js 进程。插件在该进程中执行，无法直接访问 UI 的 DOM 树，所有对编辑器的操作必须通过 IPC 异步通道发送给渲染进程，从而防止插件阻塞打字渲染。">扩展宿主</GlossaryTerm>**：扩展宿主（Extension Host）是 VS Code 专门为运行第三方插件而启动的独立 Node.js 进程。插件在该进程中执行，无法直接访问 UI 的 DOM 树，所有对编辑器的操作必须通过 IPC 异步通道发送给渲染进程，从而防止插件阻塞打字渲染。
+
+## 有
+
+*   **<GlossaryTerm term="有向无环图" definition="有向无环图（Directed Acyclic Graph, DAG）是指一个无环的有向图。在 Git 中，所有的 Commit 节点通过指向其 Parent Commit 哈希，串联起一条或多条单向的历史长河，没有闭环，支持并行分支与合并。">有向无环图</GlossaryTerm>**：有向无环图（Directed Acyclic Graph, DAG）是指一个无环的有向图。在 Git 中，所有的 Commit 节点通过指向其 Parent Commit 哈希，串联起一条或多条单向的历史长河，没有闭环，支持并行分支与合并。
+
+## 混
+
+*   **<GlossaryTerm term="混合逻辑时钟" definition="一种不需要专用物理硬件（如 GPS 或原子钟），通过结合物理时钟 and 逻辑时钟（如 Lamport 时钟）来生成单调递增且贴近物理时间的时间戳的算法，在 CockroachDB 等开源分布式数据库中被广泛使用。">混合逻辑时钟</GlossaryTerm>**：一种不需要专用物理硬件（如 GPS 或原子钟），通过结合物理时钟 and 逻辑时钟（如 Lamport 时钟）来生成单调递增且贴近物理时间的时间戳的算法，在 CockroachDB 等开源分布式数据库中被广泛使用。
+
+## 渐
+
+*   **<GlossaryTerm term="渐进式 Rehash" definition="渐进式 Rehash 是 Redis 字典在扩容时使用的一种平滑迁移算法。它在内部维护两个哈希表，通过在每次读写命令中顺带迁移一个桶的数据，以及在后台定时器中分批迁移，将巨大的扩容开销分摊到平时的请求中，从而避免了单线程卡死。">渐进式 Rehash</GlossaryTerm>**：渐进式 Rehash 是 Redis 字典在扩容时使用的一种平滑迁移算法。它在内部维护两个哈希表，通过在每次读写命令中顺带迁移一个桶的数据，以及在后台定时器中分批迁移，将巨大的扩容开销分摊到平时的请求中，从而避免了单线程卡死。
+
+## 片
+
+*   **<GlossaryTerm term="片表" definition="片表（Piece Table）是文本编辑器中管理大文件编辑的数据结构。它不直接在原始字符串上插入，而是维护一个只读的 Original 缓冲区、一个只写的 Append 缓冲区，以及一个由逻辑指针节点组成的链表。所有的插入/删除操作仅需修改链表指针节点，从而实现 O(1) 级的编辑开销。">片表</GlossaryTerm>**：片表（Piece Table）是文本编辑器中管理大文件编辑的数据结构。它不直接在原始字符串上插入，而是维护一个只读的 Original 缓冲区、一个只写的 Append 缓冲区，以及一个由逻辑指针节点组成的链表。所有的插入/删除操作仅需修改链表指针节点，从而实现 O(1) 级的编辑开销。
+
+## 自
+
+*   **<GlossaryTerm term="自我保护模式" definition="自我保护模式是 Eureka 在网络分区故障时的一种防护机制。当 Eureka 检测到心跳丢失率突然超过 15% 时，它会判定发生了网络异常而非服务崩溃，从而暂停剔除过期实例，保留所有路由信息以保证服务高可用。">自我保护模式</GlossaryTerm>**：自我保护模式是 Eureka 在网络分区故障时的一种防护机制。当 Eureka 检测到心跳丢失率突然超过 15% 时，它会判定发生了网络异常而非服务崩溃，从而暂停剔除过期实例，保留所有路由信息以保证服务高可用。
+
+## 虚
+
+*   **<GlossaryTerm term="虚拟滚动" definition="虚拟滚动（Virtual Scroll / List Virtualization）是前端开发中用于展示海量行列表的一种性能优化技术。它并不物理渲染所有行，而是仅在 DOM 中创建与视口（Viewport）大小相同的行节点，在滚动时动态修改数据和高度位移，以此用极少的 DOM 节点表达无限的内容。">虚拟滚动</GlossaryTerm>**：虚拟滚动（Virtual Scroll / List Virtualization）是前端开发中用于展示海量行列表的一种性能优化技术。它并不物理渲染所有行，而是仅在 DOM 中创建与视口（Viewport）大小相同的行节点，在滚动时动态修改数据和高度位移，以此用极少的 DOM 节点表达无限的内容。
+
+## 零
+
+*   **<GlossaryTerm term="零拷贝" definition="零拷贝（Zero-Copy）是指通过操作系统的 sendfile() 系统调用，直接在内核态将页缓存中的数据拷贝到网络 Socket 缓冲区，数据传输不经过 JVM 用户内存空间，省去了 2 次拷贝和上下文切换，大幅降低了 CPU 压力。">零拷贝</GlossaryTerm>**：零拷贝（Zero-Copy）是指通过操作系统的 sendfile() 系统调用，直接在内核态将页缓存中的数据拷贝到网络 Socket 缓冲区，数据传输不经过 JVM 用户内存空间，省去了 2 次拷贝和上下文切换，大幅降低了 CPU 压力。
+
+## 面
+
+*   **<GlossaryTerm term="面向服务架构" definition="面向服务架构（SOA - Service Oriented Architecture）是一种分布式系统设计范式。它要求将大型单体系统拆分为多个拥有独立数据库、仅通过标准接口（如 HTTP/REST API）进行通信的独立服务，每个服务由独立的小团队维护。">面向服务架构</GlossaryTerm>**：面向服务架构（SOA - Service Oriented Architecture）是一种分布式系统设计范式。它要求将大型单体系统拆分为多个拥有独立数据库、仅通过标准接口（如 HTTP/REST API）进行通信的独立服务，每个服务由独立的小团队维护。
+
+## 页
+
+*   **<GlossaryTerm term="页缓存" definition="页缓存（Page Cache）是操作系统内核为了加速磁盘文件读写而在内存中开辟的数据缓存页。读写文件时优先读写页缓存，若缺页则由内核发起异步磁盘 I/O。">页缓存</GlossaryTerm>**：页缓存（Page Cache）是操作系统内核为了加速磁盘文件读写而在内存中开辟的数据缓存页。读写文件时优先读写页缓存，若缺页则由内核发起异步磁盘 I/O。
+
+## 顺
+
+*   **<GlossaryTerm term="顺序写" definition="顺序写是指数据以完全追加的形式写入文件末尾，这使磁头无需反复寻道，从而将机械硬盘或 SSD 的随机 I/O 瓶颈消除，获得等同于纯内存的写入吞吐。">顺序写</GlossaryTerm>**：顺序写是指数据以完全追加的形式写入文件末尾，这使磁头无需反复寻道，从而将机械硬盘或 SSD 的随机 I/O 瓶颈消除，获得等同于纯内存的写入吞吐。
+
+## 高
+
+*   **<GlossaryTerm term="高水位" definition="高水位（High Watermark / HW）是指 ISR 集合中所有副本共同复制完成的最小消息位移（Offset）。Consumer 最多只能消费到高水位以下的消息，以防未同步成功的消息因 Leader 挂掉而发生脏读和数据丢失。">高水位</GlossaryTerm>**：高水位（High Watermark / HW）是指 ISR 集合中所有副本共同复制完成的最小消息位移（Offset）。Consumer 最多只能消费到高水位以下的消息，以防未同步成功的消息因 Leader 挂掉而发生脏读和数据丢失。
+
+## 默
+
+*   **<GlossaryTerm term="默克尔树" definition="默克尔树（Merkle Tree）是一种哈希树。在 Git 中，Tree 对象的哈希值是由其子项（Blob 文件的哈希与子 Tree 文件夹的哈希）组合拼接后再次哈希得到的。这使得判断两个庞大文件夹是否存在差异，仅需比对两棵树的根哈希是否相同即可。">默克尔树</GlossaryTerm>**：默克尔树（Merkle Tree）是一种哈希树。在 Git 中，Tree 对象的哈希值是由其子项（Blob 文件的哈希与子 Tree 文件夹的哈希）组合拼接后再次哈希得到的。这使得判断两个庞大文件夹是否存在差异，仅需比对两棵树的根哈希是否相同即可。
