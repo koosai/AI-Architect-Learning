@@ -72,4 +72,5 @@
 ## 阶段五：Atlas 案例增量扩建 (A2)
 
 - [x] **A2. Claude / Gemini**：长上下文工程与 AI Artifacts 容器化沙箱架构 ✅
+- [x] **K7. LangGraph / Agent 框架**：基于状态图的多智能体编排与容错架构 ✅
 
