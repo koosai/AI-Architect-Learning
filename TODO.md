@@ -77,4 +77,5 @@
 - [x] **A5. Perplexity**：RAG 搜索问答产品化与多源并发检索编排架构 ✅
 - [x] **C4. Discord**：Elixir 网关、按 Guild 分片与 ScyllaDB 存储架构 ✅
 - [x] **F3. AWS Lambda**：基于 Firecracker microVM 的 Serverless 架构与冷启动优化 ✅
+- [x] **K3. Ray**：分布式 Actor 调度与大模型训练/RLHF 基座架构 ✅
 
