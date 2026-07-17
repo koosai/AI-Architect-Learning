@@ -51,7 +51,7 @@
 | E2 | Windows NT（桌面） ✅ | ★★ | 混合内核、HAL、Win32 子系统与 WSL ✅ |
 | E3 | macOS / Darwin ✅ | ★★ | XNU=Mach+BSD 混合、沙箱与签名链 ✅ |
 | E4 | Android ✅ | ★★★ | ART 运行时、Binder IPC、进程生命周期与 LMK |
-| E5 | iOS | ★★ | 安全启动链、沙箱模型、Metal 图形栈 |
+| E5 | iOS ✅ | ★★ | 安全启动链、沙箱模型、Metal 图形栈 ✅ |
 | E6 | FreeRTOS（嵌入式 MCU） | ★★ | 抢占式微型调度器、内存受限设计（几 KB RAM） |
 | E7 | QNX（车载实时） | ★★ | 微内核消息传递、确定性延迟、故障隔离 |
 | E8 | VxWorks（航天/特殊） | ★ | 硬实时、火星车上的优先级反转事故（经典案例） |

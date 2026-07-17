@@ -90,4 +90,5 @@
 - [x] **D7. Jira + Confluence**：工作流状态机引擎、插件架构（如何让第三方安全扩展） ✅
 - [x] **E2. Windows NT**：混合内核、HAL、Win32 子系统与 WSL ✅
 - [x] **E3. macOS / Darwin**：XNU=Mach+BSD 混合、沙箱与签名链 ✅
+- [x] **E5. iOS**：安全启动链、沙箱模型、Metal 图形栈 ✅
 
