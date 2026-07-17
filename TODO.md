@@ -100,4 +100,5 @@
 - [x] **F5. Azure Cosmos DB**：全球一致性光谱、多主复制与冲突合并架构 ✅
 - [x] **F8. Cloudflare Workers/Edge**：基于 V8 Isolate 的高密度、 Anycast 路由无区域 Serverless 架构 ✅
 - [x] **F9. Snowflake**：云原生存算分离、多集群共享数据与零拷贝克隆数仓架构 ✅
+- [x] **F10. Vercel**：构建产物不可变一键回滚与增量静态再生成 (ISR) 前端云架构 ✅
 
