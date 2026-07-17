@@ -13,6 +13,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 import QuizCard from '@site/src/components/QuizCard';
 import CompareSlider from '@site/src/components/CompareSlider';
 import GuidedExercise from '@site/src/components/GuidedExercise';
+import PyRunner from '@site/src/components/PyRunner';
 
 # Cursor：IDE 与大模型的共生架构
 
@@ -166,14 +167,14 @@ graph TD
   source="Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks"
   href="https://arxiv.org/abs/1908.10084"
   insight="虽然句子向量模型（Sentence Embeddings）在捕捉高维语义上表现优秀，但在遇到特定的代码符号、短方法名或精准类名时，字面量（BM25）与编译符号（AST）的准确率是高维向量无法替代的。两者混合检索能将代码定位准确率提升 40% 以上。"
-  application="在设计代码级 RAG 时，不可单纯使用向量检索。必须在客户端提取 AST 符号树，建立基于符号引用与关键字（BM25）的复合关联，再利用 RRF 进行重排合并。"
+  application="在设计代码级 RAG 时，不可单纯使用向量检索。必须在客户端提取 AST 符号树，建立基于符号引用与关键字（BM25）的复合关联，再利用 <GlossaryTerm term='RRF' definition='Reciprocal Rank Fusion (互惠排名融合)，一种把向量检索与 BM25 字面量检索等多个检索源各自输出的候选列表按排名分值进行加权合并，从而完成统一重排的无监督算法。'>RRF</GlossaryTerm> 进行重排合并。"
 />
 
 ### 4b. 二阶段代码快速应用与微调模型 (Fast-Apply)
 
 让主力模型（如 Claude 3.5 Sonnet）生成长达数千行的完整代码文件极其缓慢，且 Token 成本高昂。Cursor 引入了**二阶段生成架构**：
 
-1. **第一阶段 (Generation)**：主力大模型接收上下文，仅输出编辑指令的 **Diff Block**（类似于 Git Diff，包含变动标记与少量上下文）。
+1. **第一阶段 (Generation)**：主力大模型接收上下文，仅输出编辑指令的 **<GlossaryTerm term="Diff Block" definition="一种以增量变动（如 Git diff 或 SEARCH/REPLACE 块）表示代码修改的格式，用来替代完整文件的输出，以大幅节省大模型生成的耗时与 Token 成本。">Diff Block</GlossaryTerm>**（类似于 Git Diff，包含变动标记与少量上下文）。
 2. **第二阶段 (Fast-Apply)**：Cursor 自研的微调小模型（如 `cursor-small`）或专用快速模型接收“原文件 + Diff Block”，以数百 Token/秒的速度执行快速合并，生成应用后的新代码。
 
 ```mermaid
@@ -190,9 +191,9 @@ sequenceDiagram
 
 ### 4c. 影子工作区与自动校验 (Shadow Workspace)
 
-即便大模型生成的代码语法无误，也常常由于缺少 import、类型不匹配等导致整体项目编译失败。为了提高自动修改（Composer）的成功率，Cursor 在云端或本地建立了一个 <GlossaryTerm term="Shadow Workspace" definition="影子工作区：一个隔离的、轻量级的沙箱目录，用于在后台静默复制用户的项目代码，并在该沙箱中运行编译、类型检查（Typecheck）与 Linter 检查，以校验 AI 代码的可运行性。">影子工作区（Shadow Workspace）</GlossaryTerm>。
+即便大模型生成的代码语法无误，也常常由于缺少 import、类型不匹配等导致整体项目编译失败。为了提高**<GlossaryTerm term="Composer" definition="Cursor 中的多文件自动编辑功能，由 AI 智能体规划变动步骤并跨项目中的多个关联文件自动执行代码修改。">自动修改（Composer）</GlossaryTerm>**的成功率，Cursor 在云端或本地建立了一个 <GlossaryTerm term="Shadow Workspace" definition="影子工作区：一个隔离的、轻量级的沙箱目录，用于在后台静默复制用户的项目代码，并在该沙箱中运行编译、类型检查（Typecheck）与 Linter 检查，以校验 AI 代码的可运行性。">影子工作区（Shadow Workspace）</GlossaryTerm>。
 
-在多文件自动生成过程中，Cursor 会在后台把修改应用到影子工作区，并自动运行 `npm run build`、`tsc` 或 `linter`。如果编译报错，系统会将报错日志喂回给 Agent，让其自动修复（Self-Correction），直到通过编译或达到最大尝试次数，最后才呈现给用户。
+在多文件自动生成过程中，Cursor 会在后台把修改应用 to 影子工作区，并自动运行 `npm run build`、`tsc` 或 `linter`。如果编译报错，系统会将报错日志喂回给 Agent，让其自动修复（Self-Correction），直到通过编译或达到最大尝试次数，最后才呈现给用户。
 
 ---
 
@@ -295,6 +296,70 @@ Cursor 团队在工程设计上经历了多次技术取舍：
     '如果原文件有多处相同的代码，你能正确根据上下文（SEARCH 块周围的代码）限定只替换指定位置。',
     '你能解释为什么二阶段生成 (Diff + Apply) 比直接让大模型输出整个文件要快得多。'
   ]}
+/>
+
+#### 交互式 Python 运行实验
+在下方控制台中运行并修改已准备好的二阶段 Fast-Apply 合并器仿真代码，体验如何通过增量 Diff 块快速更新原始文件：
+
+<PyRunner
+  expect="Fast-Apply 合并验证成功"
+  rows={25}
+  code={`import re
+
+def fast_apply(original_code: str, diff_text: str) -> str:
+    # 使用正则表达式提取 SEARCH 和 REPLACE 块（支持跨行匹配）
+    pattern = r"<<<<<<< SEARCH\\n(.*?)\\n=======\\n(.*?)\\n>>>>>>> REPLACE"
+    match = re.search(pattern, diff_text, re.DOTALL)
+    if not match:
+        raise ValueError("Diff 格式非法！必须包含 SEARCH/REPLACE 边界。")
+    
+    search_block = match.group(1)
+    replace_block = match.group(2)
+    
+    # 验证 SEARCH 块是否存在于原文件中
+    if search_block not in original_code:
+        raise ValueError("合并冲突：在原文件中未找到匹配的 SEARCH 块！")
+    
+    # 执行块合并替换
+    modified_code = original_code.replace(search_block, replace_block, 1)
+    return modified_code
+
+# 模拟原始文件代码
+original_source = """def get_user_status(user):
+    if user.is_active:
+        return "Active"
+    else:
+        return "Inactive"
+"""
+
+# 模拟大模型输出的增量修改意图 (Diff Block)
+diff_intent = """<<<<<<< SEARCH
+    if user.is_active:
+        return "Active"
+    else:
+        return "Inactive"
+=======
+    if user.is_active:
+        return "Active"
+    if user.is_suspended:
+        return "Suspended"
+    return "Inactive"
+>>>>>>> REPLACE"""
+
+print("=== 原始文件内容 ===")
+print(original_source.strip())
+
+print("\\n=== AI 吐出的增量 Diff ===")
+print(diff_intent)
+
+try:
+    new_source = fast_apply(original_source, diff_intent)
+    print("\\n=== 二阶段 Fast-Apply 合并后文件 ===")
+    print(new_source.strip())
+    print("\\n✅ Fast-Apply 合并验证成功！")
+except Exception as e:
+    print(f"\\n❌ 合并失败: {e}")
+`}
 />
 
 ---
