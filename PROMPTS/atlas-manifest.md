@@ -65,7 +65,7 @@
 | F2 | DynamoDB ✅ | ★★★ | 从 Dynamo 论文到全托管：一致性哈希→分区自动管理、自适应容量 |
 | F3 | AWS Lambda ✅ | ★★ | Firecracker microVM、冷启动优化、事件驱动计费 ✅ |
 | F4 | EC2 Nitro ✅ | ★★ | 虚拟化卸载到专用硬件的架构革命 ✅ |
-| F5 | Azure Cosmos DB | ★★ | 五种一致性级别、多主全球分布 |
+| F5 | Azure Cosmos DB ✅ | ★★ | 五种一致性级别、多主全球分布 ✅ |
 | F6 | Google Spanner ✅ | ★★★ | TrueTime、外部一致性、全球分布式 SQL |
 | F7 | Borg → Kubernetes ✅ | ★XX | 声明式调和循环、控制器模式、etcd/Raft |
 | F8 | Cloudflare Workers/Edge | ★★ | V8 isolate 多租户、全球任播、无区域架构 |
