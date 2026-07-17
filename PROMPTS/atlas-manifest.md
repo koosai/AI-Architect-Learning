@@ -69,7 +69,7 @@
 | F6 | Google Spanner ✅ | ★★★ | TrueTime、外部一致性、全球分布式 SQL |
 | F7 | Borg → Kubernetes ✅ | ★XX | 声明式调和循环、控制器模式、etcd/Raft |
 | F8 | Cloudflare Workers/Edge ✅ | ★★ | V8 isolate 多租户、全球任播、无区域架构 ✅ |
-| F9 | Snowflake | ★★ | 存算分离、虚拟仓库、多集群共享数据 |
+| F9 | Snowflake ✅ | ★★ | 存算分离、虚拟仓库、多集群共享数据 ✅ |
 | F10 | Vercel | ★ | 前端云：构建产物不可变、边缘函数与 ISR |
 
 ## G. 数据与流处理（10）
