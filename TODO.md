@@ -89,4 +89,5 @@
 - [x] **D6. 飞书 Feishu**：IM+文档+审批一体化平台的组织架构数据模型 ✅
 - [x] **D7. Jira + Confluence**：工作流状态机引擎、插件架构（如何让第三方安全扩展） ✅
 - [x] **E2. Windows NT**：混合内核、HAL、Win32 子系统与 WSL ✅
+- [x] **E3. macOS / Darwin**：XNU=Mach+BSD 混合、沙箱与签名链 ✅
 

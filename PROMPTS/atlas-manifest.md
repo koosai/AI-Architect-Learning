@@ -49,7 +49,7 @@
 |---|---|---|---|
 | E1 | Linux 内核（服务器） ✅ | ★★★ | 宏内核、调度器演进（O(1)→CFS→EEVDF）、VFS、epoll |
 | E2 | Windows NT（桌面） ✅ | ★★ | 混合内核、HAL、Win32 子系统与 WSL ✅ |
-| E3 | macOS / Darwin | ★★ | XNU=Mach+BSD 混合、沙箱与签名链 |
+| E3 | macOS / Darwin ✅ | ★★ | XNU=Mach+BSD 混合、沙箱与签名链 ✅ |
 | E4 | Android ✅ | ★★★ | ART 运行时、Binder IPC、进程生命周期与 LMK |
 | E5 | iOS | ★★ | 安全启动链、沙箱模型、Metal 图形栈 |
 | E6 | FreeRTOS（嵌入式 MCU） | ★★ | 抢占式微型调度器、内存受限设计（几 KB RAM） |
