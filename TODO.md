@@ -82,4 +82,5 @@
 - [x] **B2. Bing + Copilot**：传统搜索与 LLM 绑定的 Prometheus 编排架构 ✅
 - [x] **B6. YouTube 推荐**：两阶段召回+排序、观看时长目标演进 ✅
 - [x] **A6. Cursor**：代码库索引（嵌入+AST）、影子工作区、apply 模型 ✅
+- [x] **B4. Pinterest**：PinSage 图神经网络推荐与 home feed 混排 ✅
 
