@@ -19,7 +19,7 @@
 | B3 | Elasticsearch ✅ | ★★★ | Lucene 段结构、倒排+列存、分片与副本、近实时刷新 |
 | B4 | Pinterest | ★★ | 视觉发现引擎：PinSage 图神经推荐、home feed 混排 |
 | B5 | TikTok/抖音推荐 ✅ | ★★★ | Monolith 实时训练、特征哈希、兴趣探索 vs 利用 |
-| B6 | YouTube 推荐 | ★★ | 两阶段召回+排序、观看时长目标演进 |
+| B6 | YouTube 推荐 | ★★ | 两阶段召回+排序、观看时长目标演进 ✅ |
 
 ## C. 通讯与社交（8）
 | # | 案例 | Tier | 核心看点 |
