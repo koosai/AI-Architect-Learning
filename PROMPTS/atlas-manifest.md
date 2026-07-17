@@ -78,7 +78,7 @@
 | G1 | PostgreSQL ✅ | ★★★ | MVCC、WAL、B+树与 vacuum、扩展生态（pgvector） |
 | G2 | Redis ✅ | ★★★ | 单线程事件循环为何快、数据结构编码、持久化与集群演进 |
 | G3 | Kafka ✅ | ★★★ | 顺序写日志、零拷贝、ISR 复制、KRaft 去 ZooKeeper |
-| G4 | ClickHouse | ★★ | 列存+向量化执行、MergeTree、为什么分析快 1000 倍 |
+| G4 | ClickHouse ✅ | ★★ | 列存+向量化执行、MergeTree、为什么分析快 1000 倍 ✅ |
 | G5 | Cassandra | ★★ | 无主复制、LSM、可调一致性 |
 | G6 | MongoDB | ★ | 文档模型、从 MMAPv1 到 WiredTiger、分片演进 |
 | G7 | SQLite | ★★ | 嵌入式单文件、世界部署量最大数据库的极简架构 |

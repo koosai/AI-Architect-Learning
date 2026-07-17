@@ -101,4 +101,5 @@
 - [x] **F8. Cloudflare Workers/Edge**：基于 V8 Isolate 的高密度、 Anycast 路由无区域 Serverless 架构 ✅
 - [x] **F9. Snowflake**：云原生存算分离、多集群共享数据与零拷贝克隆数仓架构 ✅
 - [x] **F10. Vercel**：构建产物不可变一键回滚与增量静态再生成 (ISR) 前端云架构 ✅
+- [x] **G4. ClickHouse**：列存物理布局、CPU SIMD 向量化执行与 MergeTree 稀疏索引分析数仓架构 ✅
 
