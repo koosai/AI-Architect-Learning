@@ -91,4 +91,5 @@
 - [x] **E2. Windows NT**：混合内核、HAL、Win32 子系统与 WSL ✅
 - [x] **E3. macOS / Darwin**：XNU=Mach+BSD 混合、沙箱与签名链 ✅
 - [x] **E5. iOS**：安全启动链、沙箱模型、Metal 图形栈 ✅
+- [x] **E6. FreeRTOS**：抢占式微型调度器、内存受限设计（几 KB RAM） ✅
 
