@@ -84,4 +84,5 @@
 - [x] **A6. Cursor**：代码库索引（嵌入+AST）、影子工作区、apply 模型 ✅
 - [x] **B4. Pinterest**：PinSage 图神经网络推荐与 home feed 混排 ✅
 - [x] **C5. Slack**：工作区分片、实时消息总线、企业级权限模型 ✅
+- [x] **D2. Excel**：依赖图重算、稀疏表存储、多线程重算演进 ✅
 

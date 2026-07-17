@@ -37,7 +37,7 @@
 | # | 案例 | Tier | 核心看点 |
 |---|---|---|---|
 | D1 | Microsoft 365 + Office Copilot ✅ | ★★★ | 文档格式演进（二进制→OOXML）、Graph 数据层、Copilot 的编排与权限继承 |
-| D2 | Excel 计算引擎 | ★★★ | 依赖图重算、稀疏表存储、多线程重算演进 |
+| D2 | Excel 计算引擎 ✅ | ★★★ | 依赖图重算、稀疏表存储、多线程重算演进 ✅ |
 | D3 | Google Docs ✅ | ★★★ | OT 协同算法、为何不用 CRDT、离线合并 |
 | D4 | Notion | ★★ | 万物阶 block 的数据模型、权限树、离线同步 |
 | D5 | Figma ✅ | ★★★ | 浏览器里的 C++（WASM 渲染引擎）、多人协同 CRDT、multiplayer 服务器 |
