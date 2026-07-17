@@ -28,7 +28,7 @@
 | C2 | X.com (Twitter) ✅ | ★★★ | 时间线 fanout 读写权衡、从 Ruby 单体到 JVM 微服务再到精简架构 |
 | C3 | 微信 WeChat ✅ | ★★★ | 万亿消息、小程序容器架构、红包高并发 |
 | C4 | Discord | ★★ | Elixir 网关、按 guild 分片、消息存储从 Mongo→Cassandra→ScyllaDB ✅ |
-| C5 | Slack | ★★ | 工作区分片、实时消息总线、企业级权限模型 |
+| C5 | Slack ✅ | ★★ | 工作区分片、实时消息总线、企业级权限模型 ✅ |
 | C6 | Telegram | ★ | MTProto、多数据中心用户就近 |
 | C7 | Instagram | ★★ | Django 单体的极限、feed 排序、Stories 的读扩散 |
 | C8 | Zoom | ★★ | SFU 媒体路由、级联集群、弱网对抗 |
