@@ -111,7 +111,7 @@
 | # | 案例 | Tier | 核心看点 |
 |---|---|---|---|
 | J1 | Amazon 电商 ✅ | ★★★ | 从单体到 SOA 的祖师爷、购物车高可用（Dynamo 起源） |
-| J2 | Shopify | ★★ | 模块化单体的胜利、Pod 租户隔离、闪购洪峰 |
+| J2 | Shopify ✅ | ★★ | 多租户架构演进、Pod 物理隔离、闪购秒杀防护 ✅ |
 | J3 | Stripe ✅ | ★★★ | 支付状态机、幂等键设计、API 版本化哲学 |
 | J4 | 支付宝双 11 | ★★ | 单元化 LDC 架构、OceanBase、洪峰限流 |
 | J5 | Uber ✅ | ★★★ | H3 地理索引、派单撮合、从 Postgres 到 Schemaless 再到 Docstore |

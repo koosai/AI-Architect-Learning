@@ -117,3 +117,4 @@
 - [x] **I2. Spotify**：Ogg 16KB 预加载音频分发、Discover Weekly 三合一推荐 (ALS+NLP+CNN) 与 Squad 组织架构 ✅
 - [x] **I4. Twitch**：RTMP 推流入库、2s GOP GPU 实时切片转码、LL-HLS 低延迟与 TMI 百万房间 Ring Buffer 扇出架构 ✅
 - [x] **I5. TikTok**：ByteVC1 竖屏转码、流量池层级递进推荐、完播率加权与客户端 Smart Preloader 0ms 秒开架构 ✅
+- [x] **J2. Shopify**：Pod 物理隔离 SaaS 架构、Sorting Hat 路由、Live Migration 与 Redis Lua 脚本秒杀防超卖架构 ✅
