@@ -105,4 +105,5 @@
 - [x] **G5. Cassandra**：无主对等拓扑、Gossip 成员协议、可调一致性与 Merkle 树反熵对齐数仓架构 ✅
 - [x] **G6. MongoDB**：BSON 文档模型、WiredTiger MVCC 引擎与分片集群自动平衡架构 ✅
 - [x] **G7. SQLite**：嵌入式单文件、VDBE 字节码虚拟机、WAL 预写日志与 VFS 抽象架构 ✅
+- [x] **G8. RocksDB**：高吞吐 LSM-Tree 存储引擎、Memtable 跳表、SSTable 分级压实与 Bloom Filter 读优化架构 ✅
 
