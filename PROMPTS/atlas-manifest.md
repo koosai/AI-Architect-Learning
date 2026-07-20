@@ -90,7 +90,7 @@
 | # | 案例 | Tier | 核心看点 |
 |---|---|---|---|
 | H1 | Git ✅ | ★★★ | 内容寻址对象库、DAG、为什么分支几乎零成本 |
-| H2 | GitHub | ★★ | 单体 Rails 的规模化、Spokes 三副本存储、Actions 调度 |
+| H2 | GitHub ✅ | ★★ | 单体 Rails 的规模化、Spokes 三副本存储、Actions 调度 ✅ |
 | H3 | GitLab CI | ★ | Runner 架构、流水线 DAG 调度 |
 | H4 | VS Code ✅ | ★★★ | Electron 多进程、扩展宿主隔离、LSP 协议改变行业 |
 | H5 | Docker ✅ | ★★★ | namespace+cgroup+联合文件系统、镜像分层与 OCI |
