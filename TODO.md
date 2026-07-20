@@ -127,3 +127,4 @@
 - [x] **K5. Milvus**：云原生存算分离架构 (Query Node + S3/MinIO + Pulsar WAL)、Knowhere C++ 引擎、HNSW/IVF-PQ 动态索引选型与 BitSet 混合检索架构 ✅
 - [x] **K8. GPU 集群调度**：Slurm HPC 批处理 vs K8s Volcano 云原生调度、Gang Scheduling (All-or-Nothing) 0 死锁锁、NVLink/NUMA 树状拓扑感知与 GPU 碎片装箱重组架构 ✅
 - [x] **L1. MOBA 同步 (王者荣耀)**：确定性帧同步 (Deterministic Lockstep)、15 FPS 66ms 逻辑帧打包、定点数 (Fixed-Point Math) 跨平台一致性、KCP/FEC 弱网可靠传输与断线追帧 (Frame Chase) 架构 ✅
+- [x] **L2. Minecraft 服务器**：20 TPS (50ms) 逻辑 Tick 循环、Anvil Region File (.mca) 格式、PaperMC 异步区块 (Chunk) I/O 与 Folia 区域多线程 (Regional Multithreading) 架构 ✅
