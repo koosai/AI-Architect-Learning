@@ -143,9 +143,9 @@
 | # | 案例 | Tier | 核心看点 |
 |---|---|---|---|
 | M1 | Signal 协议 ✅ | ★★★ | 双棘轮、前向保密——被 WhatsApp/Messenger 采纳的加密架构 |
-| M2 | OAuth2 / OIDC 生态 | ★★ | 授权码流程、token 设计、为什么密码永不出域 |
-| M3 | Let's Encrypt | ★ | ACME 自动化 PKI，把 HTTPS 变成默认值的架构 |
-| M4 | 1Password | ★ | 零知识架构：两把钥匙派生、同步而不泄密 |
+| M2 | OAuth2 / OIDC 生态 ✅ | ★★ | 授权码流程、token 设计、为什么密码永不出域 ✅ |
+| M3 | Let's Encrypt ✅ | ★ | ACME 自动化 PKI，把 HTTPS 变成默认值的架构 ✅ |
+| M4 | 1Password ✅ | ★ | 零知识架构：两把钥匙派生、同步而不泄密 ✅ |
 
 ## N. 网络与去中心化（5）
 | # | 案例 | Tier | 核心看点 |

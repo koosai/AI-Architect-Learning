@@ -130,3 +130,4 @@
 - [x] **L2. Minecraft 服务器**：20 TPS (50ms) 逻辑 Tick 循环、Anvil Region File (.mca) 格式、PaperMC 异步区块 (Chunk) I/O 与 Folia 区域多线程 (Regional Multithreading) 架构 ✅
 - [x] **L3. Roblox**：Luau 渐进类型化脚本沙箱隔离、Memory/Instruction 限制、Network Ownership 动态物理计算权卸载与 DataModel DOM 树差量复制架构 ✅
 - [x] **L4. 游戏引擎 (Unreal Engine 5)**：Mass Entity (ECS) SOA 内存连续布局 vs AActor 层次结构、Nanite 虚拟几何体 Cluster 剔除、Lumen 实时光照与 World Partition 动态资产流送 (Asset Streaming) 架构 ✅
+- [x] **M1. Auth0 / Okta**：OAuth 2.0 & OIDC 标准、Authorization Code Flow with PKCE 防截获、JWKS (JSON Web Key Set) RS256 0 查库验签、多租户物理隔离与 Auth0 Actions 管道钩子架构 ✅
