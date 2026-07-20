@@ -110,4 +110,5 @@
 - [x] **G10. Apache Iceberg**：表格式元数据树、隐式分区、ACID 事务快照隔离与时间旅行湖仓一体架构 ✅
 - [x] **H2. GitHub**：Modular Monolith 架构、Spokes 三副本 Git 存储与 Actions 弹性编排架构 ✅
 - [x] **H3. GitLab CI**：Runner Go 代理长轮询、`needs` DAG 拓扑调度与 S3 产物缓存架构 ✅
+- [x] **H6. Bazel**：Starlark 声明式依赖图、Hermetic Linux 沙箱隔离、CAS 远程缓存与 RBE 分布式构建架构 ✅
 

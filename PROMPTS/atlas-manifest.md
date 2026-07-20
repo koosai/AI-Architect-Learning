@@ -94,7 +94,7 @@
 | H3 | GitLab CI ✅ | ★ | Runner 架构、流水线 DAG 调度 ✅ |
 | H4 | VS Code ✅ | ★★★ | Electron 多进程、扩展宿主隔离、LSP 协议改变行业 |
 | H5 | Docker ✅ | ★★★ | namespace+cgroup+联合文件系统、镜像分层与 OCI |
-| H6 | Bazel | ★ | 远程缓存+沙箱的可复现构建、Google 单仓库工程学 |
+| H6 | Bazel ✅ | ★ | 远程缓存+沙箱的可复现构建、Google 单仓库工程学 ✅ |
 | H7 | npm registry | ★ | 全球最大包仓库：CDN 化、依赖解析的演进 |
 | H8 | Sentry | ★ | 错误聚合指纹、事件洪峰削峰 |
 
