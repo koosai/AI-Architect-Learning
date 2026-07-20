@@ -124,3 +124,4 @@
 - [x] **J8. 12306**：余票查询与出票物理读写分离 (GemFire/Redis 内存网格)、沿途站区间乘法 BitMatrix 扣减与异步排队削峰架构 ✅
 - [x] **K4. Megatron-LM**：3D 混合并行架构 (TP/PP/DP)、列/行矩阵切片、1F1B 流水线调度与 NVLink 通信拓扑架构 ✅
 - [x] **K4. Triton Inference Server**：多后端 C-API 统一推理引擎 (TensorRT/ONNX/PyTorch)、5ms Dynamic Batching 动态组包与 CUDA IPC 零拷贝显存架构 ✅
+- [x] **K5. Milvus**：云原生存算分离架构 (Query Node + S3/MinIO + Pulsar WAL)、Knowhere C++ 引擎、HNSW/IVF-PQ 动态索引选型与 BitSet 混合检索架构 ✅

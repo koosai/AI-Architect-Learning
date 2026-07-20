@@ -126,7 +126,7 @@
 | K2 | Megatron-LM ✅ | ★★ | 3D 并行（数据/张量/流水线）、万卡训练的通信拓扑 ✅ |
 | K3 | Ray | ★★ | 分布式 actor/task、对象存储 plasma、RLHF 基座 ✅ |
 | K4 | Triton Inference Server ✅ | ★ | 多框架统一推理、动态批处理、模型集成 ✅ |
-| K5 | Milvus 向量数据库 | ★★ | 存算分离的向量检索、HNSW/IVF 索引选型 |
+| K5 | Milvus 向量数据库 ✅ | ★★ | 存算分离的向量检索、HNSW/IVF 索引选型 ✅ |
 | K6 | MCP 协议生态 ✅ | ★★★ | 模型-工具解耦的 USB 时刻：host/client/server、能力协商 |
 | K7 | LangGraph / Agent 框架 | ★★ | 图状态机编排、checkpoint、human-in-the-loop ✅ |
 | K8 | GPU 集群调度 | ★★ | Slurm vs K8s、gang scheduling、拓扑感知与碎片治理 |
