@@ -103,7 +103,7 @@
 |---|---|---|---|
 | I1 | Netflix ✅ | ★★★ | 微服务先驱：Zuul/Eureka/Hystrix 谱系、Open Connect 自建 CDN、混沌工程 |
 | I2 | Spotify | ★★ | 音频分发、Discover Weekly 推荐管线、squad 组织与架构关系 |
-| I3 | YouTube 视频管线 | ★★ | 上传→转码→多码率分发、Vitess 分库 MySQL |
+| I3 | YouTube 视频管线 ✅ | ★★ | 上传→转码→多码率分发、Vitess 分库 MySQL ✅ |
 | I4 | Twitch | ★★ | 直播吞吐、转码集群、聊天系统百万房间 |
 | I5 | TikTok 视频管线 | ★ | 短视频冷启动分发、边缘缓存策略 |
 
