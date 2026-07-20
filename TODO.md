@@ -111,4 +111,5 @@
 - [x] **H2. GitHub**：Modular Monolith 架构、Spokes 三副本 Git 存储与 Actions 弹性编排架构 ✅
 - [x] **H3. GitLab CI**：Runner Go 代理长轮询、`needs` DAG 拓扑调度与 S3 产物缓存架构 ✅
 - [x] **H6. Bazel**：Starlark 声明式依赖图、Hermetic Linux 沙箱隔离、CAS 远程缓存与 RBE 分布式构建架构 ✅
+- [x] **H7. npm registry**：Fastly CDN 离岸缓存、CouchDB `_changes` 镜像复制与 pnpm CAS 硬链接依赖树架构 ✅
 
