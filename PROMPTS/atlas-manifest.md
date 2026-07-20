@@ -84,7 +84,7 @@
 | G7 | SQLite ✅ | ★★ | 嵌入式单文件、世界部署量最大数据库的极简架构 ✅ |
 | G8 | RocksDB ✅ | ★★ | LSM 树深度：memtable/SST/compaction 策略 ✅ |
 | G9 | Flink ✅ | ★★ | 有状态流计算、checkpoint 对齐、exactly-once ✅ |
-| G10 | Iceberg 数据湖 | ★★ | 表格式元数据层、快照隔离、湖仓一体 |
+| G10 | Iceberg 数据湖 ✅ | ★★ | 表格式元数据层、快照隔离、湖仓一体 ✅ |
 
 ## H. 开发者工具链（8）
 | # | 案例 | Tier | 核心看点 |

@@ -107,4 +107,5 @@
 - [x] **G7. SQLite**：嵌入式单文件、VDBE 字节码虚拟机、WAL 预写日志与 VFS 抽象架构 ✅
 - [x] **G8. RocksDB**：高吞吐 LSM-Tree 存储引擎、Memtable 跳表、SSTable 分级压实与 Bloom Filter 读优化架构 ✅
 - [x] **G9. Flink**：有状态流计算、Watermark 乱序处理、ABS 屏障检查点与端到端 Exactly-Once 2PC 架构 ✅
+- [x] **G10. Apache Iceberg**：表格式元数据树、隐式分区、ACID 事务快照隔离与时间旅行湖仓一体架构 ✅
 
