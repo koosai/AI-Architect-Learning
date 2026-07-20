@@ -103,4 +103,5 @@
 - [x] **F10. Vercel**：构建产物不可变一键回滚与增量静态再生成 (ISR) 前端云架构 ✅
 - [x] **G4. ClickHouse**：列存物理布局、CPU SIMD 向量化执行与 MergeTree 稀疏索引分析数仓架构 ✅
 - [x] **G5. Cassandra**：无主对等拓扑、Gossip 成员协议、可调一致性与 Merkle 树反熵对齐数仓架构 ✅
+- [x] **G6. MongoDB**：BSON 文档模型、WiredTiger MVCC 引擎与分片集群自动平衡架构 ✅
 
