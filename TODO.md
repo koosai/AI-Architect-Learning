@@ -132,3 +132,4 @@
 - [x] **L4. 游戏引擎 (Unreal Engine 5)**：Mass Entity (ECS) SOA 内存连续布局 vs AActor 层次结构、Nanite 虚拟几何体 Cluster 剔除、Lumen 实时光照与 World Partition 动态资产流送 (Asset Streaming) 架构 ✅
 - [x] **M1. Auth0 / Okta**：OAuth 2.0 & OIDC 标准、Authorization Code Flow with PKCE 防截获、JWKS (JSON Web Key Set) RS256 0 查库验签、多租户物理隔离与 Auth0 Actions 管道钩子架构 ✅
 - [x] **M3. Let's Encrypt**：ACME 协议 (RFC 8555) 自动化轮转、HTTP-01 / DNS-01 域名所有权校验挑战、Boulder C++ 架构与 90 天短生命周期 (Short-Lived Certs) 安全机制 ✅
+- [x] **M4. 1Password**：Master Password + 128-bit Secret Key 双钥匙密钥派生、SRP-6a 零知识服务器认证、AES-256-GCM 信封加密与端到端加密 (E2EE) 云端同步架构 ✅
