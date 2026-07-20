@@ -122,3 +122,4 @@
 - [x] **J6. Airbnb**：Service Blocks 模块化架构收敛、Geohash 召回 + Listing Embedding 搜推与日历防重锁架构 ✅
 - [x] **J7. 美团 / DoorDash**：实时派单撮合 (KM 算法)、三阶段 ETA 深度学习引擎、H3 顺路拼单与骑手 TSP 路线规划架构 ✅
 - [x] **J8. 12306**：余票查询与出票物理读写分离 (GemFire/Redis 内存网格)、沿途站区间乘法 BitMatrix 扣减与异步排队削峰架构 ✅
+- [x] **K4. Megatron-LM**：3D 混合并行架构 (TP/PP/DP)、列/行矩阵切片、1F1B 流水线调度与 NVLink 通信拓扑架构 ✅
