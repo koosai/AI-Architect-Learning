@@ -112,4 +112,5 @@
 - [x] **H3. GitLab CI**：Runner Go 代理长轮询、`needs` DAG 拓扑调度与 S3 产物缓存架构 ✅
 - [x] **H6. Bazel**：Starlark 声明式依赖图、Hermetic Linux 沙箱隔离、CAS 远程缓存与 RBE 分布式构建架构 ✅
 - [x] **H7. npm registry**：Fastly CDN 离岸缓存、CouchDB `_changes` 镜像复制与 pnpm CAS 硬链接依赖树架构 ✅
+- [x] **H8. Sentry**：Rust Relay 边缘代理脱敏、堆栈帧 Fingerprint 指纹归平与 Snuba/ClickHouse 列存检索架构 ✅
 
