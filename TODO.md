@@ -119,3 +119,4 @@
 - [x] **I5. TikTok**：ByteVC1 竖屏转码、流量池层级递进推荐、完播率加权与客户端 Smart Preloader 0ms 秒开架构 ✅
 - [x] **J2. Shopify**：Pod 物理隔离 SaaS 架构、Sorting Hat 路由、Live Migration 与 Redis Lua 脚本秒杀防超卖架构 ✅
 - [x] **J4. 支付宝双 11**：LDC 单元化异地多活 (RZone/GZone/CZone)、OceanBase Paxos 强一致与多级限流降级架构 ✅
+- [x] **J6. Airbnb**：Service Blocks 模块化架构收敛、Geohash 召回 + Listing Embedding 搜推与日历防重锁架构 ✅
