@@ -115,3 +115,4 @@
 - [x] **H8. Sentry**：Rust Relay 边缘代理脱敏、堆栈帧 Fingerprint 指纹归平与 Snuba/ClickHouse 列存检索架构 ✅
 - [x] **I3. YouTube**：GGC 运营商 PoP 边缘节点、微切片并行转码、DASH 自适应码率与双阶段 DNN 推荐架构 ✅
 - [x] **I2. Spotify**：Ogg 16KB 预加载音频分发、Discover Weekly 三合一推荐 (ALS+NLP+CNN) 与 Squad 组织架构 ✅
+- [x] **I4. Twitch**：RTMP 推流入库、2s GOP GPU 实时切片转码、LL-HLS 低延迟与 TMI 百万房间 Ring Buffer 扇出架构 ✅
