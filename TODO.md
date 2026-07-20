@@ -109,4 +109,5 @@
 - [x] **G9. Flink**：有状态流计算、Watermark 乱序处理、ABS 屏障检查点与端到端 Exactly-Once 2PC 架构 ✅
 - [x] **G10. Apache Iceberg**：表格式元数据树、隐式分区、ACID 事务快照隔离与时间旅行湖仓一体架构 ✅
 - [x] **H2. GitHub**：Modular Monolith 架构、Spokes 三副本 Git 存储与 Actions 弹性编排架构 ✅
+- [x] **H3. GitLab CI**：Runner Go 代理长轮询、`needs` DAG 拓扑调度与 S3 产物缓存架构 ✅
 
