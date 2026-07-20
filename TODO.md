@@ -133,3 +133,4 @@
 - [x] **M1. Auth0 / Okta**：OAuth 2.0 & OIDC 标准、Authorization Code Flow with PKCE 防截获、JWKS (JSON Web Key Set) RS256 0 查库验签、多租户物理隔离与 Auth0 Actions 管道钩子架构 ✅
 - [x] **M3. Let's Encrypt**：ACME 协议 (RFC 8555) 自动化轮转、HTTP-01 / DNS-01 域名所有权校验挑战、Boulder C++ 架构与 90 天短生命周期 (Short-Lived Certs) 安全机制 ✅
 - [x] **M4. 1Password**：Master Password + 128-bit Secret Key 双钥匙密钥派生、SRP-6a 零知识服务器认证、AES-256-GCM 信封加密与端到端加密 (E2EE) 云端同步架构 ✅
+- [x] **N1. IPFS / Libp2p**：内容寻址 (Content-Addressing) CID Merkle DAG、Kademlia DHT 节点发现 (XOR 距离与 k-bucket)、BitSwap 去中心化块交换协议与 Libp2p 模块化 P2P 网络栈 ✅
