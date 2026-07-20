@@ -125,3 +125,4 @@
 - [x] **K4. Megatron-LM**：3D 混合并行架构 (TP/PP/DP)、列/行矩阵切片、1F1B 流水线调度与 NVLink 通信拓扑架构 ✅
 - [x] **K4. Triton Inference Server**：多后端 C-API 统一推理引擎 (TensorRT/ONNX/PyTorch)、5ms Dynamic Batching 动态组包与 CUDA IPC 零拷贝显存架构 ✅
 - [x] **K5. Milvus**：云原生存算分离架构 (Query Node + S3/MinIO + Pulsar WAL)、Knowhere C++ 引擎、HNSW/IVF-PQ 动态索引选型与 BitSet 混合检索架构 ✅
+- [x] **K8. GPU 集群调度**：Slurm HPC 批处理 vs K8s Volcano 云原生调度、Gang Scheduling (All-or-Nothing) 0 死锁锁、NVLink/NUMA 树状拓扑感知与 GPU 碎片装箱重组架构 ✅
