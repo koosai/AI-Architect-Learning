@@ -121,7 +121,68 @@ flowchart TB
 sequenceDiagram
   autonumber
   participant Client as NTP 客户端 (chronyd)
-  participant Server as NTP �- **Stepping (跳跃)**：直接修改系统时间（`settimeofday`）。仅在时间偏差巨大（如 `> 128ms`）且开机初始化时使用。
+  participant Server as NTP 服务器 (Stratum 1)
+
+  Note over Client: 记录 T1 (Client local transmit time)
+  Client->>Server: 发送 NTP 请求报文 (包含 T1)
+  Note over Server: 收到报文，打上硬件时间戳 T2
+  Note over Server: 准备响应，打上硬件时间戳 T3
+  Server-->>Client: 返回 NTP 响应报文 (包含 T1, T2, T3)
+  Note over Client: 收到响应，记录 T4 (Client local receive time)
+
+  Note over Client: 解计算 Offset θ = ((T2 - T1) + (T3 - T4)) / 2
+  Note over Client: 解计算 Delay δ = (T4 - T1) - (T3 - T2)
+  Note over Client: 调用 adjtime() 渐进微调晶振频率 (Slewing)
+```
+
+## 4. 核心机制拆解
+
+### 4a. 4-Timestamp 交叉抵消方程
+
+NTP 利用双向报文交互生成的 4 个时间戳，精准消解单向传输延迟：
+
+```mermaid
+block-beta
+  columns 4
+  T1["T1: Client 发送"]:1
+  T2["T2: Server 接收"]:1
+  T3["T3: Server 发送"]:1
+  T4["T4: Client 接收"]:2
+```
+
+假设网络去程延迟与回程延迟对称（`a = b = delta / 2`），可列出等式：
+
+```text
+T2 = T1 + a + theta
+T4 = T3 + b - theta
+```
+
+立得 **Offset 偏移量 theta** 与 **RTT 往返延迟 delta**：
+
+```text
+theta = ((T2 - T1) + (T3 - T4)) / 2
+delta = (T4 - T1) - (T3 - T2)
+```
+
+### 4b. Marzullo 滤波与区间交集算法
+
+为了防止某些 NTP 服务器因故障或网络拥堵输出错误时间（False Tickers），客户端会同时向 $N$ 个不同的 NTP 服务器发包，并采用 <GlossaryTerm term="Marzullo 算法" definition="一种容错时间同步算法。将每个服务器返回的时间 offset ± delay 视作一个区间，寻找覆盖最多重叠区间的相交区域，剔除位于区间之外的异常节点。">Marzullo 算法</GlossaryTerm> 锁定正确区间：
+
+```mermaid
+flowchart TD
+  S1["Server 1 范围: [10:00.001 .. 10:00.005]"] --> Intersection
+  S2["Server 2 范围: [10:00.002 .. 10:00.006]"] --> Intersection
+  S3["Server 3 范围: [10:00.003 .. 10:00.007]"] --> Intersection
+  S4["Server 4 (故障): [10:05.000 .. 10:05.010]"] --> Reject[被 Marzullo 剔除 (False Ticker)]
+
+  Intersection["计算最大交集区间 [10:00.003 .. 10:00.005]"] --> FineTune[作为最终同步基准]
+```
+
+### 4c. Slewing (相频平滑微调) vs Stepping (硬跳跃)
+
+当计算出客户端时间落后或超前时，NTP 采用 <GlossaryTerm term="Slewing" definition="平滑时间微调（Through adjtime 系统调用）：通过改变 Linux 内核晶振计数的滴答频率（如调快 0.05%），让本地时间以极平滑的方式追赶目标时间，确保系统时间单调递增，绝不跳跃。">Slewing</GlossaryTerm> 机制：
+
+- **Stepping (跳跃)**：直接修改系统时间（`settimeofday`）。仅在时间偏差巨大（如 `> 128ms`）且开机初始化时使用。
 - **Slewing (微调)**：调整 Linux `adjtime`，每秒微调最多 `500 PPM` (0.5ms/s)。如果偏差 10ms，系统将在 20 秒内平滑追平，**绝不会发生时间倒流**。
 
 ## 5. 关键数据结构与算法
@@ -137,9 +198,9 @@ sequenceDiagram
 |                         Root Delay                            |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                       Root Dispersion                         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                     Reference ID (SysID)                      |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                     Reference Timestamp (64)                  |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                      Origin Timestamp (T1)                    |
@@ -150,7 +211,7 @@ sequenceDiagram
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
-时间戳采用 64 位定点数（32 位整数秒 + 32 位小数秒），分辨率达到 232 皮秒 (`2^-32 秒`)。
+时间戳采用 64 位定点数（32 位整数秒 + 32 位小数秒），分辨率达到 232 皮秒（2^-32 秒）。
 
 ## 6. 架构演进史
 
@@ -216,97 +277,6 @@ sequenceDiagram
       name: 'Google TrueTime (GPS + 原子钟硬件机架)',
       scores: [20, 99, 30, 95],
       note: '精度达到微秒级（控制在 1ms 以内），可用于分布式 SQL 外部一致性；但机柜硬件成本极其高昂。',
-      whenToUse: 'Google Spanner 等需要全球分布式无锁 SQL 事务的顶级基座。'
-    }
-  ]}
-/>
-
-## 9. 常见误解与澄清
-
-:::warning 常见误解澄清
-- **误解一：NTP 会在发现时间慢了 1 秒时，直接把系统时钟强制拨快 1 秒。**
-  *事实*：在正常运行中（Slewing 模式），NTP 绝不会直接跳变 1 秒。它会调用内核接口将 CPU 的 Clock Tick 频率稍微调快（例如从 1000Hz 调为 1005Hz），在随后的数分钟里平滑追上 1 秒，保证 `now()` 函数单调递增。
-- **误解二：只要两台服务器都运行了 NTP，它们的时间就绝对完全相同。**
-  *事实*：由于公网 UDP 报文去程与回程延迟不一定严格相等（Asymmetric Latency），NTP 必定存在 1-10ms 的物理不确定性区间（Uncertainty Window）。
-:::
-
-## 10. 如果是你来设计 (Guided Exercise)
-
-<GuidedExercise
-  title="设计 NTP 4-Timestamp Offset 计算器"
-  goal="在 Python 中实现 NTP 偏移量 theta 与往返延迟 delta 的计算逻辑。"-+-+-+-+-+
-|                     Reference Timestamp (64)                  |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                      Origin Timestamp (T1)                    |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                      Receive Timestamp (T2)                   |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                     Transmit Timestamp (T3)                   |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-```
-
-时间戳采用 64 位定点数（32 位整数秒 + 32 位小数秒），分辨率达到 232 皮秒 ($2^{-32}\text{ 秒}$)。
-
-## 6. 架构演进史
-
-<EvolutionTimeline
-  events={[
-    {
-      year: '1985',
-      title: 'NTPv0 诞生 (RFC 958)',
-      why: '早期 ARPANET 网络各节点时钟混乱，需要通用协议。',
-      change: 'David Mills 提出 4-Timestamp 交叉推算方程与 Stratum 分级。'
-    },
-    {
-      year: '1992',
-      title: 'NTPv3 与 Marzullo 滤波 (RFC 1305)',
-      why: '公网抖动与网络攻击导致错误时间源污染全网。',
-      change: '引入 Marzullo 算法与相频自适应 PLL (Phase-Locked Loop) 环路。'
-    },
-    {
-      year: '2010',
-      title: 'NTPv4 与 Chrony 新一代 Daemon',
-      why: '虚拟机 (VM) 与云原生频繁挂起/恢复，传统 ntpd 收敛太慢（需数小时）。',
-      change: 'Chrony 算法实现在开机数秒内快速收敛，且支持 PTP (IEEE 1588) 硬件时间戳。'
-    }
-  ]}
-/>
-
-### 架构演进对比
-
-<CompareSlider
-  before={{
-    title: '早期单机 RTC + 简单的 ntpdate 硬跳跃',
-    description: '时间跳跃导致数据库 Log 顺序倒置，数据库事务崩溃，虚拟机休眠唤醒后偏差数分钟。'
-  }}
-  after={{
-    title: 'Stratum 多源 + Chrony 渐进微调 (Slewing)',
-    description: '时钟绝对单调递增，毫秒级微调，云原生 VM 休眠唤醒后 3 秒内恢复微秒级同步。'
-  }}
-/>
-
-## 7. 设计模式与课程映射
-
-1. **过滤器模式 (Filter Pattern)**：Marzullo 算法与 Jitter Filter 链式过滤噪声。
-2. **中介者模式 (Mediator Pattern)**：Stratum 1/2 时间服务器作为客户端与物理原子钟之间的解耦中介。
-3. **映射 [Month 5 分布式核心组件]**：物理时钟偏差与 Spanner TrueTime 理论边界。
-
-## 8. 架构取舍与权衡
-
-<TradeoffExplorer
-  title="时间同步架构核心取舍"
-  dimensions={['硬件成本', '同步精度', '部署复杂度', '网络依赖度']}
-  options={[
-    {
-      name: '纯软件 NTP / Chrony 架构 (通用 NTP 方案)',
-      scores: [100, 75, 95, 70],
-      note: '零硬件成本，完全基于现有网络 IP 报文；精度受公网 BGP 抖动影响（1-10ms）。',
-      whenToUse: '99% 的 Web 应用、微服务、通用企业数据中心。'
-    },
-    {
-      name: 'Google TrueTime (GPS + 原子钟硬件机架)',
-      scores: [20, 99, 30, 95],
-      note: '精度达到微秒级（控制 $\epsilon < 1\text{ms}$），可用于分布式 SQL 外部一致性；但机柜硬件成本极其高昂。',
       whenToUse: 'Google Spanner 等需要全球分布式无锁 SQL 事务的顶级基座。'
     }
   ]}
