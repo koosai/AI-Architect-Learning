@@ -29,9 +29,9 @@
 | C3 | 微信 WeChat ✅ | ★★★ | 万亿消息、小程序容器架构、红包高并发 |
 | C4 | Discord | ★★ | Elixir 网关、按 guild 分片、消息存储从 Mongo→Cassandra→ScyllaDB ✅ |
 | C5 | Slack ✅ | ★★ | 工作区分片、实时消息总线、企业级权限模型 ✅ |
-| C6 | Telegram | ★ | MTProto、多数据中心用户就近 |
-| C7 | Instagram | ★★ | Django 单体的极限、feed 排序、Stories 的读扩散 |
-| C8 | Zoom | ★★ | SFU 媒体路由、级联集群、弱网对抗 |
+| C6 | Telegram ✅ | ★ | MTProto、多数据中心用户就近 ✅ |
+| C7 | Instagram ✅ | ★★ | Django 单体的极限、feed 排序、Stories 的读扩散 ✅ |
+| C8 | Zoom ✅ | ★★ | SFU 媒体路由、级联集群、弱网对抗 ✅ |
 
 ## D. 办公与协作（7）
 | # | 案例 | Tier | 核心看点 |
@@ -150,8 +150,8 @@
 ## N. 网络与去中心化（5）
 | # | 案例 | Tier | 核心看点 |
 |---|---|---|---|
-| N1 | DNS 全球体系 | ★★ | 层级委托、任播根服务器、缓存 TTL 的博弈 |
-| N2 | CDN（Akamai 原理） | ★★ | 边缘缓存、回源策略、动态加速 |
-| N3 | BitTorrent | ★★ | 分块交换、tit-for-tat 激励、DHT 去中心化索引 |
-| N4 | Bitcoin | ★★ | UTXO、工作量证明、最长链共识的取舍 |
-| N5 | NTP 时间同步 | ★ | 层级时钟源、时钟偏移估计——分布式系统的隐形地基 |
+| N1 | DNS 全球体系 ✅ | ★★ | 层级委托、任播根服务器、缓存 TTL 的博弈 ✅ |
+| N2 | CDN（Akamai 原理） ✅ | ★★ | 边缘缓存、回源策略、动态加速 ✅ |
+| N3 | BitTorrent ✅ | ★★ | 分块交换、tit-for-tat 激励、DHT 去中心化索引 ✅ |
+| N4 | Bitcoin ✅ | ★★ | UTXO、工作量证明、最长链共识的取舍 ✅ |
+| N5 | NTP 时间同步 ✅ | ★ | 层级时钟源、时钟偏移估计——分布式系统的隐形地基 ✅ |

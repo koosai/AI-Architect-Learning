@@ -134,3 +134,17 @@
 - [x] **M3. Let's Encrypt**：ACME 协议 (RFC 8555) 自动化轮转、HTTP-01 / DNS-01 域名所有权校验挑战、Boulder C++ 架构与 90 天短生命周期 (Short-Lived Certs) 安全机制 ✅
 - [x] **M4. 1Password**：Master Password + 128-bit Secret Key 双钥匙密钥派生、SRP-6a 零知识服务器认证、AES-256-GCM 信封加密与端到端加密 (E2EE) 云端同步架构 ✅
 - [x] **N1. IPFS / Libp2p**：内容寻址 (Content-Addressing) CID Merkle DAG、Kademlia DHT 节点发现 (XOR 距离与 k-bucket)、BitSwap 去中心化块交换协议与 Libp2p 模块化 P2P 网络栈 ✅
+- [x] **N2. DNS 全球体系**：Root / TLD / Authoritative 树状层级委托、1,500+ BGP Anycast (任播) 根服务器物理冗余、Recursive Resolver TTL 缓存博弈与 EDNS0 Client Subnet (ECS) 智能地理调度架构 ✅
+
+---
+
+## 阶段六：Atlas 终极收官 (完成全部 100 个案例)
+
+- [x] **C6. Telegram**：MTProto 加密协议、TL-Schema 序列化、多 DC 边缘就近接入与极简 C++ 服务端架构 ✅
+- [x] **C7. Instagram**：Django 单体微服务化、Cassandra ID 局部自增生成器、Feed 混合推拉与 Stories 24 小时 TTL 缓存架构 ✅
+- [x] **C8. Zoom**：SFU 媒体选路路由、级联网关集群、FEC / SVC 抗丢包与 256 位 AES-GCM 弱网高可用架构 ✅
+- [x] **N2. CDN / Akamai 原理**：边缘 DNS 智能调度、一致性哈希 Cache 节点、回源平滑削峰与 HTTP/3 动态加速架构 ✅
+- [x] **N3. BitTorrent**：分块 SHA-1 内容校验、Tit-for-Tat 激励博弈、Kademlia Mainline DHT 去中心化寻址架构 ✅
+- [x] **N4. Bitcoin**：UTXO 交易模型、SHA-256 工作量证明 (PoW)、最长链共识与 1MB 区块扩容权衡架构 ✅
+- [x] **N5. NTP 时间同步**：Stratum 分级时钟源、Marzullo 滤波算法、双向往返时延 offset 估计与分布式系统隐形地基架构 ✅
+
