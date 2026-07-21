@@ -210,14 +210,18 @@ Zoom 根据动态检测到的网络丢包率（Packet Loss Rate），实时调�
 ### 架构演进对比
 
 <CompareSlider
-  before={{
-    title: '早期 MCU 硬解码混流架构 (WebEx 时代)',
-    description: '服务器 CPU 被编解码拉满，100 人会议需占用多台昂贵硬件服务器，弱网极易卡顿花屏。'
-  }}
-  after={{
-    title: 'Zoom 全球级联 SFU + SVC + 动态 FEC 架构',
-    description: '服务器仅做内存包路由，单节点支撑数万人，音视频支持 50% 丢包抗性与 150ms 超低延迟。'
-  }}
+  before={
+    <div style={{ padding: '20px', background: '#ffebee', borderRadius: '8px', height: '100%' }}>
+      <h3>早期 MCU 硬解码混流架构 (WebEx 时代)</h3>
+      <p>服务器 CPU 被编解码拉满，100 人会议需占用多台昂贵硬件服务器，弱网极易卡顿花屏。</p>
+    </div>
+  }
+  after={
+    <div style={{ padding: '20px', background: '#e8f5e9', borderRadius: '8px', height: '100%' }}>
+      <h3>Zoom 全球级联 SFU + SVC + 动态 FEC 架构</h3>
+      <p>服务器仅做内存包路由，单节点支撑数万人，音视频支持 50% 丢包抗性与 150ms 超低延迟。</p>
+    </div>
+  }
 />
 
 ## 7. 设计模式与课程映射

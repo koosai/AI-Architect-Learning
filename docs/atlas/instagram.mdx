@@ -226,14 +226,18 @@ $$ LANGUAGE plpgsql;
 ### 架构演进对比
 
 <CompareSlider
-  before={{
-    title: '早期单机 PostgreSQL + 简单 Push 模式',
-    description: '所有用户 Feed 写入同一张大表，大 V 发帖导致数据库 IOPS 跑满，Feed 刷新延迟超 5 秒。'
-  }}
-  after={{
-    title: '8192 逻辑 Shard + 混合 Fanout + Memcached Feed',
-    description: '数据平滑分布在 PostgreSQL/Cassandra 集群，Feed 读取 99% 命中 Memcached，延迟小于 100ms。'
-  }}
+  before={
+    <div style={{ padding: '20px', background: '#ffebee', borderRadius: '8px', height: '100%' }}>
+      <h3>早期单机 PostgreSQL + 简单 Push 模式</h3>
+      <p>所有用户 Feed 写入同一张大表，大 V 发帖导致数据库 IOPS 跑满，Feed 刷新延迟超 5 秒。</p>
+    </div>
+  }
+  after={
+    <div style={{ padding: '20px', background: '#e8f5e9', borderRadius: '8px', height: '100%' }}>
+      <h3>8192 逻辑 Shard + 混合 Fanout + Memcached Feed</h3>
+      <p>数据平滑分布在 PostgreSQL/Cassandra 集群，Feed 读取 99% 命中 Memcached，延迟小于 100ms。</p>
+    </div>
+  }
 />
 
 ## 7. 设计模式与课程映射

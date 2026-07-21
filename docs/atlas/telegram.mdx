@@ -231,14 +231,18 @@ P_i = D_K(C_i ^ P_{i-1}) ^ C_{i-1}
 ### 架构演进对比
 
 <CompareSlider
-  before={{
-    title: '传统 TLS + Protobuf/HTTP 架构',
-    description: '每次连接需 2-3 RTT 握手，序列化包头带有类型描述，多 DC 用户寻址依赖层层 HTTP 代理。'
-  }}
-  after={{
-    title: 'MTProto 2.0 + TL + 自研 C++ 架构',
-    description: '0-1 RTT 极速会话恢复，TL 二进制零内存分配解析，直连主 DC 骨干网，吞吐量提升 10 倍。'
-  }}
+  before={
+    <div style={{ padding: '20px', background: '#ffebee', borderRadius: '8px', height: '100%' }}>
+      <h3>传统 TLS + Protobuf/HTTP 架构</h3>
+      <p>每次连接需 2-3 RTT 握手，序列化包头带有类型描述，多 DC 用户寻址依赖层层 HTTP 代理。</p>
+    </div>
+  }
+  after={
+    <div style={{ padding: '20px', background: '#e8f5e9', borderRadius: '8px', height: '100%' }}>
+      <h3>MTProto 2.0 + TL + 自研 C++ 架构</h3>
+      <p>0-1 RTT 极速会话恢复，TL 二进制零内存分配解析，直连主 DC 骨干网，吞吐量提升 10 倍。</p>
+    </div>
+  }
 />
 
 ## 7. 设计模式与课程映射

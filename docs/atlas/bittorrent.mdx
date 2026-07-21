@@ -34,7 +34,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 
 ## 1. 设计初衷：人人为我，我为人人
 
-在传统 HTTP C/S 架构中，一个 10GB 的 Linux 发行版 ISO 镜像如果被 10 万人同时下载，源站需要承受 $1000\text{ TB}$ 的巨额回源带宽成本。BitTorrent 的核心原理是：**让每一个正在下载文件的人（Leecher），同时也把已经下载好的数据切块共享上传给其他下载者（Seeder）。**
+在传统 HTTP C/S 架构中，一个 10GB 的 Linux 发行版 ISO 镜像如果被 10 万人同时下载，源站需要承受 1000 TB 的巨额回源带宽成本。BitTorrent 的核心原理是：**让每一个正在下载文件的人（Leecher），同时也把已经下载好的数据切块共享上传给其他下载者（Seeder）。**
 
 <DesignIntent
   problem="如何在零服务器高昂带宽成本的前提下，支撑 TB 级超大文件向全球数百万用户同时高速分发？"
@@ -167,9 +167,11 @@ flowchart LR
 
 在磁力链接（Magnet Link）无 Tracker 模式下，每个节点与 InfoHash 均用 160-bit 空间表示。节点间的距离为：
 
-$$d(x, y) = x \oplus y$$
+```text
+d(x, y) = x ^ y
+```
 
-查找资源时，节点在本地 $k$-bucket 中查找与目标 InfoHash $\text{XOR}$ 距离最近的 8 个 Peer 节点，递归收敛找到数据拥有者。
+查找资源时，节点在本地 k-bucket 中查找与目标 InfoHash XOR 距离最近的 8 个 Peer 节点，递归收敛找到数据拥有者。
 
 ## 6. 架构演进史
 
@@ -199,14 +201,18 @@ $$d(x, y) = x \oplus y$$
 ### 架构演进对比
 
 <CompareSlider
-  before={{
-    title: '早期单点 Tracker + TCP 模式',
-    description: '依赖中心化 Tracker 服务器分配 Peer，TCP 流量容易打爆家用路由器 Buffer, 容易被封杀。'
-  }}
-  after={{
-    title: 'Magnet 磁力 + Kademlia DHT + uTP 拥塞自适应',
-    description: '无需任何中心服务器，磁力链接秒级哈希寻址，uTP 自动退让后台静默高速下载。'
-  }}
+  before={
+    <div style={{ padding: '20px', background: '#ffebee', borderRadius: '8px', height: '100%' }}>
+      <h3>早期单点 Tracker + TCP 模式</h3>
+      <p>依赖中心化 Tracker 服务器分配 Peer，TCP 流量容易打爆家用路由器 Buffer, 容易被封杀。</p>
+    </div>
+  }
+  after={
+    <div style={{ padding: '20px', background: '#e8f5e9', borderRadius: '8px', height: '100%' }}>
+      <h3>Magnet 磁力 + Kademlia DHT + uTP 拥塞自适应</h3>
+      <p>无需任何中心服务器，磁力链接秒级哈希寻址，uTP 自动退让后台静默高速下载。</p>
+    </div>
+  }
 />
 
 ## 7. 设计模式与课程映射

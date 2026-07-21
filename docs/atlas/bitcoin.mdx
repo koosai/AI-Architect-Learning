@@ -195,9 +195,11 @@ flowchart TD
 
 区块体内的所有交易通过二进制 <GlossaryTerm term="Merkle Tree" definition="默克尔树：一种二叉哈希树，叶节点为各笔交易的 TxID。通过根节点 Merkle Root 即可锁定整块交易，且支持 O(log N) 时间复杂度的轻节点 SPV 简易支付验证。">Merkle Tree</GlossaryTerm> 向上两两哈希值汇总：
 
-$$\text{ParentHash} = \text{SHA256}(\text{LeftChildHash} + \text{RightChildHash})$$
+```text
+ParentHash = SHA256(LeftChildHash + RightChildHash)
+```
 
-轻钱包（SPV）无需下载数百 GB 的完整区块，只需向全节点索取 $O(\log N)$ 长度的 Merkle Path，即可在本地验证某笔交易是否已被包含在区块中。
+轻钱包（SPV）无需下载数百 GB 的完整区块，只需向全节点索取 `O(log N)` 长度的 Merkle Path，即可在本地验证某笔交易是否已被包含在区块中。
 
 ## 6. 架构演进史
 
@@ -227,14 +229,18 @@ $$\text{ParentHash} = \text{SHA256}(\text{LeftChildHash} + \text{RightChildHash}
 ### 架构演进对比
 
 <CompareSlider
-  before={{
-    title: '早期纯 1MB 基础区块 + ECDSA 签名',
-    description: '签名与交易体混在一起，每秒仅处理 7 笔交易，多重签名脚本极其臃肿费手续费。'
-  }}
-  after={{
-    title: 'SegWit + Taproot + Lightning Network Layer-2',
-    description: '签名隔离降低体积，Schnorr 聚合多重签名，闪电网络实现百万级 TPS 秒级小额支付。'
-  }}
+  before={
+    <div style={{ padding: '20px', background: '#ffebee', borderRadius: '8px', height: '100%' }}>
+      <h3>早期纯 1MB 基础区块 + ECDSA 签名</h3>
+      <p>签名与交易体混在一起，每秒仅处理 7 笔交易，多重签名脚本极其臃肿费手续费。</p>
+    </div>
+  }
+  after={
+    <div style={{ padding: '20px', background: '#e8f5e9', borderRadius: '8px', height: '100%' }}>
+      <h3>SegWit + Taproot + Lightning Network Layer-2</h3>
+      <p>签名隔离降低体积，Schnorr 聚合多重签名，闪电网络实现百万级 TPS 秒级小额支付。</p>
+    </div>
+  }
 />
 
 ## 7. 设计模式与课程映射

@@ -174,11 +174,13 @@ flowchart TD
 
 ### 一致性哈希虚拟节点算法
 
-为防止节点硬件差异导致哈希倾斜，每个物理节点分配 $K$ 个虚拟节点（Virtual Nodes）：
+为防止节点硬件差异导致哈希倾斜，每个物理节点分配 K 个虚拟节点（Virtual Nodes）：
 
-$$\text{VirtualNodeID}_{i, j} = \text{Hash}(\text{NodeIP}_i + \text{"#VNODE-"} + j)$$
+```text
+VirtualNodeID_{i, j} = Hash(NodeIP_i + "#VNODE-" + j)
+```
 
-通过在哈希环（如 SkipList 或 Red-Black Tree）中二分查找 `Upper_Bound(Hash(URL))`，实现 $O(\log N)$ 时间复杂度的节点检索。
+通过在哈希环（如 SkipList 或 Red-Black Tree）中二分查找 `Upper_Bound(Hash(URL))`，实现 `O(log N)` 时间复杂度的节点检索。
 
 ## 6. 架构演进史
 
@@ -208,14 +210,18 @@ $$\text{VirtualNodeID}_{i, j} = \text{Hash}(\text{NodeIP}_i + \text{"#VNODE-"} +
 ### 架构演进对比
 
 <CompareSlider
-  before={{
-    title: '早期单级 DNS 轮询 + 简单 HTTP 代理',
-    description: '无法定位真实用户 IP，缓存命中率低，热点文件导致源站瞬间被击穿。'
-  }}
-  after={{
-    title: 'GSLB EDNS0 + 一致性哈希环 + Collapse Forwarding',
-    description: '精确 10ms 边缘接入，机房内内存高效利用，千万人并发抢购源站仅收 1 次请求。'
-  }}
+  before={
+    <div style={{ padding: '20px', background: '#ffebee', borderRadius: '8px', height: '100%' }}>
+      <h3>早期单级 DNS 轮询 + 简单 HTTP 代理</h3>
+      <p>无法定位真实用户 IP，缓存命中率低，热点文件导致源站瞬间被击穿。</p>
+    </div>
+  }
+  after={
+    <div style={{ padding: '20px', background: '#e8f5e9', borderRadius: '8px', height: '100%' }}>
+      <h3>GSLB EDNS0 + 一致性哈希环 + Collapse Forwarding</h3>
+      <p>精确 10ms 边缘接入，机房内内存高效利用，千万人并发抢购源站仅收 1 次请求。</p>
+    </div>
+  }
 />
 
 ## 7. 设计模式与课程映射
