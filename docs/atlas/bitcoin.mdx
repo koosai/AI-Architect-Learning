@@ -165,11 +165,15 @@ flowchart LR
 
 矿工必须不断寻找一个 32 位随机数 <GlossaryTerm term="Nonce" definition="Number used once，区块头中的随机填空值，矿工通过不断修改 Nonce 尝试寻找满足 SHA-256 难度要求的哈希值。">Nonce</GlossaryTerm>，使得：
 
-$$\text{SHA256}(\text{SHA256}(\text{BlockHeader})) < \text{Target}$$
+```text
+SHA256(SHA256(BlockHeader)) < Target
+```
 
 为保证无论全球算力如何暴涨暴跌，新块生成速度始终维持在约 10 分钟，比特币每 2016 个区块自动触发 <GlossaryTerm term="难度调整算法" definition="Difficulty Adjustment Algorithm，对比生成最近 2016 个区块实际消耗的时间与预期 2 周 (20160 分钟) 的比例，按比例放大或缩小难度 Target。">难度调整</GlossaryTerm>：
 
-$$\text{NextTarget} = \text{CurrentTarget} \times \frac{\text{ActualTimeFor2016Blocks}}{14 \text{ Days}}$$
+```text
+NextTarget = CurrentTarget * (ActualTimeFor2016Blocks / 14 Days)
+```
 
 ### 4c. Nakamoto 最长链共识与拜占庭容错
 

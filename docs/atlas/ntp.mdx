@@ -150,16 +150,19 @@ block-beta
   T4["T4: Client 接收"]:2
 ```
 
-假设网络去程延迟与回程延迟对称（$a = b = \frac{\delta}{2}$），可列出等式：
+假设网络去程延迟与回程延迟对称（`a = b = delta / 2`），可列出等式：
 
-$$T_2 = T_1 + a + \theta$$
-$$T_4 = T_3 + b - \theta$$
+```text
+T2 = T1 + a + theta
+T4 = T3 + b - theta
+```
 
-立得 **Offset 偏移量 $\theta$** 与 **RTT 往返延迟 $\delta$**：
+立得 **Offset 偏移量 theta** 与 **RTT 往返延迟 delta**：
 
-$$\theta = \frac{(T_2 - T_1) + (T_3 - T_4)}{2}$$
-
-$$\delta = (T_4 - T_1) - (T_3 - T_2)$$
+```text
+theta = ((T2 - T1) + (T3 - T4)) / 2
+delta = (T4 - T1) - (T3 - T2)
+```
 
 ### 4b. Marzullo 滤波与区间交集算法
 
