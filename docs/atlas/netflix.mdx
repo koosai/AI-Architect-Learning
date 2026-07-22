@@ -80,7 +80,7 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 mindmap
-  root((Netflix 架构))
+  root("(Netflix 架构"))
     微服务 OSS 组件
       Zuul API 网关
       Eureka 注册中心 (AP 定理)
@@ -161,18 +161,18 @@ graph TB
 
   Client["用户客户端 APP"]:::container -->|1. HTTP / RESP 请求| ZuulGateway["Zuul Edge 网关<br/>负责动态路由、身份校验、首层限流"]:::gateway
   
-  subgraph AWSControlPlane [AWS 弹性微服务平面]
+  subgraph AWSControlPlane ["AWS 弹性微服务平面"]
     ZuulGateway -->|2. 带 Ribbon 客户端负载均衡路由| RecommendationService["推荐微服务 (Recommendation)"]:::scale
     ZuulGateway -->|3. 熔断隔离链路保护| PlaybackService["播放授权微服务 (Playback)"]:::scale
     
     RecommendationService & PlaybackService <-->|4. 注册心跳与实例寻址| EurekaServer["Eureka AP 注册中心集群"]:::gateway
     
-    subgraph ServiceResilience [Hystrix 保护层]
+    subgraph ServiceResilience ["Hystrix 保护层"]
       HystrixCircuit["Hystrix 熔断拦截器"]:::gateway <.-> PlaybackService
     end
   end
 
-  subgraph LocalISPNetwork [宽带运营商 ISP 机房机架]
+  subgraph LocalISPNetwork ["宽带运营商 ISP 机房机架"]
     OCABox["Open Connect OCA 缓存服务器 (FreeBSD / Nginx 优化)"]:::storage
   end
 
@@ -201,14 +201,14 @@ graph TD
   classDef active fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
   classDef instance fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-  subgraph NetworkPartition [网络分区脑裂状态 (AP 保障)]
-    subgraph Partition1 [分区 1 (正常工作)]
+  subgraph NetworkPartition ["网络分区脑裂状态 (AP 保障)"]
+    subgraph Partition1 ["分区 1 (正常工作)"]
       EurekaNodeA["Eureka 节点 A"]:::active
       ServiceX["微服务实例 X"]:::instance
       ServiceX -->|1. 心跳注册| EurekaNodeA
     end
     
-    subgraph Partition2 [分区 2 (正常工作)]
+    subgraph Partition2 ["分区 2 (正常工作)"]
       EurekaNodeB["Eureka 节点 B"]:::active
       ServiceY["微服务实例 Y"]:::instance
       ServiceY -->|2. 心跳注册| EurekaNodeB
@@ -272,7 +272,7 @@ graph LR
 
   Request["客户端 HTTP 请求"] --> Zuul["Zuul 网关入口"]:::gateway
   
-  subgraph ZuulPipeline [Zuul 过滤器管线]
+  subgraph ZuulPipeline ["Zuul 过滤器管线"]
     Zuul --> Pre["Pre Filters<br/>(身份校验/灰度/限流)"]:::filter
     Pre --> Route["Route Filters<br/>(Ribbon 动态路由)"]:::filter
     Route --> Post["Post Filters<br/>(Headers 注入/时延指标)"]:::filter
@@ -302,16 +302,16 @@ graph TD
   classDef cache fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
   classDef user fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
 
-  subgraph AWSCloud [AWS 控制平面 (昼夜轮转)]
+  subgraph AWSCloud ["AWS 控制平面 (昼夜轮转)"]
     PredictEngine["大数据观影预测引擎"] -->|1. 预测地区观影热度| StagingLog["视频存储库 (S3)"]
     StagingLog -->|2. 每日凌晨 2:00 ~ 5:00 闲时推送新视频| PushThread["云端预分发通道"]:::control
   end
 
-  subgraph ISPMachines [全球宽带 ISP 核心机房]
+  subgraph ISPMachines ["全球宽带 ISP 核心机房"]
     PushThread -->|3. 闲时占用闲置公网带宽| OCA_Server["ISP 机房 Open Connect OCA 盒子"]:::cache
   end
 
-  subgraph UserHomes [用户家庭设备]
+  subgraph UserHomes ["用户家庭设备"]
     LocalClient["本地智能电视 (SmartTV)"]:::user -->|4. 发起播放请求| Redirector["ISP BGP 局端路由器"]
     Redirector -->|5. 路由宣告重定向至本地机架| OCA_Server
     OCA_Server -->|6. 本地超高速发送视频流| LocalClient
@@ -337,7 +337,7 @@ graph LR
   classDef bucket fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
   classDef expire fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
 
-  subgraph SlidingWindow [Hystrix 滑动窗口 (时间跨度: 最近 10秒)]
+  subgraph SlidingWindow ["Hystrix 滑动窗口 (时间跨度: 最近 10秒)"]
     B1["第 1 秒 Bucket<br/>(即将滑出)"]:::expire --> B2["第 2 秒 Bucket"]:::bucket
     B2 --> B3["第 3 秒 Bucket"]:::bucket
     B3 --> B4["..."]:::bucket

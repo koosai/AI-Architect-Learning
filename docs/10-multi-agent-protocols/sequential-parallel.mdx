@@ -91,7 +91,7 @@ graph TD
 
     Input["评估竞品大任务"] --> Split["1. 扇出任务拆分 (Fan-out)"]:::fan
     
-    subgraph ParallelExecution [并发执行层 (互相独立无依赖)]
+    subgraph ParallelExecution ["并发执行层 (互相独立无依赖)"]
         Split -->|子任务 1| AgentA["调研竞品 A (Worker A)"]:::worker
         Split -->|子任务 2| AgentB["调研竞品 B (Worker B)"]:::worker
         Split -->|子任务 3| AgentC["调研竞品 C (Worker C)"]:::worker
@@ -113,13 +113,13 @@ graph TD
     classDef benefit fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
     classDef cost fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
 
-    subgraph SequentialChain [顺序链式模式 (Chain Pattern)]
+    subgraph SequentialChain ["顺序链式模式 (Chain Pattern)"]
         SeqLatency["串行延迟 (耗时求和): 慢"]:::cost
         SeqToken["Token 开销: 相对可控 (步步过滤)"]:::benefit
         SeqDependencies["处理强因果依赖: 完美支持"]:::benefit
     end
 
-    subgraph ParallelMapReduce [并行扇出聚合 (MapReduce Pattern)]
+    subgraph ParallelMapReduce ["并行扇出聚合 (MapReduce Pattern)"]
         ParLatency["并行延迟 (最慢单点): 极快"]:::benefit
         ParToken["Token 开销: 消耗巨大 (N路齐跑)"]:::cost
         ParFailure["部分失败/聚合难题: 复杂度上升"]:::cost

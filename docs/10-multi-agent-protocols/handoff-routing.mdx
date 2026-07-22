@@ -79,7 +79,7 @@ graph TD
     Router -->|2. 提取意图 2: 退货售后| AgentReturn["专精退货智能体 (Return Agent)"]:::worker
     Router -->|2. 提取意图 3: 技术提问| AgentTech["专精技术智能体 (Tech Agent)"]:::worker
     
-    AgentBilling -->|完成子任务| Output[("结构化结果汇总")]:::target
+    AgentBilling -->|完成子任务| Output["("结构化结果汇总")"]:::target
     AgentReturn -->|完成子任务| Output
 ```
 

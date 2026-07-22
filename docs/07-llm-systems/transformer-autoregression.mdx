@@ -38,7 +38,7 @@ graph TD
     Predict --> Sample[根据采样策略选择 Token t_i]
     Sample --> CheckEnd{t_i == `<end>` 或 达到最大长度?}
     CheckEnd -- 是 --> End([生成结束])
-    CheckEnd -- 否 --> Append[将 t_i 追加到输入序列: X_new = X_old + t_i]
+    CheckEnd -- 否 --> Append["将 t_i 追加到输入序列: X_new = X_old + t_i"]
     Append --> RunModel
 ```
 

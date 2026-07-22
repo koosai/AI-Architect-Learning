@@ -78,7 +78,7 @@ graph TD
     CacheCheck -- 匹配成功 (Hit) --> ReturnCache["直接返回缓存答案"]:::client
     CacheCheck -- 匹配失败 (Miss) --> RetrieveKB["2. 知识库检索 <br/>(Grounding Retrieval)"]:::database
     
-    KB[("企业本地知识库 <br/>(Knowledge Base)")] -.-> RetrieveKB
+    KB["("企业本地知识库 <br/>(Knowledge Base)")"] -.-> RetrieveKB
     
     RetrieveKB --> GroundingCheck{"是否有相关证据?"}
     GroundingCheck -- 否 (No Grounding) --> RefuseAnswer["3. 弃答 / 安全转人工"]:::gate

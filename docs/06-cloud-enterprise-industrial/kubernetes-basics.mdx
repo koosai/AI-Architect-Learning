@@ -59,7 +59,7 @@ K8s 的工作方式不是命令式（"启动这个、停那个"），而是<Glos
 flowchart TD
   subgraph ControlPlane["🧠 控制面 (Control Plane - 集中决策)"]
     APIServer["🖥️ kube-apiserver <br/>(唯一网关，声明式 API 入口)"]
-    etcd[(("💾 etcd <br/>(共识存储期望状态)"))]
+    etcd["(("💾 etcd <br/>(共识存储期望状态)"))"]
     Controller["⚙️ kube-controller-manager <br/>(维持调和循环控制器)"]
     Scheduler["📅 kube-scheduler <br/>(分配 Pod 至物理节点)"]
     
@@ -105,9 +105,9 @@ flowchart TD
     Deployment["⚙️ Deployment <br/>(配置模板, 滚动更新)"] -->|控制| RS["⚙️ ReplicaSet <br/>(副本控制器)"]
   end
 
-  RS -->|2. 创建与维护生命周期| Pod1[("📦 Pod 1 <br/>IP: 10.244.1.5 <br/>(Label: app=web)")]
-  RS -->|2. 创建与维护生命周期| Pod2[("📦 Pod 2 <br/>IP: 10.244.2.8 <br/>(Label: app=web)")]
-  RS -->|2. 创建与维护生命周期| Pod3[("📦 Pod 3 <br/>IP: 10.244.1.9 <br/>(Label: app=web)")]
+  RS -->|2. 创建与维护生命周期| Pod1["("📦 Pod 1 <br/>IP: 10.244.1.5 <br/>(Label: app=web)")"]
+  RS -->|2. 创建与维护生命周期| Pod2["("📦 Pod 2 <br/>IP: 10.244.2.8 <br/>(Label: app=web)")"]
+  RS -->|2. 创建与维护生命周期| Pod3["("📦 Pod 3 <br/>IP: 10.244.1.9 <br/>(Label: app=web)")"]
 
   Service -->|3. 标签选择器 (Selector: app=web) 动态负载均衡分发| Pod1 & Pod2 & Pod3
 ```

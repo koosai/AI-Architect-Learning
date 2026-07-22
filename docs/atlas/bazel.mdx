@@ -82,7 +82,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((Bazel 架构))
+  root("(Bazel 架构"))
     配置与依赖解析
       Starlark 声明式受限语言
       WORKSPACE / MODULE.bazel (外置依赖)
@@ -192,7 +192,7 @@ Bazel 的核心加速秘诀在于：**构建前计算 Action Digest**。
 ```mermaid
 graph TD
   subgraph DigestCalculation["Action Digest SHA256 算力求值"]
-    InputFiles["输入文件 Hash: [foo.cc, foo.h]"]
+    InputFiles["输入文件 Hash: [foo.cc, foo.h"]"]
     CompileCommand["命令行参数: g++ -O2"]
     CompilerBinary["编译器二进制 Hash"]
   end

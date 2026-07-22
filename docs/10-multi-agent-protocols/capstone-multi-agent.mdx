@@ -83,7 +83,7 @@ graph TD
 
     User["用户需求输入"] --> Supervisor["主管 (Supervisor Agent)"]:::supervisor
     
-    subgraph SpecialWorkers [专精执行智能体角色]
+    subgraph SpecialWorkers ["专精执行智能体角色"]
         Supervisor -->|1. 派发检索| Researcher["研究员 (Researcher Agent)"]:::worker
         Supervisor -->|2. 派发分析| Analyst["分析师 (Analyst Agent)"]:::worker
         Supervisor -->|3. 派发编写| Writer["编写者 (Writer Agent)"]:::worker
@@ -134,18 +134,18 @@ graph LR
     classDef bus fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
     classDef gate fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-    subgraph StateBus [第一级防护: 状态收敛与隔离]
+    subgraph StateBus ["第一级防护: 状态收敛与隔离"]
         Blackboard["共享结构化黑板"]:::bus
         Blackboard -->|强制只读隔离| LocalThought["Worker 本地 Thought 缓存"]
     end
 
-    subgraph CostControl [第二级防护: 运维与预算控制]
+    subgraph CostControl ["第二级防护: 运维与预算控制"]
         Tracing["全局 Tracing ID 跟踪"]
         Budget{"全局 Token 预算校验"}
         Tracing --> Budget
     end
 
-    subgraph SideEffects [第三级防护: 副作用拦截网]
+    subgraph SideEffects ["第三级防护: 副作用拦截网"]
         HITL{"系统级安全闸 (HITL)"}:::gate
         HITL -->|阻断| Command["敏感命令 / 外发物理动作"]
     end

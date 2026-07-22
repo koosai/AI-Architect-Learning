@@ -139,39 +139,39 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-  subgraph StrongQuorum["配置 1: 强一致性 (Strong Quorum: W + R > N) <br/>N=3, W=2, R=2 (W + R = 4 > 3)"]
+  subgraph StrongQuorum["配置 1: 强一致性 (Strong Quorum: W + R > N) <br/>N=3, W=2, R=2("W + R = 4 > 3")"]
     direction TB
     subgraph NodesStrong["副本节点"]
-      NodeA_S[("节点 A <br/>(新数据 X=v2)")]
-      NodeB_S[("节点 B <br/>(新数据 X=v2)")]
-      NodeC_S[("节点 C <br/>(旧数据 X=v1)")]
+      NodeA_S["("节点 A <br/>(新数据 X=v2)")"]
+      NodeB_S["("节点 B <br/>(新数据 X=v2)")"]
+      NodeC_S["("节点 C <br/>(旧数据 X=v1)")"]
       style NodeA_S fill:#dfd,stroke:#333
       style NodeB_S fill:#dfd,stroke:#333
       style NodeC_S fill:#fdd,stroke:#333
     end
     
-    WriteSet_S["写集合 (W=2) <br/>[A, B]"] -.-> NodeA_S & NodeB_S
-    ReadSet_S["读集合 (R=2) <br/>[B, C]"] -.-> NodeB_S & NodeC_S
+    WriteSet_S["写集合 (W=2) <br/>[A, B"]"] -.-> NodeA_S & NodeB_S
+    ReadSet_S["读集合 (R=2) <br/>[B, C"]"] -.-> NodeB_S & NodeC_S
     
     noteS["✅ 重叠交叉点: 节点 B <br/>读请求可以通过比对版本号，直接用 B 的 v2 盖掉 C 的 v1，保证强一致性！"]
     NodeB_S -.-> noteS
   end
 
-  subgraph WeakQuorum["配置 2: 弱一致性 (Weak Quorum: W + R <= N) <br/>N=3, W=1, R=2 (W + R = 3 <= 3)"]
+  subgraph WeakQuorum["配置 2: 弱一致性 (Weak Quorum: W + R <= N) <br/>N=3, W=1, R=2("W + R = 3 <= 3")"]
     direction TB
     subgraph NodesWeak["副本节点"]
-      NodeA_W[("节点 A <br/>(新数据 Y=v2)")]
-      NodeB_W[("节点 B <br/>(旧数据 Y=v1)")]
-      NodeC_W[("节点 C <br/>(旧数据 Y=v1)")]
+      NodeA_W["("节点 A <br/>(新数据 Y=v2)")"]
+      NodeB_W["("节点 B <br/>(旧数据 Y=v1)")"]
+      NodeC_W["("节点 C <br/>(旧数据 Y=v1)")"]
       style NodeA_W fill:#dfd,stroke:#333
       style NodeB_W fill:#fdd,stroke:#333
       style NodeC_W fill:#fdd,stroke:#333
     end
     
-    WriteSet_W["写集合 (W=1) <br/>[A]"] -.-> NodeA_W
-    ReadSet_W["读集合 (R=2) <br/>[B, C]"] -.-> NodeB_W & NodeC_W
+    WriteSet_W["写集合 (W=1) <br/>[A"]"] -.-> NodeA_W
+    ReadSet_W["读集合 (R=2) <br/>[B, C"]"] -.-> NodeB_W & NodeC_W
     
-    noteW["❌ 无重叠点! <br/>读请求只查到了 [B, C]，返回的都是旧版本 Y=v1。写入的数据被脏读遗漏。"]
+    noteW["❌ 无重叠点! <br/>读请求只查到了 [B, C"]，返回的都是旧版本 Y=v1。写入的数据被脏读遗漏。"]
     NodeB_W & NodeC_W -.-> noteW
   end
 ```

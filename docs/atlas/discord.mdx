@@ -61,7 +61,7 @@ Discord 的设计初衷是提供一个**完全免费、网页一键直连、高�
 
 ```mermaid
 mindmap
-  root((Discord 架构))
+  root("(Discord 架构"))
     实时网关 Gateway (Elixir)
       BEAM 协程 Actor 模型
       轻量进程 Session Process
@@ -178,7 +178,7 @@ sequenceDiagram
   M->>C: 迁移至 Apache Cassandra (分布式宽列存储)
   
   Note over C: 消息量达到万亿级<br/>Java 的垃圾回收 (JVM GC) 在大内存下引起几十秒级的 Stop-the-world 挂起。<br/>数据压缩 (Compaction) 导致 CPU 周期性占满，尾延迟极其严重。
-  C->>S: 迁移至 ScyllaDB (C++ 编写的无 GC 版本)
+  C->>S: 迁移至 ScyllaDB("C++ 编写的无 GC 版本")
   
   Note over S: 零 GC 开销，完全接管系统内核页缓存。<br/>在相同硬件下吞吐量提升 3 倍以上，99% 尾延迟被压低至 5ms 以内！
 ```
@@ -212,7 +212,7 @@ timeline
   2015 : MongoDB 早期时代 : 网页版上线 / 采用 MongoDB 单体架构 / 消息超过一亿条后发生严重索引退化崩溃
   2016 : Apache Cassandra 时代 : 迁移到三副本 Cassandra 集群 / 实现按频道分区物理存储 / 成功度过并发爆发期
   2019 : Rust 局部替换时代 : 弃用 Go 语言开发的 Read-States 状态服务（由于 GC 抖动），改用 Rust 重写，延迟陡降
-  2022 : ScyllaDB 大一统时代 : 将所有万亿级消息由 Cassandra 整体迁移至 ScyllaDB (C++) / 解决长时间垃圾回收停顿问题
+  2022 : ScyllaDB 大一统时代 : 将所有万亿级消息由 Cassandra 整体迁移至 ScyllaDB("C++") / 解决长时间垃圾回收停顿问题
   2024 : 智能体与超级 Guild 优化 : 针对数十万人的超级 Guild 进行消息防雪崩限流隔离 / 维持 3000 万并发在线
 ```
 

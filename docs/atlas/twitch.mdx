@@ -49,7 +49,7 @@ graph TD
   Broadcaster["主播 (OBS / RTMP 实时推流)"] -->|1. RTMP 协议 (60fps)| IngestServer["Twitch Ingest POP (推流边缘接入点)"]
   
   subgraph RealtimeMediaPipeline["实时媒体处理与转码集群"]
-    IngestServer -->|2. 分发原始视频流| TranscodeCluster["Live Transcoder (Go/C++ GPU GOP 切片)"]
+    IngestServer -->|2. 分发原始视频流| TranscodeCluster["Live Transcoder("Go/C++ GPU GOP 切片")"]
     TranscodeCluster -->|3. 生成 0.5s 小 Part 切片| LLHLSBuilder["LL-HLS Manifest Engine (.m3u8 Part)"]
   end
   
@@ -87,7 +87,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((Twitch 架构))
+  root("(Twitch 架构"))
     实时流媒体入库与转码
       RTMP 协议边缘推流 (Ingest PoP)
       Go / C++ GPU GOP (Group of Pictures) 实时切片

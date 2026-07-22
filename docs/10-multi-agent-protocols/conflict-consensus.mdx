@@ -74,7 +74,7 @@ graph TD
 
     Input["评估业务方案安全性"] --> Dispatch["分发评估任务"]
     
-    subgraph DivergentOpinions [观点分裂: 各执一词]
+    subgraph DivergentOpinions ["观点分裂: 各执一词"]
         Dispatch --> AgentA["开发智能体 A<br/>结论: 极速上线 (90分)"]
         Dispatch --> AgentB["安全智能体 B<br/>结论: 存在风险拒绝 (20分)"]
         Dispatch --> AgentC["合规智能体 C<br/>结论: 需合规补充 (60分)"]

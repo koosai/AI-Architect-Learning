@@ -86,8 +86,8 @@ flowchart TD
   end
 
   subgraph SharedState["共享状态存储层 (Shared State Backend)"]
-    RedisStore[("共享 Redis 缓存集群<br/>(Shared Session Store)")]
-    DB[("持久化关系数据库<br/>(Master-Slave DB)")]
+    RedisStore["("共享 Redis 缓存集群<br/>(Shared Session Store)")"]
+    DB["("持久化关系数据库<br/>(Master-Slave DB)")"]
   end
 
   U1 & U2 --> LB

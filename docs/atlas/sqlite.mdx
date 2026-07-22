@@ -85,7 +85,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((SQLite 架构))
+  root("(SQLite 架构"))
     SQL 编译平面
       Tokenizer / Lexer 词法分析
       lemon 语法分析器
@@ -130,7 +130,7 @@ graph TB
     
     subgraph VdbeEngine["VDBE 虚拟机"]
       OpcodeRunner["VDBE 字节码执行循环"]
-      Registers["虚拟寄存器组 (Mem[])"]
+      Registers["虚拟寄存器组 (Mem["])"]
     end
 
     subgraph PagerSystem["页面与缓存管理 (Pager & Storage)"]

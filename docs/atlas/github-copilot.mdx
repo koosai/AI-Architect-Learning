@@ -137,17 +137,17 @@ graph TB
     classDef gateway fill:#ffebee,stroke:#c62828,stroke-width:2px;
     classDef inference fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-    subgraph LocalIDE [开发者本地 IDE 运行沙箱]
+    subgraph LocalIDE ["开发者本地 IDE 运行沙箱"]
         UI["IDE UI 视图渲染器"]:::client -->|输入监听| Harvester["IDE Extension: 采集上下文 (Harvesting Engine)"]:::extension
         Harvester -->|AST解析 & 符号匹配| JaccardRanker["IDE Extension: Jaccard 相似度窗口排序器"]:::extension
         JaccardRanker -->|拼装 FIM 报文| ClientNet["IDE Extension: HTTP/2 通信客户端"]:::extension
     end
 
-    subgraph CopilotCloud [GitHub Copilot 云服务集群]
+    subgraph CopilotCloud ["GitHub Copilot 云服务集群"]
         ClientNet -->|HTTPS (HTTP/2 Multiplexing)| ApiGateway["Edge API Gateway (路由/限流/安全护栏)"]:::gateway
         ApiGateway -->|动态路由分发| ServeEngine[" Serving System (vLLM / Triton)"]:::inference
         
-        subgraph GPUCluster [GPU 推理节点]
+        subgraph GPUCluster ["GPU 推理节点"]
             ServeEngine -->|校验 Prefix Hash 命中| PrefixCache["Prompt Prefix Cache (KV State Cache)"]:::inference
             PrefixCache -->|未命中: 全量预计算| LLMEngine["大模型推理引擎 (Codex / GPT-4o-mini)"]:::inference
             PrefixCache -->|命中: 重用 KV 状态| LLMEngine
@@ -282,7 +282,7 @@ graph TD
     classDef cache fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
     classDef calculate fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
 
-    Request["API 请求：[&lt;PRE&gt; 前导定义 ... 光标 &lt;SUF&gt; 后缀 ... &lt;MID&gt;]"] --> Split["提取稳定前缀段 (Stable Prefix Prefix tokens)"]
+    Request["API 请求：[&lt;PRE&gt; 前导定义 ... 光标 &lt;SUF&gt; 后缀 ... &lt;MID&gt;"]"] --> Split["提取稳定前缀段 (Stable Prefix Prefix tokens)"]
     Split --> Hash["计算前缀哈希 (Prefix SHA-256 Hash)"]
     Hash --> Check{"Prefix KV Cache 命中?"}
     

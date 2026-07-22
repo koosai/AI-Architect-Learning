@@ -81,15 +81,15 @@ graph TD
 
     Attacker["恶意用户 / 投毒文档"]:::attacker
     
-    subgraph TrustBoundary [信任边界 (Boundary Control)]
+    subgraph TrustBoundary ["信任边界 (Boundary Control)"]
         InputFilter["1. 输入过滤 / PII 脱敏"]:::boundary
         OutputFilter["2. 输出护栏 / 幻觉检测"]:::boundary
     end
 
-    subgraph LLMAppSystem [LLM 应用系统核心]
+    subgraph LLMAppSystem ["LLM 应用系统核心"]
         Prompt["Prompt 拼接区"]:::sys
         Model["大语言模型 (LLM)"]:::sys
-        Database[("企业数据库 (向量库)")]:::sys
+        Database["("企业数据库 (向量库)")"]:::sys
     end
 
     Attacker -->|直接注入 / 越狱攻击| InputFilter

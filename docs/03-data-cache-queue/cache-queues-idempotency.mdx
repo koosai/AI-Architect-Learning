@@ -80,9 +80,9 @@ sequenceDiagram
 
 ```mermaid
 graph LR
-  Producer[生产者 / Producer] -->|发送事件| Queue[消息队列 / Queue]
-  Queue -->|拉取事件| Consumer[消费者 / Consumer]
-  Consumer -->|处理任务| DB[(数据库 / DB)]
+  Producer["生产者 / Producer"] -->|发送事件| Queue["消息队列 / Queue"]
+  Queue -->|拉取事件| Consumer["消费者 / Consumer"]
+  Consumer -->|处理任务| DB["(数据库 / DB)"]
 ```
 
 适合放进队列的任务：

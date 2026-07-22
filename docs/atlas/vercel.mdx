@@ -73,7 +73,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((Vercel 前端云))
+  root("(Vercel 前端云"))
     构建系统 (Build Immutability)
       独立 Commit 编译
       带唯一 Hash 构建包
@@ -124,8 +124,8 @@ graph TB
     RouterCatalog["路由元数据表 (Commit Hash Pointers)"]
     
     subgraph ImmutableDeployments["只读构建产物仓库 (S3 Bucket)"]
-      Build_v1["部署包 v1 (Hash: abc) <br> [HTML / Serverless JS]"]
-      Build_v2["部署包 v2 (Hash: xyz) <br> [HTML / Serverless JS]"]
+      Build_v1["部署包 v1 (Hash: abc) <br> [HTML / Serverless JS"]"]
+      Build_v2["部署包 v2 (Hash: xyz) <br> [HTML / Serverless JS"]"]
     end
     
     IsrCompiler["ISR 异步页面重建器 (Serverless Executor)"]

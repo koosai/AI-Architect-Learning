@@ -48,7 +48,7 @@ GitLab CI 的核心设计用意在于：**采用反向长轮询（Long Polling�
 
 ```mermaid
 graph TD
-  GitLabServer["GitLab Server (Rails API + Redis + Postgres)"] <-->|1. HTTPS 反向长轮询 (Job Pull)| RunnerAgent["GitLab Runner (Go Agent)"]
+  GitLabServer["GitLab Server("Rails API + Redis + Postgres")"] <-->|1. HTTPS 反向长轮询 (Job Pull)| RunnerAgent["GitLab Runner (Go Agent)"]
   
   subgraph RunnerRuntime["Runner 内部执行环境 (Executor)"]
     RunnerAgent -->|2. 动态创建容器| DockerExecutor["Docker / K8s Executor"]
@@ -80,7 +80,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((GitLab CI 架构))
+  root("(GitLab CI 架构"))
     GitLab 控制平面
       Rails API 接口
       Sidekiq 异步任务队列

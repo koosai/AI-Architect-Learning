@@ -74,7 +74,7 @@ graph LR
 
     UserTask["外部请求 (TraceID = tr-999)"] --> SupervisorSpan["Supervisor Span (ID: sp-001)"]:::span
     
-    subgraph TracingChain [分布式追踪 span 树]
+    subgraph TracingChain ["分布式追踪 span 树"]
         SupervisorSpan -->|1. 派发研究| ResearchSpan["Researcher Span (ID: sp-002)<br/>Cost: 0.05$ / Parent: sp-001"]:::span
         SupervisorSpan -->|2. 派发编写| WriterSpan["Writer Span (ID: sp-003)<br/>Cost: 0.12$ / Parent: sp-001"]:::span
         
@@ -93,7 +93,7 @@ graph TD
 
     Input["接收大任务输入"] --> Init["初始化全局 Trace (Spent=0 / Budget=1.00$)"]
     
-    subgraph BudgetControlNetwork [全局预算控制网]
+    subgraph BudgetControlNetwork ["全局预算控制网"]
         Init --> RunA["调用 Agent A (Cost=0.20$)"]
         RunA --> Check1{"累加 spent = 0.20$ > 1.00$ ?"}
         

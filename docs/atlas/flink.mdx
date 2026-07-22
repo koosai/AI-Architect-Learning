@@ -77,7 +77,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((Flink 架构))
+  root("(Flink 架构"))
     流计算核心
       纯事件驱动 (Event-Driven)
       Event Time / Processing Time / Ingestion Time
@@ -176,7 +176,7 @@ graph TB
   end
 
   subgraph FlinkStream["Flink 原生事件驱动模型 (Event-Driven)"]
-    EventStream["无限事件流: [E1, E2, E3, E4...]"]
+    EventStream["无限事件流: [E1, E2, E3, E4..."]"]
     SingleOp["算子按单事件流式触发: op(Event)"]
     StateUpdate["内存 State 实时更新 + 毫秒级输出"]
     
@@ -196,8 +196,8 @@ graph TB
 ```mermaid
 graph TD
   subgraph InputChannels["多路输入 Channel"]
-    Ch1["Channel 1: [Data B] [Barrier N] [Data A]"]
-    Ch2["Channel 2: [Barrier N] [Data X]"]
+    Ch1["Channel 1: [Data B"] [Barrier N] [Data A]"]
+    Ch2["Channel 2: [Barrier N"] [Data X]"]
   end
 
   subgraph OperatorAlign["算子 Barrier 对齐阶段"]

@@ -76,11 +76,11 @@ graph TD
 
     CLI["CLI 客户端入口 (CLI Entry)"]:::client -->|1. 封装命令调用| AssistantFacade["系统大门面 (Assistant Facade)"]:::facade
     
-    subgraph IntegratedComponents [集成子系统组件]
+    subgraph IntegratedComponents ["集成子系统组件"]
         AssistantFacade -->|2. RAG 检索| RAG["RAG 问答服务"]:::component
         AssistantFacade -->|3. Agent 评审| Agent["评审 Agent"]:::component
         
-        RAG -->|摄取与查询| VectorDB[("本地向量存储")]:::component
+        RAG -->|摄取与查询| VectorDB["("本地向量存储")"]:::component
         Agent -->|调用只读工具| ToolRegistry["工具白名单注册表"]:::component
         
         RAG & Agent -->|DIP 接口| GuardedProvider["数据面网关适配层 (GuardedProvider)"]:::component

@@ -137,7 +137,7 @@ graph TB
     classDef serve fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
     classDef physical fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
 
-    subgraph UserSpace [用户空间 (Ring 3 / 非特权模式)]
+    subgraph UserSpace ["用户空间 (Ring 3 / 非特权模式)"]
         AppProcess["应用进程 (如 Nginx, MySQL)"]:::client
         Glibc["C 标准库 (glibc)"]:::client
         
@@ -146,7 +146,7 @@ graph TB
 
     Glibc -->|触发 0x80 或 syscall 指令| SCI_Interface["System Call Interface (SCI)"]:::serve
 
-    subgraph KernelSpaceMonolith [Linux 内核空间 (Ring 0 / 宏内核特权内存域)]
+    subgraph KernelSpaceMonolith ["Linux 内核空间 (Ring 0 / 宏内核特权内存域)"]
         SCI_Interface --> Scheduler["EEVDF CPU 调度器<br/>(分配 CPU 时间片)"]:::serve
         SCI_Interface --> VFS["虚拟文件系统 (VFS)<br/>(管理 Superblock/Inode)"]:::serve
         SCI_Interface --> NetworkStack["网络子系统与 epoll<br/>(基于网卡中断就绪队列)"]:::serve
@@ -238,7 +238,7 @@ sequenceDiagram
     Sock->>Epoll: 5. 触发 ep_poll_callback 回调
     Epoll->>Epoll: 6. 将对应的 fd 节点追加至就绪双链表 (Ready List)
     
-    Epoll-->>App: 7. epoll_wait() 唤醒返回，直接拷贝就绪 fd (O(1) 检索时延)
+    Epoll-->>App: 7. epoll_wait() 唤醒返回，直接拷贝就绪 fd("O(1") 检索时延)
 ```
 
 <ResearchNote

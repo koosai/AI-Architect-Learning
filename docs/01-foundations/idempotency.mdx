@@ -139,7 +139,7 @@ flowchart TD
   subgraph ExactlyOnceIdeal["理想的端到端 Exactly-Once 模式 (物理上恰好发送一次)"]
     direction LR
     Client1["发送端"] -->|理想无丢包网络| Server1["接收端 (物理上只收到1次)"]
-    Server1 -->|执行逻辑| DB1[("DB: 变更 1 次")]
+    Server1 -->|执行逻辑| DB1["("DB: 变更 1 次")"]
   end
 
   subgraph EffectivelyOnceReal["现实的 Effectively-Once 模式 (物理上多次, 效果上一次)"]
@@ -156,7 +156,7 @@ flowchart TD
       Check2 -->|Yes| Cache["直接阻断, 返回上次结果"]
     end
     
-    Exec --> DB2[("DB: 变更 1 次")]
+    Exec --> DB2["("DB: 变更 1 次")"]
     Cache --> DB2
   end
 ```

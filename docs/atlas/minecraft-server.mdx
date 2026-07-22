@@ -85,7 +85,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((Minecraft 服务器架构))
+  root("(Minecraft 服务器架构"))
     Tick 循环机制 (Tick Main Loop)
       目标 20 TPS (50ms / Tick)
       网络包处理 -> 实体 AI/物理 -> 方块 Tick -> 广播
@@ -96,7 +96,7 @@ mindmap
       PaperMC Async Chunk I/O (异步磁盘读写)
     多线程并发突破 (Concurrent Mechanics)
       Mojang Vanilla (单线程瓶颈)
-      PaperMC (异步 I/O + 主线程 Tick)
+      PaperMC("异步 I/O + 主线程 Tick")
       Folia Regional Multithreading (区域多线程)
       Off-Heap Direct Memory (减少 JVM GC)
 ```
@@ -125,8 +125,8 @@ graph TB
   end
 
   subgraph FoliaMultithreadedCore["Folia 区域多线程核心 (Regional Core)"]
-    RegionA["Region A Tick Worker (包含 Chunk [0,0]~[3,3], 20 TPS)"]
-    RegionB["Region B Tick Worker (包含 Chunk [4,0]~[7,3], 20 TPS)"]
+    RegionA["Region A Tick Worker (包含 Chunk [0,0"]~[3,3], 20 TPS)"]
+    RegionB["Region B Tick Worker (包含 Chunk [4,0"]~[7,3], 20 TPS)"]
     LaggyRegionC["Region C Tick Worker (密集成群实体养殖场, 8 TPS 卡顿隔离!)"]
   end
 

@@ -85,8 +85,8 @@ sequenceDiagram
   Comp-->>Enc: 返回 "zip(data)"
   deactivate Comp
   
-  Note over Enc: [加密后置操作] <br/> enc("zip(data)") -> "enc(zip(data))"
-  Enc-->>Client: 返回最终数据 "enc(zip(data))"
+  Note over Enc: [加密后置操作] <br/> enc("zip(data")") -> "enc("zip(data"))"
+  Enc-->>Client: 返回最终数据 "enc("zip(data"))"
   deactivate Enc
 ```
 

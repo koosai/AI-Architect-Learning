@@ -66,7 +66,7 @@ Notion 依靠 Block-based 文档树与本地 SQLite 镜像缓存，给出了优�
 
 ```mermaid
 mindmap
-  root((Notion 数据系统))
+  root("(Notion 数据系统"))
     Everything is a Block
       同构 Block 属性设计
       Parent_id 物理链条
@@ -105,7 +105,7 @@ graph LR
 graph TB
   subgraph UserDevice["Notion 客户端容器"]
     Editor["网格编辑器 (React Grid Engine)"]
-    LocalSQL[("SQLite 客户端本地缓存镜像")]
+    LocalSQL["("SQLite 客户端本地缓存镜像")"]
     SyncManager["本地同步事务管理器 (Sync Manager)"]
   end
 
@@ -121,8 +121,8 @@ graph TB
 
   subgraph DataPlane["存储底座"]
     PGRouter["PostgreSQL 空间哈希路由中台"]
-    PGShard1[("Postgres 分片 1 (Space A-K)")]
-    PGShard2[("Postgres 分片 2 (Space L-Z)")]
+    PGShard1["("Postgres 分片 1 (Space A-K)")"]
+    PGShard2["("Postgres 分片 2 (Space L-Z)")"]
   end
 
   Editor <-->|读写数据| LocalSQL

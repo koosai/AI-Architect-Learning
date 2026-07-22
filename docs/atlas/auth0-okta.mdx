@@ -52,7 +52,7 @@ graph TD
   
   subgraph PKCEAuthPlane["OAuth 2.0 OIDC + PKCE 授权码流程"]
     AuthServer -->|2. 用户登录 & MFA 验证| UserAuth{"登录成功?"}
-    UserAuth -- "是" -->|3. 返回 Authorization Code| UserClient
+    UserAuth -->|3. 成功并返回 Authorization Code| UserClient
     UserClient -->|4. 携带 Code + Code Verifier 兑换| TokenEndpoint["Token Endpoint"]
     TokenEndpoint -->|5. 校验 Verifier 哈希| TokenGen["生成 RS256 签名的 ID Token & Access Token"]
   end
@@ -86,7 +86,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((Auth0 / Okta 架构))
+  root("(Auth0 / Okta 架构"))
     协议标准 (Standard Protocols)
       OAuth 2.0 (授权框架)
       OpenID Connect (OIDC 身份识别层)

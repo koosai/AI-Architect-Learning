@@ -143,10 +143,10 @@ graph TB
     classDef serve fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
     classDef cache fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
 
-    subgraph ClientA [编辑客户端 A (Browser)]
+    subgraph ClientA ["编辑客户端 A (Browser)"]
         EditorA["Rich Editor UI"]:::client
         BufferA["Client Buffer Manager<br/>(三状态转换器)"]:::client
-        LocalDbA[("IndexedDB Local Store<br/>(离线操作日志)")]:::cache
+        LocalDbA["("IndexedDB Local Store<br/>(离线操作日志)")"]:::cache
         
         EditorA --> BufferA
         BufferA --> LocalDbA
@@ -154,9 +154,9 @@ graph TB
 
     UserConn["WebSocket Connection"] <--> ServerGateway["Docs Collaborator Server<br/>(权威排队节点)"]:::serve
     
-    subgraph ServerBackend [Docs 协同服务器后端]
+    subgraph ServerBackend ["Docs 协同服务器后端"]
         ServerGateway --> OTManager["OT Transformation Core<br/>(冲突裁决与坐标转换机)"]:::serve
-        OTManager --> VersionLog[("Revision Log Database<br/>(存储绝对递增的 op 历史)")]:::serve
+        OTManager --> VersionLog["("Revision Log Database<br/>(存储绝对递增的 op 历史)")"]:::serve
     end
 
     BufferA <-->|发送并接收 op| UserConn
@@ -232,7 +232,7 @@ stateDiagram-v2
     
     AwaitingWithBuffered --> AwaitingAck: 收到服务器对 op1 的 ACK 确认<br/>1. 发送 Buffer 中的 op2<br/>2. 清空本地 Buffer
     
-    AwaitingWithBuffered --> AwaitingWithBuffered: 收到服务器下发的他人并发 opB<br/>1. 在本地计算: T(op2, T(op1, opB))<br/>2. 动态修正本地 buffer 坐标值
+    AwaitingWithBuffered --> AwaitingWithBuffered: 收到服务器下发的他人并发 opB<br/>1. 在本地计算: T("op2, T(op1, opB"))<br/>2. 动态修正本地 buffer 坐标值
 ```
 
 ---
@@ -249,13 +249,13 @@ graph TD
     classDef offline fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
     classDef online fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
 
-    subgraph OfflinePeriod [1. 离线编辑期]
+    subgraph OfflinePeriod ["1. 离线编辑期"]
         UserEdit["用户在断线期间继续打字修改"]:::offline
         UserEdit --> LogOp["生成本地操作日志 op_off_1, op_off_2"]:::offline
         LogOp --> StoreIDB["持久化写入 IndexedDB 本地数据库"]:::offline
     end
 
-    subgraph ReconnectPeriod [2. 重新连接与双向合并]
+    subgraph ReconnectPeriod ["2. 重新连接与双向合并"]
         Recon["检测到网络重新连接"]:::online
         Recon --> QueryRev["向服务器拉取断线期间他人产生的 op_serv_1, op_serv_2"]:::online
         

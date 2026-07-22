@@ -88,7 +88,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((Milvus 架构))
+  root("(Milvus 架构"))
     云原生存算分离 (Disaggregated)
       Proxy Access Node (gRPC / REST 接入)
       Coordinator (Root / Query / Data / Index)
@@ -102,7 +102,7 @@ mindmap
       HNSW (高召回图索引, 内存高)
       IVF-FLAT (倒排索引, 均衡)
       IVF-PQ (乘积量化, 省 80% 内存)
-      Hybrid Search (向量 + 标量 BitSet 过滤)
+      Hybrid Search("向量 + 标量 BitSet 过滤")
 ```
 
 ---

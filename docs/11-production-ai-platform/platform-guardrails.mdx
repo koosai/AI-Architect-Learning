@@ -79,7 +79,7 @@ graph TD
 
     UserQuery["不可信用户输入"] --> InputBarrier["1. 输入护栏 (Input Guard)"]:::input
     
-    subgraph InputFilter [输入防御层]
+    subgraph InputFilter ["输入防御层"]
         InputBarrier -->|通过| LengthCheck["长度限制检测"]
         InputBarrier -->|通过| PromptInjection["注入与越狱分类器"]
         InputBarrier -->|通过| DataIsolation["指令/数据标签隔离"]
@@ -89,7 +89,7 @@ graph TD
     
     ModelEngine --> OutputBarrier["3. 输出护栏 (Output Guard)"]:::output
 
-    subgraph OutputFilter [输出防御层]
+    subgraph OutputFilter ["输出防御层"]
         OutputBarrier -->|通过| PIIMasking["PII 个人敏感信息脱敏"]
         OutputBarrier -->|通过| SecretLeak["系统提示词泄露扫描"]
         OutputBarrier -->|通过| Toxicity["有害/暴力违规内容过滤"]

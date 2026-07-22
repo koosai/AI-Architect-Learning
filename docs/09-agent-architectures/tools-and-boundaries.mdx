@@ -156,17 +156,17 @@ graph LR
     classDef server fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
     classDef protocol fill:#eceff1,stroke:#607d8b,stroke-width:1.5px;
 
-    subgraph HostSide [AI 运行宿主 (MCP Host / Client)]
+    subgraph HostSide ["AI 运行宿主 (MCP Host / Client)"]
         AgentApp["Agent 核心逻辑<br/>(Docusaurus App)"]:::host
         Gatekeeper["安全边界与网关<br/>(Schema/Permission/Budget)"]:::host
         AgentApp --> Gatekeeper
     end
 
-    subgraph ProtocolLayer [传输通道 (Transport Boundary)]
+    subgraph ProtocolLayer ["传输通道 (Transport Boundary)"]
         JSONRPC["JSON-RPC Over stdio/SSE<br/>(mcp.tools.call)"]:::protocol
     end
 
-    subgraph ServerSide [独立工具服务 (MCP Server)]
+    subgraph ServerSide ["独立工具服务 (MCP Server)"]
         MCPServer["MCP Server 协议封装"]:::server
         Sandbox["受限沙箱隔离环境<br/>(Docker / WASM)"]:::server
         RealTool["底层物理工具 API<br/>(本地文件/数据库)"]:::server

@@ -81,7 +81,7 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 mindmap
-  root((Amazon & Dynamo))
+  root("(Amazon & Dynamo"))
     SOA 架构演进
       Bezos 的 API 宣言
       双比萨团队 (Two-Pizza Teams)
@@ -92,7 +92,7 @@ mindmap
       虚拟节点 (Virtual Nodes)
       Gossip 拓扑传播
     高可用写操作
-      Tunable Quorum (W+R<=N)
+      Tunable Quorum("W+R<=N")
       向量时钟 Vector Clock
       购物车兄弟版本 (Siblings) 合并
     数据自愈防丢失
@@ -165,14 +165,14 @@ graph TB
 
   ClientApp["用户客户端 (User Browser)"] -->|发起主页请求| PageComposer["页面装配器 (Page Composer)<br/>负责并发发起上百个小微服务请求并拼装 Widget"]:::page
   
-  subgraph AmazonSOASystem [面向服务微服务平面 (无全局 SQL DB)]
+  subgraph AmazonSOASystem ["面向服务微服务平面 (无全局 SQL DB)"]
     PageComposer -->|调用/合并数据| PricingService["价格微服务 (Pricing)"]:::service
     PageComposer -->|调用/合并数据| ReviewService["评论微服务 (Reviews)"]:::service
     PageComposer -->|调用/合并数据| RecommendService["推荐微服务 (Recommend)"]:::service
     PageComposer -->|读写操作| CartService["购物车微服务 (Cart Service)"]:::service
   end
 
-  subgraph DynamoMasterlessStorage [Dynamo 去中心化存储容器]
+  subgraph DynamoMasterlessStorage ["Dynamo 去中心化存储容器"]
     CartService -->|写入 Cart(W=1) / 读 Cart| StorageNodeA["存储节点 Node-A (VNode 1)"]:::storage
     StorageNodeA <-->|Gossip 拓扑与 Merkle 逆熵| StorageNodeB["存储节点 Node-B (VNode 2)"]:::storage
     StorageNodeB <-->|Gossip 拓扑与 Merkle 逆熵| StorageNodeC["存储节点 Node-C (VNode 3)"]:::storage
@@ -224,8 +224,8 @@ graph TD
 
 ```mermaid
 graph TD
-  subgraph ConsistentHashRing [Dynamo 一致性哈希 Token 环 (含虚拟节点)]
-    RingOuter((Consistent Hashing Ring))
+  subgraph ConsistentHashRing ["Dynamo 一致性哈希 Token 环 (含虚拟节点)"]
+    RingOuter("(Consistent Hashing Ring"))
     
     NodeA1["VNode A-1 (物理 Node A)"]
     NodeB1["VNode B-1 (物理 Node B)"]
@@ -263,14 +263,14 @@ graph TD
   classDef clock fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
   classDef node fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-  V1["初始购物车 V1<br/>内容: [Book]<br/>Clock: [A: 1]"]:::clock -->|Node A 修改| V2["购物车 V2<br/>内容: [Book, Pen]<br/>Clock: [A: 2]"]:::clock
+  V1["初始购物车 V1<br/>内容: [Book"]<br/>Clock: [A: 1]"]:::clock -->|Node A 修改| V2["购物车 V2<br/>内容: [Book, Pen"]<br/>Clock: [A: 2]"]:::clock
   
-  V2 -->|网络断开分叉 1 (Node A 写入)| V3_A["购物车 V3-A<br/>内容: [Book, Pen, Shoes]<br/>Clock: [A: 3]"]:::clock
-  V2 -->|网络断开分叉 2 (Node B 写入)| V3_B["购物车 V3-B<br/>内容: [Book, Pen, Toy]<br/>Clock: [A: 2, B: 1]"]:::clock
+  V2 -->|网络断开分叉 1 (Node A 写入)| V3_A["购物车 V3-A<br/>内容: [Book, Pen, Shoes"]<br/>Clock: [A: 3]"]:::clock
+  V2 -->|网络断开分叉 2 (Node B 写入)| V3_B["购物车 V3-B<br/>内容: [Book, Pen, Toy"]<br/>Clock: [A: 2, B: 1]"]:::clock
   
   V3_A & V3_B -->|网络恢复发生 Read / 产生并发冲突 (Siblings)| MergeNode["客户端读取两版本并进行 Sibling 合并"]:::node
   
-  MergeNode -->|合并内容取并集并写回| V4["购物车 V4 (合并后)<br/>内容: [Book, Pen, Shoes, Toy]<br/>Clock: [A: 3, B: 1, Client: 1]"]:::clock
+  MergeNode -->|合并内容取并集并写回| V4["购物车 V4 (合并后)<br/>内容: [Book, Pen, Shoes, Toy"]<br/>Clock: [A: 3, B: 1, Client: 1]"]:::clock
 ```
 
 ---
@@ -291,7 +291,7 @@ graph TD
   classDef backup fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
   classDef error fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
 
-  subgraph PreferenceList [正常首选存储列表 (N=3)]
+  subgraph PreferenceList ["正常首选存储列表 (N=3)"]
     Node1["Node 1 (写成功)"]:::node
     Node2["Node 2 (已挂掉/卡死)"]:::error
     Node3["Node 3 (写成功)"]:::node

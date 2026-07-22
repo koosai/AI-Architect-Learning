@@ -69,14 +69,14 @@ flowchart TB
 
   subgraph Chat["Chat 服务器（Erlang，约 150 台，每台约 100 万连接）"]
     C1["连接进程 A（轻量 Erlang process）"]
-    Q[("离线消息队列 store-and-forward")]
+    Q["("离线消息队列 store-and-forward")"]
   end
 
   subgraph MM["多媒体服务器（约 250 台）"]
     M1["图片 / 视频 / 语音"]
   end
 
-  DB[("Mnesia 内存分布式库：路由 / 会话状态")]
+  DB["("Mnesia 内存分布式库：路由 / 会话状态")"]
   PUSH["第三方推送 APNs / Google"]
 
   P1 -- "1.建立长连接" --> LB --> C1
@@ -110,9 +110,9 @@ BEAM 能在单机调度**数百万个**极轻量进程。WhatsApp 把每条用�
 
 ```mermaid
 graph TD
-  Sup[Supervisor: 根监督者] --> SessionSup[Session Supervisor: 会话监督者]
-  SessionSup --> P1[Erlang Process A: User 1 Session]
-  SessionSup --> P2[Erlang Process B: User 2 Session]
+  Sup["Supervisor: 根监督者"] --> SessionSup["Session Supervisor: 会话监督者"]
+  SessionSup --> P1["Erlang Process A: User 1 Session"]
+  SessionSup --> P2["Erlang Process B: User 2 Session"]
   
   P1 -->|Crash/Error| SessionSup
   SessionSup -->|Let it crash & Restart| P1

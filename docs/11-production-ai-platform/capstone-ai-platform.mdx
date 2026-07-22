@@ -79,7 +79,7 @@ graph TD
 
     UserApp["业务客户端"]:::app -->|1. 统一接口请求| Gateway["AI 生产网关 (ProductionGateway)"]:::gate
     
-    subgraph GatewayCapabilities [网关内置横切拦截中间件]
+    subgraph GatewayCapabilities ["网关内置横切拦截中间件"]
         Gateway --> InGuard["输入安全护栏"]
         Gateway --> BudgetCheck["全局预算校验"]
         Gateway --> HITLRouter["HITL 人工审批队列"]:::human

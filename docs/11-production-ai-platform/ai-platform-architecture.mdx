@@ -77,15 +77,15 @@ graph TD
     classDef data fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
     classDef user fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-    subgraph ControlPlane [控制面 (Control Plane)]
+    subgraph ControlPlane ["控制面 (Control Plane)"]
         AdminPortal["1. 平台管理台 (Portal)"]:::control
-        ConfigDB[("配置数据库 (Model/Quota/Rules)")]:::control
+        ConfigDB["("配置数据库 (Model/Quota/Rules)")"]:::control
         EvalEngine["2. 统一评估引擎 (离线/影子)"]:::control
         
         AdminPortal -->|下发配置| ConfigDB
     end
 
-    subgraph DataPlane [数据面 (Data Plane - High Thruput)]
+    subgraph DataPlane ["数据面 (Data Plane - High Thruput)"]
         Gateway["3. AI 模型网关 (Model Gateway)"]:::data
         MetricsAgent["4. 计量与 Span 收集 (OTel)"]:::data
         

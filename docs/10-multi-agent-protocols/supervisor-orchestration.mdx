@@ -85,7 +85,7 @@ graph TD
 
     UserTask["SRE / 业务任务输入"] --> Supervisor["1. 主管智能体 (Supervisor Agent)"]:::supervisor
     
-    subgraph ExecutionTeam [专精执行智能体团队]
+    subgraph ExecutionTeam ["专精执行智能体团队"]
         Supervisor -->|2a. 分派任务 A| WorkerResearch["研究员 (Researcher Agent)"]:::worker
         Supervisor -->|2b. 分派任务 B| WorkerCode["编写员 (Coder Agent)"]:::worker
         Supervisor -->|2c. 分派任务 C| WorkerReview["质检员 (Reviewer Agent)"]:::worker

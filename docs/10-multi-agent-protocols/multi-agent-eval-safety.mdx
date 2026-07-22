@@ -78,7 +78,7 @@ graph TD
     Input["评估评测输入 (Gold: '连接池超限')"] --> SystemBlackbox["多 Agent 系统整体 (黑盒)"]
     SystemBlackbox --> Output["最终输出: '重启物理主机' (Gold mismatch)"]:::bad
     
-    subgraph AttributionMatrix [分步归因矩阵 (Per-Agent Attribution)]
+    subgraph AttributionMatrix ["分步归因矩阵 (Per-Agent Attribution)"]
         Step1["步骤 1: Researcher<br/>输出: Connection Pool Exhausted<br/>(状态: OK)"]:::test
         
         Step2["步骤 2: Analyst<br/>输出: 判定为主机内核崩溃 (幻觉)<br/>(状态: FAILED)"]:::culprit
@@ -107,10 +107,10 @@ graph TD
     
     AgentB -->|3. 被注入: 伪造管理员命令 'delete_db'| ToolBus["工具调用总线"]
     
-    subgraph SecurityInterceptor [系统级物理防御闸 (Systemic Safety Gate)]
+    subgraph SecurityInterceptor ["系统级物理防御闸 (Systemic Safety Gate)"]
         ToolBus -->|4. 高危动作拦截| Gate{"物理安全闸拦截校验 / 人在回路 (HITL)"}:::gate
         Gate -- "未通过 (拒绝命令)" --> Block["5a. 强行丢弃并告警报警"]:::bad
-        Gate -- "安全 / 授权通过" --> DB[("5b. 写入物理数据库")]:::resource
+        Gate -- "安全 / 授权通过" --> DB["("5b. 写入物理数据库")"]:::resource
     end
 
     Note over Gate: 拦截所有跨 Agent 的高危副作用调用，<br/>不能仅依赖单个 Agent 的局部 System Prompt 拦截

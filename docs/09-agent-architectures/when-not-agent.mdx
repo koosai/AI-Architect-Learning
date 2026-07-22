@@ -124,7 +124,7 @@ graph LR
     classDef agent fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
     classDef nodeStyle fill:#ffffff,stroke:#333333,stroke-width:1px;
 
-    subgraph MasterWorkflow [主控工作流 (Master Workflow - 代码驱动)]
+    subgraph MasterWorkflow ["主控工作流 (Master Workflow - 代码驱动)"]
         NodeA["步骤A: 校验并读取输入"]:::nodeStyle --> NodeB["步骤B: 数据转换与切块"]:::nodeStyle
         NodeB --> NodeC["步骤C: 调用向量检索"]:::nodeStyle
         
@@ -137,7 +137,7 @@ graph LR
         NodeE --> NodeG
     end
 
-    subgraph SubAgentLoop [智能体子系统 (Brain Loop)]
+    subgraph SubAgentLoop ["智能体子系统 (Brain Loop)"]
         AgentNode --> Observe["观察状态 (Observe)"]
         Observe --> LLMReason["模型决策 (Decide)"]
         LLMReason --> Action["工具动作 (Act)"]

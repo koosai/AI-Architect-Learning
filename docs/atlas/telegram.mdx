@@ -58,7 +58,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 
 ```mermaid
 mindmap
-  root((Telegram 架构))
+  root("(Telegram 架构"))
     传输协议层
       MTProto 2.0
         AES-256-IGE
@@ -92,9 +92,9 @@ mindmap
 ```mermaid
 flowchart TB
   subgraph Client_Tier["客户端层"]
-    iOS["iOS Client (Swift / C++)"]
-    Android["Android Client (Java / C++)"]
-    Desktop["Desktop Client (C++ / Qt)"]
+    iOS["iOS Client("Swift / C++")"]
+    Android["Android Client("Java / C++")"]
+    Desktop["Desktop Client("C++ / Qt")"]
   end
 
   subgraph Edge_Tier["全球接入边缘 (Edge Cluster)"]
@@ -105,7 +105,7 @@ flowchart TB
 
   subgraph Core_DC["核心数据中心 (Datacenter Tier)"]
     MTGate["MTProto Gateway Proxy"]
-    RPCServer["RPC Engine (C++ Custom)"]
+    RPCServer["RPC Engine("C++ Custom")"]
     KDB["KDB (Key-Value Engine)"]
     MediaStorage["Media Distributed Storage"]
   end
@@ -183,8 +183,8 @@ sendMessage#520c38c4 flags:# peer:InputPeer message:string random_id:long = Upda
 
 ```mermaid
 flowchart LR
-  C[Client (Current PTS=105)] -->|请求 updates.getDifference| S[Server Engine]
-  S -->|对比 User PTS=110| DB[(KDB Message Store)]
+  C["Client (Current PTS=105)"] -->|请求 updates.getDifference| S[Server Engine]
+  S -->|对比 User PTS=110| DB["(KDB Message Store)"]
   DB -->|检索 [106..110] 消息列表| S
   S -->|返回 differenceUpdates| C
   C -->|更新本地 SQLite 并设 PTS=110| C

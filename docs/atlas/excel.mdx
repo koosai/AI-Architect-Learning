@@ -67,7 +67,7 @@ Excel 团队要解决的核心工程痛点是：
 
 ```mermaid
 mindmap
-  root((Excel 计算引擎))
+  root("(Excel 计算引擎"))
     稀疏矩阵内存模型
       Sparse Block List
       动态内存指针偏移
@@ -184,7 +184,7 @@ graph TD
 
 ```mermaid
 graph TD
-  Queue[("无锁并发计算任务队列 (Queue)")] -->|Thread 1 提取| TaskA["计算单元格 C1 (入度已为 0)"]
+  Queue["("无锁并发计算任务队列 (Queue)")"] -->|Thread 1 提取| TaskA["计算单元格 C1 (入度已为 0)"]
   Queue -->|Thread 2 提取| TaskB["计算单元格 C2 (入度已为 0)"]
   
   TaskA --> FinishA["C1 计算完成"]
@@ -225,7 +225,7 @@ graph TD
 
 ```mermaid
 graph TD
-  Formula["计算公式: UNIQUE(A1:A10)"] --> EvalArray["生成数组数据: ['Apple', 'Banana', 'Orange']"]
+  Formula["计算公式: UNIQUE(A1:A10)"] --> EvalArray["生成数组数据: ['Apple', 'Banana', 'Orange'"]"]
   EvalArray --> CheckSpill{"验证目标 Spill 范围 C1:C3 是否空闲"}
   
   CheckSpill -->|是 (空闲)| Draw["正常绘制，C1=Apple, C2=Banana, C3=Orange"]

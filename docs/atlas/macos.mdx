@@ -66,11 +66,11 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 mindmap
-  root((Darwin / XNU))
+  root("(Darwin / XNU"))
     XNU 混合内核
       Mach 底座 (微内核调度)
       BSD POSIX (进程/文件)
-      I/O Kit (C++ 面向对象驱动)
+      I/O Kit("C++ 面向对象驱动")
     应用沙箱与安全
       MACF 安全钩子
       Sandbox Profiles 限制
@@ -122,7 +122,7 @@ graph TB
       MACF["MACF 安全决策框架 (Mandatory Access Control)"]
     end
 
-    IOKitLib["I/O Kit (C++ 驱动容器)"]
+    IOKitLib["I/O Kit("C++ 驱动容器")"]
     AMFIKernel["AMFI 内核验证器"]
   end
 

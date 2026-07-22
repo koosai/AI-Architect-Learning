@@ -72,7 +72,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((Windows NT 内核))
+  root("(Windows NT 内核"))
     用户态 (Ring 3)
       环境子系统 (csrss.exe)
       系统服务 DLL (ntdll.dll)
@@ -247,7 +247,7 @@ timeline
   1996 : NT 4.0 图形内核化 : 图形窗口驱动 win32k.sys 移入 Ring 0 / 图形显示性能飞跃 / 显卡驱动不稳定连带蓝屏死机 (BSOD)
   2001 : XP/Win7 驱动框架演进 : 推出 KMDF (内核驱动模型) 与 UMDF (用户态驱动模型) / 实现了设备驱动的安全降级和软熔断
   2016 : WSL 1 (系统调用翻译) : 内核驱动 lxcore.sys 翻译器 / 转换 Linux syscall 到 Windows syscall / 兼容性差，Docker 无法运行
-  2020 : WSL 2 (真实内核 + Hyper-V) : 在轻量 VM 内直接运行真实 Linux 内核 / 100% 兼容系统调用 / 实现云原生技术栈 the无缝融合
+  2020 : WSL 2("真实内核 + Hyper-V") : 在轻量 VM 内直接运行真实 Linux 内核 / 100% 兼容系统调用 / 实现云原生技术栈 the无缝融合
 ```
 
 ---

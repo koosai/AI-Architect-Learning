@@ -83,7 +83,7 @@ graph TD
     
     LLM -->|3. 发起动作指令| GateKeeper["3. 安全拦截网关<br/>(Policy Gatekeeper)"]:::gate
     
-    subgraph ControlGate [安全边界与审批层]
+    subgraph ControlGate ["安全边界与审批层"]
         GateKeeper -->|敏感/高危动作| HITL["人在回路网关 (HITL Approval)"]:::gate
         GateKeeper -->|普通/只读动作| ExecuteDirect["放行直连"]
     end
@@ -92,7 +92,7 @@ graph TD
     HITL -->|4. 人工批准| SandboxExecutor["5. 沙箱执行器<br/>(Docker Sandbox)"]:::sandbox
     ExecuteDirect --> SandboxExecutor
     
-    subgraph SandboxEnv [物理沙箱隔离层]
+    subgraph SandboxEnv ["物理沙箱隔离层"]
         SandboxExecutor -->|最小特权权限| RealSystem["6. 物理系统 API / 敏感资源"]:::sandbox
         SandboxExecutor -->|文件系统隔离| TempDir["只读/临时目录"]
     end
@@ -142,7 +142,7 @@ graph LR
     
     LLM -->|5. 决策失控 (被诱导越权)| ExecuteDanger["6. 危险指令: delete_record"]:::attacker
     
-    subgraph Defenses [硬性防御三道哨卡]
+    subgraph Defenses ["硬性防御三道哨卡"]
         ExecuteDanger -->|哨卡一: 隔离数据与指令| ParseFilter["指令独立解析器"]:::safe
         ParseFilter -->|哨卡二: 行为网关校验| RiskChecker["Policy Gatekeeper"]:::safe
         RiskChecker -->|哨卡三: 人在回路确认| HITLGate["HITL 审批"]:::safe

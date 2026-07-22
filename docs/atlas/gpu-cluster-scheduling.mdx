@@ -50,8 +50,8 @@ graph TD
   
   subgraph GangSchedulingPlane["Gang Scheduling (全有全无校验)"]
     Scheduler -->|2. 检查全局空闲 GPU| CheckGang{"集群能否一次性凑齐 64 张合规 GPU?"}
-    CheckGang -- "否 (仅剩 63 卡)" -->|3. 挂起等待 0 占卡| PendingQueue["Pending Queue (保持 0 资源占用, 防死锁)"]
-    CheckGang -- "是 (凑齐 64 卡)" -->|4. 原子出库| TopologyEngine["Topology-Aware Engine (拓扑感知匹配)"]
+    CheckGang -->|3. 否 (仅剩 63 卡): 挂起等待 0 占卡| PendingQueue["Pending Queue (保持 0 资源占用, 防死锁)"]
+    CheckGang -->|4. 是 (凑齐 64 卡): 原子出库| TopologyEngine["Topology-Aware Engine (拓扑感知匹配)"]
   end
   
   subgraph TopologyAwareMatching["物理拓扑感知匹配平面"]
@@ -83,7 +83,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((GPU 集群调度))
+  root("(GPU 集群调度"))
     调度架构选型 (Scheduler Architecture)
       Slurm HPC Batch Scheduler (传统 C/POSIX, 脚本驱动)
       Kubernetes + Volcano (云原生 Container CRD, 声明式)

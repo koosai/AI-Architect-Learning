@@ -87,7 +87,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((12306 架构))
+  root("(12306 架构"))
     余票查询与读写分离 (Read/Write Separation)
       千万级 QPS 读流量网关
       Pivotal GemFire / Redis Cluster 内存网格
@@ -170,9 +170,9 @@ graph TB
   subgraph SegmentBitMatrix["12306 沿途站区间位图矩阵 (BitMatrix)"]
     TrainSeat["座位 #01 (北京 -> 天津 -> 济南 -> 上海)"]
     
-    SeatBitMap["站点区间 BitMap: [站1-站2: 1] [站2-站3: 1] [站3-站4: 1]"]
+    SeatBitMap["站点区间 BitMap: [站1-站2: 1"] [站2-站3: 1] [站3-站4: 1]"]
     
-    BuySegment["乘客购买: '北京(站1) -> 济南(站3)'"] --> BitOperation["位运算掩码置 0: [站1-站2: 0] [站2-站3: 0]"]
+    BuySegment["乘客购买: '北京(站1) -> 济南(站3)'"] --> BitOperation["位运算掩码置 0: [站1-站2: 0"] [站2-站3: 0]"]
     BitOperation --> OverlapBlocked["联动效应: '站1->站4(北京-上海)' 的票自动变为 0 (不可再卖!)"]
     
     SeatBitMap --- BuySegment

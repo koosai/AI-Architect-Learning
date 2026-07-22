@@ -140,7 +140,7 @@ graph TB
     classDef framework fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
     classDef kernel fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
 
-    subgraph UserSpaceApp [用户空间应用进程 (App Sandbox)]
+    subgraph UserSpaceApp ["用户空间应用进程 (App Sandbox)"]
         AppUI["App UI Client (Java/Kotlin)"]:::client
         ArtVm["ART Runtime (JIT/AOT Compiler)"]:::client
         BinderProxy["Binder Proxy (Proxy Stub)"]:::client
@@ -149,13 +149,13 @@ graph TB
         ArtVm --> BinderProxy
     end
 
-    subgraph SystemServerProcess [System Server 系统核心服务进程]
+    subgraph SystemServerProcess ["System Server 系统核心服务进程"]
         AMS["ActivityManagerService (AMS)"]:::framework
         WMS["WindowManagerService (WMS)"]:::framework
         SM["ServiceManager (目录路由)"]:::framework
     end
 
-    subgraph LinuxKernelDomain [Linux 内核特权级 (Ring 0)]
+    subgraph LinuxKernelDomain ["Linux 内核特权级 (Ring 0)"]
         BinderDriver["/dev/binder Driver<br/>(分配 mmap 共享页面)"]:::kernel
         LmkDriver["LMK Kernel Module / PSI Monitor"]:::kernel
     end
@@ -214,15 +214,15 @@ graph TD
     classDef kernel fill:#ffebee,stroke:#c62828,stroke-width:2px;
     classDef server fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-    subgraph AppSender [1. 发送端 App (Process A)]
+    subgraph AppSender ["1. 发送端 App (Process A)"]
         SenderData["发送端用户态数据 (User Space)"]:::client
     end
 
-    subgraph KernelSpaceBoundary [2. 内核态控制层]
+    subgraph KernelSpaceBoundary ["2. 内核态控制层"]
         BinderKernelBuf["Binder 内核缓冲区<br/>(Ring 0 地址域)"]:::kernel
     end
 
-    subgraph AppReceiver [3. 接收端 App (Process B)]
+    subgraph AppReceiver ["3. 接收端 App (Process B)"]
         ReceiverData["接收端用户态数据 (User Space)"]:::server
     end
 
@@ -256,7 +256,7 @@ graph TD
 
     LmkLevel["LMKD 检测到内存可用度低于警戒阈值"] --> LoopAdj["从 adj=1000 往下逐级轮询活动进程"]
     
-    subgraph LevelAdj [Oom_score_adj 优先级分类]
+    subgraph LevelAdj ["Oom_score_adj 优先级分类"]
         StateCached["Cached App (后台缓存) adj=900~950"]:::danger
         StateService["Service App (后台服务) adj=500"]:::danger
         StatePercept["Perceptible App (后台音乐等) adj=200"]:::appState

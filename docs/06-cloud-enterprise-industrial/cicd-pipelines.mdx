@@ -79,17 +79,17 @@ flowchart TD
 ```mermaid
 flowchart TD
     subgraph Wrong_Mutable_Path["错误做法：每个环境分别构建 (环境漂移风险)"]
-        W_Code[Git 代码] -->|构建| W_Dev[开发版镜像] --> Dev_Env[(开发环境 Dev)]
-        W_Code -->|构建| W_Stg[测试版镜像] --> Stg_Env[(测试环境 Staging)]
-        W_Code -->|构建| W_Prod[生产版镜像] --> Prod_Env[(生产环境 Production)]
+        W_Code[Git 代码] -->|构建| W_Dev[开发版镜像] --> Dev_Env["(开发环境 Dev)"]
+        W_Code -->|构建| W_Stg[测试版镜像] --> Stg_Env["(测试环境 Staging)"]
+        W_Code -->|构建| W_Prod[生产版镜像] --> Prod_Env["(生产环境 Production)"]
         note1["配置、打包工具版本微小差异<br>导致各环境运行包可能存在不一致"]
     end
 
     subgraph Correct_Immutable_Path["正确做法：一次构建，逐级晋级 (Immutable Artifact)"]
-        C_Code[Git 代码] -->|CI 仅构建一次| C_Image[不可变镜像 app:sha-123]
-        C_Image --> Dev_Env2[(开发环境 Dev)]
-        Dev_Env2 -->|测试通过| Stg_Env2[(测试环境 Staging)]
-        Stg_Env2 -->|验证通过 / 制品晋级| Prod_Env2[(生产环境 Production)]
+        C_Code[Git 代码] -->|CI 仅构建一次| C_Image["不可变镜像 app:sha-123"]
+        C_Image --> Dev_Env2["(开发环境 Dev)"]
+        Dev_Env2 -->|测试通过| Stg_Env2["(测试环境 Staging)"]
+        Stg_Env2 -->|验证通过 / 制品晋级| Prod_Env2["(生产环境 Production)"]
         note2["相同的二进制镜像包依次推进<br>运行配置通过环境变量动态挂载注入"]
     end
 
@@ -105,9 +105,9 @@ flowchart TD
 ```mermaid
 flowchart TD
     subgraph Shift_Left["安全与质量左移 (Shift Left: 越早修复成本越低)"]
-        S1[1. 本地开发阶段<br>Linter / 本地单测] -->|修复成本: $1| S2[2. 代码提交 / PR 阶段<br>CI 编译 / 覆盖率门禁]
-        S2 -->|修复成本: $10| S3[3. 集成测试阶段<br>E2E 测试 / 动态安全扫描]
-        S3 -->|修复成本: $100| S4[4. Staging 预发布阶段<br>性能压测 / 人工审核]
+        S1["1. 本地开发阶段<br>Linter / 本地单测"] -->|修复成本: $1| S2["2. 代码提交 / PR 阶段<br>CI 编译 / 覆盖率门禁"]
+        S2 -->|修复成本: $10| S3["3. 集成测试阶段<br>E2E 测试 / 动态安全扫描"]
+        S3 -->|修复成本: $100| S4["4. Staging 预发布阶段<br>性能压测 / 人工审核"]
         S4 -->|修复成本: $1,000| S5["5. 生产上线阶段 (灾难)<br>系统崩溃 / 漏洞泄露"]
     end
 

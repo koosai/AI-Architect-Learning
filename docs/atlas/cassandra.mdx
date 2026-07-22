@@ -82,14 +82,14 @@ graph TD
 
 ```mermaid
 mindmap
-  root((Cassandra 架构))
+  root("(Cassandra 架构"))
     分布式路由与拓扑
       一致性哈希环 (Dynamic Ring)
       Gossip 成员状态协议
       协调者路由 (Coordinator)
       暗示切换 (Hinted Handoff)
     一致性与修复
-      Tunable Consistency (W+R>N)
+      Tunable Consistency("W+R>N")
       读修复 (Read Repair)
       Merkle 树反熵对齐
       向量时钟 / 写入时间戳
@@ -236,9 +236,9 @@ graph TD
 
 ```mermaid
 graph TD
-  Root["根哈希 Root Hash (A+B)"]
-  HashA["父哈希 Hash A (Leaf 1+2)"]
-  HashB["父哈希 Hash B (Leaf 3+4)"]
+  Root["根哈希 Root Hash("A+B")"]
+  HashA["父哈希 Hash A("Leaf 1+2")"]
+  HashB["父哈希 Hash B("Leaf 3+4")"]
   
   Leaf1["行数据 1 Hash"]
   Leaf2["行数据 2 Hash"]

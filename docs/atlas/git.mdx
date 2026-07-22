@@ -79,7 +79,7 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 mindmap
-  root((Git 架构))
+  root("(Git 架构"))
     三区工作模型
       工作区 Working Directory
       暂存区 Index (.git/index)
@@ -168,16 +168,16 @@ graph TB
   Developer["开发者 (User Space)"]:::client -->|修改源文件| WorkDir["工作目录 (Working Tree / 物理磁盘文件)"]:::folder
   
   Developer -->|1. git add| GitAddCmd["git add 命令处理器"]:::stage
-  GitAddCmd -->|2. 计算哈希并物理压缩存入| ObjectDB[(".git/objects/ 对象库 (Blob)")]:::database
-  GitAddCmd -->|3. 更新索引树| IndexFile[(".git/index 暂存区 (当前索引)")]:::stage
+  GitAddCmd -->|2. 计算哈希并物理压缩存入| ObjectDB["(".git/objects/ 对象库 (Blob)")"]:::database
+  GitAddCmd -->|3. 更新索引树| IndexFile["(".git/index 暂存区 (当前索引)")"]:::stage
   
   Developer -->|4. git commit| GitCommitCmd["git commit 命令处理器"]:::stage
   GitCommitCmd -->|5. 读取暂存区结构编译输出| TreeObj["Tree 对象"]:::database
   GitCommitCmd -->|6. 生成并串联 Parent| CommitObj["Commit 对象"]:::database
   
-  GitCommitCmd -->|7. 移动分支指针文件| RefDB[(".git/refs/heads/ 分支指针库")]:::database
+  GitCommitCmd -->|7. 移动分支指针文件| RefDB["(".git/refs/heads/ 分支指针库")"]:::database
   
-  RefDB <-->|HEAD 总是指向当前 active 分支| HEADRef[(".git/HEAD 指针文件")]:::stage
+  RefDB <-->|HEAD 总是指向当前 active 分支| HEADRef["(".git/HEAD 指针文件")"]:::stage
 ```
 
 ---
@@ -255,9 +255,9 @@ graph LR
   classDef stage fill:#ffebee,stroke:#c62828,stroke-width:2px;
   classDef repo fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-  WD["1. 工作区 (Working Dir)<br/>物理修改文件"]:::work -->|'git add'| Index[("2. 暂存区 (Index File)<br/>记录路径与哈希映射")]:::stage
+  WD["1. 工作区 (Working Dir)<br/>物理修改文件"]:::work -->|'git add'| Index["("2. 暂存区 (Index File)<br/>记录路径与哈希映射")"]:::stage
   
-  Index -->|3. 生成 Blob 对象并存盘| ObjDB[(".git/objects/ 对象库")]:::repo
+  Index -->|3. 生成 Blob 对象并存盘| ObjDB["(".git/objects/ 对象库")"]:::repo
   
   Index -->|'git commit'| Committer["4. Commit 生成器"]:::stage
   

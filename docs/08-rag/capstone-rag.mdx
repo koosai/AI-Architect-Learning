@@ -78,7 +78,7 @@ graph TD
         RawDocs["原始文档库"] --> Normalizer["格式清洗与智能分块"]:::offline
         Normalizer --> Embedding["向量编码与指纹 (MD5) 生成"]:::offline
         Embedding --> MetaAcl["元数据与 ACL 权限绑定"]:::offline
-        MetaAcl --> VectorDb[("向量/元数据数据库 (Pinecone/Milvus)")]:::secure
+        MetaAcl --> VectorDb["("向量/元数据数据库 (Pinecone/Milvus)")"]:::secure
     end
 
     subgraph OnlineChain ["在线自适应问答检索管道"]

@@ -78,7 +78,7 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 mindmap
-  root((Redis 架构))
+  root("(Redis 架构"))
     单线程 Reactor 循环
       ae 事件驱动库
       epoll / kqueue 多路复用
@@ -150,7 +150,7 @@ graph TB
 
   ClientApp["业务应用程序 (Redis Client)"]:::client -->|1. 发起命令请求| RedisNode["Redis 单节点 / 集群"]:::main
   
-  RedisNode -->|2. 持久化数据与备份| BackupStorage[("本地持久盘 (RDB 快照/AOF)")]:::main
+  RedisNode -->|2. 持久化数据与备份| BackupStorage["("本地持久盘 (RDB 快照/AOF)")"]:::main
   RedisNode <-->|3. 心跳检测与故障协商| SentinelCluster["Redis Sentinel 哨兵集群"]:::third
 ```
 
@@ -165,14 +165,14 @@ graph TB
 
   Client["Redis 客户端 (SDK)"]:::client -->|TCP Connection| NetworkSocket["网络套接字 (Socket)"]:::thread
 
-  subgraph RedisServerInstance [Redis 进程内部架构]
+  subgraph RedisServerInstance ["Redis 进程内部架构"]
     NetworkSocket <-->|多路复用监听| IOThreads["I/O 线程池 (Redis 6.0 引入/并行读写网络缓冲)"]:::thread
     
-    subgraph MainThread [Redis 主线程 (单线程核心)]
+    subgraph MainThread ["Redis 主线程 (单线程核心)"]
       AE_Loop["ae 事件循环 (aeMain)"]:::loop <-->|epoll_wait| NetworkSocket
       AE_Loop -->|1. 分发文件事件| CommandExecutor["命令执行器 (命令解析与操作)"]:::loop
       
-      CommandExecutor <-->|2. 读写操作| MemoryDB[("内存键值数据库 (SDS/Dict/Skiplist)")]:::storage
+      CommandExecutor <-->|2. 读写操作| MemoryDB["("内存键值数据库 (SDS/Dict/Skiplist)")"]:::storage
       AE_Loop -->|3. 执行定时器事件| ActiveExpire["定期过期清理 / 渐进式 Rehash"]:::loop
     end
     
@@ -180,8 +180,8 @@ graph TB
     CommandExecutor -->|5. 触发物理备份| ForkChild["rdbSaveBackground 子进程 (Fork)"]:::thread
   end
 
-  ForkChild -->|Copy-on-Write 物理转储| RDBFile[("Disk RDB File")]:::storage
-  BioThreads -->|fsync 磁盘同步| AOFFile[("Disk AOF File")]:::storage
+  ForkChild -->|Copy-on-Write 物理转储| RDBFile["("Disk RDB File")"]:::storage
+  BioThreads -->|fsync 磁盘同步| AOFFile["("Disk AOF File")"]:::storage
 ```
 
 ---
@@ -225,17 +225,17 @@ graph TD
 
 ```mermaid
 graph TD
-  subgraph ProgressiveRehashState [dict 渐进式 Rehash 双表内存图 (rehashidx = 2)]
-    rehashidx["rehashidx = 2<br/>(指向 ht[0] 待迁移的 Bucket)"]
+  subgraph ProgressiveRehashState ["dict 渐进式 Rehash 双表内存图 (rehashidx = 2)"]
+    rehashidx["rehashidx = 2<br/>(指向 ht[0"] 待迁移的 Bucket)"]
     
-    subgraph ht0 [ht[0] (老小哈希表)]
+    subgraph ht0 ["ht[0"] (老小哈希表)]
       B0_ht0["Bucket 0: (已被迁空)"]
       B1_ht0["Bucket 1: (已被迁空)"]
-      B2_ht0["Bucket 2: [KeyA -> ValA] -> [KeyB -> ValB] (等待本次命令触发迁移)"]
-      B3_ht0["Bucket 3: [KeyC -> ValC]"]
+      B2_ht0["Bucket 2: [KeyA -> ValA"] -> [KeyB -> ValB] (等待本次命令触发迁移)"]
+      B3_ht0["Bucket 3: [KeyC -> ValC"]"]
     end
     
-    subgraph ht1 [ht[1] (新大哈希表 - 正在接收 Key)]
+    subgraph ht1 ["ht[1"] (新大哈希表 - 正在接收 Key)]
       B0_ht1["Bucket 0: (KeyX -> ValX)"]
       B1_ht1["Bucket 1: (KeyY -> ValY)"]
       B2_ht1["Bucket 2: (空)"]
@@ -269,14 +269,14 @@ graph TD
 
   Parent["Redis 主进程 (Master Process)"]:::process -->|1. fork() 子进程| Child["RDB 备份子进程"]:::process
   
-  Parent <-->|2. 共享只读物理内存页 (Page 100)| Memory[("物理内存 RAM")]:::mem
+  Parent <-->|2. 共享只读物理内存页 (Page 100)| Memory["("物理内存 RAM")"]:::mem
   Child -->|3. 读取并扫描内存 Page 100| Memory
   
   Parent -->|4. 尝试修改 Page 100 (发生写操作)| OS_COW["操作系统内核 COW 拦截"]:::process
   OS_COW -->|5. 拷贝 Page 100 -> Page 100_Copy| Memory
   OS_COW -->|6. 主进程在 Page 100_Copy 上执行写入| Parent
   
-  Child -->|7. 持续写入静态数据| DiskRDB[("Disk RDB File")]:::disk
+  Child -->|7. 持续写入静态数据| DiskRDB["("Disk RDB File")"]:::disk
 ```
 
 ---
@@ -351,7 +351,7 @@ graph LR
   classDef node fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
   classDef index fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
 
-  subgraph SkipListLayers [Redis SkipList 跳表多级检索图]
+  subgraph SkipListLayers ["Redis SkipList 跳表多级检索图"]
     L3_Head["L3 Head"]:::index -->|跳跃| L3_Node3["Node 30 (L3)"]:::index -->|跳跃| L3_Tail["Tail"]
     
     L2_Head["L2 Head"]:::index --> L2_Node2["Node 15 (L2)"]:::index --> L2_Node3["Node 30 (L2)"]:::index --> L2_Tail["Tail"]

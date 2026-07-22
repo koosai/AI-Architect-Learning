@@ -141,7 +141,7 @@ graph TB
     classDef serve fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
     classDef store fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-    subgraph CrawlPlane [1. 爬取平面]
+    subgraph CrawlPlane ["1. 爬取平面"]
         Frontier["URL Frontier<br/>(优先级/礼貌度队列)"]:::crawl
         Googlebot["Googlebot Crawler Fleet<br/>(高并发下载器)"]:::crawl
         PageRepo["Repository<br/>(网页临时中转库)"]:::crawl
@@ -149,14 +149,14 @@ graph TB
         Frontier --> Googlebot --> PageRepo
     end
 
-    subgraph IndexPlane [2. 索引与数据平面]
+    subgraph IndexPlane ["2. 索引与数据平面"]
         Percolator["Percolator Engine<br/>(增量索引构建器)"]:::index
-        BigtableIndex[("Bigtable 倒排库<br/>Lexicon / Postings")]:::store
+        BigtableIndex["("Bigtable 倒排库<br/>Lexicon / Postings")"]:::store
         
         PageRepo --> Percolator --> BigtableIndex
     end
 
-    subgraph ServePlane [3. 服务平面]
+    subgraph ServePlane ["3. 服务平面"]
         UserApp["用户客户端"] -->|HTTP Query| GwsServer["Google Web Server (GWS)"]:::serve
         GwsServer -->|调度分发| Superroot["Superroot Router<br/>(并发分发与结果合并)"]:::serve
         
@@ -187,14 +187,14 @@ graph TD
 
     NewURLs["新提取的候选 URLs"] --> PriorityRouter["优先级分析器"]:::process
     
-    subgraph FrontQueues [Front Queues: 优先级划分]
+    subgraph FrontQueues ["Front Queues: 优先级划分"]
         F1["High Priority Queue (高PR网页)"]:::q
         F2["Medium Priority Queue"]:::q
         F3["Low Priority Queue (冷僻网页)"]:::q
     end
     PriorityRouter --> F1 & F2 & F3
     
-    subgraph BackQueues [Back Queues: 域名礼貌度约束]
+    subgraph BackQueues ["Back Queues: 域名礼貌度约束"]
         B1["Back Queue A (仅 siteA.com)"]:::q
         B2["Back Queue B (仅 siteB.com)"]:::q
         B3["Back Queue C (仅 siteC.com)"]:::q
@@ -203,7 +203,7 @@ graph TD
     F1 & F2 & F3 --> Redirector["Back Queue 路由器 (域名分类)"]:::process
     Redirector --> B1 & B2 & B3
     
-    subgraph FetcherFleet [Googlebot 抓取集群]
+    subgraph FetcherFleet ["Googlebot 抓取集群"]
         Worker1["Crawl Worker 1"]
         Worker2["Crawl Worker 2"]
     end
@@ -230,14 +230,14 @@ graph TD
 
     SourceDoc["新网页被下载并存入原始库"]
     
-    subgraph OldWay [旧 MapReduce 批量索引模式 (天/周级延迟)]
+    subgraph OldWay ["旧 MapReduce 批量索引模式 (天/周级延迟)"]
         SourceDoc --> MapJob["Map 任务: 全量分词提取 (DocID -> Word)"]:::batch
         MapJob --> Shuffle["Shuffle: 全量排序转换 (Word -> DocID 列表)"]:::batch
         Shuffle --> ReduceJob["Reduce 任务: 重写所有的 Inverted Index Barrels"]:::batch
         ReduceJob --> OutputIndex["全量新索引上线"]:::batch
     end
     
-    subgraph NewWay [新 Percolator 增量索引模式 (秒/分级延迟)]
+    subgraph NewWay ["新 Percolator 增量索引模式 (秒/分级延迟)"]
         SourceDoc --> Trigger["Percolator Watcher 捕获新增网页行通知"]:::stream
         Trigger --> Trans["开启 Percolator 两阶段行级锁事务"]:::stream
         Trans --> GetOld["读取 Bigtable 已有词条的 Postings List"]:::stream
@@ -322,17 +322,17 @@ graph LR
     classDef disk fill:#f1f8e9,stroke:#558b2f,stroke-width:1.5px;
     classDef hits fill:#eceff1,stroke:#37474f,stroke-width:1.5px;
 
-    subgraph Memory [内存词典表 - Lexicon]
+    subgraph Memory ["内存词典表 - Lexicon"]
         Term1["'consistent'"]:::mem --> Pointer1["Offset: 0x08F3"]
         Term2["'hashing'"]:::mem --> Pointer2["Offset: 0x090A"]
     end
 
-    subgraph DiskOrMemory [倒排链 - Postings List]
+    subgraph DiskOrMemory ["倒排链 - Postings List"]
         Pointer1 --> DocA["DocID: 12 (Rank: 0.8)"]:::disk
         DocA --> DocB["DocID: 35 (Rank: 0.6)"]:::disk
         
-        DocA --> HitsA["Hit List: [Pos: 14 (Title), Pos: 120 (Body)]"]:::hits
-        DocB --> HitsB["Hit List: [Pos: 45 (Body)]"]:::hits
+        DocA --> HitsA["Hit List: [Pos: 14 (Title), Pos: 120 (Body)"]"]:::hits
+        DocB --> HitsB["Hit List: [Pos: 45 (Body)"]"]:::hits
     end
 ```
 

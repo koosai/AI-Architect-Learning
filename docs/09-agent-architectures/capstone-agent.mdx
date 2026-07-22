@@ -73,13 +73,13 @@ graph TD
 
     UserAlert["1. SRE 告警输入<br/>(e.g., API 5xx 升高)"] --> Orchestrator["2. 编排协调器 (Host Engine)"]
     
-    subgraph AgentBrain [智能体大脑与状态]
+    subgraph AgentBrain ["智能体大脑与状态"]
         Orchestrator <-->|3. 读取/回灌状态| Scratchpad["3. 记忆草稿纸 (Scratchpad)<br/>- 待解决告警 (Alert)<br/>- 已执行动作 (done)<br/>- 已有发现 (findings)"]:::state
         Orchestrator -->|4. 组装 Context 发送| LLMBrain["4. 大脑决策层 (ReAct LLM)"]:::brain
         LLMBrain -->|5. 返回 Thought 与 Action| Orchestrator
     end
 
-    subgraph ProtectiveShield [安全控制与边界]
+    subgraph ProtectiveShield ["安全控制与边界"]
         Orchestrator -->|6. 校验与路由动作| Gatekeeper["6. 策略门禁网关"]
         Gatekeeper -->|A. 只读动作<br/>(query_logs/query_metrics)| ReadTools["只读工具集"]:::tool
         Gatekeeper -->|B. 危险副作用动作<br/>(restart_service/rollback)| HITL["人在回路审批网 (HITL)"]

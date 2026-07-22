@@ -67,7 +67,7 @@ Slack 在架构设计上面临着完全不同的权衡：
 
 ```mermaid
 mindmap
-  root((Slack 通信系统))
+  root("(Slack 通信系统"))
     工作区隔离与分片
       Workspace Sharding 对齐
       Vitess 逻辑分库分片
@@ -119,8 +119,8 @@ graph TB
 
   subgraph DataPlane["多租户分片存储平面"]
     VitessRouter["Vitess 分片路由代理"]
-    MySQLShard1[("MySQL 分片 1 (Workspace A-M)")]
-    MySQLShard2[("MySQL 分片 2 (Workspace N-Z)")]
+    MySQLShard1["("MySQL 分片 1 (Workspace A-M)")"]
+    MySQLShard2["("MySQL 分片 2 (Workspace N-Z)")"]
     PresenceBus["Presence Bus 状态流总线 (Redis Cluster)"]
   end
 

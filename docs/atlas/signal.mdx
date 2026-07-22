@@ -83,7 +83,7 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 mindmap
-  root((Signal 协议))
+  root("(Signal 协议"))
     X3DH 异步握手
       Identity Key
       Signed Prekey
@@ -167,7 +167,7 @@ graph TB
   classDef client fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
   classDef server fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
 
-  subgraph MobileClientContainer [Alice 手机安全运行沙箱]
+  subgraph MobileClientContainer ["Alice 手机安全运行沙箱"]
     AliceAppLogic["Alice 业务逻辑/UI 侧"]:::client -->|1. 发送明文| EncEngine["Signal 加密引擎 (Signal Engine)"]:::engine
     
     EncEngine <-->|2. 读写本地棘轮状态与未解密乱序密钥| LocalSQLite["本地加密数据库 (SQLite/SQLCipher)"]:::localDb
@@ -175,7 +175,7 @@ graph TB
     EncEngine -->|3. 执行 X3DH / 双棘轮更新| DH_Crypto["Curve25519/HKDF 加密组件"]:::engine
   end
 
-  subgraph CentralUntrustedServers [不可信云端集群 (仅负责中转)]
+  subgraph CentralUntrustedServers ["不可信云端集群 (仅负责中转)"]
     PrekeyServer["Prekey 预存数据库服务 (MySQL)"]:::server
     MessageQueueServer["消息排队转发服务器 (Kafka / Redis)"]:::server
   end
@@ -252,15 +252,15 @@ graph TD
 
   RootKey_N["上一代根密钥 (Root Key N-1)"] -->|1. 输入非对称 DH_N 结果| Root_KDF["Root KDF 引擎"]:::root
   
-  Root_KDF -->|2. 派生下一代根密钥| RootKey_Next[("新根密钥 (Root Key N)")]:::root
-  Root_KDF -->|3. 派生新链条密钥| ChainKey_N[("新链密钥 (Chain Key N_0)")]:::kdf
+  Root_KDF -->|2. 派生下一代根密钥| RootKey_Next["("新根密钥 (Root Key N)")"]:::root
+  Root_KDF -->|3. 派生新链条密钥| ChainKey_N["("新链密钥 (Chain Key N_0)")"]:::kdf
   
-  subgraph KDF_Chain [对称 KDF 消息棘轮链 (单向演进)]
-    ChainKey_N -->|4. KDF 步进 1| MsgKey_0[("消息密钥 0 (Message Key 0)<br/>(使用后立刻物理删除!)")]:::kdf
-    ChainKey_N -->|4. KDF 步进 1| ChainKey_N1[("Chain Key N_1")]:::kdf
+  subgraph KDF_Chain ["对称 KDF 消息棘轮链 (单向演进)"]
+    ChainKey_N -->|4. KDF 步进 1| MsgKey_0["("消息密钥 0 (Message Key 0)<br/>(使用后立刻物理删除!)")"]:::kdf
+    ChainKey_N -->|4. KDF 步进 1| ChainKey_N1["("Chain Key N_1")"]:::kdf
     
-    ChainKey_N1 -->|5. KDF 步进 2| MsgKey_1[("消息密钥 1 (Message Key 1)")]:::kdf
-    ChainKey_N1 -->|5. KDF 步进 2| ChainKey_N2[("Chain Key N_2")]:::kdf
+    ChainKey_N1 -->|5. KDF 步进 2| MsgKey_1["("消息密钥 1 (Message Key 1)")"]:::kdf
+    ChainKey_N1 -->|5. KDF 步进 2| ChainKey_N2["("Chain Key N_2")"]:::kdf
   end
 
   Alice_New_DH["Alice 换新公钥 (触发 ACK)"]:::dh -->|6. 非对称棘轮步进| RootKey_Next
@@ -324,7 +324,7 @@ graph TD
   
   Derive3 --> Decrypt3["4. 使用 MsgKey_2 解密消息 3 (成功)"]
   
-  subgraph LocalSecureCache [本地 SQLite 丢包密钥缓存区]
+  subgraph LocalSecureCache ["本地 SQLite 丢包密钥缓存区"]
     Derive2 -->|5. 写入加密暂存表| SQLiteRow["SQLite 缓存: { index_1: MsgKey_1 }"]:::cache
   end
   
@@ -341,7 +341,7 @@ KDF 链的底层核心是 **HKDF**（基于 HMAC 的单向密钥派生函数）�
 
 ```mermaid
 graph TD
-  subgraph HKDF_Block [HKDF 单步迭代结构]
+  subgraph HKDF_Block ["HKDF 单步迭代结构"]
     InputKey["当前 Chain Key (输入)"] --> HKDF_Extract["HKDF-Extract (提取单向熵值)"]
     ConstantInfo["固定上下文常量 (如 'SignalMsgKey')"] --> HKDF_Expand["HKDF-Expand (拓展位宽)"]
     

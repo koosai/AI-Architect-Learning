@@ -71,12 +71,12 @@ graph TD
 
     User["用户查询 (User Query)"]:::input --> App["应用层协调器 (Application Orchestrator)"]
     
-    subgraph ParameterMemory [参数化记忆 (大模型内部)]
+    subgraph ParameterMemory ["参数化记忆 (大模型内部)"]
         App --> LLM["LLM 推理引擎 (能力/风格/推理逻辑)"]:::logic
         LLM -.- Weights["数十亿参数权重 (Parametric Weights)"]:::memory
     end
     
-    subgraph NonParameterMemory [非参数化记忆 (外部系统)]
+    subgraph NonParameterMemory ["非参数化记忆 (外部系统)"]
         App --> SearchEngine["知识检索模块 (Retriever)"]:::db
         SearchEngine --> KB["外置知识库/向量库 (Non-parametric KB)"]:::db
     end
@@ -114,14 +114,14 @@ graph TD
 
 ```mermaid
 graph TD
-    subgraph FineTuningPath [微调模式下的知识更新 (更新周期: 天/周/月)]
+    subgraph FineTuningPath ["微调模式下的知识更新 (更新周期: 天/周/月)"]
         FT_Data["业务文档变更"] --> FT_Prepare["1. 数据收集与清洗"]
         FT_Prepare --> FT_Train["2. 算力微调训练 (GPU 耗时)"]
         FT_Train --> FT_Eval["3. 模型评测与部署上线"]
         FT_Eval --> FT_Serve["4. 模型参数记忆提供回答"]
     end
 
-    subgraph RAGPath [RAG 模式下的知识更新 (更新周期: 秒/分级)]
+    subgraph RAGPath ["RAG 模式下的知识更新 (更新周期: 秒/分级)"]
         RAG_Data["业务文档变更"] --> RAG_Index["1. 切块与向量化 (Embedding)"]
         RAG_Index --> RAG_DB["2. 写入外部向量库 (秒级)"]
         RAG_DB --> RAG_Serve["3. 检索器直接查询最新数据并回答"]

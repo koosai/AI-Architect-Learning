@@ -77,7 +77,7 @@ graph LR
 
     Host["编排协调引擎 (Host)"]:::control
     
-    subgraph IterativeLoop [提议-批评循环]
+    subgraph IterativeLoop ["提议-批评循环"]
         Host -->|1. 任务指派| Proposer["提议者智能体 (Proposer)"]:::proposer
         Proposer -->|2. 初版方案| Host
         Host -->|3. 发送方案评审| Critic["独立的批评者 (Critic)"]:::critic
@@ -100,7 +100,7 @@ graph TD
 
     Orchestrator["协调器 (Host / Supervisor)"]:::host -->|1. 下发争议性议题| Split
     
-    subgraph DebateRound [多方交叉辩论 (Cross-Debate)]
+    subgraph DebateRound ["多方交叉辩论 (Cross-Debate)"]
         Split["任务广播"] --> AgentA["智能体 A (立场: 激进提效)"]:::agent
         Split -->|2. 对抗与质询| AgentB["智能体 B (立场: 保守安全)"]:::agent
         

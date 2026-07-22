@@ -58,7 +58,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 
 ```mermaid
 mindmap
-  root((BitTorrent 架构))
+  root("(BitTorrent 架构"))
     元数据与校验
       .torrent Metafile (Bencode)
       InfoHash (20-byte SHA-1)
@@ -110,7 +110,7 @@ sequenceDiagram
   participant PeerA as Peer A (下载者)
   participant PeerB as Peer B (下载者)
 
-  PeerA->>PeerB: Handshake (InfoHash + PeerID)
+  PeerA->>PeerB: Handshake("InfoHash + PeerID")
   PeerB-->>PeerA: Handshake Response
   PeerA->>PeerB: bitfield (告知拥有的 Piece 位图)
   PeerB-->>PeerA: bitfield (告知拥有的 Piece 位图)

@@ -60,8 +60,8 @@ flowchart TB
   U["用户发帖"] --> API["Feed 服务"]
   API --> Q["消息队列<br/>M3L9：异步扇出"]
   Q --> FO["扇出 worker"]
-  FO --> TL[("各粉丝的时间线收件箱<br/>M3L10 写扩散")]
-  R["用户刷 feed"] --> CACHE[("时间线缓存<br/>M3L5")]
+  FO --> TL["("各粉丝的时间线收件箱<br/>M3L10 写扩散")"]
+  R["用户刷 feed"] --> CACHE["("时间线缓存<br/>M3L5")"]
   CACHE -. "未命中" .-> TL
 ```
 

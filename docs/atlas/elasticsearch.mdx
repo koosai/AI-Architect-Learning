@@ -145,7 +145,7 @@ graph TB
     
     DataNode1 & DataNode2 <-->|健康监测与元数据广播| MasterNode["Master Node (主节点)<br/>负责集群状态维护与故障调度"]:::master
 
-    subgraph ShardStorage [数据节点内部存储剖析]
+    subgraph ShardStorage ["数据节点内部存储剖析"]
         DataNode1 --> IndexBuffer["In-memory Index Buffer"]
         DataNode1 --> TranslogFile["Transaction Log (Translog)"]
         IndexBuffer -->|Refresh (默认 1s)| Segments["Lucene Segments (OS Page Cache)"]
@@ -194,9 +194,9 @@ graph LR
     classDef old fill:#ffebee,stroke:#c62828,stroke-width:1px;
     classDef new fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
 
-    subgraph SmallSegments [小段堆积 (含有大量被删除的墓碑)]
-        S1["Segment 1 (Doc#1, Doc#2[Del])"]:::old
-        S2["Segment 2 (Doc#3, Doc#4[Del])"]:::old
+    subgraph SmallSegments ["小段堆积 (含有大量被删除的墓碑)"]
+        S1["Segment 1 (Doc#1, Doc#2[Del"])"]:::old
+        S2["Segment 2 (Doc#3, Doc#4[Del"])"]:::old
         S3["Segment 3 (Doc#5)"]:::old
     end
 
@@ -226,11 +226,11 @@ sequenceDiagram
     par 广播至所有相关分片
         Coord->>Data1: 2a. 查询 Shard 1
         Data1->>Data1: 本地 Lucene 检索，根据 TF-IDF/BM25 评分并排序
-        Data1-->>Coord: 3a. 返回 Shard 1 的本地 Top 10 [DocID + Score] (不含内容)
+        Data1-->>Coord: 3a. 返回 Shard 1 的本地 Top 10["DocID + Score"] (不含内容)
     and
         Coord->>Data2: 2b. 查询 Shard 2
         Data2->>Data2: 本地 Lucene 检索与评分
-        Data2-->>Coord: 3b. 返回 Shard 2 的本地 Top 10 [DocID + Score] (不含内容)
+        Data2-->>Coord: 3b. 返回 Shard 2 的本地 Top 10["DocID + Score"] (不含内容)
     end
     
     Coord->>Coord: 4. 汇总所有 Shard 的 DocIDs，执行全局排序，挑选前 10 名
@@ -264,15 +264,15 @@ graph TD
 
     Document["输入文档 (Doc#1: {age: 25, title: 'ML'})"] --> Parser["双端索引生成器"]
     
-    subgraph InvertedIndex [1. 倒排全文索引 - 全文检索]
+    subgraph InvertedIndex ["1. 倒排全文索引 - 全文检索"]
         Parser -->|分词与逆向关联| TermAge["'25' -> [Doc#1]"]:::index
         TermAge --> TermML["'ML' -> [Doc#1]"]:::index
     end
 
-    subgraph DocValues [2. 列式存储 (Doc Values) - 聚合/排序]
-        Parser -->|列式物理存储| Doc1["Doc#1 -> [age: 25]"]:::column
-        Doc1 --> Doc2["Doc#2 -> [age: 30]"]:::column
-        Doc2 --> Doc3["Doc#3 -> [age: 25]"]:::column
+    subgraph DocValues ["2. 列式存储 (Doc Values) - 聚合/排序"]
+        Parser -->|列式物理存储| Doc1["Doc#1 -> [age: 25"]"]:::column
+        Doc1 --> Doc2["Doc#2 -> [age: 30"]"]:::column
+        Doc2 --> Doc3["Doc#3 -> [age: 25"]"]:::column
     end
     
     InvertedIndex --> SearchQuery["全文匹配: search?q=ML"]
@@ -295,14 +295,14 @@ Lucene 采用了 **FST（有限状态转移机）** 压缩词条前缀与后缀�
 graph LR
     classDef state fill:#eceff1,stroke:#37474f,stroke-width:1.5px;
 
-    Start((Start)) -->|c| StateC((C)):::state
-    StateC -->|a| StateCA((CA)):::state
-    StateCA -->|t| StateCAT((CAT)):::state
+    Start("(Start")) -->|c| StateC("(C")):::state
+    StateC -->|a| StateCA("(CA")):::state
+    StateCA -->|t| StateCAT("(CAT")):::state
     
-    StateCAT -->|s| StateCATS((CATS)):::state
-    StateCAT -->|h| StateCATH((CATH)):::state
+    StateCAT -->|s| StateCATS("(CATS")):::state
+    StateCAT -->|h| StateCATH("(CATH")):::state
     
-    StateCATS & StateCATH -->|ch| End((End))
+    StateCATS & StateCATH -->|ch| End("(End"))
     
     Note over Start, End: 共享前缀 'cat' 与后缀 'ch'，极高地压缩了内存词表大小
 ```

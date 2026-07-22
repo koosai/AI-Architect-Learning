@@ -80,7 +80,7 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 mindmap
-  root((Docker 架构))
+  root("(Docker 架构"))
     Namespace 隔离
       PID Namespace (进程号隔离)
       NET Namespace (网络协议栈)
@@ -152,7 +152,7 @@ graph TB
   Developer["开发运维人员 (DevOps)"]:::client -->|使用 Docker CLI 命令| HostDaemon["宿主机 Docker 守护进程 (dockerd)"]:::main
   
   HostDaemon <-->|拉取镜像 (HTTPS)| ImageRegistry["公共/私有镜像仓库 (Docker Hub / Registry)"]:::third
-  HostDaemon <-->|管理存储卷映射| LocalDisk[("本地磁盘目录 (Volumes)")]:::main
+  HostDaemon <-->|管理存储卷映射| LocalDisk["("本地磁盘目录 (Volumes)")"]:::main
 ```
 
 ### 3b. Container Diagram (容器结构图)
@@ -172,7 +172,7 @@ graph TB
   
   Containerd -->|4. 生成长期监视进程| ContainerdShim["containerd-shim 守护进程<br/>(负责收集容器 stdout/stdin 且 runc 退出后不死)"]:::shim
   
-  subgraph LinuxKernel [Linux 操作系统内核]
+  subgraph LinuxKernel ["Linux 操作系统内核"]
     ContainerdShim -->|5. 运行独立应用进程| AppProcess["应用主进程 (PID 1)"]:::shim
     
     Namespaces["Linux Namespaces<br/>(PID/NET/MNT)"]:::kernel <.->|6. 视图重定向保护| AppProcess
@@ -204,13 +204,13 @@ graph TD
   HostKernel -->|CLONE_NEWNET| NET_NS["NET Namespace"]:::kernel
   HostKernel -->|CLONE_NEWMNT| MNT_NS["MNT Namespace"]:::kernel
 
-  subgraph ContainerNamespace [容器空间内部视图]
+  subgraph ContainerNamespace ["容器空间内部视图"]
     PID_NS -->|容器只看到| AppProc["PID 1: app_main"]:::container
     NET_NS -->|容器只看到| Eth0["IP: 172.17.0.2 / eth0"]:::container
     MNT_NS -->|容器只看到| RootPath["根路径: /"]:::container
   end
 
-  subgraph HostNamespace [宿主机物理真实视图]
+  subgraph HostNamespace ["宿主机物理真实视图"]
     RealPID["物理真实 PID 12306: app_main"]:::host
     RealBridge["物理网桥 docker0 (172.17.0.1)"]:::host
     RealStorage["物理路径 /var/lib/docker/overlay2/"]:::host
@@ -266,10 +266,10 @@ graph TD
 
 ```mermaid
 graph TD
-  subgraph OverlayFSMount [OverlayFS 容器文件系统层次结构图]
+  subgraph OverlayFSMount ["OverlayFS 容器文件系统层次结构图"]
     Merged["合并展示层 (mergeddir: 容器可见根路径 /)<br/>用户看到: file_A (修改版), file_B (只读)"]
     
-    subgraph Layers [物理磁盘目录结构]
+    subgraph Layers ["物理磁盘目录结构"]
       Upper["1. 容器可写层 (upperdir)<br/>存放新修改的文件: file_A (修改版)"]
       Work["2. 中间临时工作层 (workdir)"]
       Lower["3. 基础只读镜像层 (lowerdir)<br/>原始静态文件: file_A (原始), file_B"]
@@ -299,11 +299,11 @@ graph TB
   classDef bridge fill:#ffebee,stroke:#c62828,stroke-width:2px;
   classDef device fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-  subgraph ContainerNet [容器网络命名空间 (CLONE_NEWNET)]
+  subgraph ContainerNet ["容器网络命名空间 (CLONE_NEWNET)"]
     Eth0["容器网卡: eth0<br/>IP: 172.17.0.2"]:::device
   end
 
-  subgraph HostNet [宿主机默认网络命名空间]
+  subgraph HostNet ["宿主机默认网络命名空间"]
     VethNode["宿主机侧虚拟网口: vethxxxx"]:::device
     Docker0["宿主虚拟交换机: docker0 网桥<br/>IP: 172.17.0.1"]:::bridge
     PhysicalNIC["宿主物理网卡: eth0 (物理层)<br/>IP: 192.168.1.100"]:::device

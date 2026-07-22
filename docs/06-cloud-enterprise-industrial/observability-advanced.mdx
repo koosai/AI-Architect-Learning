@@ -50,13 +50,13 @@ graph TD
     end
 
     subgraph Metrics_Pillar["1. 指标 (Metrics)<br>聚合趋势 / 高效告警"]
-        M1[成功率 / 延迟分位]
-        M2[QPS / 吞吐量]
+        M1["成功率 / 延迟分位"]
+        M2["QPS / 吞吐量"]
     end
 
     subgraph Tracing_Pillar["2. 链路 (Traces)<br>多服务依赖 / 瓶颈定位"]
-        T1[Service A Span: 150ms]
-        T2[Service B Span: 120ms]
+        T1["Service A Span: 150ms"]
+        T2["Service B Span: 120ms"]
     end
 
     subgraph Logs_Pillar["3. 日志 (Logs)<br>个体细节 / 故障现场"]
@@ -92,8 +92,8 @@ graph TD
 
 ```mermaid
 flowchart TD
-    Start([SLO: 30天 99.9% 成功率]) --> Budget[错误预算: 0.1% 请求量]
-    Budget --> Calc[计算当前错误消耗速率: 燃尽率 Burn Rate]
+    Start([SLO: 30天 99.9% 成功率]) --> Budget["错误预算: 0.1% 请求量"]
+    Budget --> Calc["计算当前错误消耗速率: 燃尽率 Burn Rate"]
     
     Calc --> Level1{"燃尽率 >= 14.4?<br>(1小时消耗 2% 预算)""}
     Level1 -->|Yes| Pager[PAGE 紧急告警<br>半夜叫醒值班 SRE 立即处理]
@@ -155,10 +155,10 @@ print("按燃尽率分级告警")`}
 ```mermaid
 flowchart TD
     Trigger([定期触发告警评估]) --> CheckShort{"5分钟短窗口 (灵敏)<br>燃尽率是否 > 14.4?"}
-    CheckShort -->|No| Reset[无紧急告警 / 清理状态]
+    CheckShort -->|No| Reset["无紧急告警 / 清理状态"]
     CheckShort -->|Yes: 满足即时严重度| CheckLong{"1小时长窗口 (平滑)<br>燃尽率是否也 > 14.4?"}
     
-    CheckLong -->|No: 判定为瞬时短抖动| Filter[过滤告警 / 不作 Page 呼叫]
+    CheckLong -->|No: 判定为瞬时短抖动| Filter["过滤告警 / 不作 Page 呼叫"]
     CheckLong -->|Yes: 判定为持续真实故障| PageAlert[PAGE 触发紧急呼叫<br>唤醒值班人员]
 
     style CheckShort fill:#b45309,stroke:#d97706,stroke-width:2px,color:#fff

@@ -81,7 +81,7 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 mindmap
-  root((Uber 架构))
+  root("(Uber 架构"))
     H3 地理索引
       六边形等距邻居
       分层嵌套网格
@@ -169,13 +169,13 @@ graph TB
   H3Resolver -->|2. 哈希 Ringpop 寻址路由| DiscoNodeA["DISCO 调度节点-A (旧金山金融区 Owner)"]:::dispatch
   H3Resolver -->|2. 哈希 Ringpop 寻址路由| DiscoNodeB["DISCO 调度节点-B (旧金山码头区 Owner)"]:::dispatch
   
-  subgraph RingpopCluster [Ringpop 去中心化对等网络 (SWIM 协议广播)]
+  subgraph RingpopCluster ["Ringpop 去中心化对等网络 (SWIM 协议广播)"]
     DiscoNodeA <-->|3. gossip 心跳健康度比对| DiscoNodeB
   end
   
   DiscoNodeA -->|4. 达成匹配，生成行程| DocstoreClient["Docstore 存取客户端"]:::database
   
-  subgraph DocstoreEngine [Docstore 事务分布式数据库]
+  subgraph DocstoreEngine ["Docstore 事务分布式数据库"]
     DocstoreClient -->|5. 分区键路由写盘| MySQLShard1["MySQL 物理分片表 1 (元数据/主行)"]:::database
     DocstoreClient -->|5. 分区键路由写盘| MySQLShard2["MySQL 物理分片表 2 (JSON 轨迹大字段)"]:::database
   end
@@ -197,13 +197,13 @@ graph TB
 
 ```mermaid
 graph TD
-  subgraph GridComparison [网格空间几何特征对比]
-    subgraph SquareGrid [正方形网格 (对角线距离失真)]
+  subgraph GridComparison ["网格空间几何特征对比"]
+    subgraph SquareGrid ["正方形网格 (对角线距离失真)"]
       SqCenter["中心"] -->|距离 = 1.0| SqEdge["相邻正方形中心"]
       SqCenter -->|距离 = 1.414 (对角线!)| SqDiag["斜向正方形中心"]
     end
     
-    subgraph HexagonalGrid [H3 六边形网格 (完美等距离邻接)]
+    subgraph HexagonalGrid ["H3 六边形网格 (完美等距离邻接)"]
       HexCenter["中心六边形"] -->|距离 = 1.0| HexN1["相邻 1"]
       HexCenter -->|距离 = 1.0| HexN2["相邻 2"]
       HexCenter -->|距离 = 1.0| HexN3["相邻 3"]
@@ -234,7 +234,7 @@ graph TB
 
   Rider["乘客 (旧金山金融街)"] -->|1. 算得 H3_ID: 8528_etc| Gateway["网关路由"]
   
-  subgraph RingpopRing [Ringpop 分布式对等哈希环]
+  subgraph RingpopRing ["Ringpop 分布式对等哈希环"]
     Gateway -->|2. 哈希寻址指向唯一 Owner 节点| DiscoNodeA["DISCO 节点 A (旧金山金融街 Owner)"]:::node
     DiscoNodeB["DISCO 节点 B"]:::node
     DiscoNodeC["DISCO 节点 C"]:::node
@@ -302,15 +302,15 @@ graph TD
 
   ClientReq["商户/服务写入行程 JSON"] --> DocstoreClient["Docstore 客户端门面"]:::client
   
-  subgraph PhysicalMySQLShard [物理 MySQL 关系数据库分片]
-    DocstoreClient -->|1. 物理写入固定宽表行| LedgerTable[("主物理表 (trips)<br/>字段: uuid, partition_key, version, body(JSON大字段)")]:::db
+  subgraph PhysicalMySQLShard ["物理 MySQL 关系数据库分片"]
+    DocstoreClient -->|1. 物理写入固定宽表行| LedgerTable["("主物理表 (trips)<br/>字段: uuid, partition_key, version, body(JSON大字段)")"]:::db
   end
   
   LedgerTable -->|2. 生成 Binlog 变更日志| MySQLBinlog:::db
   
-  subgraph IndexRebuilder [异步二级索引引擎]
+  subgraph IndexRebuilder ["异步二级索引引擎"]
     MySQLBinlog -->|3. CDC 变更拉取监听| IndexPoller["索引提取进程"]:::process
-    IndexPoller -->|4. 异步解析 JSON 中 rider_id 字段| IndexTable[("物理索引辅助表 (idx_trips_by_rider)<br/>字段: rider_id, trip_uuid")]:::db
+    IndexPoller -->|4. 异步解析 JSON 中 rider_id 字段| IndexTable["("物理索引辅助表 (idx_trips_by_rider)<br/>字段: rider_id, trip_uuid")"]:::db
   end
 ```
 

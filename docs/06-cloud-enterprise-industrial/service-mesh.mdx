@@ -232,17 +232,17 @@ python labs/month06/m6l8_sidecar/test_sidecar.py
 ```mermaid
 flowchart TD
     subgraph Era1["阶段 1: 应用程序库 (App Libraries)"]
-        App1[Java / Go 业务代码] <--> Lib["内置治理库<br>(Hystrix / SDK)"]
+        App1["Java / Go 业务代码"] <--> Lib["内置治理库<br>(Hystrix / SDK)"]
         note1["多语言不一致 / 强依赖升级代价高"]
     end
 
     subgraph Era2["阶段 2: 容器边车代理 (Sidecar Proxy)"]
-        App2[Java / Go 业务代码] <-->|本地回环 localhost| Proxy["Envoy Sidecar 边车代理<br>(透明网络拦截)"]
+        App2["Java / Go 业务代码"] <-->|本地回环 localhost| Proxy["Envoy Sidecar 边车代理<br>(透明网络拦截)"]
         note2["与语言解耦 / CPU与内存占用多 / 多一跳延迟"]
     end
 
     subgraph Era3["阶段 3: 操作系统内核 (OS Kernel eBPF)"]
-        App3[Java / Go 业务代码] <-->|内核套接字重定向| eBPF["Linux 内核 eBPF 层<br>(Ambient Mesh)"]
+        App3["Java / Go 业务代码"] <-->|内核套接字重定向| eBPF["Linux 内核 eBPF 层<br>(Ambient Mesh)"]
         note3["零容器边车开销 / 极高性能 / 零代码改动"]
     end
 

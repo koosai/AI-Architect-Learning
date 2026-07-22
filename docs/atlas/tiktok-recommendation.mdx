@@ -145,14 +145,14 @@ graph TB
 
     UserApp["用户 App 客户端"] -->|HTTP /ask| GwsGateway["网关与 API 路由调度器"]:::gateway
     
-    subgraph ServingPipeline [在线 Serving 过滤管线 (延迟 <50ms)]
+    subgraph ServingPipeline ["在线 Serving 过滤管线 (延迟 <50ms)"]
         GwsGateway -->|1. 获取候选集| RecallNode["召回服务器 (Recall Fleet)<br/>协同过滤 / 向量双塔检索"]:::extensions
         RecallNode -->|2. 粗略筛选 1000 候选| RoughRank["粗排服务器 (Rough Rank)<br/>轻量级双塔/小尺寸DNN"]:::extensions
         RoughRank -->|3. 精细打分 100 候选| MonolithServing["Monolith Serving Server<br/>(细排引擎 - 驻留内存的大模型)"]:::inference
         MonolithServing -->|4. 规则调整/多样化打散| RerankNode["重排服务器 (Re-ranking)<br/>去重与去燥"]:::extensions
     end
 
-    subgraph StreamingTraining [在线 Training 训练管线 (分钟级实效)]
+    subgraph StreamingTraining ["在线 Training 训练管线 (分钟级实效)"]
         UserApp -.->|5. 实时埋点| KafkaQueue["Kafka 实时交互日志总线"]:::gateway
         KafkaQueue -->|6. 流式特征提取| FlinkJoiner["Flink Streaming Joiner<br/>(特征-标签拼装器)"]:::inference
         
@@ -248,11 +248,11 @@ graph TD
     classDef serving fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
     classDef network fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
 
-    subgraph TrainingSystem [1. 训练子系统]
+    subgraph TrainingSystem ["1. 训练子系统"]
         TrainingWorker["Training Workers"]:::training -->|高频更新| TrainingPS["Training Parameter Server<br/>(存储完整模型、可读写)"]:::training
     end
 
-    subgraph ServingSystem [2. 在线推理子系统]
+    subgraph ServingSystem ["2. 在线推理子系统"]
         ServingPS["Serving Parameter Server<br/>(内存只读、高并发)"]:::serving -->|只读加载| ServingWorker["Serving Predictors"]:::serving
     end
 

@@ -74,7 +74,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((AWS Nitro 系统))
+  root("(AWS Nitro 系统"))
     Nitro 专用硬件卡 (Nitro Cards)
       Nitro Card for VPC (网络加速 ENA)
       Nitro Card for EBS (NVMe 存储加密)
@@ -153,7 +153,7 @@ graph TB
 ```mermaid
 graph TB
   subgraph Traditional["传统 KVM / Xen 虚拟化 (Dom0 蚕食)"]
-    KvmHostOS["宿主机系统 (Dom0 / Host OS) <br> [网络交换机、EBS 加密、QEMU 外设模拟]"]
+    KvmHostOS["宿主机系统 (Dom0 / Host OS) <br> [网络交换机、EBS 加密、QEMU 外设模拟"]"]
     KvmVM1["虚拟机 1"]
     KvmVM2["虚拟机 2"]
     KvmPhysCPU["物理 CPU (部分核心必须分给 Dom0 运行)"]
@@ -166,7 +166,7 @@ graph TB
   end
 
   subgraph Nitro["AWS Nitro 卸载架构 (硬件提速)"]
-    NitroCard["专用外置 Nitro Card ASIC 卡 <br> [硬件处理 VPC/EBS, 物理解密]"]
+    NitroCard["专用外置 Nitro Card ASIC 卡 <br> [硬件处理 VPC/EBS, 物理解密"]"]
     NitroVM1["虚拟机 1"]
     NitroVM2["虚拟机 2"]
     NitroPhysCPU["物理 CPU (100% 核心全部分配给虚拟机)"]

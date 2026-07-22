@@ -71,7 +71,7 @@ graph TD
     classDef good fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
     classDef protocol fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
 
-    subgraph HardcodedMess [混乱: 传统硬编码对接 (复杂度 N x M)]
+    subgraph HardcodedMess ["混乱: 传统硬编码对接 (复杂度 N x M)"]
         AgentA["智能体 A"]:::bad
         AgentB["智能体 B"]:::bad
         
@@ -84,7 +84,7 @@ graph TD
         AgentB -->|胶水代码 4| ToolB
     end
 
-    subgraph StandardizedProtocol [解耦: 基于统一协议 (复杂度 N + M)]
+    subgraph StandardizedProtocol ["解耦: 基于统一协议 (复杂度 N + M)"]
         HostAgent["Host 智能体宿主"]:::good
         
         HostAgent -->|1. 对接标准协议接口| ProtocolBus["标准 MCP 协议总线 (Model Context Protocol)"]:::protocol
@@ -104,7 +104,7 @@ graph LR
     classDef client fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
     classDef server fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-    subgraph ModelContextProtocol [MCP 架构分层]
+    subgraph ModelContextProtocol ["MCP 架构分层"]
         Host["MCP Host<br/>(Dify / Claude App)"]:::host
         Client["MCP Client<br/>(宿主进程内部)"]:::client
         Server["MCP Server<br/>(独立进程 / 远程 API)"]:::server

@@ -79,7 +79,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((MongoDB 架构))
+  root("(MongoDB 架构"))
     数据模型层 (BSON)
       Schema-Free 动态字段
       嵌套子文档与数组
@@ -142,7 +142,7 @@ graph TB
 
   MongosRouter <-->|1. 轮询同步 Chunk 区间映射| ConfigServerReplica
   MongosRouter -->|2. Shard Key 落在 Chunk [min, max] 路由至 Shard 1| Primary1
-  MongosRouter -->|3. Shard Key 落在 Chunk [max, +inf] 路由至 Shard 2| Primary2
+  MongosRouter -->|3. Shard Key 落在 Chunk["max, +inf"] 路由至 Shard 2| Primary2
   
   style Primary1 fill:#c8e6c9,stroke:#2e7d32
   style Primary2 fill:#c8e6c9,stroke:#2e7d32
@@ -168,7 +168,7 @@ graph TB
   end
 
   subgraph WiredTiger["WiredTiger 引擎 (现代)"]
-    WiredTigerCache["WiredTiger 专用内存 Cache (B+Tree/LSM)"]
+    WiredTigerCache["WiredTiger 专用内存 Cache("B+Tree/LSM")"]
     DocLock["文档级并发控制 (MVCC Hazard Pointers)"]
     BlockCompress["透明物理数据块压缩 (Snappy/Zstd)"]
     CheckpointWAL["WiredTiger Checkpoint + WAL 日志"]

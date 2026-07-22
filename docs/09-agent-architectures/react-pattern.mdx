@@ -97,17 +97,17 @@ graph TD
 
 ```mermaid
 graph TD
-    subgraph ModeA [模式 A: 纯思维链 (CoT Only)]
+    subgraph ModeA ["模式 A: 纯思维链 (CoT Only)"]
         CoT1["思考 (Thought 1)"] --> CoT2["思考 (Thought 2)"]
         CoT2 --> CoTAnswer["最终答案 (无依据容易幻觉)"]
     end
 
-    subgraph ModeB [模式 B: 纯工具调用 (Tool Use Only)]
+    subgraph ModeB ["模式 B: 纯工具调用 (Tool Use Only)"]
         Tool1["调工具 (Action 1)"] --> Tool2["调工具 (Action 2)"]
         Tool2 --> ToolAnswer["最终答案 (无规划容易出错)"]
     end
 
-    subgraph ModeC [模式 C: 推理与行动交织 (ReAct)]
+    subgraph ModeC ["模式 C: 推理与行动交织 (ReAct)"]
         ReThought1["推理 (Thought 1)"] --> ReAction1["行动 (Action 1)"]
         ReAction1 --> ReObs1["观察 (Observation 1)"]
         

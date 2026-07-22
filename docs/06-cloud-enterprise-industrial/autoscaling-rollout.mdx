@@ -73,10 +73,10 @@ graph TD
 
 ```mermaid
 flowchart TD
-    Start([定期触发计算 (默认 15s)]) --> ReadMetrics[读取当前度量指标值]
-    ReadMetrics --> Calculate[计算期望副本数 = 当前副本数 * (当前指标 / 目标值)]
+    Start("[定期触发计算 (默认 15s")]) --> ReadMetrics[读取当前度量指标值]
+    ReadMetrics --> Calculate["计算期望副本数 = 当前副本数 * (当前指标 / 目标值)"]
     Calculate --> CheckTolerance{期望与当前比率在容忍带内?<br>|ratio - 1.0| <= 容忍度 (默认 0.1)}
-    CheckTolerance -->|Yes| KeepCurrent[保持当前副本数 (不动)]
+    CheckTolerance -->|Yes| KeepCurrent["保持当前副本数 (不动)"]
     CheckTolerance -->|No| CheckScaleType{期望副本数 > 当前副本数?}
     
     CheckScaleType -->|Yes: 扩容| ScaleUp[立即执行扩容]

@@ -54,17 +54,17 @@ flowchart TD
   end
 
   subgraph CacheLayer["高速缓存层 (Redis Cluster - 读扩展)"]
-    App1 & App2 -->|4. 读缓存 (99%)| Redis[("⚡ 读缓存组 (Consistent Hash)")]
+    App1 & App2 -->|4. 读缓存 (99%)| Redis["("⚡ 读缓存组 (Consistent Hash)")"]
   end
 
   subgraph DBLayer["分片数据层 (Sharded DB - 写扩展/强一致)"]
-    DB_Conn -->|5. 缓存 Miss 写路由| Master1[("🗄️ Shard 1 主库 (Write)")]
-    DB_Conn -->|5. 缓存 Miss 写路由| Master2[("🗄️ Shard 2 主库 (Write)")]
+    DB_Conn -->|5. 缓存 Miss 写路由| Master1["("🗄️ Shard 1 主库 (Write)")"]
+    DB_Conn -->|5. 缓存 Miss 写路由| Master2["("🗄️ Shard 2 主库 (Write)")"]
     
-    Master1 ====>|强同步/半同步复制| Follower1[("🗄️ Shard 1 从库 (Read)")]
-    Master2 ====>|强同步/半同步复制| Follower2[("🗄️ Shard 2 从库 (Read)")]
+    Master1 ====>|强同步/半同步复制| Follower1["("🗄️ Shard 1 从库 (Read)")"]
+    Master2 ====>|强同步/半同步复制| Follower2["("🗄️ Shard 2 从库 (Read)")"]
     
-    etcd[("🌐 etcd 共识集群 <br/>(选主与分片元数据)")] <--> Master1 & Master2
+    etcd["("🌐 etcd 共识集群 <br/>(选主与分片元数据)")"] <--> Master1 & Master2
   end
 ```
 

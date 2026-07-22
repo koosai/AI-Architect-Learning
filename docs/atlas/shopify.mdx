@@ -85,7 +85,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((Shopify 架构))
+  root("(Shopify 架构"))
     多租户隔离 (Multi-Tenancy)
       Pod 物理隔离架构 (App + MySQL + Redis + Solr)
       Dedicated Pod (网红闪购专用 Pod)
@@ -180,7 +180,7 @@ graph TB
   end
 
   subgraph PodSaaS["Shopify Pod 物理隔离架构"]
-    MerchantA2["商户 A"] --> Pod10["Pod 10 (独立 Rails + MySQL + Redis)"]
+    MerchantA2["商户 A"] --> Pod10["Pod 10("独立 Rails + MySQL + Redis")"]
     MerchantB2["商户 B (闪购)"] --> DedicatedPodX["Dedicated Pod X (独立物理资源)"]
     SafeNote["Pod X 流量轰炸绝不影响 Pod 10! 100% 安全!"]
     

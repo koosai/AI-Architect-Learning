@@ -52,10 +52,10 @@ flowchart LR
   GW --> RT["消息路由"]
   RT --> ONLINE{"收件人在线?"}
   ONLINE -- "在线" --> GW
-  ONLINE -- "离线" --> Q[("离线队列<br/>store-and-forward")]
+  ONLINE -- "离线" --> Q["("离线队列<br/>store-and-forward")"]
   Q -. "上线后投递" .-> GW
-  RT --> PRES[("在线状态<br/>Redis")]
-  RT --> STORE[("消息存储<br/>按会话分片")]
+  RT --> PRES["("在线状态<br/>Redis")"]
+  RT --> STORE["("消息存储<br/>按会话分片")"]
   GW -. "离线推送" .-> PUSH["APNs / FCM"]
 ```
 
@@ -150,13 +150,13 @@ flowchart TD
     subgraph WriteAmp["写扩散 (Push / Fan-out on Write)"]
       UserA["发送方 A"] -->|1. 发送一条消息| GroupSvc1["群聊服务"]
       GroupSvc1 -->|2. 查询群成员 (B, C, D)| MemberDB1["群成员列表"]
-      GroupSvc1 -->|3. 多次写入 (写放大)| InboxB[("成员 B 收件箱")] & InboxC[("成员 C 收件箱")] & InboxD[("成员 D 收件箱")]
+      GroupSvc1 -->|3. 多次写入 (写放大)| InboxB["("成员 B 收件箱")"] & InboxC["("成员 C 收件箱")"] & InboxD["("成员 D 收件箱")"]
       Note1["特点:<br/>- 读延迟极低 (用户只需读自己的一封信)<br/>- 写开销大 (群人数 N 越大, 写入放大 N 倍)"]
     end
     
     subgraph ReadAmp["读扩散 (Pull / Fan-out on Read)"]
       UserA2["发送方 A"] -->|1. 发送一条消息| GroupSvc2["群聊服务"]
-      GroupSvc2 -->|2. 单次写入 (无写放大)| GroupInbox[("群消息主收件箱")]
+      GroupSvc2 -->|2. 单次写入 (无写放大)| GroupInbox["("群消息主收件箱")"]
       MemberB["成员 B"] & MemberC["成员 C"] & MemberD["成员 D"] -->|3. 查询时动态拉取聚合 (读放大)| GroupInbox
       Note2["特点:<br/>- 写开销极小 (只需写一份数据)<br/>- 读延迟高 (多成员并发拉取时, 带来狂暴的 DB 聚合读压力)"]
     end

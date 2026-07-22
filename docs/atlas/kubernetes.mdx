@@ -78,7 +78,7 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 mindmap
-  root((Kubernetes 架构))
+  root("(Kubernetes 架构"))
     控制平面 Master
       API Server 网关
       etcd 状态存储
@@ -166,14 +166,14 @@ graph TB
 
   Client["Kubectl / Client-Go"]:::client -->|HTTPS REST API| APIServer["kube-apiserver (控制面入口)"]:::master
 
-  subgraph ControlPlane [Kubernetes Master 控制平面]
-    APIServer <-->|Raft 数据同步与读取| etcdCluster[("etcd 强一致数据库 (Raft Group)")]:::storage
+  subgraph ControlPlane ["Kubernetes Master 控制平面"]
+    APIServer <-->|Raft 数据同步与读取| etcdCluster["("etcd 强一致数据库 (Raft Group)")"]:::storage
     
     ControllerManager["kube-controller-manager (各种核心控制器)"]:::master -->|List-Watch 状态变更| APIServer
     Scheduler["kube-scheduler (调度选择节点)"]:::master -->|List-Watch 并绑定节点| APIServer
   end
 
-  subgraph WorkerNode [Kubernetes Worker 工作节点 (以一台主机为例)]
+  subgraph WorkerNode ["Kubernetes Worker 工作节点 (以一台主机为例)"]
     Kubelet["kubelet (节点守护进程)"]:::node -->|1. List-Watch 本节点 Pod 并汇报状态| APIServer
     
     Kubelet -->|2. 容器生命周期管理 (gRPC/CRI)| ContainerRuntime["Container Runtime (containerd)"]:::node
@@ -201,8 +201,8 @@ graph TD
   classDef store fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
   classDef action fill:#ffebee,stroke:#c62828,stroke-width:2px;
 
-  Desired[("期望状态 (etcd YAML 描述)<br/>例如: replica=3")]:::store -->|1. 读取| Loop["调和循环 (Reconciliation Loop)"]:::process
-  Actual[("当前实际状态<br/>例如: 存活 Pod 数=2")]:::store -->|2. 读取| Loop
+  Desired["("期望状态 (etcd YAML 描述)<br/>例如: replica=3")"]:::store -->|1. 读取| Loop["调和循环 (Reconciliation Loop)"]:::process
+  Actual["("当前实际状态<br/>例如: 存活 Pod 数=2")"]:::store -->|2. 读取| Loop
   
   Loop -->|3. 计算状态偏差| Comp{"期望状态 == 实际状态?"}
   Comp -->|Yes| Sleep["睡眠并等待下一个事件触发"]:::process

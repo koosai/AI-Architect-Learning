@@ -37,11 +37,11 @@ import QuizCard from '@site/src/components/QuizCard';
 flowchart TD
   subgraph RangeSharding["配置 1: 范围分片 (Range Partitioning - 利于扫描，易产热点)"]
     direction TB
-    KeysR["数据键 (分区键: 订单创建时间) <br/>[2026-07-01] ... [2026-08-31]"]
+    KeysR["数据键 (分区键: 订单创建时间) <br/>[2026-07-01"] ... [2026-08-31]"]
     RouterR{"根据时间区间路由"}
     
-    Shard1_R[("Shard 1 <br/>[7月数据]")]
-    Shard2_R[("Shard 2 <br/>[8月数据]")]
+    Shard1_R["("Shard 1 <br/>[7月数据"]")]
+    Shard2_R["("Shard 2 <br/>[8月数据"]")]
     
     KeysR --> RouterR
     RouterR -->|'2026-07-15'| Shard1_R
@@ -53,11 +53,11 @@ flowchart TD
 
   subgraph HashSharding["配置 2: 哈希分片 (Hash Partitioning - 写入均匀，不利扫描)"]
     direction TB
-    KeysH["数据键 (分区键: User_UUID) <br/>[usr_abc01] ... [usr_xyz99]"]
+    KeysH["数据键 (分区键: User_UUID) <br/>[usr_abc01"] ... [usr_xyz99]"]
     RouterH{"hash(UUID) % 2"}
     
-    Shard1_H[("Shard 1 <br/>(存储 50% 记录)")]
-    Shard2_H[("Shard 2 <br/>(存储 50% 记录)")]
+    Shard1_H["("Shard 1 <br/>(存储 50% 记录)")"]
+    Shard2_H["("Shard 2 <br/>(存储 50% 记录)")"]
     
     KeysH --> RouterH
     RouterH -->|结果 = 0| Shard1_H

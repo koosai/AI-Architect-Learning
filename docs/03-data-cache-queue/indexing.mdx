@@ -33,12 +33,12 @@ import QuizCard from '@site/src/components/QuizCard';
 flowchart TD
   subgraph PrimaryKeyIndex["聚集索引 (Clustered Index - 主键 B+Tree)"]
     direction TB
-    Root1["Root Page (PrimaryKey: id)"] --> Leaf1_Data["Leaf Page (id: 1..100)<br/>[Contains Full Row Data:<br/>id | country | city | name]"]
+    Root1["Root Page (PrimaryKey: id)"] --> Leaf1_Data["Leaf Page (id: 1..100)<br/>[Contains Full Row Data:<br/>id | country | city | name"]"]
   end
 
   subgraph SecondaryIndex["二级辅助索引 (Secondary Index - 非主键 B+Tree)"]
     direction TB
-    Root2["Root Page (SecondaryKey: name)"] --> Leaf2_Index["Leaf Page (name: 'Ada'..'Bob')<br/>[Contains Key + PK Pointer:<br/>name | id (Primary Key Pointer)]"]
+    Root2["Root Page (SecondaryKey: name)"] --> Leaf2_Index["Leaf Page (name: 'Ada'..'Bob')<br/>[Contains Key + PK Pointer:<br/>name | id (Primary Key Pointer)"]"]
   end
 
   QuerySec["按 name 查找记录"] -->|1. 命中二级索引| Leaf2_Index

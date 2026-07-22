@@ -97,17 +97,17 @@ graph LR
     classDef state fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
     classDef semantic fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
 
-    subgraph SigMode [签名重复检测 (Signature Repetition)]
-        HashCompare["哈希动作比对:<br/>Hash(Action + Args)"]:::signature
+    subgraph SigMode ["签名重复检测 (Signature Repetition)"]
+        HashCompare["哈希动作比对:<br/>Hash("Action + Args")"]:::signature
         HashCompare -->|连续 N 次相同| SigTrigger["触发 STOP_LOOP"]
     end
 
-    subgraph StateMode [状态循环检测 (State Loop)]
+    subgraph StateMode ["状态循环检测 (State Loop)"]
         GraphCycle["状态转移有向图:<br/>State A -> State B -> State A"]:::state
         GraphCycle -->|检测到环路闭环| StateTrigger["触发 STOP_LOOP"]
     end
 
-    subgraph SemanticMode [语义重复检测 (Semantic Loop)]
+    subgraph SemanticMode ["语义重复检测 (Semantic Loop)"]
         Similarity["Thought 文本向量比对:<br/>Embedding Similarity > 0.95"]:::semantic
         Similarity -->|语义陷入鬼打墙| SemanticTrigger["触发 STOP_LOOP"]
     end

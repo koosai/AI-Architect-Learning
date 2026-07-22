@@ -71,14 +71,14 @@ Agent 在检索上能做几类自主决策：
 
 ```mermaid
 graph TD
-    subgraph FixedRAG [固定 RAG 管道 - 静态单向]
+    subgraph FixedRAG ["固定 RAG 管道 - 静态单向"]
         UserQ1["用户提问 (Query)"] --> RetrieveOnce["检索工具 (1次强制拉取)"]
         RetrieveOnce --> ContextBox["上下文拼接 (Prompt Context)"]
         ContextBox --> LLMGen1["LLM 一次性生成 (Generation)"]
         LLMGen1 --> Answer1["交付答案"]
     end
 
-    subgraph AgenticRAG [Agentic 检索回路 - 动态闭环]
+    subgraph AgenticRAG ["Agentic 检索回路 - 动态闭环"]
         UserQ2["用户提问 (Query)"] --> AgentLoop["LLM 智能体决策环 (Agent Loop)"]
         AgentLoop -->|思考: 不需要检索| DirectAnswer["直接回答/闲聊"]
         AgentLoop -->|思考: 需要事实支持| CallRetrieve["调用 retrieve(q, source)"]
@@ -140,7 +140,7 @@ graph LR
     AssessRel -->|Output: [IsRel]| GenResponse["基于 d1/d2 生成多条候选回复"]:::process
     
     GenResponse --> GroundingCheck["评估事实 grounding 对齐度"]:::process
-    GroundingCheck -->|Output: [IsSupported]| FinalSelect["评估综合有用度<br/>Output: [IsUseful]"]:::process
+    GroundingCheck -->|Output: [IsSupported]| FinalSelect["评估综合有用度<br/>Output: [IsUseful"]"]:::process
     
     FinalSelect --> SelectBest["选择综合得分最高的候选作为最终输出"]
 ```

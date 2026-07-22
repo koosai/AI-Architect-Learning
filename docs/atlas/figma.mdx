@@ -132,9 +132,9 @@ graph TB
     classDef serve fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
     classDef storage fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-    subgraph BrowserSandbox [设计师浏览器沙箱]
+    subgraph BrowserSandbox ["设计师浏览器沙箱"]
         UI["Figma Workspace Web App (JS UI)"]:::client
-        WasmCore["Figma Core Engine (C++ via WebAssembly)"]:::client
+        WasmCore["Figma Core Engine("C++ via WebAssembly")"]:::client
         Canvas["WebGL Viewport (<canvas> 渲染视窗)"]:::client
         
         UI -->|调用调用| WasmCore
@@ -143,12 +143,12 @@ graph TB
 
     WasmCore <-->|2. WebSocket 推送 op| RealtimeGateway["Multiplayer Socket Gateway (Rust)"]:::serve
 
-    subgraph CollaborativeBackends [协同服务集群]
+    subgraph CollaborativeBackends ["协同服务集群"]
         RealtimeGateway --> DocumentServer["Document Service Node<br/>(负责当前设计稿的内存排队与LWW)"]:::serve
         DocumentServer --> PaxosEngine["Consistency Paxos Engine<br/>(操作顺序序列化)"]:::serve
     end
 
-    DocumentServer -->|3. 快照存储| DB[("Figma MetaStore / S3")]:::storage
+    DocumentServer -->|3. 快照存储| DB["("Figma MetaStore / S3")"]:::storage
 ```
 
 ---
@@ -199,7 +199,7 @@ graph TD
     OpA --> SyncServer["Multiplayer Server (Rust)"]:::server
     OpB --> SyncServer
     
-    subgraph LwwProcess [属性级 LWW 冲突解析]
+    subgraph LwwProcess ["属性级 LWW 冲突解析"]
         SyncServer --> AuditA["Color 属性: 无并发修改冲突 -> 写入"]:::server
         SyncServer --> AuditB["Width 属性: 无并发修改冲突 -> 写入"]:::server
     end

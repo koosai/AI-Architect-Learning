@@ -78,15 +78,15 @@ graph TD
 
     LLM["LLM 决策大脑 (LLM Core)"]:::brain
     
-    subgraph ContextMemory [工作/短期记忆 (Context Working Memory - RAM)]
+    subgraph ContextMemory ["工作/短期记忆 (Context Working Memory - RAM)"]
         Scratchpad["结构化草稿纸 (Scratchpad)<br/>- 核心目标 (Goal)<br/>- 规划进度 (Plan)<br/>- 关键观察 (Observations)"]:::working
     end
 
-    subgraph CacheMemory [会话本地缓存 (Session RAM Cache)]
+    subgraph CacheMemory ["会话本地缓存 (Session RAM Cache)"]
         FullHistory["完整轨迹日志 (Full History Log)<br/>- 原生 Thought/Action 历史"]:::session
     end
 
-    subgraph LongtermStore [外部长期记忆 (Long-term DB Store - Disk)]
+    subgraph LongtermStore ["外部长期记忆 (Long-term DB Store - Disk)"]
         VectorDB["外部向量数据库 (Vector DB)<br/>- 跨任务沉淀经验<br/>- 用户偏好画像 (Profiles)"]:::external
         RelationalDB["传统关系型数据库 / 文件系统<br/>- 归档的完工报告"]:::external
     end

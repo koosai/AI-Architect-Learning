@@ -79,7 +79,7 @@ graph TD
     
     Loader --> Chunker["2. 语义分块器 (Structural Chunker)"]:::process
     
-    subgraph ChunkMetadata [元数据挂载]
+    subgraph ChunkMetadata ["元数据挂载"]
         Chunker --> DocRef["来源文件名 (source)"]
         Chunker --> DocTitle["标题层级 (title)"]
         Chunker --> DocPos["块序号 (pos)"]

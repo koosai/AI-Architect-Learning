@@ -84,7 +84,7 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 mindmap
-  root((MCP 协议))
+  root("(MCP 协议"))
     对等拓扑
       Host 主控大脑
       Client 协议层
@@ -153,11 +153,11 @@ graph TB
   
   IdeHost <-->|2. 请求推理与工具参数填充| LlmService["三方大模型 API (Model, 如 Claude 3.5)"]:::model
   
-  subgraph LocalSystem [本地宿主安全边界]
+  subgraph LocalSystem ["本地宿主安全边界"]
     IdeHost <-->|3. 标准输入输出 (Stdio) 管道通信 (MCP)| LocalMcpServer["本地文件系统 MCP Server"]:::server
   end
   
-  subgraph RemoteNetwork [企业外部网络]
+  subgraph RemoteNetwork ["企业外部网络"]
     IdeHost <-->|4. 远程 HTTP SSE 双工长连接 (MCP)| RemoteMcpServer["GitHub 远程控制 MCP Server"]:::server
   end
 ```
@@ -171,20 +171,20 @@ graph TB
   classDef server fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
   classDef app fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
 
-  subgraph IdeHostContainer [Host 应用程序内部容器]
+  subgraph IdeHostContainer ["Host 应用程序内部容器"]
     IdeApp["Host 业务逻辑 (如 IDE 编辑器核心)"]:::app -->|1. 控制生命周期| ClientManager["MCP 客户端生命周期管理器"]:::app
     
     ClientManager <-->|2. 挂载物理驱动| StdioClient["Stdio 传输驱动器"]:::client
     ClientManager <-->|2. 挂载物理驱动| SseClient["SSE 传输驱动器"]:::client
   end
 
-  subgraph OSProcessBoundary [操作系统独立子进程]
+  subgraph OSProcessBoundary ["操作系统独立子进程"]
     StdioClient <-->|3. JSON-RPC (stdin/stdout)| LocalServerProcess["MCP 本地 Server (Node.js/Python 进程)"]:::server
     
-    LocalServerProcess -->|4. 调用操作系统接口| LocalFile[("本地工作区文件")]
+    LocalServerProcess -->|4. 调用操作系统接口| LocalFile["("本地工作区文件")"]
   end
 
-  subgraph RemoteServerContainer [远程云端容器]
+  subgraph RemoteServerContainer ["远程云端容器"]
     SseClient <-->|5. JSON-RPC (HTTP SSE / POST)| SseServerEndpoint["SSE 远程服务端监听器"]:::conn
     SseServerEndpoint <-->|6. 执行逻辑| CloudMcpServer["MCP 远程云端 Server"]:::server
   end
@@ -214,7 +214,7 @@ graph LR
 
   Model["大模型 (Model Brain)"]:::model <-->|1. 仅交互语义参数 (Text/Schema)| HostHub["Host 宿主主控网关 (Client 驱动区)"]:::host
   
-  subgraph StandardBus [MCP USB-like 协议总线]
+  subgraph StandardBus ["MCP USB-like 协议总线"]
     HostHub <-->|2. Stdio 物理通道 1| LocalServer["文件管理 Server"]:::server
     HostHub <-->|2. Stdio 物理通道 2| DatabaseServer["SQL 查询 Server"]:::server
     HostHub <-->|2. SSE 网络通道 3| RemoteSlackServer["Slack 推送 Server"]:::server
@@ -270,8 +270,8 @@ graph TD
   
   ClientRouter -->|1. 根据 scheme 分发路由| PostgresServer["PostgreSQL MCP Server"]:::router
   
-  subgraph DataRetrieval [物理数据提取]
-    PostgresServer -->|2. 执行只读 SQL 元数据查询| DB[("Postgres 物理库")]:::database
+  subgraph DataRetrieval ["物理数据提取"]
+    PostgresServer -->|2. 执行只读 SQL 元数据查询| DB["("Postgres 物理库")"]:::database
     DB -->|3. 提取 schema 表结构信息| PostgresServer
   end
 
@@ -319,12 +319,12 @@ MCP 在 Stdio/SSE 通道中流转的所有消息帧，均强制封装在标准�
 
 ```mermaid
 graph TD
-  subgraph MessageEnvelope [JSON-RPC 2.0 消息帧结构]
+  subgraph MessageEnvelope ["JSON-RPC 2.0 消息帧结构"]
     JSON_RPC["jsonrpc: '2.0' (协议版本声明)"]
     MessageID["id: 104 (唯一帧递增序号，Request/Response 匹配对齐)"]
     MethodType["method: 'tools/call' (调用的原语接口名称)"]
     
-    subgraph ParamsObject [params: 参数结构体]
+    subgraph ParamsObject ["params: 参数结构体"]
       ToolName["name: 'read_filesystem'"]
       arguments["arguments: { 'path': '/src/main.py' }"]
     end

@@ -58,7 +58,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 
 ```mermaid
 mindmap
-  root((Zoom RTC 架构))
+  root("(Zoom RTC 架构"))
     控制平面 Zone Controller
       HTTP/WebSocket 部署
       会议调度与信令协商
@@ -157,8 +157,8 @@ Zoom 采用了 <GlossaryTerm term="SVC 可伸缩视频编码" definition="将单
 flowchart LR
   Raw[原始 1080p 60fps 画面] --> Encoder[SVC 编码器]
   Encoder --> L0["L0 基础层: 360p 15fps (仅需 150Kbps)"]
-  Encoder --> L1["L1 增强层: 720p 30fps (+300Kbps)"]
-  Encoder --> L2["L2 顶层: 1080p 60fps (+1Mbps)"]
+  Encoder --> L1["L1 增强层: 720p 30fps("+300Kbps")"]
+  Encoder --> L2["L2 顶层: 1080p 60fps("+1Mbps")"]
 ```
 
 MMR 路由器无需重新解码，只需直接在 IP 封包层丢弃 L1/L2 即可为弱网设备瘦身。

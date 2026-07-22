@@ -61,7 +61,7 @@ import GuidedExercise from '@site/src/components/GuidedExercise';
 
 ```mermaid
 mindmap
-  root((Prometheus 架构))
+  root("(Prometheus 架构"))
     意图改写与解析 Query Router
       多轮提问语义改写
       搜索引擎 Query 生成
@@ -130,7 +130,7 @@ graph TB
   BingRanker <-->|2. 读取倒排索引与网页快照| BingIndexer
   BingRanker -->|3. 返回 Top-N 优质网页片段| ContextAggregator
   
-  ContextAggregator -->|4. 拼接 Prompt (Context + User Query)| GPTInference
+  ContextAggregator -->|4. 拼接 Prompt("Context + User Query")| GPTInference
   GPTInference -->|5. 流式返回生成的候选答案| ControlLoop
   
   ControlLoop <-->|6. 生成结果双向校对| AttributionVerifier

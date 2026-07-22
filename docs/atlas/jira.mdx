@@ -66,7 +66,7 @@ Atlassian 通过开发 Forge 云隔离沙箱与柔性状态机编译器，完美
 
 ```mermaid
 mindmap
-  root((Jira/Confluence 架构))
+  root("(Jira/Confluence 架构"))
     工作流状态机
       有向图状态转移 (Transitions)
       前置权限判定 (Conditions)
@@ -120,8 +120,8 @@ graph TB
   end
 
   subgraph TenantData["租户隔离存储平面"]
-    TenantDB[("PostgreSQL 租户数据库")]
-    ForgeStore[("Forge Key-Value 隔离存储区")]
+    TenantDB["("PostgreSQL 租户数据库")"]
+    ForgeStore["("Forge Key-Value 隔离存储区")"]
   end
 
   MainApp <-->|Batch REST / gRPC| APIProxy

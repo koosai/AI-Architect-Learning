@@ -58,7 +58,7 @@ import ResearchNote from '@site/src/components/ResearchNote';
 
 ```mermaid
 mindmap
-  root((NTP 时间同步架构))
+  root("(NTP 时间同步架构"))
     Stratum 层级拓扑
       Stratum 0 (GPS / 铯原子钟 / 銣钟)
       Stratum 1 (直接连接 S0 的主时间服务器)
@@ -170,12 +170,12 @@ delta = (T4 - T1) - (T3 - T2)
 
 ```mermaid
 flowchart TD
-  S1["Server 1 范围: [10:00.001 .. 10:00.005]"] --> Intersection
-  S2["Server 2 范围: [10:00.002 .. 10:00.006]"] --> Intersection
-  S3["Server 3 范围: [10:00.003 .. 10:00.007]"] --> Intersection
-  S4["Server 4 (故障): [10:05.000 .. 10:05.010]"] --> Reject[被 Marzullo 剔除 (False Ticker)]
+  S1["Server 1 范围: [10:00.001 .. 10:00.005"]"] --> Intersection
+  S2["Server 2 范围: [10:00.002 .. 10:00.006"]"] --> Intersection
+  S3["Server 3 范围: [10:00.003 .. 10:00.007"]"] --> Intersection
+  S4["Server 4 (故障): [10:05.000 .. 10:05.010"]"] --> Reject["被 Marzullo 剔除 (False Ticker)"]
 
-  Intersection["计算最大交集区间 [10:00.003 .. 10:00.005]"] --> FineTune[作为最终同步基准]
+  Intersection["计算最大交集区间 [10:00.003 .. 10:00.005"]"] --> FineTune[作为最终同步基准]
 ```
 
 ### 4c. Slewing (相频平滑微调) vs Stepping (硬跳跃)

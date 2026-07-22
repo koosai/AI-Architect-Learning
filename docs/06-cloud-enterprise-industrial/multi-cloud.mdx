@@ -133,13 +133,13 @@ classDiagram
 flowchart TD
     subgraph App_Migration["1. 应用层迁移 (轻量级)"]
         Code[编译 Docker 镜像] --> ImagePush[上传跨云镜像仓库]
-        ImagePush --> K8sDeploy[在目标云 EKS/GKE 重新调度]
+        ImagePush --> K8sDeploy["在目标云 EKS/GKE 重新调度"]
         Note1["几分钟内完成 / 零费用 / 极其简单"]
     end
 
     subgraph Data_Migration["2. 数据层迁移 (重力瓶颈)"]
         DataStore["源云数据库/文件 (PB级)"] --> BandwidthLimit{"带宽限制 & 流量计费"}
-        BandwidthLimit -->|迁移周期极长 (数天/数周)| TimeCost[迁移时间成本 / 业务中断风险]
+        BandwidthLimit -->|迁移周期极长 (数天/数周)| TimeCost["迁移时间成本 / 业务中断风险"]
         BandwidthLimit -->|出口网络流量费 (Egress Fee)| MoneyCost[巨大财务开销]
         
         TimeCost --> Sync["双写 / 追增量数据同步"]

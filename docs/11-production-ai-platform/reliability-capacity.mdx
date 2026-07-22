@@ -81,7 +81,7 @@ graph TD
     
     Limiter -->|通过| Breaker["2. 熔断判定器 (Circuit Breaker)"]:::cb
     
-    subgraph FailoverGroup [多模型容灾备份组]
+    subgraph FailoverGroup ["多模型容灾备份组"]
         Breaker -->|正常通行| Primary["主模型 API (强力提供商)"]:::models
         Primary -.->|持续 429 / 5xx 故障| Secondary["备用模型 API (他厂模型)"]:::models
     end

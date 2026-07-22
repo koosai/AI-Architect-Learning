@@ -76,7 +76,7 @@ graph TD
     classDef traces fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
     classDef logs fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-    subgraph ObservabilityPillars [可观测三支柱]
+    subgraph ObservabilityPillars ["可观测三支柱"]
         Metrics["1. 度量指标 (Metrics)"]:::metrics
         Traces["2. 链路追踪 (Traces)"]:::traces
         Logs["3. 详细日志 (Logs)"]:::logs
@@ -95,7 +95,7 @@ sequenceDiagram
     participant App as 客户端 (App)
     participant GW as API 网关 [Trace ID: t-100]
     participant Vector as 向量检索引擎 [Span ID: s-1]
-    participant LLM as 大模型 API [Span ID: s-2]
+    participant LLM as 大模型 API["Span ID: s-2"]
     participant Tool as 天气查询工具 [Span ID: s-3]
 
     App->>GW: 1. 发起请求 "深圳今天天气" (Inject Header)

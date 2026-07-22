@@ -106,7 +106,7 @@ graph TD
     CheckReplanner -->|是| Replan["启动动态规划修正模块<br/>(LLM Re-planner)"]:::replan
     
     Replan --> GenerateFix["生成补救步骤 T_fix<br/>(如换备用数据源)"]
-    GenerateFix --> InsertQueue["动态注入队列:<br/>T.insert(i + 1, T_fix)"]
+    GenerateFix --> InsertQueue["动态注入队列:<br/>T.insert("i + 1, T_fix")"]
     InsertQueue --> Next
 ```
 
@@ -114,15 +114,15 @@ graph TD
 
 ```mermaid
 graph TD
-    subgraph ReactivePath [纯反应式路径 (ReAct) - 易迷失]
+    subgraph ReactivePath ["纯反应式路径 (ReAct) - 易迷失"]
         R1["目标"] --> R_Thought1["Thought: 查A"] --> R_Action1["Call search(A)"]
         R_Action1 --> R_Obs1["Obs: A 成功"] --> R_Thought2["Thought: 突然想到查C"]:::replan
         R_Thought2 --> R_Action2["Call search(C)"] --> R_Obs2["Obs: C 失败"]
         R_Obs2 --> R_Thought3["Thought: 陷入死结 / 遗忘目标B"]:::replan
     end
 
-    subgraph PlanningPath [规划执行路径 (Plan-then-Execute) - 条理清晰]
-        P1["目标"] --> Plan["生成全局计划: [查A, 查B, 对比]"]
+    subgraph PlanningPath ["规划执行路径 (Plan-then-Execute) - 条理清晰"]
+        P1["目标"] --> Plan["生成全局计划: [查A, 查B, 对比"]"]
         
         Plan --> P_T1["执行 T1: 查A (有明确上下文与状态标记)"]
         P_T1 --> P_T2["执行 T2: 查B (不受中间无关信息干扰)"]

@@ -79,7 +79,7 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 mindmap
-  root((Kafka 架构))
+  root("(Kafka 架构"))
     顺序追加写存储
       LogSegment 分段文件
       稀疏索引 .index / .timeindex
@@ -151,7 +151,7 @@ graph TB
   Producer["生产者应用 (Producer App)"]:::client -->|1. 发送消息流 (Kafka Protocol)| KafkaCluster["Kafka 分布式事件流集群"]:::main
   Consumer["消费者应用 (Consumer App)"]:::client <--|2. 主动拉取消息流 (Pull Model)| KafkaCluster
   
-  KafkaCluster -->|3. 定期冷备份与归档| TieredStorage[("对象存储 (AWS S3 / GCS)")]:::third
+  KafkaCluster -->|3. 定期冷备份与归档| TieredStorage["("对象存储 (AWS S3 / GCS)")"]:::third
 ```
 
 ### 3b. Container Diagram (容器结构图)
@@ -165,19 +165,19 @@ graph TB
 
   Producer["Kafka Producer SDK"]:::client -->|批量压缩消息| SocketLayer["Broker Network Sockets (网络层)"]:::mem
   
-  subgraph KafkaBrokerInstance [Kafka Broker 节点容器内部]
+  subgraph KafkaBrokerInstance ["Kafka Broker 节点容器内部"]
     SocketLayer <-->|Acceptor/Processor 线程分发| RequestHandler["Request Handler Threads (请求处理线程池)"]:::process
     
     RequestHandler -->|1. 写数据至内核缓存| PageCache["OS Page Cache (操作系统页缓存)"]:::mem
     
-    subgraph LogStorage [分区分段存储管理器]
-      PageCache -->|2. 异步顺序刷盘| SegmentFiles[("Log Segment Files (.log)")]:::disk
-      PageCache -->|3. 写入稀疏索引| IndexFiles[("Index Files (.index / .timeindex)")]:::disk
+    subgraph LogStorage ["分区分段存储管理器"]
+      PageCache -->|2. 异步顺序刷盘| SegmentFiles["("Log Segment Files (.log)")"]:::disk
+      PageCache -->|3. 写入稀疏索引| IndexFiles["("Index Files (.index / .timeindex)")"]:::disk
     end
 
     ReplicaManager["Replica Manager (副本管理器)"]:::process -->|4. ISR 副本数据复制同步| PageCache
     
-    KRaftController["KRaft Controller (元数据管理器)"]:::process <-->|5. 元数据 Raft 复制| MetadataLog[("Metadata Log")]:::disk
+    KRaftController["KRaft Controller (元数据管理器)"]:::process <-->|5. 元数据 Raft 复制| MetadataLog["("Metadata Log")"]:::disk
   end
 
   Consumer["Kafka Consumer SDK"]:::client -->|6. 发起零拷贝拉取请求| SocketLayer
@@ -207,7 +207,7 @@ graph TD
   
   PageCache -->|2. 数据立刻对读操作可见 (热度直读)| Consumer["Consumer 读请求"]:::pagecache
   
-  PageCache -->|3. 脏页定期异步刷新 (WAL/pdflush)| HardDisk[("物理磁盘 Log Segment 文件 (顺序写)")]:::disk
+  PageCache -->|3. 脏页定期异步刷新 (WAL/pdflush)| HardDisk["("物理磁盘 Log Segment 文件 (顺序写)")"]:::disk
 ```
 
 ---
@@ -226,15 +226,15 @@ graph TB
   classDef mem fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
   classDef app fill:#ffebee,stroke:#c62828,stroke-width:2px;
 
-  subgraph TraditionalPath [传统网络数据发送 (4次拷贝/4次切换)]
-    Disk_T[("磁盘")] -->|1. DMA 拷贝| PageCache_T["Page Cache (内核)"]:::mem
+  subgraph TraditionalPath ["传统网络数据发送 (4次拷贝/4次切换)"]
+    Disk_T["("磁盘")"] -->|1. DMA 拷贝| PageCache_T["Page Cache (内核)"]:::mem
     PageCache_T -->|2. CPU 拷贝| JVM_T["JVM 内存 (用户态)"]:::app
     JVM_T -->|3. CPU 拷贝| Socket_T["Socket 缓冲区 (内核)"]:::mem
     Socket_T -->|4. DMA 拷贝| NIC_T["网卡发送区"]:::mem
   end
 
-  subgraph ZeroCopyPath [零拷贝 sendfile() 网络数据发送 (2次拷贝/2次切换)]
-    Disk_Z[("磁盘")] -->|1. DMA 拷贝| PageCache_Z["Page Cache (内核)"]:::mem
+  subgraph ZeroCopyPath ["零拷贝 sendfile() 网络数据发送 (2次拷贝/2次切换)"]
+    Disk_Z["("磁盘")"] -->|1. DMA 拷贝| PageCache_Z["Page Cache (内核)"]:::mem
     PageCache_Z -->|2. DMA 直接拷贝 (零 CPU 复制)| NIC_Z["网卡发送区"]:::mem
   end
 ```
@@ -295,7 +295,7 @@ graph TD
   classDef standby fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
   classDef broker fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-  subgraph KRaftControllerQuorum [KRaft 控制器共识组 (Raft Quorum)]
+  subgraph KRaftControllerQuorum ["KRaft 控制器共识组 (Raft Quorum)"]
     ActiveController["Active Controller Node 1 (Raft Leader)"]:::active
     StandbyController1["Standby Controller Node 2 (Raft Follower)"]:::standby
     StandbyController2["Standby Controller Node 3 (Raft Follower)"]:::standby
@@ -303,7 +303,7 @@ graph TD
 
   ActiveController <-->|Raft 日志强同步元数据| StandbyController1 & StandbyController2
   
-  subgraph DataPlaneBrokers [数据平面普通 Broker 节点]
+  subgraph DataPlaneBrokers ["数据平面普通 Broker 节点"]
     Broker1["Kafka Broker A"]:::broker
     Broker2["Kafka Broker B"]:::broker
     Broker3["Kafka Broker C"]:::broker

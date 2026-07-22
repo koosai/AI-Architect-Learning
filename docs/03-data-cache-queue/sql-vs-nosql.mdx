@@ -44,7 +44,7 @@ flowchart LR
 
   subgraph DocumentModel["文档型反规范化嵌套模型 (Document Denormalized Model)"]
     direction TB
-    UserDoc["用户文档 (MongoDB User Document)<br/>{<br/>&nbsp;&nbsp;_id: 1,<br/>&nbsp;&nbsp;name: 'Ada',<br/>&nbsp;&nbsp;orders: [<br/>&nbsp;&nbsp;&nbsp;&nbsp;{ id: 11, item: 'book', price: 99.0 },<br/>&nbsp;&nbsp;&nbsp;&nbsp;{ id: 12, item: 'pen', price: 5.0 }<br/>&nbsp;&nbsp;]<br/>}"]
+    UserDoc["用户文档 (MongoDB User Document)<br/>{<br/>&nbsp;&nbsp;_id: 1,<br/>&nbsp;&nbsp;name: 'Ada',<br/>&nbsp;&nbsp;orders: [<br/>&nbsp;&nbsp;&nbsp;&nbsp;{ id: 11, item: 'book', price: 99.0 },<br/>&nbsp;&nbsp;&nbsp;&nbsp;{ id: 12, item: 'pen', price: 5.0 }<br/>&nbsp;&nbsp;"]<br/>}"]
     NoteDoc["特征:<br/>- 自包含嵌套数组<br/>- 故意冗余商品名/价格<br/>- 无需多表外键"]
   end
 ```

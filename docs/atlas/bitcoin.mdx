@@ -58,10 +58,10 @@ import ResearchNote from '@site/src/components/ResearchNote';
 
 ```mermaid
 mindmap
-  root((Bitcoin 架构))
+  root("(Bitcoin 架构"))
     账本模型 (UTXO)
-      Input (引用旧 UTXO + UnlockScript)
-      Output (Value + PubKeyScript/P2PKH)
+      Input("引用旧 UTXO + UnlockScript")
+      Output("Value + PubKeyScript/P2PKH")
       Coinbase Transaction (创世奖励)
     区块结构 (Block)
       Block Header (80 Bytes)
@@ -92,9 +92,9 @@ flowchart TB
   end
 
   subgraph Core_P2P["Bitcoin Core 全节点网络 (P2P Mesh)"]
-    Node1["Bitcoin Core Full Node 1 (Mempool + DB)"]
-    Node2["Bitcoin Core Full Node 2 (Mempool + DB)"]
-    Node3["Bitcoin Core Full Node 3 (Mempool + DB)"]
+    Node1["Bitcoin Core Full Node 1("Mempool + DB")"]
+    Node2["Bitcoin Core Full Node 2("Mempool + DB")"]
+    Node3["Bitcoin Core Full Node 3("Mempool + DB")"]
   end
 
   subgraph Block_Chain["分布式账本 (Blockchain State)"]
@@ -127,7 +127,7 @@ sequenceDiagram
 
   Miner->>Miner: 构造 Block Header (设置 Nonce)
   loop SHA-256 算力碰撞
-    Miner->>Miner: SHA256(SHA256(BlockHeader)) < Target
+    Miner->>Miner: SHA256("SHA256(BlockHeader")) < Target
   end
   Miner->>Network: 找到合法 Nonce！广播新 Block N+1
 

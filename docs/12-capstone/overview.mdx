@@ -32,7 +32,7 @@ flowchart LR
   UI --> GW["模型网关<br/>(M11 护栏/成本/观测)"]
   GW --> RAG["RAG 服务<br/>(M8 检索+引用)"]
   GW --> AG["Agent 编排<br/>(M9 工具+循环)"]
-  RAG --> VDB[("本地向量库<br/>(M8)")]
+  RAG --> VDB["("本地向量库<br/>(M8)")"]
   AG --> TOOLS["评审工具"]
   GW --> LLM["模型 provider<br/>(本地/云, 可替换 M4 DIP)"]
   GW --> OBS["Trace / Eval<br/>(M11 观测+评估)"]

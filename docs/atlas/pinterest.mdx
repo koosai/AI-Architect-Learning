@@ -67,7 +67,7 @@ Pinterest 面临的独特挑战是：
 
 ```mermaid
 mindmap
-  root((Pinterest 推荐))
+  root("(Pinterest 推荐"))
     在线 Pixie 实时召回
       二分图内存邻接表拓扑
       度数自适应游走次数 Scaling
@@ -192,7 +192,7 @@ graph TD
   Trans --> Pool["3. 池化层 (Max/Mean Pooling): 聚合为单一邻居向量 n_u"]
   
   TargetNode --> SelfFeat["自身原始特征 (图像 VGG16 向量 + 文本词向量)"]
-  Pool --> Concat["4. 拼接 (Concatenation): [h_u, n_u]"]
+  Pool --> Concat["4. 拼接 (Concatenation): [h_u, n_u"]"]
   SelfFeat --> Concat
   
   Concat --> FinalDense["5. 激活与归一化: Output Layer -> 生成 L_2 归一化嵌入向量 z_u"]

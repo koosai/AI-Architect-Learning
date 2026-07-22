@@ -81,7 +81,7 @@ graph TD
     classDef bad fill:#ffebee,stroke:#c62828,stroke-width:1px;
     classDef good fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-    subgraph SingleAgentMode [单 Agent 模拟多角色 (过度负荷)]
+    subgraph SingleAgentMode ["单 Agent 模拟多角色 (过度负荷)"]
         AgentA["单能智能体 (All-in-One Agent)"]:::brain
         AgentA --> Role1["角色一: 研究员 (Research)"]:::roles
         AgentA --> Role2["角色二: 批评家 (Critic)"]:::roles
@@ -89,7 +89,7 @@ graph TD
         Note over AgentA: 既写又审，容易发生自我确认偏差 (Blind Spot)<br/>且工具绑定过多，上下文极易污染
     end
 
-    subgraph MultiAgentMode [多 Agent 专精分工 (关注点分离)]
+    subgraph MultiAgentMode ["多 Agent 专精分工 (关注点分离)"]
         Orchestrator["编排协调器 (Host / Workflow)"]:::good
         Orchestrator --> AgentResearch["1. 研究员智能体"]:::roles
         Orchestrator --> AgentCritic["2. 评审员智能体"]:::roles

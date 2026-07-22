@@ -81,13 +81,13 @@ graph TD
     App1["应用 A: 客服"]:::app
     App2["应用 B: 分析"]:::app
     
-    subgraph MeteringPlatform [平台计量网关]
+    subgraph MeteringPlatform ["平台计量网关"]
         App1 & App2 -->|网关 API 调用| Collector["1. 流量与 Token 收集器"]:::metering
         Collector -->|实时上报| Aggregator["2. 异步聚合器 (Kafka / Redis)"]:::metering
     end
 
     subgraph CostBilling System [FinOps 成本分析系统]
-        Aggregator -->|存储计量记录| DB[("成本明细数据库")]
+        Aggregator -->|存储计量记录| DB["("成本明细数据库")"]
         DB -->|看板聚合展示| Dashboard["3. 成本归因大盘 (FinOps 看板)"]:::billing
         DB -->|超支控制| Limiter["4. 实时配额与预算限制器"]:::billing
     end

@@ -43,7 +43,7 @@ flowchart LR
 
   subgraph LogModel["2. 日志型队列 (Log-based: Kafka Partition)"]
     direction TB
-    P2["生产者 (Producer)"] -->|Append Write| Log2["只读追加物理日志 (Log)<br/>[msg0] [msg1] [msg2] [msg3]"]
+    P2["生产者 (Producer)"] -->|Append Write| Log2["只读追加物理日志 (Log)<br/>[msg0"] [msg1] [msg2] [msg3]"]
     C2["消费者 (Consumer)"] -->|Pull & Move Offset| Log2
     NoteL["Offset 逻辑移动:<br/>- 消息只读追加, 物理不删<br/>- 消费进度仅移动指针<br/>- 随时支持重置 Offset 重放"]
   end

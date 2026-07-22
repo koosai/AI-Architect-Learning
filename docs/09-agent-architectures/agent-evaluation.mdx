@@ -83,12 +83,12 @@ graph TD
     AgentRun --> TraceLog["生成运行轨迹 (Trace Logs)"]
     AgentRun --> FinalAnswer["最终输出答案"]
 
-    subgraph TraditionalEval [传统评估 (结果主义)]
+    subgraph TraditionalEval ["传统评估 (结果主义)"]
         FinalAnswer --> CheckAns{"只判答案对错?"}
         CheckAns -->|True| PassResult["判定通过 (Pass)"]:::good
     end
 
-    subgraph TrajectoryEval [轨迹评估 (过程主义)]
+    subgraph TrajectoryEval ["轨迹评估 (过程主义)"]
         TraceLog --> MultiEval["四维联合评估器 (Evaluator)"]:::eval
         MultiEval --> CheckGoal["1. 目标达成度 (Goal Reached)"]
         MultiEval --> CheckReason["2. 步骤合理性 (Step Validity)"]
@@ -110,7 +110,7 @@ graph LR
 
     Developer["架构师修改 Agent Prompt/逻辑"] --> CodeCommit["提交代码 (Git Commit)"]
     
-    subgraph CICDPipeline [CI/CD 自动化门禁]
+    subgraph CICDPipeline ["CI/CD 自动化门禁"]
         CodeCommit --> TriggerCI["触发测试流水线"]:::ci
         TriggerCI --> RunEvalSet["运行标准评测任务集 (Evaluation Suite)"]:::ci
         RunEvalSet --> ExtractTrace["提取步级 Trace Log"]
@@ -121,7 +121,7 @@ graph LR
         ScoreCheck -->|达标| MergeCode["允许合并代码"]:::ci
     end
 
-    subgraph ProductionObs [线上生产观测监控]
+    subgraph ProductionObs ["线上生产观测监控"]
         MergeCode --> Deploy["部署上线 (Deploy)"]:::ci
         Deploy --> RealUser["线上真实用户流量"]
         RealUser --> Collector["Trace 收集器"]:::main

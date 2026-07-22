@@ -48,10 +48,10 @@ Roblox 的核心设计用意在于：**基于 C++ 打造 <GlossaryTerm term="Lua
 
 ```mermaid
 graph TD
-  UGCDeveloper["UGC 开发者 / 玩家客户端"] -->|1. 提交 Luau 脚本与物理 Part| RobloxServer["Roblox Cloud Game Server (C++ Engine)"]
+  UGCDeveloper["UGC 开发者 / 玩家客户端"] -->|1. 提交 Luau 脚本与物理 Part| RobloxServer["Roblox Cloud Game Server("C++ Engine")"]
   
   subgraph LuauSandboxPlane["Luau 安全脚本沙箱平面"]
-    RobloxServer -->|2. 装载至隔离沙箱| LuauEngine["Luau VM (Memory Quota + Instruction Counter)"]
+    RobloxServer -->|2. 装载至隔离沙箱| LuauEngine["Luau VM("Memory Quota + Instruction Counter")"]
     LuauEngine -->|3. 监控死循环与危险调用| SecurityGate{"检测到恶意指令或超限?"}
     SecurityGate -->|4. 强制终止并报错| TerminateScript["Throw Script Timeout Exception"]
     SecurityGate -->|5. 安全执行逻辑| DataModelTree["DataModel DOM Tree (游戏场景状态)"]
@@ -86,7 +86,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((Roblox 架构))
+  root("(Roblox 架构"))
     Luau 安全脚本沙箱 (Sandbox)
       Luau VM (渐进类型化, JIT/AOT 编译)
       Instruction Counter (死循环拦截)

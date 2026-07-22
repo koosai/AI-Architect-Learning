@@ -122,9 +122,9 @@ graph TB
     
     CopilotGateway -->|2. Grounding 与编排| Orchestration["Copilot Orchestration Engine"]:::main
     
-    subgraph EnterpriseTenantBoundary [企业租户安全边界 (Tenant Boundary)]
+    subgraph EnterpriseTenantBoundary ["企业租户安全边界 (Tenant Boundary)"]
         Orchestration <-->|3. 语义检索与 ACL 检查| MicrosoftGraph["Microsoft Graph & Semantic Index"]:::main
-        MicrosoftGraph <-->|4. 数据拉取| TenantData[("SharePoint / Outlook 数据存储")]:::third
+        MicrosoftGraph <-->|4. 数据拉取| TenantData["("SharePoint / Outlook 数据存储")"]:::third
     end
     
     Orchestration -->|5. 发送合规 Prompt| AzureOpenAI["Azure OpenAI Hosting (GPT-4 模型)"]:::main
@@ -140,13 +140,13 @@ graph TB
 
     UserRequest["User Prompt (Office App)"] --> CopilotEngine["Copilot Orchestration Engine<br/>(状态编排器)"]:::serve
     
-    subgraph GraphSemanticPlatform [语义索引存储引擎]
+    subgraph GraphSemanticPlatform ["语义索引存储引擎"]
         CopilotEngine -->|1. 召回请求| GraphAPI["Microsoft Graph API"]:::serve
         GraphAPI -->|2. 检索语义相关性| SemanticIndex["Semantic Index Service<br/>(向量搜索引擎)"]:::data
         GraphAPI -->|3. 并发提取权限表| ActiveDirectory["Active Directory ACLs<br/>(用户访问控制列表)"]:::data
     end
 
-    subgraph LLMSecuritySandBox [LLM 交互与安全网关]
+    subgraph LLMSecuritySandBox ["LLM 交互与安全网关"]
         CopilotEngine -->|4. 权限修剪后的安全上下文| MetapromptMaker["Metaprompt Builder<br/>(提示词与上下文拼接器)"]:::serve
         MetapromptMaker -->|5. 安全 RPC 发送| AzureOpenAIService["Azure OpenAI Service<br/>(模型权重只读、不回传数据)"]:::serve
         
@@ -207,7 +207,7 @@ graph TD
     
     AclGet -->|A 的权限 ID 列表: [Group#1, User#A]| VectorSearch["向量检索语义召回"]:::query
     
-    subgraph SecurityTrimProcess [动态安全修剪 (Security Trimming)]
+    subgraph SecurityTrimProcess ["动态安全修剪 (Security Trimming)"]
         VectorSearch --> MatchAcl{"检查 Chunk 元数据中的 ACL 是否包含 A 的权限 ID?"}:::trim
         MatchAcl -->|No| Discard["从结果集中彻底丢弃 (物理隔离)"]:::trim
         MatchAcl -->|Yes| Keep["保留此 Chunk 作为安全背景上下文"]:::trim

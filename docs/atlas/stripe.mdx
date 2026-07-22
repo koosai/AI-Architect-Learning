@@ -80,7 +80,7 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 mindmap
-  root((Stripe 架构))
+  root("(Stripe 架构"))
     API 门面设计
       幂等防重机制
         Redis 临时租约锁
@@ -151,8 +151,8 @@ graph TB
 
   MerchantServer["商户服务器 (Merchant System)"]:::client -->|使用 API-Version 与 Idempotency-Key 头发送 JSON 请求| StripePlatform["Stripe 支付网关服务"]:::main
   
-  StripePlatform <-->|执行 Redis 幂等锁校验| RedisCache[("Redis 缓存 (Idempotency Cache)")]:::main
-  StripePlatform <-->|异步对账与日志拉取| Database[("Stripe 关系型数据库 (Postgres Ledger)")]:::main
+  StripePlatform <-->|执行 Redis 幂等锁校验| RedisCache["("Redis 缓存 (Idempotency Cache)")"]:::main
+  StripePlatform <-->|异步对账与日志拉取| Database["("Stripe 关系型数据库 (Postgres Ledger)")"]:::main
   
   StripePlatform <-->|发起划扣与对账报文| CardNetwork["卡组织网络 / 汇兑银行 (Visa / Mastercard)"]:::third
 ```
@@ -168,18 +168,18 @@ graph TB
 
   API_Request["商户支付请求 (携带 Idempotency-Key)"] --> ZuulGateway["Stripe API Edge 网关<br/>负责安全限流与 API 版本转换"]:::gateway
   
-  subgraph StripeInternalPlatform [Stripe 金融级平台内部]
+  subgraph StripeInternalPlatform ["Stripe 金融级平台内部"]
     ZuulGateway -->|1. 拦截解析| IdempotencyInterceptor["幂等拦截器 (Idempotency Filter)"]:::gateway
     
-    IdempotencyInterceptor <-->|2. 检查租约锁是否存在| RedisLock[("Redis 租约缓存")]:::controller
+    IdempotencyInterceptor <-->|2. 检查租约锁是否存在| RedisLock["("Redis 租约缓存")"]:::controller
     
     IdempotencyInterceptor -->|3. 锁未命中: 开始事务执行| PaymentStateMachine["支付状态机引擎<br/>(Payment Lifecycle Engine)"]:::controller
     
-    PaymentStateMachine <-->|4. 记录订单与 Outbox 日志| LedgerDB[("关系数据库 (Postgres Ledger)")]:::ledger
+    PaymentStateMachine <-->|4. 记录订单与 Outbox 日志| LedgerDB["("关系数据库 (Postgres Ledger)")"]:::ledger
     
     IdempotencyInterceptor <-->|2b. 锁命中: 从 DB 获取响应缓存重放| LedgerDB
     
-    subgraph EventBusSystem [事件总线发布]
+    subgraph EventBusSystem ["事件总线发布"]
       OutboxPoller["Outbox 异步扫描器"]:::ledger -->|5. 轮询读取 Outbox 变更| LedgerDB
       OutboxPoller -->|6. 发送事件| KafkaEvent["消息队列 (Kafka 事件总线)"]:::ledger
     end
@@ -253,7 +253,7 @@ graph TD
 
   OldReq["1. 旧版本请求 (2017-08-15)<br/>JSON: { 'amount': 10 }"] --> Gateway["2. 网关 AST 适配器管线"]
   
-  subgraph UpconvertChain [向上翻译链条 (Up-convert Pipeline)]
+  subgraph UpconvertChain ["向上翻译链条 (Up-convert Pipeline)"]
     Gateway --> Adapter1["Adapter 2018-02-05<br/>将 amount 翻译为 amount_in_cents"]:::adapt
     Adapter1 --> Adapter2["Adapter 2020-03-12<br/>格式化货币代号"]:::adapt
   end
@@ -261,7 +261,7 @@ graph TD
   Adapter2 -->|3. 最新标准 JSON 传入| CoreApp["4. Stripe 最新主业务代码<br/>(自豪地认为全是最新格式!)"]:::app
   CoreApp -->|5. 返回最新格式响应 JSON| DownconvertChain["网关反向适配管线"]
   
-  subgraph DownconvertChain [向下翻译链条 (Down-convert Pipeline)]
+  subgraph DownconvertChain ["向下翻译链条 (Down-convert Pipeline)"]
     Adapter3["Adapter 2020-03-12 反向"]:::adapt --> Adapter4["Adapter 2018-02-05 反向<br/>还原 amount 字段"]:::adapt
   end
   
@@ -328,13 +328,13 @@ graph TD
 
   PaymentRequest["收到付款确认请求"] --> AppServer["Stripe 业务服务端"]:::app
   
-  subgraph LocalPostgres [本地 Postgres 数据库边界]
+  subgraph LocalPostgres ["本地 Postgres 数据库边界"]
     AppServer -->|1. 启动本地事务| Tx["本地强事务 (ACID Tx)"]:::db
-    Tx -->|2. 修改支付主账本表| LedgerTable[("支付明细账本表 (payment_ledger)")]:::db
-    Tx -->|3. 插入待发事件到 Outbox 表| OutboxTable[("外发消息事件表 (outbox_events)")]:::db
+    Tx -->|2. 修改支付主账本表| LedgerTable["("支付明细账本表 (payment_ledger)")"]:::db
+    Tx -->|3. 插入待发事件到 Outbox 表| OutboxTable["("外发消息事件表 (outbox_events)")"]:::db
   end
   
-  subgraph AsyncSender [异步投递总线]
+  subgraph AsyncSender ["异步投递总线"]
     OutboxPoller["Outbox 独立扫描进程"]:::process -->|4. 持续轮询未发送的 Outbox 记录| OutboxTable
     OutboxPoller -->|5. 发送消息到 Kafka| KafkaBus["Kafka 消息总线 (通知发货/开票)"]:::app
     KafkaBus -->|6. 发送确认 (ACK)| OutboxPoller
@@ -359,11 +359,11 @@ Stripe 提出了**带有随机抖动（Jitter）的指数退避重试**算法：
 
 ```mermaid
 graph TD
-  subgraph RetryIntervals [重试时间间隔随重试次数分布与抖动区间图]
-    Attempt1["第 1 次重试<br/>延迟范围: [0, 100ms]"]
-    Attempt2["第 2 次重试<br/>延迟范围: [0, 200ms]"]
-    Attempt3["第 3 次重试<br/>延迟范围: [0, 400ms]"]
-    Attempt4["第 4 次重试<br/>延迟范围: [0, 800ms]"]
+  subgraph RetryIntervals ["重试时间间隔随重试次数分布与抖动区间图"]
+    Attempt1["第 1 次重试<br/>延迟范围: [0, 100ms"]"]
+    Attempt2["第 2 次重试<br/>延迟范围: [0, 200ms"]"]
+    Attempt3["第 3 次重试<br/>延迟范围: [0, 400ms"]"]
+    Attempt4["第 4 次重试<br/>延迟范围: [0, 800ms"]"]
   end
 
   Note over RetryIntervals: 由于 Random() 噪声介入，不同客户端的重试发送波峰被物理拉平！

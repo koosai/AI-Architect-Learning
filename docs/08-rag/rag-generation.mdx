@@ -127,9 +127,9 @@ graph LR
     end
 
     subgraph ValidationCases ["引用校验器处理实例"]
-        CaseA["情况一: 正常回答<br/>'退货需要自理运费 [2]'<br/>(验证: 引用 2 处于 [1, 2] 范围内)"] --> CaseAPass["🎉 通过校验 (正常展现)"]:::passed
+        CaseA["情况一: 正常回答<br/>'退货需要自理运费 [2"]'<br/>(验证: 引用 2 处于 [1, 2] 范围内)"] --> CaseAPass["🎉 通过校验 (正常展现)"]:::passed
         
-        CaseB["情况二: 幻觉编造<br/>'30天内可换货 [9]'<br/>(验证: 引用 9 超出最大索引 2)"] --> CaseBIntercept["❌ 拦截并弃答 (警告/转人工)"]:::failed
+        CaseB["情况二: 幻觉编造<br/>'30天内可换货 [9"]'<br/>(验证: 引用 9 超出最大索引 2)"] --> CaseBIntercept["❌ 拦截并弃答 (警告/转人工)"]:::failed
     end
 
     InputEvidence -.-> ValidationCases

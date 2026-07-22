@@ -79,7 +79,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((ClickHouse 架构))
+  root("(ClickHouse 架构"))
     MergeTree 存储层
       列存物理文件 (.bin)
       稀疏主键索引 (.idx)
@@ -166,9 +166,9 @@ graph TB
 ```mermaid
 graph TB
   subgraph RowStore["MySQL 行存物理布局 (数据交错在一行)"]
-    Row1["Row 1: [ID_1 | User_1 | Revenue_1]"]
-    Row2["Row 2: [ID_2 | User_2 | Revenue_2]"]
-    Row3["Row 3: [ID_3 | User_3 | Revenue_3]"]
+    Row1["Row 1: [ID_1 | User_1 | Revenue_1"]"]
+    Row2["Row 2: [ID_2 | User_2 | Revenue_2"]"]
+    Row3["Row 3: [ID_3 | User_3 | Revenue_3"]"]
     MemoryRow["读入内存：整行全部字段连续加载，总线开销极大"]
     
     Row1 --> MemoryRow
@@ -176,9 +176,9 @@ graph TB
   end
 
   subgraph ColumnStore["ClickHouse 列存物理布局 (单独字段成 bin)"]
-    Col_ID["id.bin: [ID_1, ID_2, ID_3]"]
-    Col_User["user.bin: [User_1, User_2, User_3]"]
-    Col_Revenue["revenue.bin: [Rev_1, Rev_2, Rev_3]"]
+    Col_ID["id.bin: [ID_1, ID_2, ID_3"]"]
+    Col_User["user.bin: [User_1, User_2, User_3"]"]
+    Col_Revenue["revenue.bin: [Rev_1, Rev_2, Rev_3"]"]
     MemoryCol["读入内存：仅加载需要的 [Rev] 列紧凑数组"]
     
     Col_Revenue --> MemoryCol

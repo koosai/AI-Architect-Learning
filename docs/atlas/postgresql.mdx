@@ -79,7 +79,7 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 mindmap
-  root((PostgreSQL 架构))
+  root("(PostgreSQL 架构"))
     存储结构与缓冲区
       Heap File 堆表
       Slotted Page 槽页
@@ -91,7 +91,7 @@ mindmap
       Transaction Snapshot 事务快照
       Autovacuum 垃圾回收
     索引引擎 (Access Methods)
-      nbtree (并发 B+ 树)
+      nbtree("并发 B+ 树")
       GIN (广义倒排索引)
       GiST (广义搜索树)
       pgvector (HNSW / IVFFlat 向量索引)
@@ -151,7 +151,7 @@ graph TB
   ClientApp["应用程序 Client"]:::client -->|1. 发起 SQL 读写/向量计算| PGCluster["PostgreSQL 数据库实例"]:::main
   
   PGCluster -->|2. 加载外部动态链接库| Extensions["向量/地理插件 (pgvector, PostGIS)"]:::third
-  PGCluster -->|3. 物理读写与持久化| LocalStorage[("本地 NVMe SSD (数据文件 & WAL)")]:::main
+  PGCluster -->|3. 物理读写与持久化| LocalStorage["("本地 NVMe SSD (数据文件 & WAL)")"]:::main
 ```
 
 ### 3b. Container Diagram (容器结构图)
@@ -166,7 +166,7 @@ graph TB
   Client["客户端 SDK / PgBouncer"]:::client -->|1. 连接请求| Postmaster["Postmaster 主守护进程"]:::process
   Postmaster -->|2. Fork 派生进程服务连接| BackendProc["Backend Process (服务进程)"]:::process
 
-  subgraph SystemMemory [PostgreSQL 共享内存与进程拓扑]
+  subgraph SystemMemory ["PostgreSQL 共享内存与进程拓扑"]
     BackendProc -->|3. 查询与修改缓冲区| SharedBuffers["Shared Buffers (共享缓冲池)"]:::mem
     BackendProc -->|4. 写入事务日志| WALBuffers["WAL Buffers (WAL 缓冲区)"]:::mem
     
@@ -175,9 +175,9 @@ graph TB
     Autovacuum["Autovacuum 后台进程"]:::process -->|7. 物理清扫死亡元组| SharedBuffers
   end
 
-  subgraph PhysicalDisk [磁盘存储空间]
-    WALFiles[("WAL Log Logs (预写日志)")]:::disk
-    HeapFiles[("Heap Files & Index (堆表与索引文件)")]:::disk
+  subgraph PhysicalDisk ["磁盘存储空间"]
+    WALFiles["("WAL Log Logs (预写日志)")"]:::disk
+    HeapFiles["("Heap Files & Index (堆表与索引文件)")"]:::disk
   end
   
   SharedBuffers -->|物理数据读取与刷写| HeapFiles
@@ -204,12 +204,12 @@ graph TD
   classDef tuple fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
   classDef process fill:#e3f2fd,stroke:#1565c0,stroke-width:1.5px;
 
-  subgraph HeapPage [物理数据页 (Page)]
+  subgraph HeapPage ["物理数据页 (Page)"]
     TupleV1["元组版本 1 (balance=50)<br/>xmin=100 (已提交)<br/>xmax=105 (已提交)"]:::tuple
     TupleV2["元组版本 2 (balance=100)<br/>xmin=105 (已提交)<br/>xmax=0 (激活)"]:::tuple
   end
 
-  Reader["只读事务 (快照: 活跃列表=[105])"]:::process -->|读取数据| TupleV1
+  Reader["只读事务 (快照: 活跃列表=[105"])"]:::process -->|读取数据| TupleV1
   Reader -->|读取数据| TupleV2
 
   Note over Reader, TupleV1: 因为 xmax=105，而 105 在快照中仍算活跃（未提交），<br/>所以 TupleV1 对当前 Reader 可见！
@@ -326,11 +326,11 @@ PostgreSQL 的物理数据块（Page，默认为 8KB）采用槽页结构（Slot
 
 ```mermaid
 graph TD
-  subgraph SlottedPageLayout [PostgreSQL 8KB 物理数据页布局 (Slotted Page)]
+  subgraph SlottedPageLayout ["PostgreSQL 8KB 物理数据页布局 (Slotted Page)"]
     Header["Page Header (页头部元信息 - 24 字节)"]
-    LinePtrs["行指针数组 (Line Pointers / 槽)<br/>[Ptr #1] [Ptr #2] [Ptr #3] (由前向后生长)"]
+    LinePtrs["行指针数组 (Line Pointers / 槽)<br/>[Ptr #1"] [Ptr #2] [Ptr #3] (由前向后生长)"]
     FreeSpace["夹在中间的空闲空间 (Free Space)"]
-    Tuples["物理元组数据 (Tuple Data)<br/>[Tuple #3] [Tuple #2] [Tuple #1] (由后向前生长)"]
+    Tuples["物理元组数据 (Tuple Data)<br/>[Tuple #3"] [Tuple #2] [Tuple #1] (由后向前生长)"]
   end
   
   Header --> LinePtrs

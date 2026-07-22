@@ -81,7 +81,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((Sentry 架构))
+  root("(Sentry 架构"))
     边缘接收层 (Relay Proxy)
       Rust 语言编写
       Envelope 格式解析
@@ -178,7 +178,7 @@ graph TB
     
     Scrub["清洗动态内存地址与干扰参数"]
     HashGen["生成统一 Hash Key: e3b0c442"]
-    SingleIssue["合并为一个 Issue (计数 +2，页面清爽!)"]
+    SingleIssue["合并为一个 Issue("计数 +2，页面清爽!")"]
     
     ErrA & ErrB --> Scrub --> HashGen --> SingleIssue
     style SingleIssue fill:#c8e6c9,stroke:#2e7d32

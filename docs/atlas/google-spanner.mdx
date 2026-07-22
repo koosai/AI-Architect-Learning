@@ -78,7 +78,7 @@ import PyRunner from '@site/src/components/PyRunner';
 ### 2a. 全景架构思维导图
 ```mermaid
 mindmap
-  root((Google Spanner))
+  root("(Google Spanner"))
     数据组织与存储
       Spanserver
       Tablet 数据分片
@@ -155,8 +155,8 @@ graph TB
 
     ClientApp["用户应用程序 (Spanner Client)"]:::client -->|1. 发起 SQL 事务请求| SpannerCluster["Google Spanner 数据库集群"]:::main
     
-    SpannerCluster -->|2. 调用物理时钟校正| TrueTimeMaster["TrueTime Master Nodes (原子钟 + GPS)"]:::third
-    SpannerCluster -->|3. 持久化数据与日志| ColossusFileSystem[("Colossus DFS (Google 级分布式文件系统)")]:::main
+    SpannerCluster -->|2. 调用物理时钟校正| TrueTimeMaster["TrueTime Master Nodes("原子钟 + GPS")"]:::third
+    SpannerCluster -->|3. 持久化数据与日志| ColossusFileSystem["("Colossus DFS (Google 级分布式文件系统)")"]:::main
 ```
 
 ### 3b. Container Diagram (容器结构图)
@@ -171,7 +171,7 @@ graph TB
     Client["Spanner Client SDK"]:::client -->|1. 写请求路由至分片 Leader| SpanserverLeader["Spanserver Node (Paxos Leader)"]:::container
     Client -->|2. 只读请求就近路由| SpanserverFollower["Spanserver Node (Paxos Follower)"]:::container
 
-    subgraph SpanserverContainer [Spanserver 内部容器结构 (以 Leader 节点为例)]
+    subgraph SpanserverContainer ["Spanserver 内部容器结构 (以 Leader 节点为例)"]
         SpanserverLeader -->|3. 调用获取当前时间区间| TrueTimeDaemon["TrueTime Daemon (本地硬件同步进程)"]:::component
         SpanserverLeader -->|4. 分片并发读写锁定| LockTable["Lock Table (单机二阶段锁 2PL)"]:::component
         SpanserverLeader -->|5. 事务日志与状态协调| TxManager["Transaction Manager (二阶段提交 2PC 协调/参与者)"]:::component
@@ -179,7 +179,7 @@ graph TB
         SpanserverLeader -->|6. 共识日志同步| PaxosGroup["Paxos Group 共识复制实例"]:::component
     end
 
-    PaxosGroup -->|7. 异步刷写 SSTable| ColossusStorage[("Colossus Storage (SSTable)")]:::node
+    PaxosGroup -->|7. 异步刷写 SSTable| ColossusStorage["("Colossus Storage (SSTable)")"]:::node
     SpanserverFollower -->|快照版本读| ColossusStorage
 ```
 
@@ -304,7 +304,7 @@ graph TD
 
     TxWrite["写事务 (在 s=150 写入 data='NewValue')"]:::write -->|1. 准备提交| PaxosLeader["Paxos Leader (AZ-1)"]:::write
     
-    PaxosLeader -->|2. 分配时间戳 s=150 刷写快照| MVCCStorage[("Colossus 存储 (MVCC 多版本)<br/>balance@t=100 : 50<br/>balance@t=150 : 100")]:::storage
+    PaxosLeader -->|2. 分配时间戳 s=150 刷写快照| MVCCStorage["("Colossus 存储 (MVCC 多版本)<br/>balance@t=100 : 50<br/>balance@t=150 : 100")"]:::storage
 
     TxReadOnly["只读事务 (T_read = 120)"]:::read -->|3. 就近携带 T_read 读取| PaxosFollower["Paxos Follower (AZ-2)"]:::read
     

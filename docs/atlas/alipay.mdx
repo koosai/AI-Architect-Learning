@@ -57,11 +57,11 @@ graph TD
     EdgeGW <-->|2. 根据 User ID Hash 计算 Routing| LDCRouter["LDC 动态路由网关 (Zone Router)"]
     
     subgraph HangzhouDataCenter["杭州数据中心 Zone"]
-      LDCRouter -->|3a. 路由至 RZone 01| RZone01["RZone 01 (包含 500 万用户全栈微服务 + OceanBase 副本)"]
+      LDCRouter -->|3a. 路由至 RZone 01| RZone01["RZone 01("包含 500 万用户全栈微服务 + OceanBase 副本")"]
     end
     
     subgraph ShanghaiDataCenter["上海数据中心 Zone"]
-      LDCRouter -->|3b. 路由至 RZone 02| RZone02["RZone 02 (包含 500 万用户全栈微服务 + OceanBase 副本)"]
+      LDCRouter -->|3b. 路由至 RZone 02| RZone02["RZone 02("包含 500 万用户全栈微服务 + OceanBase 副本")"]
     end
     
     subgraph GlobalCommonZone["全局共享 Zone"]
@@ -93,7 +93,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((支付宝双 11 架构))
+  root("(支付宝双 11 架构"))
     LDC 单元化架构 (Cellular)
       RZone (Region Zone: 用户自治单元)
       GZone (Global Zone: 全局公共单元)
@@ -185,8 +185,8 @@ graph TB
   end
 
   subgraph LDCSystem["支付宝 LDC 单元化架构 (无限水平扩容)"]
-    UsersGroup1["用户群 A (User_ID % 2 == 0)"] --> RZoneA["RZone A (包含独立 App + OB 数据库)"]
-    UsersGroup2["用户群 B (User_ID % 2 == 1)"] --> RZoneB["RZone B (包含独立 App + OB 数据库)"]
+    UsersGroup1["用户群 A (User_ID % 2 == 0)"] --> RZoneA["RZone A("包含独立 App + OB 数据库")"]
+    UsersGroup2["用户群 B (User_ID % 2 == 1)"] --> RZoneB["RZone B("包含独立 App + OB 数据库")"]
     InfiniteScale["加机房加 RZone 即可线性增加全网 TPS！"]
     
     RZoneA & RZoneB --- InfiniteScale

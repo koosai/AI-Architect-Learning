@@ -80,7 +80,7 @@ graph TD
     
     InGuard -->|正常放行| Breaker["2. 熔断降级判断"]:::cb
     
-    subgraph FailoverList [高可用多活提供商链]
+    subgraph FailoverList ["高可用多活提供商链"]
         Breaker -->|正常通过| PrimaryLLM["3a. 主大模型 API"]:::models
         PrimaryLLM -.->|超时/429/500| BackupLLM["3b. 备选云端 API"]:::models
         BackupLLM -.->|持续崩溃| LocalLLM["3c. 本地轻量模型"]:::models

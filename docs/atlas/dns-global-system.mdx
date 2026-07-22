@@ -51,11 +51,11 @@ graph TD
   
   subgraph CacheLayer["Local DNS 多级 TTL 缓存层"]
     LocalDNS -->|2. 检查本地 RAM 缓存| CacheHit{"TTL 未过期?"}
-    CacheHit -- "是 (99% 场景)" -->|3. 0.1ms 极速返回 A 记录| ClientDevice
+    CacheHit -->|3. 命中 99% 场景: 0.1ms 极速返回 A 记录| ClientDevice
   end
 
   subgraph HierarchicalLookupPlane["DNS 层级递归迭代查询平面"]
-    CacheHit -- "否 (缓存 Miss)" -->|4. 查询 Root (.)| RootDNS["Root Name Server (A~M Anycast 1500+ 镜像)"]
+    CacheHit -->|4. 未命中: 查询 Root (.)| RootDNS["Root Name Server (A~M Anycast 1500+ 镜像)"]
     RootDNS -->|5. 返回 .com NS 指针| LocalDNS
     LocalDNS -->|6. 查询 TLD (.com)| TLDDNS[".com TLD Name Server"]
     TLDDNS -->|7. 返回 ns1.example.com NS 指针| LocalDNS
@@ -87,14 +87,14 @@ graph TD
 
 ```mermaid
 mindmap
-  root((DNS 全球体系架构))
+  root("(DNS 全球体系架构"))
     树状层级结构 (Hierarchy)
       Root Name Servers (. 根域名服务器)
       Top-Level Domain (TLD .com / .org)
       Authoritative Name Server (权威服务器)
     高可用与拓扑 (Anycast & Redundancy)
       13 IPv4/IPv6 Addresses (A ~ M Root)
-      BGP Anycast Global Anycast Mesh (1,500+ 物理实例)
+      BGP Anycast Global Anycast Mesh("1,500+ 物理实例")
       DDoS Traffic Scrubbing (流量边缘洗消)
     缓存与解析 (Caching & Lookup)
       Recursive Resolver (递归解析器 Local DNS)

@@ -75,14 +75,14 @@ graph TD
 
     TaskInput["评审任务: '审查我的缓存设计'"] --> AgentBrain["Agent 核心大脑 (ReAct Planner)"]:::brain
     
-    subgraph AgentLoop [ReAct 迭代循环]
+    subgraph AgentLoop ["ReAct 迭代循环"]
         AgentBrain --> Thought["1. Thought: 思考接下来应审核哪个维度"]:::brain
         Thought --> Action["2. Action: 决定调用哪个工具并填充参数"]:::brain
         Action --> Observation["3. Observation: 解析工具返回的物理世界事实"]:::brain
         Observation -->|反馈输入| AgentBrain
     end
 
-    subgraph ToolRegistry [工具安全白名单注册表]
+    subgraph ToolRegistry ["工具安全白名单注册表"]
         Action -->|JSON Schema 校验| Router["网关安全防火墙"]
         Router -->|1. 读操作| SearchNotes["search_notes(dim) 查阅笔记"]:::tools
         Router -->|2. 比对操作| CheckAspect["check_dimension(aspect) 评估核验"]:::tools

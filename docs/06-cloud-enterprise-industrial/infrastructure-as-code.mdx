@@ -119,7 +119,7 @@ flowchart TD
     end
 
     subgraph Immutable_Path["现代不可变路径 (Immutable)"]
-        B1[服务器 v1.0] -->|修改 IaC 代码/镜像模板| B2[CI/CD 构建新镜像 v2.0]
+        B1[服务器 v1.0] -->|修改 IaC 代码/镜像模板| B2["CI/CD 构建新镜像 v2.0"]
         B2 -->|部署全新服务器 v2.0| B3[新服务器 v2.0 运行上线]
         B3 -->|流量切换| B4[销毁旧服务器 v1.0]
     end

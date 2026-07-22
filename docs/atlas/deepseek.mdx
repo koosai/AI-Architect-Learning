@@ -60,14 +60,14 @@ import ResearchNote from '@site/src/components/ResearchNote';
 
 ```mermaid
 mindmap
-  root((DeepSeek V3/R1 架构))
+  root("(DeepSeek V3/R1 架构"))
     注意力机制优化
       MLA (Multi-Head Latent Attention)
       KV 潜变量低秩联合压缩 (dc=512)
       RoPE 解耦位置编码 (dr=64)
       吸收投影矩阵到 Q/K
     MoE 细粒度专家
-      DeepSeekMoE (256  Routed + 1 Shared)
+      DeepSeekMoE("256  Routed + 1 Shared")
       Top-8 细粒度路由 (K=8)
       无 Aux Loss 负载均衡 (Bias 动态调整)
       共享专家捕捉通用知识
@@ -213,8 +213,8 @@ DeepSeek-R1 开启了 LLM 自动推理（Reasoning）的新纪元。其核心 RL
 
 ```mermaid
 flowchart TD
-  Prompt[Prompt Q] --> Sample[采样 N 个回答: A1, A2, ..., AN]
-  Sample --> Reward[规则 Reward Evaluator (正确性检查 + 格式 Check)]
+  Prompt[Prompt Q] --> Sample["采样 N 个回答: A1, A2, ..., AN"]
+  Sample --> Reward["规则 Reward Evaluator("正确性检查 + 格式 Check")"]
   Reward --> Score["获得得分: r1, r2, ..., rN"]
   Score --> Advantage["计算组内相对 Advantage: A_i = (r_i - mean(r)) / std(r)"]
   Advantage --> PolicyUpdate[GRPO 策略梯度更新 Actor]

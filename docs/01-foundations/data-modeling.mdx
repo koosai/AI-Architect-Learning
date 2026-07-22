@@ -72,13 +72,13 @@ flowchart TD
   subgraph NormalizedQuery["规范化单表查询模式 (Normalized Scan - No Index)"]
     direction TB
     Req1["查询 Event = e1 的所有用户"] --> Scan["全表扫描 (遍历 Signups 列表)"]
-    Scan -->|O(N) 复杂度| Res1["匹配结果: [ada, bob]"]
+    Scan -->|O(N) 复杂度| Res1["匹配结果: [ada, bob"]"]
   end
 
   subgraph IndexedQuery["反规范化双向索引模式 (Indexed Lookup - O(1))"]
     direction TB
-    Req2["查询 Event = e1 的所有用户"] --> Match1["直接命中哈希索引: by_event['e1']"]
-    Req3["查询 User = ada 的所有活动"] --> Match2["直接命中哈希索引: by_user['ada']"]
+    Req2["查询 Event = e1 的所有用户"] --> Match1["直接命中哈希索引: by_event['e1'"]"]
+    Req3["查询 User = ada 的所有活动"] --> Match2["直接命中哈希索引: by_user['ada'"]"]
     
     Match1 -->|O(1) 复杂度| Res2["[ada, bob]"]
     Match2 -->|O(1) 复杂度| Res3["[e1, e2]"]

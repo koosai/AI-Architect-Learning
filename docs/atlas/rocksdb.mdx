@@ -82,7 +82,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((RocksDB 架构))
+  root("(RocksDB 架构"))
     内存结构层
       Active Memtable (SkipList 跳表)
       Immutable Memtable
@@ -137,9 +137,9 @@ graph TB
     WalFile["WAL 日志文件 (.log)"]
     
     subgraph SSTLevels["SSTable 物理分层文件库"]
-      Level0_Files["Level 0 (.sst) [范围交错]"]
-      Level1_Files["Level 1 (.sst) [按 Key 排序无交错]"]
-      Level2_Files["Level 2 (.sst) [容量扩大 10 倍]"]
+      Level0_Files["Level 0 (.sst) [范围交错"]"]
+      Level1_Files["Level 1 (.sst) [按 Key 排序无交错"]"]
+      Level2_Files["Level 2 (.sst) [容量扩大 10 倍"]"]
     end
   end
 
@@ -196,13 +196,13 @@ graph TB
 ```mermaid
 graph TD
   subgraph Level0["Level 0 (Key 范围存在重叠)"]
-    L0_F1["SST 1: [Key 10 ~ 100]"]
-    L0_F2["SST 2: [Key 50 ~ 150]"]
+    L0_F1["SST 1: [Key 10 ~ 100"]"]
+    L0_F2["SST 2: [Key 50 ~ 150"]"]
   end
 
   subgraph Level1["Level 1 (数据严格排序，无 Key 重叠)"]
-    L1_F1["SST A: [Key 0 ~ 80]"]
-    L1_F2["SST B: [Key 81 ~ 200]"]
+    L1_F1["SST A: [Key 0 ~ 80"]"]
+    L1_F2["SST B: [Key 81 ~ 200"]"]
   end
 
   L0_F1 & L0_F2 -->|选出与 L1 范围有交集的文件| MultiWayMerge["多路归并排序线程 (Multi-way Merge Sort)"]
@@ -253,7 +253,7 @@ timeline
   title RocksDB 架构演进时间线
   2011 : 基于 LevelDB 分叉 : Facebook (Meta) 从 Google LevelDB 分叉 / 针对多核 CPU 与 NVMe SSD 进行并发重构
   2013 : RocksDB 正式开源 : 开源 RocksDB / 推出 Column Families (列族) / 引入 Block Cache 与可平滑调控的 Compaction 架构
-  2016 : MyRocks 与云原生存储选型 : 推出 MyRocks (MySQL + RocksDB 引擎) / 被 TiKV、CockroachDB 等下一代 NewSQL 数据库选为底层引擎底座
+  2016 : MyRocks 与云原生存储选型 : 推出 MyRocks("MySQL + RocksDB 引擎") / 被 TiKV、CockroachDB 等下一代 NewSQL 数据库选为底层引擎底座
   2023 : RocksDB 8.0 时代 : 支持 User-Defined Timestamps (用户自定义时间戳) / 引入次级 Block Cache 针对 CXL/NVM 介质硬件加速
 ```
 

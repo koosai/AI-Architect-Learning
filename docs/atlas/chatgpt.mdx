@@ -112,7 +112,7 @@ flowchart TB
   subgraph GPU["GPU 推理集群（多卡）"]
     PRE["Prefill 阶段：处理整个 prompt，算出 KV cache（算力密集）"]
     DEC["Decode 阶段：逐 token 生成（显存带宽密集）"]
-    KV[("KV Cache：PagedAttention 分页管理显存")]
+    KV["("KV Cache：PagedAttention 分页管理显存")"]
     PRE --> KV --> DEC
   end
   SCHED --> PRE

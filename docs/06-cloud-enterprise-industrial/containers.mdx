@@ -104,13 +104,13 @@ flowchart TD
 flowchart TD
   subgraph ImageLayers["只读分层镜像堆叠 (Image Layers - 类似 Git 提交链)"]
     direction BT
-    Layer1["Layer 1: Base OS <br/>(alpine:3.18) <br/>[Fingerprint: sha256_aaa]"]
+    Layer1["Layer 1: Base OS <br/>(alpine:3.18) <br/>[Fingerprint: sha256_aaa"]"]
     
-    Layer2["Layer 2: Run Dependencies <br/>(apk add python3) <br/>[Fingerprint: sha256_bbb]"]
+    Layer2["Layer 2: Run Dependencies <br/>(apk add python3) <br/>[Fingerprint: sha256_bbb"]"]
     
-    Layer3["Layer 3: App requirements <br/>(pip install -r requirements.txt) <br/>[Fingerprint: sha256_ccc]"]
+    Layer3["Layer 3: App requirements <br/>(pip install -r requirements.txt) <br/>[Fingerprint: sha256_ccc"]"]
     
-    Layer4["Layer 4: Copy source code <br/>(COPY . .) <br/>[Fingerprint: sha256_ddd]"]
+    Layer4["Layer 4: Copy source code <br/>(COPY . .) <br/>[Fingerprint: sha256_ddd"]"]
 
     Layer2 --> Layer1
     Layer3 --> Layer2

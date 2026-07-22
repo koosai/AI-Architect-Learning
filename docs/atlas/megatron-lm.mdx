@@ -87,7 +87,7 @@ graph TD
 
 ```mermaid
 mindmap
-  root((Megatron-LM 架构))
+  root("(Megatron-LM 架构"))
     3D 混合并行 (3D Parallelism)
       Tensor Parallelism (TP: 节点内矩阵切分)
       Pipeline Parallelism (PP: 节点间网络层切分)
@@ -159,7 +159,7 @@ graph TB
 ```mermaid
 graph TB
   subgraph TraditionalDP["传统数据并行 DP (显存爆仓 OOM)"]
-    GPUA["GPU A (完整 1T 模型权重 + 完整激活值)"]
+    GPUA["GPU A("完整 1T 模型权重 + 完整激活值")"]
     OOMCrash["80GB 显存无法容纳 2000GB 模型 -> 物理 OOM 崩溃!"]
     
     GPUA --> OOMCrash

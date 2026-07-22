@@ -58,7 +58,7 @@ Instagram 创立之初仅有两位工程师。他们的原则是：**"Keep it si
 
 ```mermaid
 mindmap
-  root((Instagram 架构))
+  root("(Instagram 架构"))
     Web/API 层
       uWSGI + Async Django Monolith
       Py3 CPython 内存优化 (Copy-on-Write)
@@ -84,7 +84,7 @@ mindmap
 ```mermaid
 flowchart TB
   subgraph Client_Tier["客户端层"]
-    App["Instagram Mobile App (React Native + Native)"]
+    App["Instagram Mobile App("React Native + Native")"]
   end
 
   subgraph Gateway_Tier["网关与负载均衡"]
@@ -163,8 +163,8 @@ block-beta
 ```mermaid
 flowchart TD
   Post[用户发布新帖] --> Check{粉丝数是否 > 10,000?}
-  Check -- 否 (普通用户) --> Push[Push 模式: Celery 异步写入所有粉丝的 Feed 列表 Cache]
-  Check -- 是 (大 V / 名人) --> Pull[Pull 模式: 仅写入大 V 个人 Timeline, 粉丝刷新时动态 Merging]
+  Check -- 否 (普通用户) --> Push["Push 模式: Celery 异步写入所有粉丝的 Feed 列表 Cache"]
+  Check -- 是 (大 V / 名人) --> Pull["Pull 模式: 仅写入大 V 个人 Timeline, 粉丝刷新时动态 Merging"]
 ```
 
 ### 4c. Stories 24 小时 TTL 缓存架构
