@@ -64,8 +64,14 @@ export default function PyRunner({ code: initialCode, rows = 12, expect }: PyRun
       setProgress(90);
       const py = window.pyodideInstance;
 
-      // 3. Setup redirect for print statements
+      // 3. Setup redirect for print statements and stderr
       py.setStdout({
+        batched: (text: string) => {
+          outputRef.current += text + '\n';
+          setOutput(outputRef.current);
+        },
+      });
+      py.setStderr({
         batched: (text: string) => {
           outputRef.current += text + '\n';
           setOutput(outputRef.current);
@@ -103,9 +109,14 @@ export default function PyRunner({ code: initialCode, rows = 12, expect }: PyRun
         }
       }
     } catch (err: any) {
-      setOutput(`错误:\n${err.message || err}`);
+      const errMsg = err.message || String(err);
+      setOutput(`错误:\n${errMsg}`);
       setStatus('error');
       setVerifyPassed(false);
+      // Reset corrupted pyodide instance if Pyodide process exited
+      if (errMsg.includes('terminated with exit')) {
+        window.pyodideInstance = null;
+      }
     }
   };
 
