@@ -378,12 +378,12 @@ class DiscoverWeeklyEngine:
         is_cold_start = sum(track2.behavior_vec) == 0
         
         if is_cold_start:
-            print(f"\n❄️ [Cold Start Detected] 曲目 '{track2.name}' 播放记录为 0！自动切换至 CNN 声学波形匹配...")
+            print(f"\\n❄️ [Cold Start Detected] 曲目 '{track2.name}' 播放记录为 0！自动切换至 CNN 声学波形匹配...")
             # 纯声学余弦相似度计算
             dot = sum(a * b for a, b in zip(track1.acoustic_vec, track2.acoustic_vec))
             return dot
         else:
-            print(f"\n🔥 [Normal Matching] 使用 70% 行为 + 30% 声学混合推荐...")
+            print(f"\\n🔥 [Normal Matching] 使用 70% 行为 + 30% 声学混合推荐...")
             dot_b = sum(a * b for a, b in zip(track1.behavior_vec, track2.behavior_vec))
             dot_a = sum(a * b for a, b in zip(track1.acoustic_vec, track2.acoustic_vec))
             return 0.7 * dot_b + 0.3 * dot_a
@@ -406,7 +406,7 @@ print(f"🎯 [Recommendation Score] 新歌 '{indie_new_song.name}' 匹配度评�
 if sim_score > 0.8:
     print(f"✨ [Discover Weekly Result] 成功将冷门新歌 '{indie_new_song.name}' 纳入本周一的推荐歌单中！")
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

@@ -498,23 +498,23 @@ catalog.create_table("table_users", [pid1, pid2])
 # 初始化无状态计算仓库
 vw_query = VirtualWarehouse("VW_QUERY_CLUSTER", "Small")
 
-print("\n--- 1. 初始查询表 table_users ---")
+print("\\n--- 1. 初始查询表 table_users ---")
 res1 = vw_query.query("table_users", catalog, s3)
 print(f"   查询输出: {res1}")
 
-print("\n--- 2. 零拷贝克隆 table_users -> table_users_backup ---")
+print("\\n--- 2. 零拷贝克隆 table_users -> table_users_backup ---")
 catalog.clone_table("table_users", "table_users_backup")
 
-print("\n--- 3. 对克隆表 table_users_backup 执行更新 (ID=3 修改 name='Charlie_V2') ---")
+print("\\n--- 3. 对克隆表 table_users_backup 执行更新 (ID=3 修改 name='Charlie_V2') ---")
 vw_query.update_record("table_users_backup", target_id=3, new_val={"name": "Charlie_V2"}, catalog=catalog, s3=s3)
 
-print("\n--- 4. 隔离性核对：分别查询原表与克隆表 ---")
+print("\\n--- 4. 隔离性核对：分别查询原表与克隆表 ---")
 res_orig = vw_query.query("table_users", catalog, s3)
 res_clone = vw_query.query("table_users_backup", catalog, s3)
 print(f"   原表数据 (应保持原样): {res_orig}")
 print(f"   克隆表数据 (应看到修改): {res_clone}")
 
-print("\n--- 5. 零重分片扩容计算节点 ---")
+print("\\n--- 5. 零重分片扩容计算节点 ---")
 vw_query.resize("Large")
 `}
 />

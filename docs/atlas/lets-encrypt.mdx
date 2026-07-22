@@ -345,7 +345,7 @@ class MockWebFolder:
 class BoulderVAServer:
     def validate_http01(self, domain: str, token: str, expected_key_auth: str, web_folder: MockWebFolder):
         path = "/.well-known/acme-challenge/" + token
-        print("\n🌐 [Boulder VA] 正在向 http://%s%s 发起 HTTP-01 校验请求..." % (domain, path))
+        print("\\n🌐 [Boulder VA] 正在向 http://%s%s 发起 HTTP-01 校验请求..." % (domain, path))
         
         content = web_folder.http_get(path)
         if content == expected_key_auth:
@@ -363,7 +363,7 @@ class CertbotACMEClient:
         self.cert_days_left = 0
 
     def auto_renew(self):
-        print("\n🔒 [Certbot Client] 触发 ACME 自动申请/续期流程...")
+        print("\\n🔒 [Certbot Client] 触发 ACME 自动申请/续期流程...")
         token = "token_random_998877"
         key_auth = token + ".account_thumbprint_xyz"
         
@@ -392,12 +392,12 @@ client = CertbotACMEClient(domain="ai-architect.org", web_folder=web_server, va_
 client.auto_renew()
 
 # 模拟时间推移至 Day 60
-print("\n--- 模拟 60 天时间推移 ---")
+print("\\n--- 模拟 60 天时间推移 ---")
 for day in range(1, 62):
     if day == 1 or day == 60:
         client.check_cron_daily(current_day=day)
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

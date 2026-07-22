@@ -383,7 +383,7 @@ class MicroserviceAPIGateway:
         self.cached_jwks_kid = jwks_kid # 本地缓存的 JWKS 公钥 ID
 
     def verify_jwt_stateless(self, jwt_token: dict):
-        print("\n⚡ [Microservice API Gateway] 收到 Bearer JWT -> 执行本地无状态 JWKS 验签 (0 查 DB)...")
+        print("\\n⚡ [Microservice API Gateway] 收到 Bearer JWT -> 执行本地无状态 JWKS 验签 (0 查 DB)...")
         header = jwt_token["header"]
         payload = jwt_token["payload"]
 
@@ -427,7 +427,7 @@ token = auth0.exchange_token_pkce(code="auth_code_xyz", verifier=verifier, chall
 gateway = MicroserviceAPIGateway(expected_issuer="https://dev-ai.us.auth0.com/", jwks_kid="key_2026_rsa")
 gateway.verify_jwt_stateless(token)
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

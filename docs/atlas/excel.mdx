@@ -442,7 +442,7 @@ try:
 except ValueError as e:
     print(e)
 
-print("\n--- 注入循环引用环路测试 A1->B1->C1->A1 ---")
+print("\\n--- 注入循环引用环路测试 A1->B1->C1->A1 ---")
 # 更改公式使其陷入环路: A1 依赖 D1
 excel.set_cell("A1", "=D1+5")
 try:

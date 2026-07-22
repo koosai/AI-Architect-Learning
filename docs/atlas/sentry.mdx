@@ -392,19 +392,19 @@ fp1 = relay.compute_fingerprint(evt1)
 print(f"📩 原始消息脱敏后: '{msg1}' | 计算指纹 Key: {fp1[:8]}")
 backend.process_event(fp1, evt1, msg1)
 
-print("\n--- 2. 处理 Event 2 (相同错误，不同内存地址与密码) ---")
+print("\\n--- 2. 处理 Event 2 (相同错误，不同内存地址与密码) ---")
 msg2 = relay.scrub_pii(evt2.message)
 fp2 = relay.compute_fingerprint(evt2)
 print(f"📩 原始消息脱敏后: '{msg2}' | 计算指纹 Key: {fp2[:8]}")
 backend.process_event(fp2, evt2, msg2)
 
-print("\n--- 3. 处理 Event 3 (不同错误) ---")
+print("\\n--- 3. 处理 Event 3 (不同错误) ---")
 msg3 = relay.scrub_pii(evt3.message)
 fp3 = relay.compute_fingerprint(evt3)
 print(f"📩 原始消息脱敏后: '{msg3}' | 计算指纹 Key: {fp3[:8]}")
 backend.process_event(fp3, evt3, msg3)
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

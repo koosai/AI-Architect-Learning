@@ -319,7 +319,7 @@ timeline
         entry = self.cache[url]
         time_elapsed = self.clock - entry["cached_at"]
         
-        print(f"\n[GET Request] 用户请求 URL '{url}'，当前时钟 t={self.clock}s (该缓存已存在 {time_elapsed}s)")
+        print(f"\\n[GET Request] 用户请求 URL '{url}'，当前时钟 t={self.clock}s (该缓存已存在 {time_elapsed}s)")
         
         if time_elapsed <= entry["revalidate"]:
             # 在过期窗口内，绝对新鲜，直接返回缓存 (SSG 级别时延)

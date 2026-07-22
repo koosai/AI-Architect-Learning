@@ -405,15 +405,15 @@ evaluator.add_block(Block("restricted_text", "text", parent_id="page_a", permiss
 
 print("--- 测试 1: Alice 访问常规段落 text_1 ---")
 perm_alice = evaluator.resolve_permission("Alice", "text_1")
-print(f"=> 最终判定结果: {perm_alice} (期望: write)\n")
+print(f"=> 最终判定结果: {perm_alice} (期望: write)\\n")
 
 print("--- 测试 2: Bob 访问常规段落 text_1 ---")
 perm_bob_ok = evaluator.resolve_permission("Bob", "text_1")
-print(f"=> 最终判定结果: {perm_bob_ok} (期望: read)\n")
+print(f"=> 最终判定结果: {perm_bob_ok} (期望: read)\\n")
 
 print("--- 测试 3: Bob 访问受限段落 restricted_text ---")
 perm_bob_fail = evaluator.resolve_permission("Bob", "restricted_text")
-print(f"=> 最终判定结果: {perm_bob_fail} (期望: none)\n")
+print(f"=> 最终判定结果: {perm_bob_fail} (期望: none)\\n")
 `}
 />
 

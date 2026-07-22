@@ -378,7 +378,7 @@ class OrderBatcher:
 
 class TSPOptimizer:
     def solve_route(self, start_pos: tuple, waypoints: list):
-        print("\n🗺️ [TSP Route Optimizer] 开始为骑手规划多单最佳取送顺序...")
+        print("\\n🗺️ [TSP Route Optimizer] 开始为骑手规划多单最佳取送顺序...")
         # waypoints: list of dict {'id': 101, 'type': 'PICKUP', 'pos': (x, y)}
         best_dist = 999999.0
         best_perm = None
@@ -430,7 +430,7 @@ waypoints = [
 
 tsp.solve_route(start_location, waypoints)
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

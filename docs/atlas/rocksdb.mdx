@@ -391,7 +391,7 @@ class RocksDBEngine:
         self.active_memtable.clear()
 
     def get(self, key: str):
-        print(f"\n🔍 [Get] 开始检索 Key='{key}'")
+        print(f"\\n🔍 [Get] 开始检索 Key='{key}'")
         
         # 1. 检索 Active Memtable
         if key in self.active_memtable:
@@ -431,14 +431,14 @@ db.put("user_105", "Frank")   # 触发 Flush -> SST_2
 
 db.put("user_106", "Grace")   # 留在 Active Memtable
 
-print("\n--- 2. 检索存在的 Key (测试 Memtable 与 SST 读取) ---")
+print("\\n--- 2. 检索存在的 Key (测试 Memtable 与 SST 读取) ---")
 db.get("user_106") # 应命中 Memtable
 db.get("user_101") # 应命中 SST_1
 
-print("\n--- 3. 检索不存在的 Key (测试 Bloom Filter 拦截能力) ---")
+print("\\n--- 3. 检索不存在的 Key (测试 Bloom Filter 拦截能力) ---")
 db.get("user_999") # Bloom Filter 应当成功拦截并跳过磁盘读取
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

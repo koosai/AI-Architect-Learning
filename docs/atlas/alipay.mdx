@@ -376,7 +376,7 @@ class RZoneCell:
         self.ob_cluster = OceanBasePaxosCluster(nodes)
 
     def process_payment(self, user_id: str, amount: float):
-        print("\n⚡ [%s @ %s] 单元内闭环处理用户 '%s' 扣款 $%s..." % (self.zone_name, self.datacenter, user_id, str(amount)))
+        print("\\n⚡ [%s @ %s] 单元内闭环处理用户 '%s' 扣款 $%s..." % (self.zone_name, self.datacenter, user_id, str(amount)))
         tx_id = "TX_" + hashlib.md5((user_id + str(amount)).encode()).hexdigest()[:8]
         self.ob_cluster.paxos_write(tx_id, "Deduct %s from %s" % (str(amount), user_id))
 
@@ -408,7 +408,7 @@ cell_a.process_payment(user_a, 199.00)
 cell_b = router.route_user(user_b)
 cell_b.process_payment(user_b, 599.00)
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

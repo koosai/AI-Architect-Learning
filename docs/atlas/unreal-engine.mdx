@@ -358,7 +358,7 @@ class WorldPartitionStreamer:
         ]
 
     def update_player_pos(self, player_x: float, player_y: float):
-        print("\n🗺️ [World Partition Streamer] 玩家移动至坐标 (%.1f, %.1f) (加载半径: %.1fm)..." % 
+        print("\\n🗺️ [World Partition Streamer] 玩家移动至坐标 (%.1f, %.1f) (加载半径: %.1fm)..." % 
               (player_x, player_y, self.loading_radius))
         
         for cell in self.grid_cells:
@@ -384,7 +384,7 @@ streamer = WorldPartitionStreamer(loading_radius=300.0)
 streamer.update_player_pos(player_x=0.0, player_y=0.0)   # 在城堡
 streamer.update_player_pos(player_x=300.0, player_y=0.0) # 走向森林，远离城堡
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

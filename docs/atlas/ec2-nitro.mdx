@@ -353,7 +353,7 @@ class CloudHostSimulator:
         self.ebs_write_queue = 50      # 待加密存储写
 
     def run_simulation_cycle(self):
-        print(f"\n--- [调度周期开始 - 虚拟化模式: {self.mode}] ---")
+        print(f"\\n--- [调度周期开始 - 虚拟化模式: {self.mode}] ---")
         
         if self.mode == "Traditional_KVM":
             # 传统 KVM 中，Core 0 和 Core 1 通常被强行分配给 Host OS (Dom0)，用于运行网卡驱动、VPC、磁盘加密
@@ -399,7 +399,7 @@ class CloudHostSimulator:
     def show_statistics(self):
         total = self.user_vm_cycles + self.hypervisor_tax_cycles
         tax_pct = (self.hypervisor_tax_cycles / total) * 100 if total > 0 else 0
-        print(f"\n================ 仿真总结统计 ({self.mode}) ================")
+        print(f"\\n================ 仿真总结统计 ({self.mode}) ================")
         print(f"   用户虚机总算力周期 (User VM Cycles): {self.user_vm_cycles}")
         print(f"   虚拟化损耗税算力周期 (Hypervisor Tax): {self.hypervisor_tax_cycles}")
         print(f"   虚拟机物理算力实际交付率: {100 - tax_pct:.2f}% (越高越接近物理机 Bare Metal)")
@@ -411,7 +411,7 @@ sim_kvm = CloudHostSimulator("Traditional_KVM")
 sim_kvm.run_simulation_cycle()
 sim_kvm.show_statistics()
 
-print("\n" + "="*70 + "\n")
+print("\\n" + "="*70 + "\\n")
 
 sim_nitro = CloudHostSimulator("AWS_Nitro")
 sim_nitro.run_simulation_cycle()

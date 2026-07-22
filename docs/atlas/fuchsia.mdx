@@ -445,14 +445,14 @@ proc_driver.add_handle("h_my_buffer", driver_root_handle)
 proc_driver.write_object("h_my_buffer", "[Frame 42: X=12.2, Y=3.4]")
 
 # 4. SLAM_Component 起初尝试直接读 VMO，由于沙箱隔离，它没有任何句柄，报错
-print("\n--- 1. 隔离测试：无句柄的 SLAM 尝试读 LidarDriver 的物理内存 ---")
+print("\\n--- 1. 隔离测试：无句柄的 SLAM 尝试读 LidarDriver 的物理内存 ---")
 try:
     proc_slam.read_object("h_my_buffer")
 except SecurityException as e:
     print(e)
 
 # 5. 权限转授权：LidarDriver 传递句柄给 SLAM。为了安全，将其降权为【只读】，不允许 SLAM 篡改雷达数据
-print("\n--- 2. 能力传递：LidarDriver 将只读句柄传输给 SLAM ---")
+print("\\n--- 2. 能力传递：LidarDriver 将只读句柄传输给 SLAM ---")
 proc_driver.transfer_handle(
     handle_id="h_my_buffer", 
     target_process=proc_slam, 
@@ -465,20 +465,20 @@ data = proc_slam.read_object("h_radar_read_only")
 print(f"SLAM 组件利用 h_radar_read_only 读取数据成功: {data}")
 
 # SLAM 企图篡改雷达物理内存，报错被拒
-print("\n--- 3. 越权测试：SLAM 企图写入只读句柄 ---")
+print("\\n--- 3. 越权测试：SLAM 企图写入只读句柄 ---")
 try:
     proc_slam.write_object("h_radar_read_only", "[MOCK DATA: CRITICAL PANIC]")
 except SecurityException as e:
     print(e)
 
 # SLAM 企图越权向其他进程转移可写句柄，报错被拒
-print("\n--- 4. 越权提权测试：SLAM 企图将只读句柄以 [READ, WRITE] 权限向外转移 ---")
+print("\\n--- 4. 越权提权测试：SLAM 企图将只读句柄以 [READ, WRITE] 权限向外转移 ---")
 try:
     proc_slam.transfer_handle("h_radar_read_only", proc_driver, "h_leaked_write", restrict_rights=['READ', 'WRITE'])
 except SecurityException as e:
     print(e)
 
-print("\n=== 仿真验证完毕：Zircon 能力检查机制成功拦截了全部访问漏洞！ ===")
+print("\\n=== 仿真验证完毕：Zircon 能力检查机制成功拦截了全部访问漏洞！ ===")
 `}
 />
 

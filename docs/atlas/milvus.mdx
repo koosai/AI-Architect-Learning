@@ -374,7 +374,7 @@ class MilvusCollection:
         # 2. 按 L2 距离升序排列 (距离越小越相似)
         candidates.sort(key=lambda x: x[0])
         
-        print("\n✨ [Top-%d Hybrid Search Results]:" % top_k)
+        print("\\n✨ [Top-%d Hybrid Search Results]:" % top_k)
         for dist, item in candidates[:top_k]:
             print("   🎯 Document ID: #%d | Year: %d | L2 Distance: %.4f" % 
                   (item["id"], item["year"], dist))
@@ -391,7 +391,7 @@ collection.insert(doc_id=104, vector=[0.11, 0.21, 0.31, 0.41], year=2022) # 极�
 query_vector = [0.1, 0.2, 0.3, 0.4]
 collection.hybrid_search(query_vector, filter_year=2025, top_k=2)
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

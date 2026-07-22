@@ -340,7 +340,7 @@ class PnpmPackageEngine:
         self.cas = cas
 
     def install(self, project_name: str, pkg_name: str, version: str, content: str):
-        print(f"\n🚀 [Install Request] 项目 '{project_name}' 申请安装 {pkg_name}@{version}")
+        print(f"\\n🚀 [Install Request] 项目 '{project_name}' 申请安装 {pkg_name}@{version}")
         
         # 1. 写入全局 CAS
         sha512 = self.cas.save(content)
@@ -362,12 +362,12 @@ pkg_code = "module.exports = function lodash() { return 'v4.17.21'; };"
 print("--- 1. 在 Project Alpha 中安装 lodash@4.17.21 ---")
 engine.install("Project_Alpha", "lodash", "4.17.21", pkg_code)
 
-print("\n--- 2. 在 Project Beta 中再次安装相同的 lodash@4.17.21 ---")
+print("\\n--- 2. 在 Project Beta 中再次安装相同的 lodash@4.17.21 ---")
 engine.install("Project_Beta", "lodash", "4.17.21", pkg_code)
 
-print(f"\n📊 [Disk Summary] 全局 CAS 真正占用的物理包数量: {len(cas_store.files)} (实现 100% 磁盘去重!)")
+print(f"\\n📊 [Disk Summary] 全局 CAS 真正占用的物理包数量: {len(cas_store.files)} (实现 100% 磁盘去重!)")
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

@@ -369,7 +369,7 @@ class TritonDynamicBatcher:
             batch = self.queue[:self.max_batch_size]
             self.queue = self.queue[self.max_batch_size:]
             
-            print("\n🔄 [Dynamic Batching Triggered] 触发合并！成功组装 Batch Size = %d (最大容量: %d)" % 
+            print("\\n🔄 [Dynamic Batching Triggered] 触发合并！成功组装 Batch Size = %d (最大容量: %d)" % 
                   (len(batch), self.max_batch_size))
             
             inputs = [item["val"] for item in batch]
@@ -386,15 +386,15 @@ triton.submit_request("Req_01", 10.0)
 triton.submit_request("Req_02", 20.0)
 triton.submit_request("Req_03", 30.0)
 
-print("\n--- 2. 再提交 1 个单请求 -> 刚好触发满额 max_batch_size=4 组装 ---")
+print("\\n--- 2. 再提交 1 个单请求 -> 刚好触发满额 max_batch_size=4 组装 ---")
 triton.submit_request("Req_04", 40.0)
 triton.flush_if_needed()
 
-print("\n--- 3. 提交 1 个剩余单请求 -> 触发 5ms 时间窗口超时强行 Flush ---")
+print("\\n--- 3. 提交 1 个剩余单请求 -> 触发 5ms 时间窗口超时强行 Flush ---")
 triton.submit_request("Req_05", 50.0)
 triton.flush_if_needed(force=True)
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

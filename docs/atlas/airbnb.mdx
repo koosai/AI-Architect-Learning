@@ -414,12 +414,12 @@ top_pick = engine.search_and_rank(user_pref, target_geohash="w7w")
 
 booking_block = CalendarBookingBlock()
 
-print("\n--- 发起日历锁定测试 ---")
+print("\\n--- 发起日历锁定测试 ---")
 booking_block.book_date(top_pick.listing_id, "2026-10-01")
 # 再次重复预订同一天
 booking_block.book_date(top_pick.listing_id, "2026-10-01")
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

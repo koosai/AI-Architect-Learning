@@ -389,13 +389,13 @@ sandbox_engine = MACFSandboxInterceptor(secure_profile)
 print("--- 测试 1: 写入合规的缓存文件 ---")
 sandbox_engine.check_file_access("/tmp/logs/session.log", "write")
 
-print("\n--- 测试 2: 试图越权读取系统密码文件 (应被阻断) ---")
+print("\\n--- 测试 2: 试图越权读取系统密码文件 (应被阻断) ---")
 sandbox_engine.check_file_access("/etc/passwd", "read")
 
-print("\n--- 测试 3: 恶意的目录穿越攻击 (试图通过 /tmp 穿越到 /etc，应被规范化后阻断) ---")
+print("\\n--- 测试 3: 恶意的目录穿越攻击 (试图通过 /tmp 穿越到 /etc，应被规范化后阻断) ---")
 sandbox_engine.check_file_access("/tmp/../etc/hosts", "write")
 
-print("\n--- 测试 4: 试图发起 HTTPS 请求 (应被网络控制策略阻断) ---")
+print("\\n--- 测试 4: 试图发起 HTTPS 请求 (应被网络控制策略阻断) ---")
 sandbox_engine.check_network_access("api.apple.com", 443)
 `}
 />

@@ -391,13 +391,13 @@ class IcebergTableSimulator:
         print(f"📝 [Commit Snapshot] 成功提交 Snapshot ID={snap_id} (Parent={parent_id}) | 包含文件数: {len(all_files)}")
 
     def scan_current(self):
-        print(f"\n🔍 [Scan Current] 查询当前最新快照 (Snapshot ID={self.current_snapshot_id})...")
+        print(f"\\n🔍 [Scan Current] 查询当前最新快照 (Snapshot ID={self.current_snapshot_id})...")
         snap = self.snapshots[self.current_snapshot_id]
         for f in snap.manifest_files:
             print(f"   -> 物理文件: {f.file_path} (Range: [{f.min_val} ~ {f.max_val}])")
 
     def scan_time_travel(self, target_snapshot_id: int):
-        print(f"\n⏳ [Time Travel] 执行时间旅行查询 (FOR SYSTEM_TIME AS OF Snapshot ID={target_snapshot_id})...")
+        print(f"\\n⏳ [Time Travel] 执行时间旅行查询 (FOR SYSTEM_TIME AS OF Snapshot ID={target_snapshot_id})...")
         if target_snapshot_id not in self.snapshots:
             print("   ❌ Snapshot ID 不存在！")
             return
@@ -415,17 +415,17 @@ file1 = ManifestEntry("s3://bucket/data/file1.parquet", min_val=1, max_val=100)
 file2 = ManifestEntry("s3://bucket/data/file2.parquet", min_val=101, max_val=200)
 table.commit([file1, file2])
 
-print("\n--- 2. 提交更新版本 Snapshot 2 (追加写 1 个 Parquet 文件) ---")
+print("\\n--- 2. 提交更新版本 Snapshot 2 (追加写 1 个 Parquet 文件) ---")
 file3 = ManifestEntry("s3://bucket/data/file3.parquet", min_val=201, max_val=300)
 table.commit([file3])
 
-print("\n--- 3. 普通最新查询 ---")
+print("\\n--- 3. 普通最新查询 ---")
 table.scan_current()
 
-print("\n--- 4. 执行时间旅行：回溯查询 Snapshot 1 的历史数据 ---")
+print("\\n--- 4. 执行时间旅行：回溯查询 Snapshot 1 的历史数据 ---")
 table.scan_time_travel(target_snapshot_id=1)
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

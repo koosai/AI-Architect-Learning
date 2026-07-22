@@ -412,15 +412,15 @@ act1 = Action("compile_foo", "g++ -O2 -c foo.cc -o foo.o", files_v1, ["foo.o"])
 print("--- 1. 第一次构建 (全新代码，CAS 为空) ---")
 engine.execute_action(act1)
 
-print("\n--- 2. 第二次构建 (代码无变化，同事在另一台机器构建) ---")
+print("\\n--- 2. 第二次构建 (代码无变化，同事在另一台机器构建) ---")
 engine.execute_action(act1)
 
-print("\n--- 3. 第三次构建 (开发者修改了 foo.cc 代码) ---")
+print("\\n--- 3. 第三次构建 (开发者修改了 foo.cc 代码) ---")
 files_v2 = {"foo.cc": "hash_abc999_MODIFIED", "foo.h": "hash_def456"}
 act2 = Action("compile_foo", "g++ -O2 -c foo.cc -o foo.o", files_v2, ["foo.o"])
 engine.execute_action(act2)
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

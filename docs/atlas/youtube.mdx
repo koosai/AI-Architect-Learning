@@ -373,7 +373,7 @@ class VideoTranscoder:
 
 class DASHPlayer:
     def play_stream(self, manifest: dict, bandwidth_timeline: list):
-        print("\n▶️ [DASH Player] 开始播放视频，自适应监测网速中...")
+        print("\\n▶️ [DASH Player] 开始播放视频，自适应监测网速中...")
         total_chunks = len(manifest["1080p"])
         
         for i in range(total_chunks):
@@ -395,7 +395,7 @@ bandwidth_timeline = [25.0, 22.0, 5.0, 4.5]
 player = DASHPlayer()
 player.play_stream(manifest, bandwidth_timeline)
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

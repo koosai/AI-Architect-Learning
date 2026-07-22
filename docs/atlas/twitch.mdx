@@ -369,7 +369,7 @@ class TMIChatGateway:
         self.buffer.append({"user": user, "msg": message})
 
     def flush_to_websocket(self):
-        print(f"\n💬 [TMI Fanout Gateway] 正在向客户端 Socket 推送弹幕 Batch...")
+        print(f"\\n💬 [TMI Fanout Gateway] 正在向客户端 Socket 推送弹幕 Batch...")
         if self.dropped_messages > 0:
             print(f"   ⚠️ [Ring Buffer Active] 消息溢出！已主动丢弃 {self.dropped_messages} 条超期旧弹幕以防长连接 OOM！")
             self.dropped_messages = 0
@@ -385,14 +385,14 @@ transcoder.process_rtmp_gop(gop_id=101)
 
 gateway = TMIChatGateway(max_buffer_size=5)
 
-print("\n--- 模拟大房间弹幕海啸: 瞬间涌入 8 条消息 (超过 Buffer 限制 5) ---")
+print("\\n--- 模拟大房间弹幕海啸: 瞬间涌入 8 条消息 (超过 Buffer 限制 5) ---")
 for i in range(1, 9):
     gateway.receive_chat(f"User_{i}", f"POGChamp Pog {i}")
 
 # 刷盘推送到客户端
 gateway.flush_to_websocket()
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

@@ -438,16 +438,16 @@ db.write_data("Map_v5") # 全局目前最新是 V5，时钟 t=5
 # 模拟亚洲客户端访问东亚副本 (lag_cycles = 5)
 # 在时钟 t=5 时，东亚副本因为滞后 5 周期，可见时间 limit = 0。所以本地只能看到 V0 默认值
 
-print("\n--- 1. Eventual 最终一致性读测试 (访问东亚副本) ---")
+print("\\n--- 1. Eventual 最终一致性读测试 (访问东亚副本) ---")
 db.read_data(client_location="East_Asia", level="Eventual")
 
-print("\n--- 2. Strong 强一致性读测试 (访问东亚副本) ---")
+print("\\n--- 2. Strong 强一致性读测试 (访问东亚副本) ---")
 db.read_data(client_location="East_Asia", level="Strong")
 
-print("\n--- 3. Bounded Staleness 界限滞后读测试 (最大容忍滞后 3 个版本) ---")
+print("\\n--- 3. Bounded Staleness 界限滞后读测试 (最大容忍滞后 3 个版本) ---")
 db.read_data(client_location="East_Asia", level="Bounded_Staleness") # 全局 V5，东亚可见 V0。滞后为 5 > 3，触发 Bounded，返回全局 V(5-3) = V2
 
-print("\n--- 4. Session 会话写后读测试 (客户端曾写入 V4，持有 token V4) ---")
+print("\\n--- 4. Session 会话写后读测试 (客户端曾写入 V4，持有 token V4) ---")
 db.read_data(client_location="East_Asia", level="Session", client_session_token=4) # 触发写后读机制，返回 V4
 `}
 />

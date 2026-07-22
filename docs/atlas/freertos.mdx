@@ -382,7 +382,7 @@ class FreeRTOSSchedulerSimulator:
 
     def tick_interrupt(self):
         # 滴答时钟中断 (SysTick) 模拟
-        print("\n[SysTick] 滴答时钟中断触发...")
+        print("\\n[SysTick] 滴答时钟中断触发...")
         
         # 2. 模拟同优先级任务之间的时间片轮转 (Round Robin)
         if self.current_task:
@@ -413,7 +413,7 @@ scheduler.create_task("Task_B_Low", priority=2)
 scheduler.tick_interrupt()
 scheduler.tick_interrupt()
 
-print("\n--- 此时，创建高优先级任务 C (期望触发即时抢占) ---")
+print("\\n--- 此时，创建高优先级任务 C (期望触发即时抢占) ---")
 # 4. 动态创建一个优先级为 5 的高优先级任务 C
 scheduler.create_task("Task_C_High", priority=5)
 

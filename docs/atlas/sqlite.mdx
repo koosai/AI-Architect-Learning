@@ -414,7 +414,7 @@ class SQLitePager:
         self.wal.append_frame(page_no, new_data)
 
     def checkpoint(self):
-        print("\n⚡ [Checkpoint Triggered] 触发 WAL 检查点合并刷盘...")
+        print("\\n⚡ [Checkpoint Triggered] 触发 WAL 检查点合并刷盘...")
         if not self.wal.frames:
             print("   WAL 为空，无需合并")
             return
@@ -439,22 +439,22 @@ pager = SQLitePager()
 print("--- 1. 初始读取 Page 2 ---")
 pager.read_page(2)
 
-print("\n--- 2. 修改 Page 2 数据 (WAL 追加) ---")
+print("\\n--- 2. 修改 Page 2 数据 (WAL 追加) ---")
 pager.write_page(2, "Page_2_Users_NewData_V2")
 
-print("\n--- 3. 验证读操作 (应读取到 WAL 中的 V2 最新页) ---")
+print("\\n--- 3. 验证读操作 (应读取到 WAL 中的 V2 最新页) ---")
 pager.read_page(2)
 
-print(f"\n[检查主 DB 文件] 主 .db 文件中的 Page 2 目前依然是旧值: '{pager.db_file[2]}'")
+print(f"\\n[检查主 DB 文件] 主 .db 文件中的 Page 2 目前依然是旧值: '{pager.db_file[2]}'")
 
-print("\n--- 4. 执行 Checkpoint 检查点合并 ---")
+print("\\n--- 4. 执行 Checkpoint 检查点合并 ---")
 pager.checkpoint()
 
-print("\n--- 5. Checkpoint 后再次验证读操作与主 DB 文件 ---")
+print("\\n--- 5. Checkpoint 后再次验证读操作与主 DB 文件 ---")
 pager.read_page(2)
 print(f"[检查主 DB 文件] 主 .db 文件中的 Page 2 已被成功更新: '{pager.db_file[2]}'")
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

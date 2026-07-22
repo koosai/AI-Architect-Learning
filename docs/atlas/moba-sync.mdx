@@ -375,7 +375,7 @@ class DeterministicClient:
                   (self.name, key_frame["frame_id"], self.pos_x, self.pos_y))
 
     def chase_frames(self, history_frames: list):
-        print("\n⚡ [%s 断线重连] 启动 100 倍速追帧! 极速快放 %d 个历史逻辑帧..." % 
+        print("\\n⚡ [%s 断线重连] 启动 100 倍速追帧! 极速快放 %d 个历史逻辑帧..." % 
               (self.name, len(history_frames)))
         for frame in history_frames:
             self.apply_frame(frame, is_chasing=True) # 无渲染快放
@@ -398,7 +398,7 @@ frame2 = server.tick_frame()
 client_iOS.apply_frame(frame2)
 # 假设 Android 客户端此时网络中断，未收到 frame2!
 
-print("\n--- 2. 模拟 Android 客户端断线后重连追帧 ---")
+print("\\n--- 2. 模拟 Android 客户端断线后重连追帧 ---")
 # 服务器继续进行 Frame #3
 server.receive_input(player_id=1, move_x=1, move_y=1)
 frame3 = server.tick_frame()
@@ -407,7 +407,7 @@ client_iOS.apply_frame(frame3)
 # Android 客户端发起追帧重连，从服务器拉取 frame2 与 frame3 历史帧
 client_Android.chase_frames(server.frame_history[1:]) # 从 index 1 (Frame 2) 开始追
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

@@ -398,7 +398,7 @@ print("--- 1. 测试 UGC 非信任代码沙箱隔离 ---")
 vm.run_script("NormalScript.lua", loop_count=200)
 vm.run_script("MaliciousInfiniteLoop.lua", loop_count=9999) # 故意死循环
 
-print("\n--- 2. 测试 Network Ownership 动态物理卸载与防外挂 ---")
+print("\\n--- 2. 测试 Network Ownership 动态物理卸载与防外挂 ---")
 physics = RobloxPhysicsEngine()
 physics.update_ownership(player_dist=10.0) # 玩家靠近
 
@@ -408,7 +408,7 @@ physics.receive_client_update(new_pos=20.0, delta_time=1.0)
 # 客户端尝试传送外挂 (1 秒移动 200 米)
 physics.receive_client_update(new_pos=220.0, delta_time=1.0)
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

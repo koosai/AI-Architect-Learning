@@ -366,7 +366,7 @@ class SmartPreloader:
         self.ram_cache = {} # video_id -> first_2s_chunk (500KB)
 
     def preload_next_videos(self, feed: list, current_index: int):
-        print(f"\n⚡ [Smart Preloader Active] 当前正在播放 Video #{current_index}，开始后台静默预加载后 2 个视频...")
+        print(f"\\n⚡ [Smart Preloader Active] 当前正在播放 Video #{current_index}，开始后台静默预加载后 2 个视频...")
         for i in range(1, 3):
             next_idx = current_index + i
             if next_idx < len(feed):
@@ -399,7 +399,7 @@ preloader = SmartPreloader()
 preloader.preload_next_videos(feed, current_index=0)
 preloader.swipe_next(v1)
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

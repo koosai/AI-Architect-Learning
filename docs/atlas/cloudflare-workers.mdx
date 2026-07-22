@@ -377,7 +377,7 @@ class EdgeNodeSimulator:
             if not success:
                 break
                 
-        print(f"\n[仿真结束] 模式: {self.runtime_type}")
+        print(f"\\n[仿真结束] 模式: {self.runtime_type}")
         print(f"   物理节点最大承载租户数: {len(self.tenants)}")
         print(f"   已用内存: {self.allocated_memory_mb} / {self.total_memory_mb} MB")
         print(f"   初始化总冷启动时延 (所有租户累加): {self.cold_start_penalties}ms")
@@ -386,7 +386,7 @@ class EdgeNodeSimulator:
 sim_vm = EdgeNodeSimulator("MicroVM")
 sim_vm.run_density_test()
 
-print("\n" + "="*70 + "\n")
+print("\\n" + "="*70 + "\\n")
 
 # 2. 运行 Cloudflare Workers 倡导的 V8 Isolate 模式测试
 sim_isolate = EdgeNodeSimulator("V8_Isolate")

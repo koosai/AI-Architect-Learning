@@ -368,7 +368,7 @@ class LocalDNSResolver:
 
     def query(self, domain: str, client_ip: str):
         now = time.time()
-        print("\n🔍 [Local DNS / 8.8.8.8] 收到客户端 (IP: %s) 查询域名 '%s'..." % (client_ip, domain))
+        print("\\n🔍 [Local DNS / 8.8.8.8] 收到客户端 (IP: %s) 查询域名 '%s'..." % (client_ip, domain))
 
         # 1. 检查本地 TTL 缓存
         if domain in self.ram_cache:
@@ -403,13 +403,13 @@ resolver.query("ai-architect.org", client_ip="116.228.10.55")
 resolver.query("ai-architect.org", client_ip="116.228.10.55")
 
 # 3. 模拟 6 秒后 TTL 过期
-print("\n--- 模拟等待 6 秒致使 TTL 过期 ---")
+print("\\n--- 模拟等待 6 秒致使 TTL 过期 ---")
 time.sleep(6)
 
 # 4. 再次查询 (触发 TTL 过期刷新重新查询)
 resolver.query("ai-architect.org", client_ip="116.228.10.55")
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

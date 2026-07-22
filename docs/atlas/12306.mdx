@@ -376,10 +376,10 @@ class AsyncOrderQueue:
         print("📩 [Order Queuing] 旅客 '%s' 提交订单成功 -> 注入异步削峰队列 (当前排队位置: #%d)" % (user, pos))
 
     def process_all(self, engine: BitMatrixEngine):
-        print("\n⚙️ [Async Worker] 启动后台出票 Engine 匀速消费队列...")
+        print("\\n⚙️ [Async Worker] 启动后台出票 Engine 匀速消费队列...")
         while not self.order_queue.empty():
             order = self.order_queue.get()
-            print("\n▶️ 处理旅客 '%s' 的订单 (区间 %d->%d)..." % (order['user'], order['start'], order['end']))
+            print("\\n▶️ 处理旅客 '%s' 的订单 (区间 %d->%d)..." % (order['user'], order['start'], order['end']))
             success = engine.try_book_segment(order['start'], order['end'])
             if success:
                 print("   ✨ 旅客 '%s' 成功拿到火车票！落盘数据库。" % order['user'])
@@ -403,7 +403,7 @@ order_queue.push_order("Passenger_C", start_idx=2, end_idx=4)
 # 启动后台出票引擎
 order_queue.process_all(seat_01)
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

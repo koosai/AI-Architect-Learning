@@ -437,15 +437,15 @@ executor.add_callback_to_waitset(cb_slam)
 
 # 4. 模拟多线程执行器 (Worker 1 和 Worker 2) 并行抢占式调度
 # Worker 1 抢占执行了 odom，锁定 SensorGroup 组
-print("\n--- Worker 1 开始执行，SensorGroup 组上锁 ---")
+print("\\n--- Worker 1 开始执行，SensorGroup 组上锁 ---")
 executor.execute_one_ready_callback(worker_thread_id=1)
 
 # 此时 Worker 2 企图调度，由于 SensorGroup 上锁，它应跳过 IMU，直接调度 SLAM 任务
-print("\n--- Worker 2 在 Worker 1 释放前调度，因 SensorGroup 上锁而跳过 IMU，执行 SLAM ---")
+print("\\n--- Worker 2 在 Worker 1 释放前调度，因 SensorGroup 上锁而跳过 IMU，执行 SLAM ---")
 executor.execute_one_ready_callback(worker_thread_id=2)
 
 # 最后再次触发调度，此时剩余的 IMU 能够被成功执行
-print("\n--- 再次调度，执行剩余的回调 ---")
+print("\\n--- 再次调度，执行剩余的回调 ---")
 executor.execute_one_ready_callback(worker_thread_id=1)
 `}
 />

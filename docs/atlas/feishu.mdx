@@ -400,17 +400,17 @@ evaluator.register_user("Bob", "/Corp/Sales")     # 销售代表
 print("--- 测试 1: AI 科学家 Alice 访问研发指南 ---")
 # Alice 属于 /Corp/Rnd/AI，符合 /Corp/Rnd 的前缀，应继承 "write"
 res_1 = evaluator.evaluate_access("Alice", "tech_guideline")
-print(f"=> Alice 最终权限: {res_1}\n")
+print(f"=> Alice 最终权限: {res_1}\\n")
 
 print("--- 测试 2: 销售代表 Bob 访问研发指南 ---")
 # Bob 属于 /Corp/Sales，在 /Corp/Sales 显式配置了针对 tech_guideline 的 "none"
 res_2 = evaluator.evaluate_access("Bob", "tech_guideline")
-print(f"=> Bob 最终权限: {res_2}\n")
+print(f"=> Bob 最终权限: {res_2}\\n")
 
 print("--- 测试 3: Bob 访问集团政策 ---")
 # Bob 符合 /Corp 的前缀，应继承 /Corp 的 "read"
 res_3 = evaluator.evaluate_access("Bob", "company_policy")
-print(f"=> Bob 最终权限: {res_3}\n")
+print(f"=> Bob 最终权限: {res_3}\\n")
 `}
 />
 

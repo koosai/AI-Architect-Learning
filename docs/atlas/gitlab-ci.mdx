@@ -401,14 +401,14 @@ runner.run_step()
 # Step 2: 轮询拉取并执行第二个可运行任务 (build_docs)
 runner.run_step()
 
-print("\n--- 关键验证: 观察 test_docs 是否被提前拉起 (无需等待 build_app 完成) ---")
+print("\\n--- 关键验证: 观察 test_docs 是否被提前拉起 (无需等待 build_app 完成) ---")
 # Step 3: 执行队列中就绪的任务 (应该是 test_docs，因为它依赖的 build_docs 已完成!)
 runner.run_step()
 
 # Step 4: 最后执行 test_app
 runner.run_step()
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

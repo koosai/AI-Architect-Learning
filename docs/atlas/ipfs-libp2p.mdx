@@ -363,7 +363,7 @@ class KademliaDHT:
 
 class BitSwapEngine:
     def fetch_block(self, provider_peer: dict, cid: str):
-        print("\n⚡ [BitSwap Protocol] 向 '%s' 发送 Wantlist [CID: %s...]..." % (provider_peer["name"], cid[:16]))
+        print("\\n⚡ [BitSwap Protocol] 向 '%s' 发送 Wantlist [CID: %s...]..." % (provider_peer["name"], cid[:16]))
         
         if cid in provider_peer["store"]:
             block_data = provider_peer["store"][cid]
@@ -392,7 +392,7 @@ provider = dht.find_providers_xor(cid)
 # 4. 通过 BitSwap 协议下载块
 data = bitswap.fetch_block(provider, cid)
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

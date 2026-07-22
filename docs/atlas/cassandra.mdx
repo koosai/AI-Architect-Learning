@@ -409,7 +409,7 @@ class CoordinatorNode:
         else:
             r = 1
 
-        print(f"\n[Coordinator Read] 读取 Key='{key}' | 级别CL: {cl} (要求比对 R={r})")
+        print(f"\\n[Coordinator Read] 读取 Key='{key}' | 级别CL: {cl} (要求比对 R={r})")
         
         # 模拟并发向在线副本发起请求
         queried_nodes = [rep for rep in self.replicas if rep.is_online]
@@ -456,19 +456,19 @@ coord = CoordinatorNode(nodes)
 coord.write("user_profile", "v1", ts=100, cl="QUORUM")
 
 # 2. 模拟网络分区：节点 3 掉线离线
-print("\n--- 模拟 Node_3 离线断连 ---")
+print("\\n--- 模拟 Node_3 离线断连 ---")
 nodes[2].is_online = False
 
 # 3. 客户端写入新版本 v2 (ts=200)。因为 1 和 2 仍在线，QUORUM 写 (W=2) 依然成功
 coord.write("user_profile", "v2", ts=200, cl="QUORUM")
 
 # 4. 模拟网络恢复：节点 3 重新上线 (但它错过了 v2 写入，本地仍为旧的 v1)
-print("\n--- 模拟 Node_3 恢复上线 ---")
+print("\\n--- 模拟 Node_3 恢复上线 ---")
 nodes[2].is_online = True
 
 # 5. 执行弱一致读：CL = ONE。如果恰好先读取了 Node_3 节点，将直接返回 stale 的 v1！
 # (注意此处模拟优先读取在线的前面节点，若只请求 Node_3，则会引发最终一致下的旧数据错觉)
-print("\n[Final Consistency Test] 仅从恢复上线的 Node_3 读取 (CL=ONE):")
+print("\\n[Final Consistency Test] 仅从恢复上线的 Node_3 读取 (CL=ONE):")
 # 强制只读节点 3 (仿真仅核对 1 节点)
 nodes[0].is_online = False
 nodes[1].is_online = False

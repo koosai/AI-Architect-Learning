@@ -390,7 +390,7 @@ class WindowOperator:
                 print(f"   📊 [State Updated] 当前内存状态: {self.state}")
 
         elif isinstance(element, Barrier):
-            print(f"\n📸 [Checkpoint Barrier Triggered] 收到 Barrier {element.checkpoint_id}！对当前状态拍照中...")
+            print(f"\\n📸 [Checkpoint Barrier Triggered] 收到 Barrier {element.checkpoint_id}！对当前状态拍照中...")
             # 模拟异步快照 (深拷贝当前 State)
             self.checkpoint_store[element.checkpoint_id] = dict(self.state)
             print(f"   ✅ [Snapshot Saved] Checkpoint {element.checkpoint_id} 成功保存至远程快照库: {self.checkpoint_store[element.checkpoint_id]}")
@@ -403,18 +403,18 @@ op.process_element(Event(1000, "sensor_1", 10.0))
 op.process_element(Event(4000, "sensor_1", 20.0)) # Watermark 变为 2000
 op.process_element(Event(2500, "sensor_1", 15.0)) # 乱序事件 (2500 > Watermark 2000，成功放入状态!)
 
-print("\n--- 2. 注入 Checkpoint Barrier 1 拍照 ---")
+print("\\n--- 2. 注入 Checkpoint Barrier 1 拍照 ---")
 op.process_element(Barrier(checkpoint_id=1))
 
-print("\n--- 3. 事件时间大跃进，推进 Watermark 并淘汰过迟数据 ---")
+print("\\n--- 3. 事件时间大跃进，推进 Watermark 并淘汰过迟数据 ---")
 op.process_element(Event(10000, "sensor_1", 30.0)) # Watermark 变为 8000
 op.process_element(Event(1500, "sensor_1", 50.0))  # 事件时间 1500 < Watermark 8000，触发 Drop
 
-print("\n--- 4. 验证 Checkpoint 1 状态持久化未受后续故障破坏 ---")
+print("\\n--- 4. 验证 Checkpoint 1 状态持久化未受后续故障破坏 ---")
 print(f"历史 Checkpoint 1 保存的状态镜像: {op.checkpoint_store[1]}")
 print(f"当前算子最新的实时状态: {op.state}")
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

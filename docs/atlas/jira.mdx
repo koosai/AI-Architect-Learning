@@ -361,19 +361,19 @@ class JiraWorkflowEngine:
         # A. 校验是否存在此转移通路
         rule = self.rules.get(transition_key)
         if not rule:
-            print(f"   -> ❌ 转换失败：不存在从 '{current_status}' 直达 '{target_status}' 的转换通路\n")
+            print(f"   -> ❌ 转换失败：不存在从 '{current_status}' 直达 '{target_status}' 的转换通路\\n")
             return False
             
         # B. 校验 Conditions (前置权限检查)
         for i, cond in enumerate(rule["conditions"]):
             if not cond(issue, user_role):
-                print(f"   -> ❌ 拒绝：操作人不符合该转换的第 {i+1} 个权限条件\n")
+                print(f"   -> ❌ 拒绝：操作人不符合该转换的第 {i+1} 个权限条件\\n")
                 return False
                 
         # C. 校验 Validators (数据一致性检查)
         for i, val in enumerate(rule["validators"]):
             if not val(issue):
-                print(f"   -> ❌ 拒绝：数据未通过第 {i+1} 个验证器校验 (提示：请检查 Assignee 等字段是否补全)\n")
+                print(f"   -> ❌ 拒绝：数据未通过第 {i+1} 个验证器校验 (提示：请检查 Assignee 等字段是否补全)\\n")
                 return False
                 
         # D. 执行事务性修改与后置逻辑 (Post Functions)
@@ -381,7 +381,7 @@ class JiraWorkflowEngine:
         for post in rule["post_functions"]:
             post(issue)
             
-        print(f"   -> 成功！工单状态更新为 '{issue.status}'，执行历史：{issue.log_history[-1]}\n")
+        print(f"   -> 成功！工单状态更新为 '{issue.status}'，执行历史：{issue.log_history[-1]}\\n")
         return True
 
 # 1. 初始化引擎

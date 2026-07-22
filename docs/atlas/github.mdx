@@ -381,14 +381,14 @@ class GitHubSystem:
         self.spokes = SpokesCluster(nodes)
 
     def handle_git_push(self, repo_name: str, commit_id: str, branch: str):
-        print(f"\n--- 1. 处理开发者 Git Push (Repo: {repo_name}, Commit: {commit_id}) ---")
+        print(f"\\n--- 1. 处理开发者 Git Push (Repo: {repo_name}, Commit: {commit_id}) ---")
         # 写入 Spokes
         if self.spokes.push(repo_name, commit_id, f"Code changes on {branch}"):
             # 触发 Webhook / Actions 调度
             self.trigger_actions(repo_name, commit_id)
 
     def trigger_actions(self, repo_name: str, commit_id: str):
-        print(f"\n--- 2. 事件总线监听到 Push，调度 GitHub Actions ---")
+        print(f"\\n--- 2. 事件总线监听到 Push，调度 GitHub Actions ---")
         runner = EphemeralRunner("runner-v1.1.2-k8s-pod")
         runner.execute_workflow(".github/workflows/ci.yml")
         runner.destroy()
@@ -397,7 +397,7 @@ class GitHubSystem:
 gh = GitHubSystem()
 gh.handle_git_push("torvalds/linux", "c0mm1t_abc123", "main")
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

@@ -362,7 +362,7 @@ class VolcanoScheduler:
         ]
 
     def schedule_pod_group(self, job_name: str, min_available: int, require_nvlink=True):
-        print("\n⚙️ [Volcano Scheduler] 收到 PodGroup '%s' (需求: %d 卡, NVLink 要求: %s)" % 
+        print("\\n⚙️ [Volcano Scheduler] 收到 PodGroup '%s' (需求: %d 卡, NVLink 要求: %s)" % 
               (job_name, min_available, require_nvlink))
         
         # 1. 检查全局 Gang 资源 (全有全无)
@@ -394,10 +394,10 @@ scheduler = VolcanoScheduler()
 print("--- 1. 提交大模型预训练作业 A (要求 8 卡 NVLink 整机) ---")
 scheduler.schedule_pod_group("LLaMA3_Pretrain_Job", min_available=8, require_nvlink=True)
 
-print("\n--- 2. 提交作业 B (要求 6 卡) -> 尝试申请但全局仅剩 4 卡 ---")
+print("\\n--- 2. 提交作业 B (要求 6 卡) -> 尝试申请但全局仅剩 4 卡 ---")
 scheduler.schedule_pod_group("Eval_Job_B", min_available=6, require_nvlink=False)
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

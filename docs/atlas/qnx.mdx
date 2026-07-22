@@ -352,7 +352,7 @@ class QNXIPCBroker:
         return msg
         
     def msg_receive(self, receiver_id: str) -> Message:
-        print(f"\n[Thread '{receiver_id}'] 执行 MsgReceive() 监听通道...")
+        print(f"\\n[Thread '{receiver_id}'] 执行 MsgReceive() 监听通道...")
         if not self.channel_queue:
             print("   -> 通道空，服务端进入 Blocked 状态挂起...")
             return None
@@ -362,7 +362,7 @@ class QNXIPCBroker:
         return msg
         
     def msg_reply(self, receiver_id: str, msg: Message, reply_content: str):
-        print(f"\n[Thread '{receiver_id}'] 执行 MsgReply() 给 '{msg.sender_id}' 写入数据: '{reply_content}'")
+        print(f"\\n[Thread '{receiver_id}'] 执行 MsgReply() 给 '{msg.sender_id}' 写入数据: '{reply_content}'")
         sender_id = msg.sender_id
         
         # 检查该发送者是否处于阻塞等待应答状态
@@ -390,7 +390,7 @@ if server_msg:
 
 # 5. 验证客户端被唤醒后，成功得到数据并恢复就绪
 if client_token.replied:
-    print(f"\n[Thread 'Dashboard_App'] 重新获得 CPU 调度，读取到应答: '{client_token.reply_data}'")
+    print(f"\\n[Thread 'Dashboard_App'] 重新获得 CPU 调度，读取到应答: '{client_token.reply_data}'")
 `}
 />
 

@@ -345,11 +345,11 @@ router.write_message("W_Slack", "random", "Charlie", "Docusaurus is great!")
 router.write_message("W_Google", "tech", "Dave", "GCN is ready for deployment.")
 
 # 3. 验证数据归属与跨分片读取安全性
-print("\n--- 数据库物理分片数据快照 ---")
+print("\\n--- 数据库物理分片数据快照 ---")
 for s_id, data in router.db_shards.items():
     print(f"分片 {s_id} 存储的活跃租户: {list(data.keys())}")
 
-print("\n--- 执行合规性与租户隔离验证 ---")
+print("\\n--- 执行合规性与租户隔离验证 ---")
 google_shard = router.get_shard_id("W_Google")
 print(f"W_Google 归属分片：{google_shard}")
 

@@ -438,11 +438,11 @@ print("--- 1. 连续插入数据触发 Chunk 分裂与平衡 ---")
 for key in [10, 20, 30, 40, 60, 70, 80, 90]:
     router.insert({"shard_key": key, "title": f"Doc_{key}"})
 
-print("\n--- 2. 路由验证：查询分布在不同 Shard 上的数据 ---")
+print("\\n--- 2. 路由验证：查询分布在不同 Shard 上的数据 ---")
 router.query(20)
 router.query(80)
 
-print("\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 分片路由与隔离验证成功")
 `}
 />
 

@@ -369,7 +369,7 @@ class MarsPathfinderSimulator:
         # 模拟执行时间序列
         for t in range(12):
             self.clock = t
-            print(f"\n[Time = {t}] --- 任务状态评估 ---")
+            print(f"\\n[Time = {t}] --- 任务状态评估 ---")
             
             # 1. 在第 0 个周期，低优先级气象任务 L 启动并占有 Mutex 锁
             if t == 0:
@@ -435,14 +435,14 @@ class MarsPathfinderSimulator:
             else:
                 self.watchdog_timer = 0
                 
-        print("\n===== 仿真成功：所有任务在时限内安全调度完毕，未触发重启！ =====")
+        print("\\n===== 仿真成功：所有任务在时限内安全调度完毕，未触发重启！ =====")
         return True
 
 # 1. 模拟未开启优先级继承：导致看门狗重置
 sim_inversion = MarsPathfinderSimulator(use_priority_inheritance=False)
 sim_inversion.run_simulation()
 
-print("\n" + "="*70 + "\n")
+print("\\n" + "="*70 + "\\n")
 
 # 2. 模拟开启优先级继承：系统安全运行
 sim_safe = MarsPathfinderSimulator(use_priority_inheritance=True)

@@ -445,7 +445,7 @@ class ClickHouseSimulator:
 
 # 仿真过程
 db = ClickHouseSimulator()
-print("\n--- 任务: 查找 UserID=99 的销售额总和 (SWR分析) ---")
+print("\\n--- 任务: 查找 UserID=99 的销售额总和 (SWR分析) ---")
 db.run_row_oriented_sum(99)
 db.run_vectorized_sparse_sum(99)
 `}

@@ -349,7 +349,7 @@ class iOSSecureBootChainSimulator:
         print("[Boot ROM] 校验根信任证书：Signature OK (Apple Root CA)")
         
         for i, stage in enumerate(self.stages):
-            print(f"\n[Stage {i+1}] 正在核验下一阶段映像签名: {stage.name}...")
+            print(f"\\n[Stage {i+1}] 正在核验下一阶段映像签名: {stage.name}...")
             
             # 模拟数字签名哈希校验
             if stage.expected_hash == stage.actual_hash:
@@ -361,7 +361,7 @@ class iOSSecureBootChainSimulator:
                 print(f"   -> ⚠️ [Kernel Panic] 启动链条断裂！强行终止开机以防止内核劫持")
                 return False
                 
-        print("\n--- [SUCCESS] 启动链完整闭环！iOS 内核就绪，移交 launchd 控制权 ---")
+        print("\\n--- [SUCCESS] 启动链完整闭环！iOS 内核就绪，移交 launchd 控制权 ---")
         return True
 
 # 运行验证
@@ -374,7 +374,7 @@ normal_stages = [
 sim_ok = iOSSecureBootChainSimulator(normal_stages)
 sim_ok.boot()
 
-print("\n\n" + "="*50 + "\n\n")
+print("\\n\\n" + "="*50 + "\\n\\n")
 
 # 2. 异常启动流程：模拟 iBoot 遭到越狱工具或恶意软件篡改
 tampered_stages = [
