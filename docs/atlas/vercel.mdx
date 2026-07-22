@@ -110,22 +110,22 @@ graph LR
 
 ```mermaid
 graph TB
-  subgraph UserAccess["客户端与边界路由"]
+  subgraph UserAccess ["客户端与边界路由']"]
     ClientUser["访问者终端"]
     EdgeRouter["Edge 边缘请求路由器 (BGP Anycast)"]
   end
 
-  subgraph VercelEdge["Vercel 全球边缘节点 (Edge Node)"]
+  subgraph VercelEdge ["Vercel 全球边缘节点 (Edge Node)']"]
     EdgeCache["边缘高速静态缓存 (RocksDB/Memcached)"]
     EdgeFunction["边缘重定向中间件 (V8 Isolate)"]
   end
 
-  subgraph DeployStore["Vercel 存储与控制平面 (Cloud Core)"]
+  subgraph DeployStore ["Vercel 存储与控制平面 (Cloud Core)']"]
     RouterCatalog["路由元数据表 (Commit Hash Pointers)"]
     
-    subgraph ImmutableDeployments["只读构建产物仓库 (S3 Bucket)"]
-      Build_v1["部署包 v1 (Hash: abc) <br> [HTML / Serverless JS"]"]
-      Build_v2["部署包 v2 (Hash: xyz) <br> [HTML / Serverless JS"]"]
+    subgraph ImmutableDeployments ["只读构建产物仓库 (S3 Bucket)']"]
+      Build_v1["部署包 v1 (Hash: abc) <br> (HTML / Serverless JS"]
+      Build_v2["部署包 v2 (Hash: xyz) <br> (HTML / Serverless JS"]
     end
     
     IsrCompiler["ISR 异步页面重建器 (Serverless Executor)"]
@@ -133,14 +133,14 @@ graph TB
 
   ClientUser --> EdgeRouter
   EdgeRouter --> EdgeFunction
-  EdgeFunction -->|1. 查询当前活动版本路由| RouterCatalog
-  EdgeFunction -->|2. 尝试读取本地静态 HTML| EdgeCache
+  EdgeFunction -->|"1. 查询当前活动版本路由"| RouterCatalog
+  EdgeFunction -->|"2. 尝试读取本地静态 HTML"| EdgeCache
   
-  EdgeCache -->|3. 缓存过期时通知后台| IsrCompiler
-  IsrCompiler -->|4. 拉取当前代码模版| Build_v2
-  IsrCompiler -->|5. 编译出 fresh.html 并上传写入| EdgeCache
+  EdgeCache -->|"3. 缓存过期时通知后台"| IsrCompiler
+  IsrCompiler -->|"4. 拉取当前代码模版"| Build_v2
+  IsrCompiler -->|"5. 编译出 fresh.html 并上传写入"| EdgeCache
   
-  Build_v2 -.->|指向最新 XYZ 目录| RouterCatalog
+  Build_v2 -.->|"指向最新 XYZ 目录"| RouterCatalog
   style Build_v2 fill:#c8e6c9,stroke:#2e7d32
   style Build_v1 fill:#ffebee,stroke:#c62828
 ```

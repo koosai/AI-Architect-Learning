@@ -73,22 +73,22 @@ graph TD
     classDef tools fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
     classDef resource fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-    subgraph ResearcherNode ["研究员 Agent (只读视角)"]
+    subgraph ResearcherNode ["研究员 Agent (只读视角)']"]
         Researcher["1. 调研智能体 (Researcher)"]:::brain
-        Researcher -->|仅能调用| SearchAPI["Google 搜索 / 向量库检索"]:::tools
-        SearchAPI -->|只读访问| DB["("只读数据库 / 知识库")"]:::resource
+        Researcher -->|"仅能调用"| SearchAPI["Google 搜索 / 向量库检索"]:::tools
+        SearchAPI -->|"只读访问"| DB[("只读数据库 / 知识库")]:::resource
     end
 
-    subgraph ArchitectNode ["架构师 Agent (只写方案)"]
+    subgraph ArchitectNode ["架构师 Agent (只写方案)']"]
         Architect["2. 设计智能体 (Architect)"]:::brain
-        Architect -->|仅能调用| DiagramGen["代码/图表生成 API"]:::tools
-        DiagramGen -->|生成| Artifacts["内存草稿区 (Artifacts)"]:::resource
+        Architect -->|"仅能调用"| DiagramGen["代码/图表生成 API"]:::tools
+        DiagramGen -->|"生成"| Artifacts["内存草稿区 (Artifacts)"]:::resource
     end
 
-    subgraph ReviewerNode ["审查员 Agent (独立只读审计)"]
+    subgraph ReviewerNode ["审查员 Agent (独立只读审计)']"]
         Reviewer["3. 审查智能体 (Reviewer)"]:::brain
-        Reviewer -->|仅能调用| ReadArtifacts["草稿区读取工具"]:::tools
-        ReadArtifacts -->|评估建议| ReviewReport["只读评估报告 (HITL)"]:::resource
+        Reviewer -->|"仅能调用"| ReadArtifacts["草稿区读取工具"]:::tools
+        ReadArtifacts -->|"评估建议"| ReviewReport["只读评估报告 (HITL)"]:::resource
     end
 ```
 
@@ -99,17 +99,19 @@ graph LR
     classDef bad fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
     classDef role fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
 
-    subgraph ConflictingRoles ["混乱：全能角色重叠"]
+    subgraph ConflictingRoles ["混乱：全能角色重叠']"]
         AgentA["全能型智能体 A"]:::bad
         AgentB["全能型智能体 B"]:::bad
         
-        AgentA & AgentB -->|同时读写| SharedDB["("同一个数据库挂载卷")"]
-        AgentA & AgentB -->|同时占用| TerminalCmd["Shell 终端 / 执行工具"]
+        AgentA & AgentB -->|"同时读写"| SharedDB[("同一个数据库挂载卷")]
+        AgentA & AgentB -->|"同时占用"| TerminalCmd["Shell 终端 / 执行工具"]
         
-        AgentA -->|1. 写文件 A| SharedDB
-        AgentB -->|2. 改文件 A (覆盖)| SharedDB
+        AgentA -->|"1. 写文件 A"| SharedDB
+        AgentB -->|"2. 改文件 A (覆盖)"| SharedDB
         
-        Note over AgentA, AgentB: 职责边界模糊造成了竞态条件 (Race Condition)<br/>无法定责，逻辑相互践踏
+        Note_AgentA["职责边界模糊造成了竞态条件 (Race Condition)<br/>无法定责，逻辑相互践踏"]
+        AgentA -.-> Note_AgentA
+        AgentB -.-> Note_AgentA
     end
 ```
 

@@ -67,22 +67,22 @@ Excel 团队要解决的核心工程痛点是：
 
 ```mermaid
 mindmap
-  root("(Excel 计算引擎"))
+  root(("Excel 计算引擎"))
     稀疏矩阵内存模型
       Sparse Block List
       动态内存指针偏移
       Spill Range 溢出校验
-    依赖图 (DAG) 管理
+    ["依赖图 (DAG) 管理"]
       单元格节点与依赖边
       Kahn 拓扑排序求值
-      Tarjan 强连通检测 (环路)
+      ["Tarjan 强连通检测 (环路)"]
     增量脏标记重算
       脏标记 DFS 扩散剪枝
-      动态依赖重构 (volatile)
+      ["动态依赖重构 (volatile)"]
     多线程并发调度
       入度零节点并发池
       Worker Threads 队列分发
-      线程局部缓存 (Thread-local)
+      ["线程局部缓存 (Thread-local)"]
 ```
 
 ---
@@ -97,9 +97,9 @@ Excel 计算核心引擎采用前端 Grid 界面、中台公式编译解析器�
 graph LR
   User["使用电子表格的用户"] -->|1. 修改单元格或输入公式| GUI["Excel 前端网格界面 (Grid UI)"]
   GUI -->|2. 发送重算命令| CalcEngine["Excel 核心计算引擎 (C++ Calc Engine)"]
-  CalcEngine <-->|3. 查询与写入| CellMemory["稀疏单元格内存存储 (Sparse Cell Memory)"]
+  CalcEngine <--->|3. 查询与写入| CellMemory["稀疏单元格内存存储 (Sparse Cell Memory)"]
   CalcEngine -->|4. 并行分配求值任务| ThreadPool["多线程并发执行池 (Worker Thread Pool)"]
-  GUI -->> User: 5. 毫秒级刷新网格数值与状态
+  GUI -->|"5. 毫秒级刷新网格数值与状态"| User
 ```
 
 ### 3b. 容器架构图 (Container)
@@ -184,8 +184,8 @@ graph TD
 
 ```mermaid
 graph TD
-  Queue["("无锁并发计算任务队列 (Queue)")"] -->|Thread 1 提取| TaskA["计算单元格 C1 (入度已为 0)"]
-  Queue -->|Thread 2 提取| TaskB["计算单元格 C2 (入度已为 0)"]
+  Queue[("无锁并发计算任务队列 (Queue)")] -->|"Thread 1 提取"| TaskA["计算单元格 C1 (入度已为 0)"]
+  Queue -->|"Thread 2 提取"| TaskB["计算单元格 C2 (入度已为 0)"]
   
   TaskA --> FinishA["C1 计算完成"]
   TaskB --> FinishB["C2 计算完成"]
@@ -193,7 +193,7 @@ graph TD
   FinishA --> Dec1["下游公式 D1 (入度 2 - 1 = 1)"]
   FinishB --> Dec2["下游公式 D1 (入度 1 - 1 = 0, 推入任务队列)"]
   
-  Dec2 -->|推入| Queue
+  Dec2 -->|"推入"| Queue
 ```
 
 ### 4c. 循环依赖检测机制 (Tarjan's SCC Algorithm)
@@ -225,11 +225,11 @@ graph TD
 
 ```mermaid
 graph TD
-  Formula["计算公式: UNIQUE(A1:A10)"] --> EvalArray["生成数组数据: ['Apple', 'Banana', 'Orange'"]"]
+  Formula["计算公式: UNIQUE(A1:A10)"] --> EvalArray["生成数组数据: ('Apple', 'Banana', 'Orange'"]
   EvalArray --> CheckSpill{"验证目标 Spill 范围 C1:C3 是否空闲"}
   
-  CheckSpill -->|是 (空闲)| Draw["正常绘制，C1=Apple, C2=Banana, C3=Orange"]
-  CheckSpill -->|否 (C2 中有已有数据 'Hello')| SpillError["报错: #SPILL! 溢出错误"]
+  CheckSpill -->|"是 (空闲)"| Draw["正常绘制，C1=Apple, C2=Banana, C3=Orange"]
+  CheckSpill -->|"否 (C2 中有已有数据 'Hello')"| SpillError["报错: #SPILL! 溢出错误"]
 ```
 
 ---

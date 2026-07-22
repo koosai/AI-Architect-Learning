@@ -72,11 +72,11 @@ flowchart TD
 ```mermaid
 flowchart LR
   Client["客户端请求 (Key)"] --> BloomCheck{"布隆过滤器 (Bloom Filter)<br/>哈希映射位图计算"}
-  BloomCheck -->|判定判定不存在<br/>(100% 绝对可靠)| Reject["直接拦截并返回 404 / 空值<br/>(拦截率 ~99%, 零打库)"]
-  BloomCheck -->|判定存在<br/>(有极小假阳性概率)| CacheCheck{"查找 Redis 缓存"}
+  BloomCheck -->|"判定判定不存在<br/>(100% 绝对可靠)"| Reject["直接拦截并返回 404 / 空值<br/>(拦截率 ~99%, 零打库)"]
+  BloomCheck -->|"判定存在<br/>(有极小假阳性概率)"| CacheCheck{"查找 Redis 缓存"}
   
-  CacheCheck -->|Cache Hit| ReturnData["返回缓存数据"]
-  CacheCheck -->|Cache Miss| QueryDB["查询物理数据库 MySQL"]
+  CacheCheck -->|"Cache Hit"| ReturnData["返回缓存数据"]
+  CacheCheck -->|"Cache Miss"| QueryDB["查询物理数据库 MySQL"]
 ```
 
 ### 深入（选学）：single-flight / 请求合并

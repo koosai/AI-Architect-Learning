@@ -96,24 +96,24 @@ graph TD
 
 ```mermaid
 flowchart TD
-    Read([传感器采集高频数据]) --> CheckNet{边缘网关在线状态?}
+    Read([传感器采集高频数据]) --> CheckNet{"边缘网关在线状态?"}
     
-    CheckNet -->|在线 (Online)| SendCloud[1. 直接推送上云]
+    CheckNet -->|"在线 (Online)"| SendCloud["1. 直接推送上云"]
     
-    CheckNet -->|离线 (Offline)| CheckCap{"2. 本地环形缓冲区<br>(Buffer) 是否已满?"}
-    CheckCap -->|未满| StoreLocal[3. 写入本地缓存]
-    CheckCap -->|已满| Backpressure{"4. 触发背压策略"}
+    CheckNet -->|"离线 (Offline)"| CheckCap{"2. 本地环形缓冲区<br>(Buffer) 是否已满?"}
+    CheckCap -->|"未满"| StoreLocal["3. 写入本地缓存"]
+    CheckCap -->|"已满"| Backpressure{"4. 触发背压策略"}
     
-    Backpressure -->|丢弃最旧数据| DropOld[丢弃 Buffer 头部数据]
-    Backpressure -->|关键告警优先| KeepAlert[降采样普通遥测，锁存关键告警]
+    Backpressure -->|"丢弃最旧数据"| DropOld["丢弃 Buffer 头部数据"]
+    Backpressure -->|"关键告警优先"| KeepAlert["降采样普通遥测，锁存关键告警"]
     
     DropOld --> StoreLocal
     KeepAlert --> StoreLocal
 
-    StoreLocal --> Wait[等待网络连接恢复]
+    StoreLocal --> Wait["等待网络连接恢复"]
     Wait --> Reconnect([网络重新连接])
     Reconnect --> Playback["5. 补发缓冲数据<br>(按设备时间戳顺序推送)"]
-    Playback --> ClearLocal[6. 清空本地缓冲区]
+    Playback --> ClearLocal["6. 清空本地缓冲区"]
 
     style CheckCap fill:#b45309,stroke:#d97706,color:#fff
     style DropOld fill:#7f1d1d,stroke:#b91c1c,color:#fee2e2

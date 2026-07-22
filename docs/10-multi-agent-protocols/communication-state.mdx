@@ -74,10 +74,10 @@ graph TD
 
     UserTask["外部任务: 校验 DB 并输出修复方法"] --> Step1["Agent A (只读排查)"]
     
-    subgraph ChatHistoryMemory ["共享自由文本历史 (Chat History)"]
-        Step1 -->|1. 追加中间日志与 Thought| Hist1["对话历史: ['排查中...', 'DB CPU 95%', '疑有死锁(幻觉)...'"]"]:::bad
-        Hist1 -->|2. Agent B 基于 A 的幻觉结论写方案| Hist2["对话历史: [追加 'A说是死锁', '生成死锁修复脚本'"]"]:::bad
-        Hist2 -->|3. 冗余文本堆叠| Hist3["对话历史: [追加 '脚本生成完毕', '字数超限...', '上下文爆炸'"]"]:::bad
+    subgraph ChatHistoryMemory ["共享自由文本历史 (Chat History)')"]
+        Step1 -->|"1. 追加中间日志与 Thought"| Hist1["对话历史: ('排查中...', 'DB CPU 95%', '疑有死锁(幻觉)...'')"]:::bad
+        Hist1 -->|"2. Agent B 基于 A 的幻觉结论写方案"| Hist2["对话历史: (追加 'A说是死锁', '生成死锁修复脚本'')"]:::bad
+        Hist2 -->|"3. 冗余文本堆叠"| Hist3["对话历史: (追加 '脚本生成完毕', '字数超限...', '上下文爆炸'')"]:::bad
     end
 
     Hist3 --> FinalAnswer["最终输出 (因 A 幻觉和历史堆叠导致失败)"]:::bad
@@ -91,18 +91,19 @@ graph TD
     classDef agent fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
     classDef check fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
 
-    subgraph SharedStorage ["共享存储区"]
+    subgraph SharedStorage ["共享存储区']"]
         Blackboard["共享结构化黑板 (Structured Blackboard)"]:::blackboard
         Blackboard --- Key1["evidence: 监控证据 (Verified: True/Author: A)"]
         Blackboard --- Key2["proposal: 修复方案 (Verified: False/Author: B)"]
         Blackboard --- Key3["risks: 安全风险 (Verified: True/Author: C)"]
     end
 
-    AgentA["Agent A (Researcher)"]:::agent -->|1. 校验写入 evidence| Blackboard
-    AgentB["Agent B (Coder)"]:::agent -->|2. 读 evidence 并写 proposal| Blackboard
-    AgentC["Agent C (Reviewer)"]:::agent -->|3. 读 proposal 并写 risks| Blackboard
+    AgentA["Agent A (Researcher)"]:::agent -->|"1. 校验写入 evidence"| Blackboard
+    AgentB["Agent B (Coder)"]:::agent -->|"2. 读 evidence 并写 proposal"| Blackboard
+    AgentC["Agent C (Reviewer)"]:::agent -->|"3. 读 proposal 并写 risks"| Blackboard
     
-    Note over Blackboard: 每步读写限定字段，Thought 仅在节点内消化<br/>共享黑板只有高纯度的结构化结果，完全杜绝状态污染
+    Note_Blackboard["每步读写限定字段，Thought 仅在节点内消化<br/>共享黑板只有高纯度的结构化结果，完全杜绝状态污染"]
+    Blackboard -.-> Note_Blackboard
 ```
 
 ### 3. 时序全景：黑板模式读写冲突与状态对齐时序

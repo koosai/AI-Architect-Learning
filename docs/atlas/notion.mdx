@@ -103,41 +103,41 @@ graph LR
 
 ```mermaid
 graph TB
-  subgraph UserDevice["Notion 客户端容器"]
+  subgraph UserDevice ["Notion 客户端容器']"]
     Editor["网格编辑器 (React Grid Engine)"]
-    LocalSQL["("SQLite 客户端本地缓存镜像")"]
+    LocalSQL[("SQLite 客户端本地缓存镜像")]
     SyncManager["本地同步事务管理器 (Sync Manager)"]
   end
 
-  subgraph GatewayPlane["协同网关平面"]
+  subgraph GatewayPlane ["协同网关平面']"]
     SyncGateway["同步网关 (Sync Gateway - Go)"]
     AuthEvaluator["权限树评估引擎 (Auth Evaluator)"]
   end
 
-  subgraph CachePlane["缓存网络平面"]
+  subgraph CachePlane ["缓存网络平面']"]
     RedisPubSub["Redis 实时发布订阅集群"]
     BlockCache["Memcached Block 内存缓存"]
   end
 
-  subgraph DataPlane["存储底座"]
+  subgraph DataPlane ["存储底座']"]
     PGRouter["PostgreSQL 空间哈希路由中台"]
-    PGShard1["("Postgres 分片 1 (Space A-K)")"]
-    PGShard2["("Postgres 分片 2 (Space L-Z)")"]
+    PGShard1[("Postgres 分片 1 (Space A-K)")]
+    PGShard2[("Postgres 分片 2 (Space L-Z)")]
   end
 
-  Editor <-->|读写数据| LocalSQL
-  Editor -->|操作流水线| SyncManager
-  SyncManager <-->|批量 Transaction Ops (HTTPS)| SyncGateway
+  Editor <--->|"读写数据"| LocalSQL
+  Editor -->|"操作流水线"| SyncManager
+  SyncManager <--->|"批量 Transaction Ops (HTTPS)"| SyncGateway
   
-  SyncGateway <-->|快速判定权限| AuthEvaluator
-  AuthEvaluator <-->|读取 Block 上游父级| BlockCache
+  SyncGateway <--->|"快速判定权限"| AuthEvaluator
+  AuthEvaluator <--->|"读取 Block 上游父级"| BlockCache
   
-  SyncGateway -->|写入持久化| PGRouter
+  SyncGateway -->|"写入持久化"| PGRouter
   PGRouter --> PGShard1
   PGRouter --> PGShard2
 
-  SyncGateway -->|通知变更广播| RedisPubSub
-  RedisPubSub -.->|变更推送| SyncManager
+  SyncGateway -->|"通知变更广播"| RedisPubSub
+  RedisPubSub -.->|"变更推送"| SyncManager
 ```
 
 ---
@@ -159,11 +159,11 @@ graph TB
 
 ```mermaid
 graph TD
-  SpaceRoot["工作区主空间 (Workspace Space)"] -->|包含| PageA["页面 Block (Page A)"]
-  PageA -->|子 Block 1| Text1["文本 Block: 'Notion 架构介绍'"]
-  PageA -->|子 Block 2| Image1["图片 Block: (Diagram.png)"]
-  PageA -->|子 Block 3 (嵌套页面)| PageB["子页面 Block (Page B)"]
-  PageB -->|子 Block| Text2["文本 Block: '子页内容'"]
+  SpaceRoot["工作区主空间 (Workspace Space)"] -->|"包含"| PageA["页面 Block (Page A)"]
+  PageA -->|"子 Block 1"| Text1["文本 Block: 'Notion 架构介绍'"]
+  PageA -->|"子 Block 2"| Image1["图片 Block: (Diagram.png)"]
+  PageA -->|"子 Block 3 (嵌套页面)"| PageB["子页面 Block (Page B)"]
+  PageB -->|"子 Block"| Text2["文本 Block: '子页内容'"]
 ```
 
 ### 4b. 树形权限继承算法 (Permission Tree Evaluating)
@@ -203,12 +203,12 @@ sequenceDiagram
   客户端 A->>本地 SQLite: 1. 离线修改标题 (添加 Op 到本地同步队列)
   Note over 客户端 A: 处于断网状态，所有 Op 在本地挂起
   Note over 客户端 A: 重新连接网络
-  客户端 A->>同步网关: 2. 批量发送增量操作集: submitTransactions([Op1, Op2])
+  客户端 A->>同步网关: 2. 批量发送增量操作集: submitTransactions((Op1, Op2))
   同步网关->>权限评估引擎: 3. 校验租户空间访问权限
   权限评估引擎-->>同步网关: 4. 权限通过 (Authorized)
   同步网关->>PostgreSQL: 5. 写入 Blocks 变更记录
   同步网关->>Redis 广播: 6. 发布事件 'Block_Update'
-  Redis 广播-.>>客户端 B: 7. 推送最新 Block 数据
+  Redis 广播-->>客户端 B: 7. 推送最新 Block 数据
   客户端 B->>客户端 B: 8. 更新本地 SQLite 镜像并重新渲染界面
 ```
 

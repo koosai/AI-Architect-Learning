@@ -71,28 +71,29 @@ graph TD
     classDef good fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
     classDef protocol fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
 
-    subgraph HardcodedMess ["混乱: 传统硬编码对接 (复杂度 N x M)"]
+    subgraph HardcodedMess ["混乱: 传统硬编码对接 (复杂度 N x M)']"]
         AgentA["智能体 A"]:::bad
         AgentB["智能体 B"]:::bad
         
         ToolA["SQLite 数据库"]
         ToolB["Slack 消息推送"]
         
-        AgentA -->|胶水代码 1| ToolA
-        AgentA -->|胶水代码 2| ToolB
-        AgentB -->|胶水代码 3| ToolA
-        AgentB -->|胶水代码 4| ToolB
+        AgentA -->|"胶水代码 1"| ToolA
+        AgentA -->|"胶水代码 2"| ToolB
+        AgentB -->|"胶水代码 3"| ToolA
+        AgentB -->|"胶水代码 4"| ToolB
     end
 
-    subgraph StandardizedProtocol ["解耦: 基于统一协议 (复杂度 N + M)"]
+    subgraph StandardizedProtocol ["解耦: 基于统一协议 (复杂度 N + M)']"]
         HostAgent["Host 智能体宿主"]:::good
         
-        HostAgent -->|1. 对接标准协议接口| ProtocolBus["标准 MCP 协议总线 (Model Context Protocol)"]:::protocol
+        HostAgent -->|"1. 对接标准协议接口"| ProtocolBus["标准 MCP 协议总线 (Model Context Protocol)"]:::protocol
         
-        ProtocolBus -->|2a. 插头 1| ServerSql["Sqlite MCP Server"]
-        ProtocolBus -->|2b. 插头 2| ServerSlack["Slack MCP Server"]
+        ProtocolBus -->|"2a. 插头 1"| ServerSql["Sqlite MCP Server"]
+        ProtocolBus -->|"2b. 插头 2"| ServerSlack["Slack MCP Server"]
         
-        Note over ProtocolBus: 一次对接协议，即插即用，彻底解耦
+        Note_ProtocolBus["一次对接协议，即插即用，彻底解耦"]
+        ProtocolBus -.-> Note_ProtocolBus
     end
 ```
 

@@ -48,20 +48,20 @@ Auth0 和 Okta 的核心设计用意在于：**基于 <GlossaryTerm term="OAuth 
 
 ```mermaid
 graph TD
-  UserClient["单页应用 SPA / 移动 App (Public Client)"] -->|1. 动态生成 Verifier & Challenge| AuthServer["Auth0 / Okta 认证服务器"]
+  UserClient["单页应用 SPA / 移动 App (Public Client)"] -->|"1. 动态生成 Verifier & Challenge"| AuthServer["Auth0 / Okta 认证服务器"]
   
-  subgraph PKCEAuthPlane["OAuth 2.0 OIDC + PKCE 授权码流程"]
-    AuthServer -->|2. 用户登录 & MFA 验证| UserAuth{"登录成功?"}
-    UserAuth -->|3. 成功并返回 Authorization Code| UserClient
-    UserClient -->|4. 携带 Code + Code Verifier 兑换| TokenEndpoint["Token Endpoint"]
-    TokenEndpoint -->|5. 校验 Verifier 哈希| TokenGen["生成 RS256 签名的 ID Token & Access Token"]
+  subgraph PKCEAuthPlane ["OAuth 2.0 OIDC + PKCE 授权码流程']"]
+    AuthServer -->|"2. 用户登录 & MFA 验证"| UserAuth{"登录成功?"}
+    UserAuth -->|"3. 成功并返回 Authorization Code"| UserClient
+    UserClient -->|"4. 携带 Code + Code Verifier 兑换"| TokenEndpoint["Token Endpoint"]
+    TokenEndpoint -->|"5. 校验 Verifier 哈希"| TokenGen["生成 RS256 签名的 ID Token & Access Token"]
   end
 
-  subgraph StatelessJWKSPlane["微服务本地 0 查库 JWKS 验签平面"]
-    TokenGen -->|6. 颁发 JWT Access Token| UserClient
-    UserClient -->|7. 带着 Bearer JWT 请求 API| Microservice["Backend API Microservice"]
-    Microservice <-->|8. 定期下载 RSA 公钥 (0 查 DB)| JWKSEndpoint["/.well-known/jwks.json (JWKS 公钥池)"]
-    Microservice -->|9. 本地 CPU 极速验签成功| BusinessAPI["返回业务数据 (0ms 查库开销!)"]
+  subgraph StatelessJWKSPlane ["微服务本地 0 查库 JWKS 验签平面']"]
+    TokenGen -->|"6. 颁发 JWT Access Token"| UserClient
+    UserClient -->|"7. 带着 Bearer JWT 请求 API"| Microservice["Backend API Microservice"]
+    Microservice <--->|"8. 定期下载 RSA 公钥 (0 查 DB)"| JWKSEndpoint["/.well-known/jwks.json (JWKS 公钥池)"]
+    Microservice -->|"9. 本地 CPU 极速验签成功"| BusinessAPI["返回业务数据 (0ms 查库开销!)"]
   end
 ```
 
@@ -124,12 +124,12 @@ graph LR
 
 ```mermaid
 graph TB
-  subgraph ClientAndGateway["客户端与网关平面"]
+  subgraph ClientAndGateway ["客户端与网关平面']"]
     SPAApp["Single Page App (Browser)"]
     BackendAPI["Backend Microservice (API Node)"]
   end
 
-  subgraph Auth0PlatformPlane["Auth0 IDaaS 平台核心"]
+  subgraph Auth0PlatformPlane ["Auth0 IDaaS 平台核心']"]
     UniversalLogin["Universal Login Engine"]
     ActionSandbox["Auth0 Actions (Node.js Hook 沙箱)"]
     TokenIssuer["RS256 Token Issuer (用私钥签名)"]
@@ -138,13 +138,13 @@ graph TB
   end
 
   SPAApp -- "1. PKCE Auth Request" --> UniversalLogin
-  UniversalLogin <--> TenantDB
+  UniversalLogin <---> TenantDB
   UniversalLogin --> ActionSandbox
   ActionSandbox --> TokenIssuer
   TokenIssuer -- "2. 返回 ID & Access Token" --> SPAApp
   
   SPAApp -- "3. Bearer Access Token (JWT)" --> BackendAPI
-  BackendAPI <-->|4. 缓存下载 RSA 公钥 (0 查 DB)| JWKSStorage
+  BackendAPI <--->|"4. 缓存下载 RSA 公钥 (0 查 DB)"| JWKSStorage
   BackendAPI -- "5. 本地 RSA 验签成功" --> BackendAPI
 
   style TokenIssuer fill:#bbdefb,stroke:#1976d2

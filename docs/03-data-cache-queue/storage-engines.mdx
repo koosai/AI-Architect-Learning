@@ -68,28 +68,28 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  subgraph BTreeStructure["B-Tree 磁盘节点页结构 (B-Tree Disk Page Layout)"]
+  subgraph BTreeStructure ["B-Tree 磁盘节点页结构 (B-Tree Disk Page Layout)']"]
     direction TB
     Root["根节点页 (Root Page)<br/>- 包含 Key 范围与子页物理指针"]
     
     InternalA["中间节点页 A (Internal Page)"]
     InternalB["中间节点页 B (Internal Page)"]
     
-    Leaf1["叶子节点页 1 (Leaf Page)<br/>[Key: 1..10 | Row Data"]"]
-    Leaf2["叶子节点页 2 (Leaf Page)<br/>[Key: 11..20 | Row Data"]"]
-    Leaf3["叶子节点页 3 (Leaf Page)<br/>[Key: 21..30 | Row Data"]"]
+    Leaf1["叶子节点页 1 (Leaf Page)<br/>(Key: 1..10 | Row Data"]
+    Leaf2["叶子节点页 2 (Leaf Page)<br/>(Key: 11..20 | Row Data"]
+    Leaf3["叶子节点页 3 (Leaf Page)<br/>(Key: 21..30 | Row Data"]
     
-    Root -->|指针 0..10| InternalA
-    Root -->|指针 11..30| InternalB
+    Root -->|"指针 0..10"| InternalA
+    Root -->|"指针 11..30"| InternalB
     
-    InternalA -->|指针 1..10| Leaf1
-    InternalA -->|指针 11..20| Leaf2
-    InternalB -->|指针 21..30| Leaf3
+    InternalA -->|"指针 1..10"| Leaf1
+    InternalA -->|"指针 11..20"| Leaf2
+    InternalB -->|"指针 21..30"| Leaf3
     
-    Leaf1 <-->|双向链表指针| Leaf2
-    Leaf2 <-->|双向链表指针| Leaf3
+    Leaf1 <--->|"双向链表指针"| Leaf2
+    Leaf2 <--->|"双向链表指针"| Leaf3
     
-    WriteAction["更新操作 (Put / Update)<br/>- 定位到 Leaf Page 物理地址<br/>- 原地改写该 Page 的二进制数据落盘 (In-place Update)"] -.->|覆写该块| Leaf2
+    WriteAction["更新操作 (Put / Update)<br/>- 定位到 Leaf Page 物理地址<br/>- 原地改写该 Page 的二进制数据落盘 (In-place Update)"] -.->|"覆写该块"| Leaf2
   end
 ```
 

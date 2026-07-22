@@ -48,23 +48,23 @@ Triton Inference Server 的核心设计用意在于：**基于 C++ 架构的 <Gl
 
 ```mermaid
 graph TD
-  Client1["客户端 A (Batch=1)"] -->|1. HTTP / gRPC 单请求| TritonScheduler["Triton Dynamic Batching Scheduler"]
-  Client2["客户端 B (Batch=1)"] -->|1. HTTP / gRPC 单请求| TritonScheduler
-  Client3["客户端 C (Batch=1)"] -->|1. HTTP / gRPC 单请求| TritonScheduler
+  Client1["客户端 A (Batch=1)"] -->|"1. HTTP / gRPC 单请求"| TritonScheduler["Triton Dynamic Batching Scheduler"]
+  Client2["客户端 B (Batch=1)"] -->|"1. HTTP / gRPC 单请求"| TritonScheduler
+  Client3["客户端 C (Batch=1)"] -->|"1. HTTP / gRPC 单请求"| TritonScheduler
   
-  subgraph DynamicBatchingWindow["动态批处理时间窗口 (max_delay=5ms)"]
-    TritonScheduler -->|2. 5ms 窗口内凑齐 Requests| DynamicQueue["Dynamic Batching Queue (凑满 Batch=32)"]
+  subgraph DynamicBatchingWindow ["动态批处理时间窗口 (max_delay=5ms)')"]
+    TritonScheduler -->|"2. 5ms 窗口内凑齐 Requests"| DynamicQueue["Dynamic Batching Queue (凑满 Batch=32)"]
   end
   
-  subgraph MultiBackendEngine["Triton 多后端统一 GPU 执行平面"]
-    DynamicQueue -->|3. 提交至 GPU 执行| BackendsNode["C-API Dynamic Backends (.so)"]
-    BackendsNode -->|4a. 分发| TensorRTBackend["TensorRT Backend("极致 C++ 性能")"]
-    BackendsNode -->|4b. 分发| ONNXBackend["ONNX Runtime Backend"]
-    BackendsNode -->|4c. 分发| PyTorchBackend["PyTorch (LibTorch) Backend"]
+  subgraph MultiBackendEngine ["Triton 多后端统一 GPU 执行平面')"]
+    DynamicQueue -->|"3. 提交至 GPU 执行"| BackendsNode["C-API Dynamic Backends (.so)"]
+    BackendsNode -->|"4a. 分发"| TensorRTBackend["TensorRT Backend('极致 C++ 性能')"]
+    BackendsNode -->|"4b. 分发"| ONNXBackend["ONNX Runtime Backend"]
+    BackendsNode -->|"4c. 分发"| PyTorchBackend["PyTorch (LibTorch) Backend"]
   end
 
-  subgraph ZeroCopyMemory["CUDA IPC 零拷贝共享内存"]
-    TensorRTBackend <-->|5. 直接在 GPU 显存间传递 Tensor| CUDAIPCMemory["CUDA Shared Memory (0 拷贝开销)"]
+  subgraph ZeroCopyMemory ["CUDA IPC 零拷贝共享内存')"]
+    TensorRTBackend <--->|"5. 直接在 GPU 显存间传递 Tensor"| CUDAIPCMemory["CUDA Shared Memory (0 拷贝开销)"]
   end
 ```
 
@@ -89,21 +89,21 @@ graph TD
 
 ```mermaid
 mindmap
-  root("(Triton 架构"))
-    多后端统一引擎 (Multi-Backend)
-      TensorRT Backend("C++ 极致性能")
-      ONNX Runtime Backend (跨平台)
-      PyTorch (LibTorch) Backend
-      Python Backend & TensorRT-LLM
-    动态批处理 (Dynamic Batching)
-      max_queue_delay_microseconds (时间窗口)
-      max_batch_size (最大批次控制)
-      Preferred Batch Sizes (优先批次对齐: 8/16/32)
-    管道编排与内存优化 (Pipeline & Memory)
-      Ensemble DAG (配置文件定义模型级联)
-      BLS (Business Logic Scripting 复杂 Python 编排)
-      CUDA IPC Shared Memory (GPU 显存 0 拷贝)
-      System Shared Memory (系统内存共享)
+  root(("Triton 架构"))
+    ["多后端统一引擎 (Multi-Backend)"]
+      ["TensorRT Backend('C++ 极致性能')"]
+      ["ONNX Runtime Backend (跨平台)"]
+      ["PyTorch (LibTorch) Backend"]
+      ["Python Backend & TensorRT-LLM"]
+    ["动态批处理 (Dynamic Batching)"]
+      ["max_queue_delay_microseconds (时间窗口)"]
+      ["max_batch_size (最大批次控制)"]
+      ["Preferred Batch Sizes (优先批次对齐: 8/16/32)"]
+    ["管道编排与内存优化 (Pipeline & Memory)"]
+      ["Ensemble DAG (配置文件定义模型级联)"]
+      ["BLS (Business Logic Scripting 复杂 Python 编排)"]
+      ["CUDA IPC Shared Memory (GPU 显存 0 拷贝)"]
+      ["System Shared Memory (系统内存共享)"]
 ```
 
 ---
@@ -161,7 +161,7 @@ graph TB
 
 ```mermaid
 graph TB
-  subgraph SingleRequestMode["传统单 Request 推理 (GPU 算力极度空转)"]
+  subgraph SingleRequestMode ["传统单 Request 推理 (GPU 算力极度空转)')"]
     ReqA["Req A (Batch=1)"] --> GPU1["GPU CUDA Cores (仅 10% 算力被占用)"]
     ReqB["Req B (Batch=1)"] --> GPU1
     LowThroughput["GPU 极其闲置，整体 TPS 吞吐低至极限!"]
@@ -170,10 +170,10 @@ graph TB
     style LowThroughput fill:#ffcdd2,stroke:#c62828
   end
 
-  subgraph DynamicBatchingMode["Triton 动态批处理 (GPU 算力打满)"]
+  subgraph DynamicBatchingMode ["Triton 动态批处理 (GPU 算力打满)')"]
     ReqsGroup["Req A, B, C, D (5ms 内静默收集)"] --> Batcher["Dynamic Batching Scheduler"]
     Batcher --> CombinedBatch["合并为 Batch Size = 32 的大矩阵"]
-    CombinedBatch --> GPU2["GPU CUDA Cores("85%+ 算力被打满!")"]
+    CombinedBatch --> GPU2["GPU CUDA Cores('85%+ 算力被打满!')"]
     HighThroughput["吞吐量拉升 400%，在毫秒延时内释放硬件极限!"]
     
     GPU2 --- HighThroughput

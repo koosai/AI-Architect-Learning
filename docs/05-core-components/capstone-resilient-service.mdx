@@ -39,32 +39,32 @@ import QuizCard from '@site/src/components/QuizCard';
 
 ```mermaid
 flowchart TD
-  Client["👤 客户端 (Client)"] -->|1. DNS 路由| LB["⚖️ 多活负载均衡器 (LB/健康检查)"]
+  Client["👤 客户端 (Client)"] -->|"1. DNS 路由"| LB["⚖️ 多活负载均衡器 (LB/健康检查)"]
   
-  subgraph GatewayLayer["入口网关层 (API Gateway - 限流防护)"]
-    LB -->|2. 反向代理| GW["🛡️ 网关 (限流熔断防护)"]
-    TokenBucket["Token Bucket <br/>(令牌桶防过载)"] <--> GW
+  subgraph GatewayLayer ["入口网关层 (API Gateway - 限流防护)']"]
+    LB -->|"2. 反向代理"| GW["🛡️ 网关 (限流熔断防护)"]
+    TokenBucket["Token Bucket <br/>(令牌桶防过载)"] <---> GW
   end
   
-  subgraph AppLayer["业务应用层 (无状态 App 集群 - 故障隔离)"]
-    GW -->|3. 点查路由| App1["💻 App 实例 1"]
-    GW -->|3. 点查路由| App2["💻 App 实例 2"]
+  subgraph AppLayer ["业务应用层 (无状态 App 集群 - 故障隔离)']"]
+    GW -->|"3. 点查路由"| App1["💻 App 实例 1"]
+    GW -->|"3. 点查路由"| App2["💻 App 实例 2"]
     
-    App1 & App2 -.->|超时/退避重试/熔断保护| DB_Conn["🔌 舱壁隔离通道"]
+    App1 & App2 -.->|"超时/退避重试/熔断保护"| DB_Conn["🔌 舱壁隔离通道"]
   end
 
-  subgraph CacheLayer["高速缓存层 (Redis Cluster - 读扩展)"]
-    App1 & App2 -->|4. 读缓存 (99%)| Redis["("⚡ 读缓存组 (Consistent Hash)")"]
+  subgraph CacheLayer ["高速缓存层 (Redis Cluster - 读扩展)']"]
+    App1 & App2 -->|"4. 读缓存 (99%)"| Redis[("⚡ 读缓存组 (Consistent Hash)")]
   end
 
-  subgraph DBLayer["分片数据层 (Sharded DB - 写扩展/强一致)"]
-    DB_Conn -->|5. 缓存 Miss 写路由| Master1["("🗄️ Shard 1 主库 (Write)")"]
-    DB_Conn -->|5. 缓存 Miss 写路由| Master2["("🗄️ Shard 2 主库 (Write)")"]
+  subgraph DBLayer ["分片数据层 (Sharded DB - 写扩展/强一致)']"]
+    DB_Conn -->|"5. 缓存 Miss 写路由"| Master1[("🗄️ Shard 1 主库 (Write)")]
+    DB_Conn -->|"5. 缓存 Miss 写路由"| Master2[("🗄️ Shard 2 主库 (Write)")]
     
-    Master1 ====>|强同步/半同步复制| Follower1["("🗄️ Shard 1 从库 (Read)")"]
-    Master2 ====>|强同步/半同步复制| Follower2["("🗄️ Shard 2 从库 (Read)")"]
+    Master1 ====>|"强同步/半同步复制"| Follower1[("🗄️ Shard 1 从库 (Read)")]
+    Master2 ====>|"强同步/半同步复制"| Follower2[("🗄️ Shard 2 从库 (Read)")]
     
-    etcd["("🌐 etcd 共识集群 <br/>(选主与分片元数据)")"] <--> Master1 & Master2
+    etcd[("🌐 etcd 共识集群 <br/>(选主与分片元数据)")] <---> Master1 & Master2
   end
 ```
 
@@ -84,27 +84,27 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  subgraph MetricsLayer["数据观测层 (SLIs - 量化关键指标)"]
+  subgraph MetricsLayer ["数据观测层 (SLIs - 量化关键指标)']"]
     SLI_Success["SLI 1: 请求成功率 <br/>(成功请求数 / 总请求数)"]
     SLI_Latency["SLI 2: 页面响应延迟 <br/>(p99 延迟值)"]
   end
 
-  subgraph ObjectiveLayer["服务目标层 (SLOs - 可靠性对赌契约)"]
+  subgraph ObjectiveLayer ["服务目标层 (SLOs - 可靠性对赌契约)']"]
     SLO_Success["SLO 1: 30天内成功率 >= 99.95%"]
     SLO_Latency["SLO 2: 30天内读 p99 < 50ms"]
     
-    SLI_Success -->|对齐并限定| SLO_Success
-    SLI_Latency -->|对齐并限定| SLO_Latency
+    SLI_Success -->|"对齐并限定"| SLO_Success
+    SLI_Latency -->|"对齐并限定"| SLO_Latency
   end
 
-  subgraph BudgetLayer["错误预算层 (Error Budget - 允许的失败余量)"]
+  subgraph BudgetLayer ["错误预算层 (Error Budget - 允许的失败余量)']"]
     Budget["每月可用错误预算: 0.05% <br/>(折合可用性故障停机约 22 分钟)"]
-    SLO_Success -->|100% - SLO =| Budget
+    SLO_Success -->|"100% - SLO ="| Budget
   end
 
-  subgraph Actions["运维控制环 (SRE 自动响应)"]
-    Budget -->|预算充足 (Error Budget > 0)| FastTrack["✅ 加速业务新功能研发与部署上线"]
-    Budget -->|预算耗尽 (Error Budget <= 0)| StabilityFreeze["🚨 立即执行部署冻结，全员主攻系统稳定性"]
+  subgraph Actions ["运维控制环 (SRE 自动响应)']"]
+    Budget -->|"预算充足 (Error Budget > 0)"| FastTrack["✅ 加速业务新功能研发与部署上线"]
+    Budget -->|"预算耗尽 (Error Budget <= 0)"| StabilityFreeze["🚨 立即执行部署冻结，全员主攻系统稳定性"]
   end
 ```
 

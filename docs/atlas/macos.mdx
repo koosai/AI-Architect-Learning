@@ -102,47 +102,47 @@ graph LR
 
 ```mermaid
 graph TB
-  subgraph UserMode["用户空间 (User Mode - Ring 3)"]
+  subgraph UserMode ["用户空间 (User Mode - Ring 3)')"]
     CocoaApp["用户 App (沙箱保护)"]
     LibSystem["System 动态库 (libSystem.dylib)"]
     Launchd["系统总控进程 (launchd)"]
     TCCD["权限控制服务 (tccd)"]
   end
 
-  subgraph KernelMode["XNU 内核空间 (Ring 0 Kernel)"]
-    subgraph MachSubsystem["Mach 最底层内核 (Mach Core)"]
+  subgraph KernelMode ["XNU 内核空间 (Ring 0 Kernel)')"]
+    subgraph MachSubsystem ["Mach 最底层内核 (Mach Core)')"]
       MachVM["Mach 虚拟内存"]
       Scheduler["多核调度器 (Threads)"]
       IPC["IPC 端口路由 (Ports)"]
     end
     
-    subgraph BSDSubsystem["BSD UNIX 层 (POSIX Interface)"]
+    subgraph BSDSubsystem ["BSD UNIX 层 (POSIX Interface)')"]
       VFS["虚拟文件系统 (VFS)"]
       NetworkStack["BSD 网络协议栈"]
       MACF["MACF 安全决策框架 (Mandatory Access Control)"]
     end
 
-    IOKitLib["I/O Kit("C++ 驱动容器")"]
+    IOKitLib["I/O Kit('C++ 驱动容器')"]
     AMFIKernel["AMFI 内核验证器"]
   end
 
-  subgraph HardwareSpace["物理硬件层"]
+  subgraph HardwareSpace ["物理硬件层')"]
     SecureEnclave["安全协处理器 (Secure Enclave)"]
     MainCPU["Apple Silicon 主 CPU"]
   end
 
-  CocoaApp -->|封装调用| LibSystem
-  LibSystem -->|POSIX Syscalls / Mach Trap| MACF
-  MACF -->|策略拦截| AMFIKernel
+  CocoaApp -->|"封装调用"| LibSystem
+  LibSystem -->|"POSIX Syscalls / Mach Trap"| MACF
+  MACF -->|"策略拦截"| AMFIKernel
   MACF --> BSDSubsystem
   
-  BSDSubsystem <-->|桥接依赖| MachSubsystem
-  IOKitLib <--> MachSubsystem
+  BSDSubsystem <--->|"桥接依赖"| MachSubsystem
+  IOKitLib <---> MachSubsystem
   
-  AMFIKernel <-->|物理信任对齐| SecureEnclave
-  MachSubsystem <--> MainCPU
-  TCCD <-->|IPC 授权对齐| CocoaApp
-  Launchd -->|加载与拉起| CocoaApp
+  AMFIKernel <--->|"物理信任对齐"| SecureEnclave
+  MachSubsystem <---> MainCPU
+  TCCD <--->|"IPC 授权对齐"| CocoaApp
+  Launchd -->|"加载与拉起"| CocoaApp
 ```
 
 ---
@@ -159,9 +159,9 @@ graph TB
 
 ```mermaid
 graph TD
-  UserApp["1. 用户 App (Ring 3)"] -->|2. 发起 POSIX 系统调用: open('/data.txt')| BSD["3. BSD 层 (Ring 0)"]
-  BSD -->|4. 直接函数调用 (无特权切换)| MachVM["4. Mach VM (Ring 0 内存定位)"]
-  MachVM -->|5. 分配物理页框| Disk["5. 底层 I/O 驱动 (Ring 0)"]
+  UserApp["1. 用户 App (Ring 3)"] -->|"2. 发起 POSIX 系统调用: open('/data.txt')"| BSD["3. BSD 层 (Ring 0)"]
+  BSD -->|"4. 直接函数调用 (无特权切换)"| MachVM["4. Mach VM (Ring 0 内存定位)"]
+  MachVM -->|"5. 分配物理页框"| Disk["5. 底层 I/O 驱动 (Ring 0)"]
 ```
 
 ### 4b. 强制访问控制框架 MACF 与 AMFI 应用沙箱机制
@@ -175,12 +175,12 @@ graph TD
 
 ```mermaid
 graph TD
-  App["沙箱 App"] -->|1. 触发系统调用: write('/etc/hosts')| Syscall["Ring 0 系统调用入口"]
-  Syscall -->|2. 强行暂停，导入安全评估| MACFHook["MACF 安全拦截钩子"]
-  MACFHook -->|3. 查询沙箱规则配置| SandboxProfile{"Sandbox Profile 是否允许写入该路径?"}
+  App["沙箱 App"] -->|"1. 触发系统调用: write('/etc/hosts')"| Syscall["Ring 0 系统调用入口"]
+  Syscall -->|"2. 强行暂停，导入安全评估"| MACFHook["MACF 安全拦截钩子"]
+  MACFHook -->|"3. 查询沙箱规则配置"| SandboxProfile{"Sandbox Profile 是否允许写入该路径?"}
   
-  SandboxProfile -->|否| Block["4a. 拒绝写入，抛出 Permission Denied，触发安全告警"]
-  SandboxProfile -->|是| Execute["4b. 通过校验，将操作下发给 VFS 执行写入"]
+  SandboxProfile -->|"否"| Block["4a. 拒绝写入，抛出 Permission Denied，触发安全告警"]
+  SandboxProfile -->|"是"| Execute["4b. 通过校验，将操作下发给 VFS 执行写入"]
 ```
 
 ### 4c. Mach IPC 与 MIG (Mach Interface Generator) 机制

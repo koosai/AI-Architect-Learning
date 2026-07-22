@@ -74,14 +74,16 @@ graph LR
 
     UserTask["外部请求 (TraceID = tr-999)"] --> SupervisorSpan["Supervisor Span (ID: sp-001)"]:::span
     
-    subgraph TracingChain ["分布式追踪 span 树"]
-        SupervisorSpan -->|1. 派发研究| ResearchSpan["Researcher Span (ID: sp-002)<br/>Cost: 0.05$ / Parent: sp-001"]:::span
-        SupervisorSpan -->|2. 派发编写| WriterSpan["Writer Span (ID: sp-003)<br/>Cost: 0.12$ / Parent: sp-001"]:::span
+    subgraph TracingChain ["分布式追踪 span 树']"]
+        SupervisorSpan -->|"1. 派发研究"| ResearchSpan["Researcher Span (ID: sp-002)<br/>Cost: 0.05$ / Parent: sp-001"]:::span
+        SupervisorSpan -->|"2. 派发编写"| WriterSpan["Writer Span (ID: sp-003)<br/>Cost: 0.12$ / Parent: sp-001"]:::span
         
-        WriterSpan -->|3. 派发纠错| ReviewSpan["Reviewer Span (ID: sp-004)<br/>Cost: 0.03$ / Parent: sp-003"]:::span
+        WriterSpan -->|"3. 派发纠错"| ReviewSpan["Reviewer Span (ID: sp-004)<br/>Cost: 0.03$ / Parent: sp-003"]:::span
     end
 
-    Note over ResearchSpan, ReviewSpan: 统一 TraceID 贯穿整条调用链，<br/>每个节点包含 ParentID、Token 消耗与耗时明细
+    Note_ResearchSpan["统一 TraceID 贯穿整条调用链，<br/>每个节点包含 ParentID、Token 消耗与耗时明细"]
+    ResearchSpan -.-> Note_ResearchSpan
+    ReviewSpan -.-> Note_ResearchSpan
 ```
 
 ### 2. 控制流程：分层级/全局预算控制网与熔断卡点

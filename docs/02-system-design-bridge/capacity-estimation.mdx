@@ -32,16 +32,16 @@ import QuizCard from '@site/src/components/QuizCard';
 
 ```mermaid
 flowchart LR
-  subgraph CalculationFlow["容量心算推导流 (Back-of-the-Envelope Workflow)"]
+  subgraph CalculationFlow ["容量心算推导流 (Back-of-the-Envelope Workflow)']"]
     direction LR
-    DAU["日活用户数 (DAU)"] -->|x 人均日操作数| DailyOps["日均总操作次数 (Daily Ops)"]
-    DailyOps -->|除以 86400 (秒/天)| AvgQPS["平均每秒 QPS (Avg QPS)"]
-    AvgQPS -->|x 峰值因子 (2-10)| PeakQPS["峰值 QPS (Peak QPS)"]
+    DAU["日活用户数 (DAU)"] -->|"x 人均日操作数"| DailyOps["日均总操作次数 (Daily Ops)"]
+    DailyOps -->|"除以 86400 (秒/天)"| AvgQPS["平均每秒 QPS (Avg QPS)"]
+    AvgQPS -->|"x 峰值因子 (2-10)"| PeakQPS["峰值 QPS (Peak QPS)"]
     
-    DailyOps -->|x 单条负载字节大小| Storage["日新增存储量 (Storage/Day)"]
-    Storage -->|x 365| YearStorage["年新增存储量 (Storage/Year)"]
+    DailyOps -->|"x 单条负载字节大小"| Storage["日新增存储量 (Storage/Day)"]
+    Storage -->|"x 365"| YearStorage["年新增存储量 (Storage/Year)"]
     
-    PeakQPS -->|x 单条字节大小| Bandwidth["网络带宽需求 (Bandwidth/s)"]
+    PeakQPS -->|"x 单条字节大小"| Bandwidth["网络带宽需求 (Bandwidth/s)"]
   end
 ```
 

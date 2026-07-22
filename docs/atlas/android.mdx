@@ -126,10 +126,10 @@ graph TB
     classDef main fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
     classDef third fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-    UserApp["用户 App 进程 (如 WeChat)"]:::client -->|1. 跨进程请求服务 (Binder)| Framework["System Server 系统框架进程"]:::main
-    Framework -->|2. 分配资源 / 杀背景应用| Lmkd["Low Memory Killer Daemon (LMKD)"]:::main
+    UserApp["用户 App 进程 (如 WeChat)"]:::client -->|"1. 跨进程请求服务 (Binder)"| Framework["System Server 系统框架进程"]:::main
+    Framework -->|"2. 分配资源 / 杀背景应用"| Lmkd["Low Memory Killer Daemon (LMKD)"]:::main
     
-    Framework -->|3. 内核特权硬件调用| LinuxKernel["Linux Kernel & Binder Driver"]:::third
+    Framework -->|"3. 内核特权硬件调用"| LinuxKernel["Linux Kernel & Binder Driver"]:::third
 ```
 
 ### 3b. Container Diagram (容器结构图)
@@ -214,24 +214,26 @@ graph TD
     classDef kernel fill:#ffebee,stroke:#c62828,stroke-width:2px;
     classDef server fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-    subgraph AppSender ["1. 发送端 App (Process A)"]
+    subgraph AppSender ["1. 发送端 App (Process A)']"]
         SenderData["发送端用户态数据 (User Space)"]:::client
     end
 
-    subgraph KernelSpaceBoundary ["2. 内核态控制层"]
+    subgraph KernelSpaceBoundary ["2. 内核态控制层']"]
         BinderKernelBuf["Binder 内核缓冲区<br/>(Ring 0 地址域)"]:::kernel
     end
 
-    subgraph AppReceiver ["3. 接收端 App (Process B)"]
+    subgraph AppReceiver ["3. 接收端 App (Process B)']"]
         ReceiverData["接收端用户态数据 (User Space)"]:::server
     end
 
-    SenderData -->|拷贝 1: Client Copy to Kernel| BinderKernelBuf
+    SenderData -->|"拷贝 1: Client Copy to Kernel"| BinderKernelBuf
     
     %% mmap 共享物理页面
     BinderKernelBuf -.-|mmap 物理页面直接映射| ReceiverData
     
-    Note over KernelSpaceBoundary, AppReceiver: 接收端通过物理页框直接读取只读数据，免去第二次内核态到用户态的 Copy
+    Note_KernelSpaceBoundary["接收端通过物理页框直接读取只读数据，免去第二次内核态到用户态的 Copy"]
+    KernelSpaceBoundary -.-> Note_KernelSpaceBoundary
+    AppReceiver -.-> Note_KernelSpaceBoundary
 ```
 
 ---

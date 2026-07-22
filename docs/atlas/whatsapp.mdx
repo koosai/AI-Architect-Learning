@@ -60,23 +60,23 @@ WhatsApp 的后端建立在一个为消息而生的技术栈上：<GlossaryTerm 
 
 ```mermaid
 flowchart TB
-  subgraph Clients["客户端（手机 App）"]
+  subgraph Clients ["客户端（手机 App）']"]
     P1["用户 A"]
     P2["用户 B（离线）"]
   end
 
   LB["接入层 / 负载均衡"]
 
-  subgraph Chat["Chat 服务器（Erlang，约 150 台，每台约 100 万连接）"]
+  subgraph Chat ["Chat 服务器（Erlang，约 150 台，每台约 100 万连接）']"]
     C1["连接进程 A（轻量 Erlang process）"]
-    Q["("离线消息队列 store-and-forward")"]
+    Q[("离线消息队列 store-and-forward")]
   end
 
-  subgraph MM["多媒体服务器（约 250 台）"]
+  subgraph MM ["多媒体服务器（约 250 台）']"]
     M1["图片 / 视频 / 语音"]
   end
 
-  DB["("Mnesia 内存分布式库：路由 / 会话状态")"]
+  DB[("Mnesia 内存分布式库：路由 / 会话状态")]
   PUSH["第三方推送 APNs / Google"]
 
   P1 -- "1.建立长连接" --> LB --> C1

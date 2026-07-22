@@ -100,7 +100,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  subgraph SLOLoop["SLO 与错误预算反馈闭环 (SLO & Error Budget)"]
+  subgraph SLOLoop ["SLO 与错误预算反馈闭环 (SLO & Error Budget)']"]
     SLI["监测指标 (SLI)<br/>例如: 成功率"]
     SLOTarget{"达成 SLO 目标?<br/>例如: 99.9%"}
     
@@ -111,12 +111,12 @@ flowchart TD
   end
 
   SLI --> SLOTarget
-  SLOTarget -->|Yes| Budget
-  Budget -->|预算充足| Allow
+  SLOTarget -->|"Yes"| Budget
+  Budget -->|"预算充足"| Allow
   
-  SLOTarget -->|No| Budget
-  Budget -->|预算耗尽 (<=0)| Freeze
-  Freeze -->|倒逼开发修改Bug/治理服务| SLI
+  SLOTarget -->|"No"| Budget
+  Budget -->|"预算耗尽 (<=0)"| Freeze
+  Freeze -->|"倒逼开发修改Bug/治理服务"| SLI
 ```
 
 

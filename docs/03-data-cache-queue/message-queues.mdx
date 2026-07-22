@@ -33,18 +33,18 @@ import QuizCard from '@site/src/components/QuizCard';
 
 ```mermaid
 flowchart LR
-  subgraph BrokerModel["1. 代理型队列 (Broker-based: RabbitMQ)"]
+  subgraph BrokerModel ["1. 代理型队列 (Broker-based: RabbitMQ)')"]
     direction TB
-    P1["生产者 (Producer)"] -->|Push| Queue1["Broker 队列<br/>(内存/磁盘)"]
-    Queue1 -->|Push| C1["消费者 1 (Consumer)"]
-    C1 -->|Ack| Queue1
+    P1["生产者 (Producer)"] -->|"Push"| Queue1["Broker 队列<br/>(内存/磁盘)"]
+    Queue1 -->|"Push"| C1["消费者 1 (Consumer)"]
+    C1 -->|"Ack"| Queue1
     NoteB["确认后物理删除:<br/>- 消费成功即刻从队列清除<br/>- 水位极低<br/>- 无法重复消费历史"]
   end
 
-  subgraph LogModel["2. 日志型队列 (Log-based: Kafka Partition)"]
+  subgraph LogModel ["2. 日志型队列 (Log-based: Kafka Partition)')"]
     direction TB
-    P2["生产者 (Producer)"] -->|Append Write| Log2["只读追加物理日志 (Log)<br/>[msg0"] [msg1] [msg2] [msg3]"]
-    C2["消费者 (Consumer)"] -->|Pull & Move Offset| Log2
+    P2["生产者 (Producer)"] -->|"Append Write"| Log2["只读追加物理日志 (Log)<br/>(msg0') (msg1) (msg2) (msg3)"]
+    C2["消费者 (Consumer)"] -->|"Pull & Move Offset"| Log2
     NoteL["Offset 逻辑移动:<br/>- 消息只读追加, 物理不删<br/>- 消费进度仅移动指针<br/>- 随时支持重置 Offset 重放"]
   end
 ```

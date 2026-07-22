@@ -43,10 +43,10 @@ FreeRTOS 的立项目标，就是要在微型 MCU 上提供**硬实时（Hard Re
 
 ```mermaid
 graph TD
-  MCU["微控制器资源 (几 KB RAM / Flash)"] -->|O(1) 就绪列表算法| RTScheduler["硬实时抢占式调度器"]
-  RTScheduler -->|彻底解耦 malloc/free| HeapManagement["heap_1 至 heap_5 堆策略"]
-  RTScheduler -->|优先级继承算法| Synchronization["互斥锁与信号量同步机制"]
-  Synchronization -->|响应中断| Interrupt["SysTick 滴答微秒级响应"]
+  MCU["微控制器资源 (几 KB RAM / Flash)"] -->|"O(1) 就绪列表算法"| RTScheduler["硬实时抢占式调度器"]
+  RTScheduler -->|"彻底解耦 malloc/free"| HeapManagement["heap_1 至 heap_5 堆策略"]
+  RTScheduler -->|"优先级继承算法"| Synchronization["互斥锁与信号量同步机制"]
+  Synchronization -->|"响应中断"| Interrupt["SysTick 滴答微秒级响应"]
 ```
 
 <DesignIntent
@@ -108,14 +108,14 @@ graph LR
 
 ```mermaid
 graph TB
-  subgraph MCUMemory["单片物理内存 (RAM + Flash - 无虚拟映射)"]
-    subgraph UserTasks["应用层任务 (Tasks)"]
+  subgraph MCUMemory ["单片物理内存 (RAM + Flash - 无虚拟映射)']"]
+    subgraph UserTasks ["应用层任务 (Tasks)']"]
       TaskA["高优先级刹车任务 (Task A)"]
       TaskB["低优先级数据上报任务 (Task B)"]
       IdleTask["空闲休眠任务 (Idle Task)"]
     end
 
-    subgraph FreeRTOSCore["FreeRTOS 核心组件"]
+    subgraph FreeRTOSCore ["FreeRTOS 核心组件']"]
       ReadyLists["优先级就绪列表数组 (Ready Lists Array)"]
       TickManager["时间片与滴答管理器 (SysTick)"]
       MutexControl["互斥同步组件 (Priority Inheritance)"]
@@ -123,21 +123,21 @@ graph TB
     end
   end
 
-  subgraph MCUHardware["MCU 物理硬件 (Bare Metal)"]
+  subgraph MCUHardware ["MCU 物理硬件 (Bare Metal)']"]
     SysTickRegister["滴答时钟计时器 (SysTick Timer)"]
     PendSV_Reg["悬起系统中断 (PendSV)"]
     PhysicalRAM["物理 SRAM 芯片"]
   end
 
-  TaskA -->|1. 申请分配内存| HeapManager
-  TaskB -->|2. 阻塞等待 Mutex| MutexControl
-  MutexControl -->|3. 临时提升 Task B 优先级| ReadyLists
+  TaskA -->|"1. 申请分配内存"| HeapManager
+  TaskB -->|"2. 阻塞等待 Mutex"| MutexControl
+  MutexControl -->|"3. 临时提升 Task B 优先级"| ReadyLists
   
-  SysTickRegister -->|4. 周期性硬件 Tick 触发| TickManager
-  TickManager -->|5. 决定进行抢占，悬起中断| PendSV_Reg
+  SysTickRegister -->|"4. 周期性硬件 Tick 触发"| TickManager
+  TickManager -->|"5. 决定进行抢占，悬起中断"| PendSV_Reg
   
-  PendSV_Reg -->|6. 执行汇编上下文切换 (SP 指针挪移)| UserTasks
-  HeapManager <-->|7. 直接操作物理分配| PhysicalRAM
+  PendSV_Reg -->|"6. 执行汇编上下文切换 (SP 指针挪移)"| UserTasks
+  HeapManager <--->|"7. 直接操作物理分配"| PhysicalRAM
 ```
 
 ---

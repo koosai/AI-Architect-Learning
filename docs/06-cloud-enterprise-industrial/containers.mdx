@@ -102,31 +102,31 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  subgraph ImageLayers["只读分层镜像堆叠 (Image Layers - 类似 Git 提交链)"]
+  subgraph ImageLayers ["只读分层镜像堆叠 (Image Layers - 类似 Git 提交链)']"]
     direction BT
-    Layer1["Layer 1: Base OS <br/>(alpine:3.18) <br/>[Fingerprint: sha256_aaa"]"]
+    Layer1["Layer 1: Base OS <br/>(alpine:3.18) <br/>(Fingerprint: sha256_aaa"]
     
-    Layer2["Layer 2: Run Dependencies <br/>(apk add python3) <br/>[Fingerprint: sha256_bbb"]"]
+    Layer2["Layer 2: Run Dependencies <br/>(apk add python3) <br/>(Fingerprint: sha256_bbb"]
     
-    Layer3["Layer 3: App requirements <br/>(pip install -r requirements.txt) <br/>[Fingerprint: sha256_ccc"]"]
+    Layer3["Layer 3: App requirements <br/>(pip install -r requirements.txt) <br/>(Fingerprint: sha256_ccc"]
     
-    Layer4["Layer 4: Copy source code <br/>(COPY . .) <br/>[Fingerprint: sha256_ddd"]"]
+    Layer4["Layer 4: Copy source code <br/>(COPY . .) <br/>(Fingerprint: sha256_ddd"]
 
     Layer2 --> Layer1
     Layer3 --> Layer2
     Layer4 --> Layer3
   end
 
-  subgraph CachePolicy["缓存失效向上传播法则 (Dockerfile Build Caching)"]
+  subgraph CachePolicy ["缓存失效向上传播法则 (Dockerfile Build Caching)']"]
     direction TB
     Trigger["业务代码修改并触发构建"] --> MatchBase{"1. Base OS 变更？"}
-    MatchBase -->|否: 命中缓存| MatchDeps{"2. requirements.txt 变更？"}
-    MatchBase -->|是: Cache Miss| RebuildAll["💥 重新执行 Layer 1~4 全量构建"]
+    MatchBase -->|"否: 命中缓存"| MatchDeps{"2. requirements.txt 变更？"}
+    MatchBase -->|"是: Cache Miss"| RebuildAll["💥 重新执行 Layer 1~4 全量构建"]
     
-    MatchDeps -->|否: 命中缓存| MatchCode{"3. 仅业务源码变动？"}
-    MatchDeps -->|是: Cache Miss| RebuildFromDeps["🔥 重新执行 Layer 3 依赖下载<br/>+ Layer 4 源码构建"]
+    MatchDeps -->|"否: 命中缓存"| MatchCode{"3. 仅业务源码变动？"}
+    MatchDeps -->|"是: Cache Miss"| RebuildFromDeps["🔥 重新执行 Layer 3 依赖下载<br/>+ Layer 4 源码构建"]
     
-    MatchCode -->|是: 仅 Layer 4 未命中| RebuildCode["✅ Layer 1~3 全部秒级命中缓存<br/>仅重建最顶层 Layer 4"]
+    MatchCode -->|"是: 仅 Layer 4 未命中"| RebuildCode["✅ Layer 1~3 全部秒级命中缓存<br/>仅重建最顶层 Layer 4"]
   end
 ```
 

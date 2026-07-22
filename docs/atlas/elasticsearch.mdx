@@ -124,10 +124,10 @@ graph TB
     classDef main fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
     classDef third fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-    UserApp["应用程序 CLI / Kibana"]:::client -->|1. 发送读写请求 (RESTful JSON API)| ESCluster["Elasticsearch 物理集群 (Cluster)"]:::main
+    UserApp["应用程序 CLI / Kibana"]:::client -->|"1. 发送读写请求 (RESTful JSON API)"| ESCluster["Elasticsearch 物理集群 (Cluster)"]:::main
     
-    ESCluster -->|2. 归档日志与备份| SnapshotRepo["S3 / 本地快照仓库 (Snapshot Storage)"]:::third
-    ESCluster -.->|3. 物理存储| FileSystem["宿主机磁盘 OS Page Cache / SSD"]:::main
+    ESCluster -->|"2. 归档日志与备份"| SnapshotRepo["S3 / 本地快照仓库 (Snapshot Storage)"]:::third
+    ESCluster -.->|"3. 物理存储"| FileSystem["宿主机磁盘 OS Page Cache / SSD"]:::main
 ```
 
 ### 3b. Container Diagram (容器结构图)
@@ -140,15 +140,15 @@ graph TB
 
     UserRequest["REST API Request"] --> CoordNode["Coordinating Node (协调节点)<br/>1. 决定 Shard 路由<br/>2. 合并 Scatter-Gather 结果"]:::coord
     
-    CoordNode -->|读取/写入分发| DataNode1["Data Node 1 (数据节点)<br/>承载 Primary Shard 1"]:::data
-    CoordNode -->|读取/写入分发| DataNode2["Data Node 2 (数据节点)<br/>承载 Replica Shard 1"]:::data
+    CoordNode -->|"读取/写入分发"| DataNode1["Data Node 1 (数据节点)<br/>承载 Primary Shard 1"]:::data
+    CoordNode -->|"读取/写入分发"| DataNode2["Data Node 2 (数据节点)<br/>承载 Replica Shard 1"]:::data
     
-    DataNode1 & DataNode2 <-->|健康监测与元数据广播| MasterNode["Master Node (主节点)<br/>负责集群状态维护与故障调度"]:::master
+    DataNode1 & DataNode2 <--->|"健康监测与元数据广播"| MasterNode["Master Node (主节点)<br/>负责集群状态维护与故障调度"]:::master
 
-    subgraph ShardStorage ["数据节点内部存储剖析"]
+    subgraph ShardStorage ["数据节点内部存储剖析']"]
         DataNode1 --> IndexBuffer["In-memory Index Buffer"]
         DataNode1 --> TranslogFile["Transaction Log (Translog)"]
-        IndexBuffer -->|Refresh (默认 1s)| Segments["Lucene Segments (OS Page Cache)"]
+        IndexBuffer -->|"Refresh (默认 1s)"| Segments["Lucene Segments (OS Page Cache)"]
     end
 ```
 
@@ -171,14 +171,14 @@ graph TD
 
     Doc["新文档写入请求 (JSON Doc)"] --> Dispatcher["写入分流器"]
     
-    Dispatcher -->|1. 写入| IndexBuffer["In-Memory Index Buffer (JVM Heap)"]:::mem
-    Dispatcher -->|2. 追加| Translog["Translog 事务日志 (Disk / fsync)"]:::disk
+    Dispatcher -->|"1. 写入"| IndexBuffer["In-Memory Index Buffer (JVM Heap)"]:::mem
+    Dispatcher -->|"2. 追加"| Translog["Translog 事务日志 (Disk / fsync)"]:::disk
     
-    IndexBuffer -->|3. Refresh (每 1 秒触发)| OSPageCache["OS Page Cache (Lucene Segments 驻留)"]:::mem
-    OSPageCache -->|此时状态| 可被全局检索["可被搜索 (Near Real-Time)"]
+    IndexBuffer -->|"3. Refresh (每 1 秒触发)"| OSPageCache["OS Page Cache (Lucene Segments 驻留)"]:::mem
+    OSPageCache -->|"此时状态"| 可被全局检索["可被搜索 (Near Real-Time)"]
     
-    OSPageCache -->|4. Flush (每 30 分钟或 Translog > 512MB)| SolidDisk["物理硬磁盘 (Lucene Commit)"]:::disk
-    Translog -->|5. Flush 完成后| Truncate["清空与截断旧 Translog 日志"]:::disk
+    OSPageCache -->|"4. Flush (每 30 分钟或 Translog > 512MB)"| SolidDisk["物理硬磁盘 (Lucene Commit)"]:::disk
+    Translog -->|"5. Flush 完成后"| Truncate["清空与截断旧 Translog 日志"]:::disk
 ```
 
 ---
@@ -195,15 +195,16 @@ graph LR
     classDef new fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
 
     subgraph SmallSegments ["小段堆积 (含有大量被删除的墓碑)"]
-        S1["Segment 1 (Doc#1, Doc#2[Del"])"]:::old
-        S2["Segment 2 (Doc#3, Doc#4[Del"])"]:::old
+        S1["Segment 1 (Doc#1, Doc#2 (Del)"]:::old
+        S2["Segment 2 (Doc#3, Doc#4 (Del)"]:::old
         S3["Segment 3 (Doc#5)"]:::old
     end
 
     SmallSegments --> MergeProcess["后台段合并任务 (Segment Merge)"]
     
     MergeProcess --> S4["Merged Segment (Doc#1, Doc#3, Doc#5)"]:::new
-    Note over S4: 物理上彻底丢弃了被 Del 标记的 Doc#2 和 Doc#4，压缩了存储
+    NoteS4["物理上彻底丢弃了被 Del 标记的 Doc#2 和 Doc#4，压缩了存储"]
+    S4 -.-> NoteS4
 ```
 
 ---
@@ -264,15 +265,15 @@ graph TD
 
     Document["输入文档 (Doc#1: {age: 25, title: 'ML'})"] --> Parser["双端索引生成器"]
     
-    subgraph InvertedIndex ["1. 倒排全文索引 - 全文检索"]
-        Parser -->|分词与逆向关联| TermAge["'25' -> [Doc#1]"]:::index
-        TermAge --> TermML["'ML' -> [Doc#1]"]:::index
+    subgraph InvertedIndex ["1. 倒排全文索引 - 全文检索')"]
+        Parser -->|"分词与逆向关联"| TermAge["'25' -> (Doc#1)"]:::index
+        TermAge --> TermML["'ML' -> (Doc#1)"]:::index
     end
 
-    subgraph DocValues ["2. 列式存储 (Doc Values) - 聚合/排序"]
-        Parser -->|列式物理存储| Doc1["Doc#1 -> [age: 25"]"]:::column
-        Doc1 --> Doc2["Doc#2 -> [age: 30"]"]:::column
-        Doc2 --> Doc3["Doc#3 -> [age: 25"]"]:::column
+    subgraph DocValues ["2. 列式存储 (Doc Values) - 聚合/排序')"]
+        Parser -->|"列式物理存储"| Doc1["Doc#1 -> (age: 25')"]:::column
+        Doc1 --> Doc2["Doc#2 -> (age: 30')"]:::column
+        Doc2 --> Doc3["Doc#3 -> (age: 25')"]:::column
     end
     
     InvertedIndex --> SearchQuery["全文匹配: search?q=ML"]
@@ -295,16 +296,18 @@ Lucene 采用了 **FST（有限状态转移机）** 压缩词条前缀与后缀�
 graph LR
     classDef state fill:#eceff1,stroke:#37474f,stroke-width:1.5px;
 
-    Start("(Start")) -->|c| StateC("(C")):::state
-    StateC -->|a| StateCA("(CA")):::state
-    StateCA -->|t| StateCAT("(CAT")):::state
+    Start(("Start")) -->|"c"| StateC(("C")):::state
+    StateC -->|"a"| StateCA(("CA")):::state
+    StateCA -->|"t"| StateCAT(("CAT")):::state
     
-    StateCAT -->|s| StateCATS("(CATS")):::state
-    StateCAT -->|h| StateCATH("(CATH")):::state
+    StateCAT -->|"s"| StateCATS(("CATS")):::state
+    StateCAT -->|"h"| StateCATH(("CATH")):::state
     
-    StateCATS & StateCATH -->|ch| End("(End"))
+    StateCATS & StateCATH -->|"ch"| End(("End"))
     
-    Note over Start, End: 共享前缀 'cat' 与后缀 'ch'，极高地压缩了内存词表大小
+    Note_Start["共享前缀 'cat' 与后缀 'ch'，极高地压缩了内存词表大小"]
+    Start -.-> Note_Start
+    End -.-> Note_Start
 ```
 
 ---

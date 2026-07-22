@@ -31,7 +31,7 @@ import QuizCard from '@site/src/components/QuizCard';
 
 ```mermaid
 flowchart TD
-  subgraph IsolationHierarchy["事务隔离级别与并发异常防范树 (Isolation Anomaly Hierarchy)"]
+  subgraph IsolationHierarchy ["事务隔离级别与并发异常防范树 (Isolation Anomaly Hierarchy)']"]
     direction TB
     
     Level0["1. 读未提交 (Read Uncommitted)<br/>- 没有任何并发隔离防线"]
@@ -39,19 +39,19 @@ flowchart TD
     Level2["3. 可重复读 (Repeatable Read / MVCC 快照隔离)<br/>- 防止脏读、不可重复读、部分幻读"]
     Level3["4. 可串行化 (Serializable / 锁或串行)<br/>- 防止全部并发异常 (包含写偏斜 Write Skew)"]
     
-    Level0 -->|阻断脏读| Level1
-    Level1 -->|阻断不可重复读| Level2
-    Level2 -->|阻断写偏斜/幻读| Level3
+    Level0 -->|"阻断脏读"| Level1
+    Level1 -->|"阻断不可重复读"| Level2
+    Level2 -->|"阻断写偏斜/幻读"| Level3
     
     Dirty["脏读 (Dirty Read)<br/>- 读到未提交垃圾版本"]
     NonRep["不可重复读 (Non-repeatable Read)<br/>- 两次读取单行值被更改"]
     Phantom["幻读 (Phantom Read)<br/>- 两次查询结果行数变多/变少"]
     Skew["写偏斜 (Write Skew)<br/>- 快照决策后写不同行导致约束破损"]
     
-    Level0 -.- x Dirty
-    Level1 -.- x NonRep
-    Level2 -.- x Skew
-    Level2 -.- x Phantom
+    Level0 -.-> Dirty
+    Level1 -.-> NonRep
+    Level2 -.-> Skew
+    Level2 -.-> Phantom
   end
 ```
 

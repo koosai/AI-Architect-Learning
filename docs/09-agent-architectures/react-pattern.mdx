@@ -84,13 +84,13 @@ graph TD
     
     Thought --> CheckAction{"3. 判断是否终结?"}
     
-    CheckAction -->|是 (finish)| Finish["结束阶段 (Finish)<br/>- 输出最终答案给用户"]:::finish
-    CheckAction -->|否 (call tool)| Action["4. 行动阶段 (Action)<br/>- 决定调用特定工具与参数"]:::action
+    CheckAction -->|"是 (finish)"| Finish["结束阶段 (Finish)<br/>- 输出最终答案给用户"]:::finish
+    CheckAction -->|"否 (call tool)"| Action["4. 行动阶段 (Action)<br/>- 决定调用特定工具与参数"]:::action
     
     Action --> Exec["5. 运行物理工具 (Execute Tool)"]
     Exec --> Observation["6. 观察阶段 (Observation)<br/>- 获取外部反馈事实<br/>- 将结果追加至记忆"]:::observation
     
-    Observation -->|反馈事实至 Context| Thought
+    Observation -->|"反馈事实至 Context"| Thought
 ```
 
 #### 2. 三种推理与交互范式对比 (Comparison of Interaction Paradigms)

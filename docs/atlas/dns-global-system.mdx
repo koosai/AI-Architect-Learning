@@ -47,23 +47,23 @@ DNS 架构师 Paul Mockapetris 等人提出了革命性的解决方案：**基�
 
 ```mermaid
 graph TD
-  ClientDevice["终端设备 (Stub Resolver / Browser)"] -->|1. 查询 A 记录 example.com| LocalDNS["Local DNS / Recursive Resolver (8.8.8.8)"]
+  ClientDevice["终端设备 (Stub Resolver / Browser)"] -->|"1. 查询 A 记录 example.com"| LocalDNS["Local DNS / Recursive Resolver (8.8.8.8)"]
   
-  subgraph CacheLayer["Local DNS 多级 TTL 缓存层"]
-    LocalDNS -->|2. 检查本地 RAM 缓存| CacheHit{"TTL 未过期?"}
-    CacheHit -->|3. 命中 99% 场景: 0.1ms 极速返回 A 记录| ClientDevice
+  subgraph CacheLayer ["Local DNS 多级 TTL 缓存层']"]
+    LocalDNS -->|"2. 检查本地 RAM 缓存"| CacheHit{"TTL 未过期?"}
+    CacheHit -->|"3. 命中 99% 场景: 0.1ms 极速返回 A 记录"| ClientDevice
   end
 
-  subgraph HierarchicalLookupPlane["DNS 层级递归迭代查询平面"]
-    CacheHit -->|4. 未命中: 查询 Root (.)| RootDNS["Root Name Server (A~M Anycast 1500+ 镜像)"]
-    RootDNS -->|5. 返回 .com NS 指针| LocalDNS
-    LocalDNS -->|6. 查询 TLD (.com)| TLDDNS[".com TLD Name Server"]
-    TLDDNS -->|7. 返回 ns1.example.com NS 指针| LocalDNS
-    LocalDNS -->|8. 带 ECS 附带 Client IP 查询| AuthDNS["Authoritative DNS (权威服务器)"]
-    AuthDNS -->|9. 精准返回 CDN A 记录与 TTL| LocalDNS
+  subgraph HierarchicalLookupPlane ["DNS 层级递归迭代查询平面']"]
+    CacheHit -->|"4. 未命中: 查询 Root (.)"| RootDNS["Root Name Server (A~M Anycast 1500+ 镜像)"]
+    RootDNS -->|"5. 返回 .com NS 指针"| LocalDNS
+    LocalDNS -->|"6. 查询 TLD (.com)"| TLDDNS[".com TLD Name Server"]
+    TLDDNS -->|"7. 返回 ns1.example.com NS 指针"| LocalDNS
+    LocalDNS -->|"8. 带 ECS 附带 Client IP 查询"| AuthDNS["Authoritative DNS (权威服务器)"]
+    AuthDNS -->|"9. 精准返回 CDN A 记录与 TTL"| LocalDNS
   end
 
-  LocalDNS -->|10. 写入本地 TTL 缓存并返回| ClientDevice
+  LocalDNS -->|"10. 写入本地 TTL 缓存并返回"| ClientDevice
 ```
 
 <DesignIntent

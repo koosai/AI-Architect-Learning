@@ -125,15 +125,15 @@ flowchart LR
   C --> LB["负载均衡"]
   LB --> API["应用服务（无状态）"]
 
-  subgraph Write["写路径：发图"]
-    API --> OBJ["("对象存储<br/>原图")"]
+  subgraph Write ["写路径：发图']"]
+    API --> OBJ[("对象存储<br/>原图")]
     API --> Q["消息队列"]
     Q --> W["worker：生成缩略图 / 更新 feed"]
   end
 
-  subgraph Read["读路径：刷 feed"]
-    API --> CACHE["("缓存<br/>热点 feed")"]
-    CACHE -. "未命中" .-> DB["("数据库<br/>帖子/关系")"]
+  subgraph Read ["读路径：刷 feed']"]
+    API --> CACHE[("缓存<br/>热点 feed")]
+    CACHE -. "未命中" .-> DB[("数据库<br/>帖子/关系")]
   end
 ```
 

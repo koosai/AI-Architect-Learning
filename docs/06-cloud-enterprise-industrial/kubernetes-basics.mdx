@@ -57,38 +57,38 @@ K8s 的工作方式不是命令式（"启动这个、停那个"），而是<Glos
 
 ```mermaid
 flowchart TD
-  subgraph ControlPlane["🧠 控制面 (Control Plane - 集中决策)"]
+  subgraph ControlPlane ["🧠 控制面 (Control Plane - 集中决策)')"]
     APIServer["🖥️ kube-apiserver <br/>(唯一网关，声明式 API 入口)"]
-    etcd["(("💾 etcd <br/>(共识存储期望状态)"))"]
+    etcd["(('💾 etcd <br/>(共识存储期望状态)'))"]
     Controller["⚙️ kube-controller-manager <br/>(维持调和循环控制器)"]
     Scheduler["📅 kube-scheduler <br/>(分配 Pod 至物理节点)"]
     
-    APIServer <--> etcd
-    Controller <--> APIServer
-    Scheduler <--> APIServer
+    APIServer <---> etcd
+    Controller <---> APIServer
+    Scheduler <---> APIServer
   end
 
-  subgraph DataPlane["💪 数据面 (Data Plane - 承载流量与计算)"]
-    subgraph Node1["工作节点 Node 1"]
+  subgraph DataPlane ["💪 数据面 (Data Plane - 承载流量与计算)')"]
+    subgraph Node1 ["工作节点 Node 1')"]
       kubelet1["⚙️ kubelet (代理守护进程)"]
       Proxy1["🔌 kube-proxy (网络负载均衡)"]
       Pod1["📦 Pod A (App Container)"]
       
-      kubelet1 <--> Pod1
+      kubelet1 <---> Pod1
     end
     
-    subgraph Node2["工作节点 Node 2"]
+    subgraph Node2 ["工作节点 Node 2')"]
       kubelet2["⚙️ kubelet (代理守护进程)"]
       Proxy2["🔌 kube-proxy (网络负载均衡)"]
       Pod2["📦 Pod B (App Container)"]
       Pod3["📦 Pod C (App Container)"]
       
-      kubelet2 <--> Pod2 & Pod3
+      kubelet2 <---> Pod2 & Pod3
     end
   end
 
-  APIServer <-->|控制指令与心跳状态| kubelet1 & kubelet2
-  Proxy1 & Proxy2 -.->|路由流量| Pod1 & Pod2 & Pod3
+  APIServer <--->|"控制指令与心跳状态"| kubelet1 & kubelet2
+  Proxy1 & Proxy2 -.->|"路由流量"| Pod1 & Pod2 & Pod3
 
   noteCP["⚠️ 解耦设计：所有的外部业务请求包直接打给工作节点（Data Plane）的 Pod，完全不通过控制面，确保元数据开销与数据高并发分离！"]
   ControlPlane -.-> noteCP
@@ -99,17 +99,17 @@ flowchart TD
 - 核心对象：<GlossaryTerm term="Pod" definition="Pod：K8s 最小调度单元，包含一个或多个共享网络和存储的容器。通常一个 Pod 跑一个主容器。Pod 是临时的、可被随时替换。" >Pod</GlossaryTerm>（最小调度单元，一组容器）、<GlossaryTerm term="Deployment" definition="Deployment：声明“我要 N 个某镜像的 Pod 副本”，由控制器维持该数量、并负责滚动更新/回滚。是无状态服务的标准管理对象。" >Deployment</GlossaryTerm>（维持 N 个副本 + 滚动升级）、<GlossaryTerm term="Service" definition="Service：给一组 Pod 一个稳定的虚拟地址和负载均衡入口。Pod 会变动（重建换 IP），Service 提供不变的访问点（服务端发现，见 M5L3）。" >Service</GlossaryTerm>（给一组会变动的 Pod 一个稳定入口 + 负载均衡，正是 [M5L3 服务端发现](../core-components/service-discovery)）。
 ```mermaid
 flowchart TD
-  Client["👤 客户端 (Client)"] -->|1. 访问稳定虚拟 IP / DNS 域名| Service["🔌 Service <br/>(Stable Entrance: ClusterIP/NodePort)"]
+  Client["👤 客户端 (Client)"] -->|"1. 访问稳定虚拟 IP / DNS 域名"| Service["🔌 Service <br/>(Stable Entrance: ClusterIP/NodePort)"]
   
-  subgraph DeploymentController["Deployment 控制器声明 (Replicas=3)"]
-    Deployment["⚙️ Deployment <br/>(配置模板, 滚动更新)"] -->|控制| RS["⚙️ ReplicaSet <br/>(副本控制器)"]
+  subgraph DeploymentController ["Deployment 控制器声明 (Replicas=3)']"]
+    Deployment["⚙️ Deployment <br/>(配置模板, 滚动更新)"] -->|"控制"| RS["⚙️ ReplicaSet <br/>(副本控制器)"]
   end
 
-  RS -->|2. 创建与维护生命周期| Pod1["("📦 Pod 1 <br/>IP: 10.244.1.5 <br/>(Label: app=web)")"]
-  RS -->|2. 创建与维护生命周期| Pod2["("📦 Pod 2 <br/>IP: 10.244.2.8 <br/>(Label: app=web)")"]
-  RS -->|2. 创建与维护生命周期| Pod3["("📦 Pod 3 <br/>IP: 10.244.1.9 <br/>(Label: app=web)")"]
+  RS -->|"2. 创建与维护生命周期"| Pod1[("📦 Pod 1 <br/>IP: 10.244.1.5 <br/>(Label: app=web)")]
+  RS -->|"2. 创建与维护生命周期"| Pod2[("📦 Pod 2 <br/>IP: 10.244.2.8 <br/>(Label: app=web)")]
+  RS -->|"2. 创建与维护生命周期"| Pod3[("📦 Pod 3 <br/>IP: 10.244.1.9 <br/>(Label: app=web)")]
 
-  Service -->|3. 标签选择器 (Selector: app=web) 动态负载均衡分发| Pod1 & Pod2 & Pod3
+  Service -->|"3. 标签选择器 (Selector: app=web) 动态负载均衡分发"| Pod1 & Pod2 & Pod3
 ```
 ### 深入（选学）：为什么调和模型如此强大
 

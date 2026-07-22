@@ -40,25 +40,25 @@ import QuizCard from '@site/src/components/QuizCard';
 
 ```mermaid
 flowchart TD
-  subgraph Cluster["5 节点 Raft 集群被网络分区隔离 (N=5)"]
+  subgraph Cluster ["5 节点 Raft 集群被网络分区隔离 (N=5)']"]
     direction LR
     
-    subgraph Part1["分区 1 (少数派 - Read Only / 挂起)"]
-      NodeA["("节点 A <br/>(Candidate)")"]
-      NodeB["("节点 B <br/>(Follower)")"]
-      NodeA <--> NodeB
+    subgraph Part1 ["分区 1 (少数派 - Read Only / 挂起)']"]
+      NodeA[("节点 A <br/>(Candidate)")]
+      NodeB[("节点 B <br/>(Follower)")]
+      NodeA <---> NodeB
       style NodeA fill:#fdd,stroke:#333
       style NodeB fill:#eee,stroke:#333
     end
 
     PartitionLine["⚡ 网络断开 (Network Partition) ⚡"]
 
-    subgraph Part2["分区 2 (多数派 - 正常选出 Leader)"]
-      NodeC["("节点 C <br/>(Candidate)")"]
-      NodeD["("节点 D <br/>(Follower)")"]
-      NodeE["("节点 E <br/>(Follower)")"]
-      NodeC <--> NodeD & NodeE
-      NodeD <--> NodeE
+    subgraph Part2 ["分区 2 (多数派 - 正常选出 Leader)']"]
+      NodeC[("节点 C <br/>(Candidate)")]
+      NodeD[("节点 D <br/>(Follower)")]
+      NodeE[("节点 E <br/>(Follower)")]
+      NodeC <---> NodeD & NodeE
+      NodeD <---> NodeE
       style NodeC fill:#dfd,stroke:#333
       style NodeD fill:#eee,stroke:#333
       style NodeE fill:#eee,stroke:#333

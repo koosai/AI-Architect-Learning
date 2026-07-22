@@ -75,12 +75,12 @@ graph TD
 
     UserRequest["动态用户输入: '查一下上月的账单并退货'"] --> Router["1. 路由智能体 (Router / Classifier)"]:::router
     
-    Router -->|2. 提取意图 1: 账单咨询| AgentBilling["专精账单智能体 (Billing Agent)"]:::worker
-    Router -->|2. 提取意图 2: 退货售后| AgentReturn["专精退货智能体 (Return Agent)"]:::worker
-    Router -->|2. 提取意图 3: 技术提问| AgentTech["专精技术智能体 (Tech Agent)"]:::worker
+    Router -->|"2. 提取意图 1: 账单咨询"| AgentBilling["专精账单智能体 (Billing Agent)"]:::worker
+    Router -->|"2. 提取意图 2: 退货售后"| AgentReturn["专精退货智能体 (Return Agent)"]:::worker
+    Router -->|"2. 提取意图 3: 技术提问"| AgentTech["专精技术智能体 (Tech Agent)"]:::worker
     
-    AgentBilling -->|完成子任务| Output["("结构化结果汇总")"]:::target
-    AgentReturn -->|完成子任务| Output
+    AgentBilling -->|"完成子任务"| Output[("结构化结果汇总")]:::target
+    AgentReturn -->|"完成子任务"| Output
 ```
 
 ### 2. 控制流程：网状点对点交接（Swarm Pattern）拓扑
@@ -92,12 +92,14 @@ graph TD
 
     Start(["接收原始请求"]) --> AgentA["智能体 A (售前咨询)"]:::agent
     
-    AgentA -->|1. 转交控制权 (Handoff)| AgentB["智能体 B (账单处理)"]:::agent
-    AgentB -->|2. 再次转交 (Handoff)| AgentC["智能体 C (售后服务)"]:::agent
+    AgentA -->|"1. 转交控制权 (Handoff)"| AgentB["智能体 B (账单处理)"]:::agent
+    AgentB -->|"2. 再次转交 (Handoff)"| AgentC["智能体 C (售后服务)"]:::agent
     
-    AgentC -.->|3. 踢皮球循环 (死循环风险)| AgentB
+    AgentC -.->|"3. 踢皮球循环 (死循环风险)"| AgentB
     
-    Note over AgentB, AgentC: Swarm 模式去中心化，但极易发生循环交接 (踢皮球)<br/>必须用最大 handoff 步数强行熔断限制
+    Note_AgentB["Swarm 模式去中心化，但极易发生循环交接 (踢皮球)<br/>必须用最大 handoff 步数强行熔断限制"]
+    AgentB -.-> Note_AgentB
+    AgentC -.-> Note_AgentB
 ```
 
 ### 3. 时序全景：路由分派与 Swarm 动态交接时序对比

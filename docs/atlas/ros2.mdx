@@ -102,10 +102,10 @@ ROS 2 的整体控制拓扑与数据穿透层级划分如下：
 
 ```mermaid
 graph LR
-  Sensors["传感器硬件 (雷达 / 惯导 / 相机)"] -->|1. 原始传感器数据| SensorNode["ROS 2 传感器发布节点"]
-  SensorNode -->|2. DDS 去中心化对等网络| PlanningNode["ROS 2 规划与定位节点"]
-  PlanningNode -->|3. 定时反馈状态| Nav2System["Nav2 导航控制系统 (行为树)"]
-  Nav2System -->|4. 下发速度指令 (cmd_vel)| ChassisDriver["底盘电机控制器 (Actuator)"]
+  Sensors["传感器硬件 (雷达 / 惯导 / 相机)"] -->|"1. 原始传感器数据"| SensorNode["ROS 2 传感器发布节点"]
+  SensorNode -->|"2. DDS 去中心化对等网络"| PlanningNode["ROS 2 规划与定位节点"]
+  PlanningNode -->|"3. 定时反馈状态"| Nav2System["Nav2 导航控制系统 (行为树)"]
+  Nav2System -->|"4. 下发速度指令 (cmd_vel)"| ChassisDriver["底盘电机控制器 (Actuator)"]
 ```
 
 ### 3b. Container Diagram (容器架构)
@@ -165,24 +165,24 @@ graph TB
 
 ```mermaid
 graph TB
-  subgraph ROS1["ROS 1 中心化注册拓扑 (中心主节点)"]
+  subgraph ROS1 ["ROS 1 中心化注册拓扑 (中心主节点)']"]
     Master["中央注册主节点 (roscore)"]
     NodeA1["Node A"]
     NodeB1["Node B"]
     
-    NodeA1 -->|1. 注册与寻址查询| Master
-    NodeB1 -->|1. 注册与寻址查询| Master
-    NodeA1 -->|2. 建立 XML-RPC 直连通信| NodeB1
+    NodeA1 -->|"1. 注册与寻址查询"| Master
+    NodeB1 -->|"1. 注册与寻址查询"| Master
+    NodeA1 -->|"2. 建立 XML-RPC 直连通信"| NodeB1
     
     style Master fill:#ffcdd2,stroke:#c62828
   end
 
-  subgraph ROS2["ROS 2 去中心化 DDS 拓扑 (对等发现)"]
+  subgraph ROS2 ["ROS 2 去中心化 DDS 拓扑 (对等发现)']"]
     NodeA2["Node A (发布者)"]
     NodeB2["Node B (订阅者)"]
     
-    NodeA2 <-->|RTPS 组播对等发现 (Peer Discovery)| NodeB2
-    NodeA2 -->|数据直达 (零拷贝/共享内存)| NodeB2
+    NodeA2 <--->|"RTPS 组播对等发现 (Peer Discovery)"| NodeB2
+    NodeA2 -->|"数据直达 (零拷贝/共享内存)"| NodeB2
     
     style NodeA2 fill:#c8e6c9,stroke:#2e7d32
     style NodeB2 fill:#c8e6c9,stroke:#2e7d32

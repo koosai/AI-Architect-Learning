@@ -82,34 +82,34 @@ mindmap
 
 ```mermaid
 flowchart TB
-  subgraph Clients["客户端层"]
+  subgraph Clients ["客户端层']"]
     C1["Speaker Client (Broadcaster)"]
     C2["Attendee 1 (High Bandwidth Desktop)"]
     C3["Attendee 2 (Low Bandwidth Mobile)"]
   end
 
-  subgraph Control_Plane["控制平面 (Signaling Cluster)"]
+  subgraph Control_Plane ["控制平面 (Signaling Cluster)']"]
     ZC["Zone Controller (信令与路由中心)"]
     Auth["Auth & Billing Service"]
   end
 
-  subgraph Media_Plane["媒体平面 (Global MMR Network)"]
+  subgraph Media_Plane ["媒体平面 (Global MMR Network)']"]
     MMR_US["US West MMR Node (SFU)"]
     MMR_EU["EU Central MMR Node (Cascaded)"]
     MMR_ASIA["Asia East MMR Node (Cascaded)"]
   end
 
-  C1 -->|1. SIP/WebSocket 信令协商| ZC
-  ZC -->|2. 分配最佳就近 MMR| C1
-  ZC -->|2. 分配就近 MMR| C2
-  ZC -->|2. 分配就近 MMR| C3
+  C1 -->|"1. SIP/WebSocket 信令协商"| ZC
+  ZC -->|"2. 分配最佳就近 MMR"| C1
+  ZC -->|"2. 分配就近 MMR"| C2
+  ZC -->|"2. 分配就近 MMR"| C3
 
-  C1 -->|3. 上传 SVC 视频多层流 (RTP/UDP)| MMR_US
-  MMR_US -->|4. 跨区域级联专线转发| MMR_EU
-  MMR_US -->|4. 跨区域级联专线转发| MMR_ASIA
+  C1 -->|"3. 上传 SVC 视频多层流 (RTP/UDP)"| MMR_US
+  MMR_US -->|"4. 跨区域级联专线转发"| MMR_EU
+  MMR_US -->|"4. 跨区域级联专线转发"| MMR_ASIA
 
-  MMR_EU -->|5. 转发 L3 高清层 (1080p)| C2
-  MMR_ASIA -->|5. 仅转发 L1 基础层 (360p)| C3
+  MMR_EU -->|"5. 转发 L3 高清层 (1080p)"| C2
+  MMR_ASIA -->|"5. 仅转发 L1 基础层 (360p)"| C3
 ```
 
 ```mermaid
@@ -155,10 +155,10 @@ Zoom 采用了 <GlossaryTerm term="SVC 可伸缩视频编码" definition="将单
 
 ```mermaid
 flowchart LR
-  Raw[原始 1080p 60fps 画面] --> Encoder[SVC 编码器]
+  Raw["原始 1080p 60fps 画面"] --> Encoder["SVC 编码器"]
   Encoder --> L0["L0 基础层: 360p 15fps (仅需 150Kbps)"]
-  Encoder --> L1["L1 增强层: 720p 30fps("+300Kbps")"]
-  Encoder --> L2["L2 顶层: 1080p 60fps("+1Mbps")"]
+  Encoder --> L1["L1 增强层: 720p 30fps('+300Kbps')"]
+  Encoder --> L2["L2 顶层: 1080p 60fps('+1Mbps')"]
 ```
 
 MMR 路由器无需重新解码，只需直接在 IP 封包层丢弃 L1/L2 即可为弱网设备瘦身。

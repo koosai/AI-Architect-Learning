@@ -58,23 +58,23 @@ import ResearchNote from '@site/src/components/ResearchNote';
 
 ```mermaid
 mindmap
-  root("(CDN / Akamai 架构"))
+  root(("CDN / Akamai 架构"))
     调度平面 GSLB
       智能 DNS 解析
       EDNS0 Client Subnet
       BGP Anycast 路由
       实时链路质量探测
-    边缘节点 PoP (Edge)
-      L7 Nginx / ATS 反向代理
+    ["边缘节点 PoP (Edge)"]
+      ["L7 Nginx / ATS 反向代理"]
       Consistent Hashing 环分片
-      LRU / ARC 内存 SSD 缓存
-    回源与保护 (Origin Guard)
+      ["LRU / ARC 内存 SSD 缓存"]
+    ["回源与保护 (Origin Guard)"]
       Parent Cache 边缘二级中继
       Collapse Forwarding 读合并
       Origin Shield 预热与降级
     动态加速 API
-      HTTP/3 (QUIC) 0-RTT
-      BGP 自建骨干网优化 (DSA)
+      ["HTTP/3 (QUIC) 0-RTT"]
+      ["BGP 自建骨干网优化 (DSA)"]
       TLS Session Resumption
 ```
 
@@ -102,20 +102,17 @@ flowchart TB
     OriginDB["Customer Origin Server (App/DB)"]
   end
 
-  Client -->|1. DNS Query: cdn.example.com| LDNS
-  LDNS -->|2. 带 EDNS0 Client IP 查询| GSLB
-  GSLB -->|3. 结合 NetworkMap 计算最快 PoP| LDNS
-  LDNS -->>Client: 4. 返回 Edge IP (1.2.3.4)
+  Client -->|"1. DNS Query: cdn.example.com"| LDNS
+  LDNS -->|"2. 带 EDNS0 Client IP 查询"| GSLB
+  GSLB -->|"3. 结合 NetworkMap 计算最快 PoP"| LDNS
+  LDNS -->|"4. 返回 Edge IP (1.2.3.4)"| Client
 
-  Client -->|5. HTTP/3 Request| Edge1
-  alt 边缘缓存命中 (Cache Hit)
-    Edge1 -->>Client: 6. 200 OK (来自边缘 SSD/RAM 10ms)
-  else 缓存未命中 (Cache Miss)
-    Edge1 -->|7. 一致性哈希查找文件归属| Edge2
-    Edge2 -->|8. Collapse Forwarding 合并回源| OriginShield
-    OriginShield -->|9. 唯一回源请求| OriginDB
-    OriginDB -->>Edge1: 10. 返回源数据并缓存
-  end
+  Client -->|"5. HTTP/3 Request"| Edge1
+  Edge1 -->|"6. 200 OK (来自边缘 SSD/RAM 10ms)"| Client
+  Edge1 -->|"7. 一致性哈希查找文件归属"| Edge2
+  Edge2 -->|"8. Collapse Forwarding 合并回源"| OriginShield
+  OriginShield -->|"9. 唯一回源请求"| OriginDB
+  OriginDB -->|"10. 返回源数据并缓存"| Edge1
 ```
 
 ```mermaid

@@ -58,24 +58,24 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  subgraph FixedWindowBurst["1. 固定窗口临界双倍突发 (Fixed Window Boundary Burst)"]
+  subgraph FixedWindowBurst ["1. 固定窗口临界双倍突发 (Fixed Window Boundary Burst)']"]
     direction TB
     W1["窗口 1 (0:00 - 0:59) <br/>限流阈值: 100"]
     W2["窗口 2 (1:00 - 1:59) <br/>限流阈值: 100"]
     
-    ReqW1["0:59 瞬间涌入 100 个请求"] -->|放行 (未超限)| W1
-    ReqW2["1:01 瞬间涌入 100 个请求"] -->|放行 (未超限)| W2
+    ReqW1["0:59 瞬间涌入 100 个请求"] -->|"放行 (未超限)"| W1
+    ReqW2["1:01 瞬间涌入 100 个请求"] -->|"放行 (未超限)"| W2
     
     noteFW["安全隐患：从 0:59 到 1:01 仅仅 2 秒内，系统放行了 200 个请求！<br/>这达到了真实限额（100次/分钟）的 2 倍，可能击穿服务器。"]
   end
 
-  subgraph SlidingWindowFix["2. 滑动窗口精确限制 (Sliding Window Continuous Check)"]
+  subgraph SlidingWindowFix ["2. 滑动窗口精确限制 (Sliding Window Continuous Check)']"]
     direction TB
     WindowRange["滑动时间窗口 (60 秒连续跨度)"]
-    NewReq["新请求到达 (当前时间 t)"] -->|1. 划定检测时间段 [t-60, t]| WindowRange
-    WindowRange -->|2. 计算累计请求数| CheckLimit{是否超额 100?}
-    CheckLimit -->|未超| PassSW["允许放行"]
-    CheckLimit -->|已超| BlockSW["拒绝 429"]
+    NewReq["新请求到达 (当前时间 t)"] -->|"1. 划定检测时间段 (t-60, t)"| WindowRange
+    WindowRange -->|"2. 计算累计请求数"| CheckLimit{"是否超额 100?"}
+    CheckLimit -->|"未超"| PassSW["允许放行"]
+    CheckLimit -->|"已超"| BlockSW["拒绝 429"]
     
     noteSW["优势：无论请求在哪个时间点涌入，任一连续 60 秒区间内的流量均被锁死在 <= 100，消除了边界黑洞。"]
   end
@@ -90,30 +90,30 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  Client["海量客户端 (Clients)"] -->|发起高并发请求| GW1["API 网关 1"]
-  Client -->|发起高并发请求| GW2["API 网关 2"]
+  Client["海量客户端 (Clients)"] -->|"发起高并发请求"| GW1["API 网关 1"]
+  Client -->|"发起高并发请求"| GW2["API 网关 2"]
   
-  subgraph RedisCluster["全局 Redis 限流中心 (Lua 脚本驱动)"]
+  subgraph RedisCluster ["全局 Redis 限流中心 (Lua 脚本驱动)']"]
     Redis["共享 Redis 主库"]
   end
   
-  GW1 -->|1a. 执行 EVALSHA (检查令牌并扣减)| Redis
-  GW2 -->|1b. 执行 EVALSHA (检查令牌并扣减)| Redis
+  GW1 -->|"1a. 执行 EVALSHA (检查令牌并扣减)"| Redis
+  GW2 -->|"1b. 执行 EVALSHA (检查令牌并扣减)"| Redis
   
-  subgraph RouteDecision["网关策略决策"]
-    Redis -->|2a. 返回剩余令牌与放行指令| GW1
-    Redis -->|2b. 发生连接超时 / 宕机| GW2
+  subgraph RouteDecision ["网关策略决策']"]
+    Redis -->|"2a. 返回剩余令牌与放行指令"| GW1
+    Redis -->|"2b. 发生连接超时 / 宕机"| GW2
   end
   
-  subgraph ServiceFallback["后端微服务群 & 降级保护"]
+  subgraph ServiceFallback ["后端微服务群 & 降级保护']"]
     SrvNormal["核心微服务 (Normal Area)"]
     LocalLimiter["本地单机限流兜底 (Local Limiter)"]
   end
 
-  GW1 -->|3a. 正常路由转发| SrvNormal
-  GW2 -->|3b. 触发降级机制 (容灾保命)| LocalLimiter
-  LocalLimiter -->|放行部分请求| SrvNormal
-  LocalLimiter -->|阻断超限流量| Reject429["直接拦截返回 429"]
+  GW1 -->|"3a. 正常路由转发"| SrvNormal
+  GW2 -->|"3b. 触发降级机制 (容灾保命)"| LocalLimiter
+  LocalLimiter -->|"放行部分请求"| SrvNormal
+  LocalLimiter -->|"阻断超限流量"| Reject429["直接拦截返回 429"]
 ```
 
 <ResearchNote

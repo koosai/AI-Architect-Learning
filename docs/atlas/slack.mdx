@@ -92,50 +92,50 @@ Slack 的整体架构划分为同步 Web API 平面、异步长连接推送网�
 
 ```mermaid
 graph LR
-  Client["开发者与普通用户客户端 (Client)"] -->|1. 发送聊天消息 (HTTP POST)| WebAPI["同步 Web API 服务 (PHP Monolith)"]
-  Client -->|2. 维持 WebSocket 实时通道| Gateway["WebSocket 长连接网关 (Gateway)"]
-  WebAPI -->|3. 写入消息与变更| Database["多租户分片存储 (Vitess / MySQL Shards)"]
-  WebAPI -->|4. 消息发布推送指令 (Redis Pub/Sub)| Gateway
-  Gateway -->|5. 实时推送消息给接收方| Client
+  Client["开发者与普通用户客户端 (Client)"] -->|"1. 发送聊天消息 (HTTP POST)"| WebAPI["同步 Web API 服务 (PHP Monolith)"]
+  Client -->|"2. 维持 WebSocket 实时通道"| Gateway["WebSocket 长连接网关 (Gateway)"]
+  WebAPI -->|"3. 写入消息与变更"| Database["多租户分片存储 (Vitess / MySQL Shards)"]
+  WebAPI -->|"4. 消息发布推送指令 (Redis Pub/Sub)"| Gateway
+  Gateway -->|"5. 实时推送消息给接收方"| Client
 ```
 
 ### 3b. 容器架构图 (Container)
 
 ```mermaid
 graph TB
-  subgraph UserDevice["用户端"]
+  subgraph UserDevice ["用户端']"]
     ClientApp["Slack Client (Electron / Mobile)"]
   end
 
-  subgraph GatewayPlane["边缘长连接与缓存网关平面"]
+  subgraph GatewayPlane ["边缘长连接与缓存网关平面']"]
     FlannelProxy["Flannel 边缘缓存代理 (Go)"]
     WSGateway["WebSocket 消息网关服务"]
   end
 
-  subgraph LogicPlane["核心业务平原"]
+  subgraph LogicPlane ["核心业务平原']"]
     PHPApp["PHP 业务核心服务"]
     JobQueue["异步任务调度集群 (Celery / Kafka)"]
   end
 
-  subgraph DataPlane["多租户分片存储平面"]
+  subgraph DataPlane ["多租户分片存储平面']"]
     VitessRouter["Vitess 分片路由代理"]
-    MySQLShard1["("MySQL 分片 1 (Workspace A-M)")"]
-    MySQLShard2["("MySQL 分片 2 (Workspace N-Z)")"]
+    MySQLShard1[("MySQL 分片 1 (Workspace A-M)")]
+    MySQLShard2[("MySQL 分片 2 (Workspace N-Z)")]
     PresenceBus["Presence Bus 状态流总线 (Redis Cluster)"]
   end
 
-  ClientApp <-->|gRPC / HTTPS 就近查询| FlannelProxy
-  ClientApp <-->|WebSocket 长连接连接| WSGateway
+  ClientApp <--->|"gRPC / HTTPS 就近查询"| FlannelProxy
+  ClientApp <--->|"WebSocket 长连接连接"| WSGateway
 
-  FlannelProxy <-->|本地缓存失效时回源| PHPApp
-  PHPApp -->|基于 Workspace ID 写入| VitessRouter
+  FlannelProxy <--->|"本地缓存失效时回源"| PHPApp
+  PHPApp -->|"基于 Workspace ID 写入"| VitessRouter
   
   VitessRouter --> MySQLShard1
   VitessRouter --> MySQLShard2
 
-  PHPApp -->|通知状态变化| PresenceBus
-  PresenceBus -->|分发状态消息| WSGateway
-  WSGateway -->|消息下发| ClientApp
+  PHPApp -->|"通知状态变化"| PresenceBus
+  PresenceBus -->|"分发状态消息"| WSGateway
+  WSGateway -->|"消息下发"| ClientApp
 ```
 
 ---

@@ -68,24 +68,24 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  UserTokyo["东京客户端 (User in Tokyo)"] -->|1. 请求获取 /logo.png| DNS["CDN Anycast DNS 解析"]
-  DNS -->|2. 智能解析到最近PoP节点| TokyoPoP["东京边缘 PoP 缓存节点 <br/>(Tokyo PoP Edge Node)"]
+  UserTokyo["东京客户端 (User in Tokyo)"] -->|"1. 请求获取 /logo.png"| DNS["CDN Anycast DNS 解析"]
+  DNS -->|"2. 智能解析到最近PoP节点"| TokyoPoP["东京边缘 PoP 缓存节点 <br/>(Tokyo PoP Edge Node)"]
   
-  subgraph EdgeCheck["边缘节点判断"]
-    TokyoPoP -->|3. 查询本地 KV 缓存| CheckCache{是否命中?}
-    CheckCache -->|3a. 命中 HIT| ReturnHit["直接返回 cached 静态内容 <br/>(网络延迟 < 10ms!)"]
-    CheckCache -->|3b. 未命中 MISS| PullOrigin["发起跨洲回源拉取"]
+  subgraph EdgeCheck ["边缘节点判断']"]
+    TokyoPoP -->|"3. 查询本地 KV 缓存"| CheckCache{"是否命中?"}
+    CheckCache -->|"3a. 命中 HIT"| ReturnHit["直接返回 cached 静态内容 <br/>(网络延迟 < 10ms!)"]
+    CheckCache -->|"3b. 未命中 MISS"| PullOrigin["发起跨洲回源拉取"]
   end
   
   ReturnHit --> UserTokyo
   
-  subgraph OriginVirginia["美国弗吉尼亚源站 (Origin Server)"]
+  subgraph OriginVirginia ["美国弗吉尼亚源站 (Origin Server)']"]
     Origin["弗吉尼亚应用主机 (Virginia Origin)"]
   end
   
-  PullOrigin -->|4. 跨洋网络往返 (RTT ~150ms)| Origin
-  Origin -->|5. 返回源站最新图片资源| TokyoPoP
-  TokyoPoP -->|6. 写入东京本地缓存库 (带 TTL)| ReturnHit
+  PullOrigin -->|"4. 跨洋网络往返 (RTT ~150ms)"| Origin
+  Origin -->|"5. 返回源站最新图片资源"| TokyoPoP
+  TokyoPoP -->|"6. 写入东京本地缓存库 (带 TTL)"| ReturnHit
 ```
 
 - 用户请求被 [DNS/Anycast](./load-balancing) 导到**最近的边缘节点**（解决距离）。

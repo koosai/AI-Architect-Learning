@@ -170,8 +170,8 @@ graph TB
 
 ```mermaid
 graph TB
-  subgraph SharedSaaS["传统共享多租户 SaaS (嘈杂邻居危机)"]
-    MerchantA1["商户 A (普通)"] & MerchantB1["商户 B (网红闪购秒杀!)"]
+  subgraph SharedSaaS ["传统共享多租户 SaaS (嘈杂邻居危机)')"]
+    MerchantA1["商户 A (普通)') & MerchantB1('商户 B (网红闪购秒杀!)"]
     SharedDB["共享集中式单体 MySQL 数据库"]
     GlobalCrash["MySQL CPU 100% 挂起 -> 所有商户全部瘫痪!"]
     
@@ -179,8 +179,8 @@ graph TB
     style GlobalCrash fill:#ffcdd2,stroke:#c62828
   end
 
-  subgraph PodSaaS["Shopify Pod 物理隔离架构"]
-    MerchantA2["商户 A"] --> Pod10["Pod 10("独立 Rails + MySQL + Redis")"]
+  subgraph PodSaaS ["Shopify Pod 物理隔离架构')"]
+    MerchantA2["商户 A"] --> Pod10["Pod 10('独立 Rails + MySQL + Redis')"]
     MerchantB2["商户 B (闪购)"] --> DedicatedPodX["Dedicated Pod X (独立物理资源)"]
     SafeNote["Pod X 流量轰炸绝不影响 Pod 10! 100% 安全!"]
     

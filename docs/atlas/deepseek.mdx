@@ -213,11 +213,11 @@ DeepSeek-R1 开启了 LLM 自动推理（Reasoning）的新纪元。其核心 RL
 
 ```mermaid
 flowchart TD
-  Prompt[Prompt Q] --> Sample["采样 N 个回答: A1, A2, ..., AN"]
-  Sample --> Reward["规则 Reward Evaluator("正确性检查 + 格式 Check")"]
+  Prompt["Prompt Q"] --> Sample["采样 N 个回答: A1, A2, ..., AN"]
+  Sample --> Reward["规则 Reward Evaluator('正确性检查 + 格式 Check')"]
   Reward --> Score["获得得分: r1, r2, ..., rN"]
   Score --> Advantage["计算组内相对 Advantage: A_i = (r_i - mean(r)) / std(r)"]
-  Advantage --> PolicyUpdate[GRPO 策略梯度更新 Actor]
+  Advantage --> PolicyUpdate["GRPO 策略梯度更新 Actor"]
 ```
 
 由于没有 Critic 网络，GRPO 省去了整整一个万亿参数模型的显存！模型在训练过程中自主涌现出了思考链（`<thought>`）、自我纠错（"Wait, let me double check..."）和长推理能力。

@@ -48,13 +48,13 @@ SQLite 的核心设计用意在于：**取消服务端进程，将整个 SQL 数
 
 ```mermaid
 graph TD
-  AppProcess["应用程序进程空间 (Single Process)"] -->|1. C API 函数调用 (sqlite3_exec)| SQLCompiler["SQL 编译器 (Parser / CodeGen)"]
-  SQLCompiler -->|2. 生成字节码指令| VDBE["VDBE 虚拟机 (Opcode 解释器)"]
-  VDBE -->|3. 物理页查找与修改| BTree_Pager["B-Tree 页面管理器 & Page Cache"]
-  BTree_Pager -->|4. 读写物理页 (WAL / DB File)| OS_VFS["VFS (Virtual File System 跨平台抽象层)"]
-  OS_VFS -->|5. 读写单文件| DiskDB[".db 单二进制数据库文件"]
+  AppProcess["应用程序进程空间 (Single Process)"] -->|"1. C API 函数调用 (sqlite3_exec)"| SQLCompiler["SQL 编译器 (Parser / CodeGen)"]
+  SQLCompiler -->|"2. 生成字节码指令"| VDBE["VDBE 虚拟机 (Opcode 解释器)"]
+  VDBE -->|"3. 物理页查找与修改"| BTree_Pager["B-Tree 页面管理器 & Page Cache"]
+  BTree_Pager -->|"4. 读写物理页 (WAL / DB File)"| OS_VFS["VFS (Virtual File System 跨平台抽象层)"]
+  OS_VFS -->|"5. 读写单文件"| DiskDB[".db 单二进制数据库文件"]
 
-  subgraph EmbeddedLibrary["SQLite C 静态库 (sqlite3.c)"]
+  subgraph EmbeddedLibrary ["SQLite C 静态库 (sqlite3.c)']"]
     SQLCompiler
     VDBE
     BTree_Pager
@@ -85,9 +85,9 @@ graph TD
 
 ```mermaid
 mindmap
-  root("(SQLite 架构"))
+  root(("SQLite 架构"))
     SQL 编译平面
-      Tokenizer / Lexer 词法分析
+      ["Tokenizer / Lexer 词法分析"]
       lemon 语法分析器
       Code Generator 字节码生成
     VDBE 虚拟机
@@ -95,13 +95,13 @@ mindmap
       Registers 寄存器数组
       Cursor 游标管理
     存储与缓存平面
-      B-Tree 表/索引树结构
-      Pager 页面缓存 (Page Cache)
-      <GlossaryTerm term="Rollback Journal (回滚日志)" definition="Rollback Journal：SQLite 传统的事务原子性保证机制。在修改磁盘页前，先将原物理页的旧数据拷贝备份至 .journal 文件中。若事务失败或崩溃，通过将 .journal 中的旧页覆盖回原 DB 文件实现回滚。但在写入期间会阻塞读操作。">Rollback Journal</GlossaryTerm>
-      <GlossaryTerm term="WAL (预写日志模式)" definition="WAL (Write-Ahead Logging)：SQLite 现代高并发事务模式。所有写操作顺序追加写入独立的 .wal 文件中，原 DB 文件保持只读。使得读事务与写事务互不阻塞，大大提升了多线程并发吞吐。">WAL 预写日志模式</GlossaryTerm>
+      ["B-Tree 表/索引树结构"]
+      ["Pager 页面缓存 (Page Cache)"]
+      Rollback Journal
+      WAL 预写日志模式
     OS 操作系统移植层
-      <GlossaryTerm term="VFS (虚拟文件系统)" definition="VFS (Virtual File System)：SQLite 的操作系统接口抽象层。它将物理文件的打开、关闭、读写、加锁及 sync 落盘抽象为标准 C 结构体句柄，使 SQLite 能够轻松移植到 Windows、POSIX、FreeRTOS、VxWorks 等各种 OS 上。">VFS 抽象层</GlossaryTerm>
-      共享内存 (.shm 校验索引)
+      VFS 抽象层
+      ["共享内存 (.shm 校验索引)"]
 ```
 
 ---
@@ -114,9 +114,9 @@ SQLite 将整个系统划分为顶层的编译器、中层的虚拟执行机与�
 
 ```mermaid
 graph LR
-  HostApp["宿主应用程序 (如 Chrome / iOS App)"] -->|1. C API 直接调用 (sqlite3_step)| SQLiteLib["SQLite 嵌入式引擎 (进程内)"]
-  SQLiteLib <-->|2. 读写物理磁盘页| SingleDBFile["应用程序本地单文件 (app.db)"]
-  SQLiteLib <-->|3. WAL 模式下追加写入| WALFile["预写日志文件 (app.db-wal)"]
+  HostApp["宿主应用程序 (如 Chrome / iOS App)"] -->|"1. C API 直接调用 (sqlite3_step)"| SQLiteLib["SQLite 嵌入式引擎 (进程内)"]
+  SQLiteLib <--->|"2. 读写物理磁盘页"| SingleDBFile["应用程序本地单文件 (app.db)"]
+  SQLiteLib <--->|"3. WAL 模式下追加写入"| WALFile["预写日志文件 (app.db-wal)"]
 ```
 
 ### 3b. Container Diagram (容器架构)
@@ -130,7 +130,7 @@ graph TB
     
     subgraph VdbeEngine["VDBE 虚拟机"]
       OpcodeRunner["VDBE 字节码执行循环"]
-      Registers["虚拟寄存器组 (Mem["])"]
+      Registers["虚拟寄存器组 (Mem)"]
     end
 
     subgraph PagerSystem["页面与缓存管理 (Pager & Storage)"]

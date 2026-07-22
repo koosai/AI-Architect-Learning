@@ -161,28 +161,28 @@ graph TB
 
 ```mermaid
 graph TB
-  subgraph Traditional["传统 MicroVM (Firecracker) 多租户架构"]
-    VM1["VM 1 <br> [Linux内核 + 运行时"]"]
-    VM2["VM 2 <br> [Linux内核 + 运行时"]"]
+  subgraph Traditional ["传统 MicroVM (Firecracker) 多租户架构']"]
+    VM1["VM 1 <br> (Linux内核 + 运行时"]
+    VM2["VM 2 <br> (Linux内核 + 运行时"]
     HypervisorHost["Host OS (Dom0 管理器)"]
     PhysRAM["物理内存 (每个虚机起步 256MB 开销)"]
     
-    VM1 -->|读写| PhysRAM
-    VM2 -->|读写| PhysRAM
-    VM1 <-->|强硬物理页表边界隔离| HypervisorHost
+    VM1 -->|"读写"| PhysRAM
+    VM2 -->|"读写"| PhysRAM
+    VM1 <--->|"强硬物理页表边界隔离"| HypervisorHost
     
     style HypervisorHost fill:#ffcdd2,stroke:#c62828
   end
 
-  subgraph V8Isolates["Cloudflare Workers (V8 Isolate) 架构"]
+  subgraph V8Isolates ["Cloudflare Workers (V8 Isolate) 架构']"]
     V8HostProcess["单进程 Workers Host"]
-    Isolate1["V8 Isolate 1 (租户 A)<br>[独立堆 3MB"]"]
-    Isolate2["V8 Isolate 2 (租户 B)<br>[独立堆 3MB"]"]
+    Isolate1["V8 Isolate 1 (租户 A)<br>(独立堆 3MB"]
+    Isolate2["V8 Isolate 2 (租户 B)<br>(独立堆 3MB"]
     IsolateRAM["进程内存 (Isolate 仅受 V8 指针空间限制)"]
     
-    Isolate1 -->|进程内内存挂载| IsolateRAM
-    Isolate2 -->|进程内内存挂载| IsolateRAM
-    Isolate1 <-->|V8 堆指针边界安全拦截| V8HostProcess
+    Isolate1 -->|"进程内内存挂载"| IsolateRAM
+    Isolate2 -->|"进程内内存挂载"| IsolateRAM
+    Isolate1 <--->|"V8 堆指针边界安全拦截"| V8HostProcess
     
     style V8HostProcess fill:#c8e6c9,stroke:#2e7d32
   end

@@ -166,7 +166,7 @@ Spark Streaming 采用把无限流切割为小微批（Micro-Batch）的思想�
 
 ```mermaid
 graph TB
-  subgraph SparkStreaming["Spark Streaming 微批模型 (Micro-Batching)"]
+  subgraph SparkStreaming ["Spark Streaming 微批模型 (Micro-Batching)']"]
     BatchTimer["批定时器 (如每 500ms 触发一次)"]
     BatchData["打包为 RDD 离散微批文件"]
     BatchExec["提交 Spark 批处理 Task 计算"]
@@ -175,8 +175,8 @@ graph TB
     style BatchTimer fill:#ffcdd2,stroke:#c62828
   end
 
-  subgraph FlinkStream["Flink 原生事件驱动模型 (Event-Driven)"]
-    EventStream["无限事件流: [E1, E2, E3, E4..."]"]
+  subgraph FlinkStream ["Flink 原生事件驱动模型 (Event-Driven)']"]
+    EventStream["无限事件流: (E1, E2, E3, E4..."]
     SingleOp["算子按单事件流式触发: op(Event)"]
     StateUpdate["内存 State 实时更新 + 毫秒级输出"]
     
@@ -195,21 +195,21 @@ graph TB
 
 ```mermaid
 graph TD
-  subgraph InputChannels["多路输入 Channel"]
-    Ch1["Channel 1: [Data B"] [Barrier N] [Data A]"]
-    Ch2["Channel 2: [Barrier N"] [Data X]"]
+  subgraph InputChannels ["多路输入 Channel')"]
+    Ch1["Channel 1: (Data B') (Barrier N) (Data A)"]
+    Ch2["Channel 2: (Barrier N') (Data X)"]
   end
 
-  subgraph OperatorAlign["算子 Barrier 对齐阶段"]
+  subgraph OperatorAlign ["算子 Barrier 对齐阶段')"]
     AlignBuffer["Buffer 区: 暂存 Channel 2 处 Barrier N 之后的 Data Y"]
     AlignWait["等待 Channel 1 的 Barrier N 到达..."]
   end
 
-  Ch2 -->|1. Barrier N 先到达| AlignBuffer
-  Ch1 -->|2. Barrier N 随后到达 (对齐完成)| AlignWait
+  Ch2 -->|"1. Barrier N 先到达"| AlignBuffer
+  Ch1 -->|"2. Barrier N 随后到达 (对齐完成)"| AlignWait
   
-  AlignWait -->|3. 触发本地 State 异步 Snapshot| AsyncStateSave["异步保存 State 至 S3"]
-  AlignWait -->|4. 向下游继续下发 Barrier N| Downstream["广播 Barrier N 给下游"]
+  AlignWait -->|"3. 触发本地 State 异步 Snapshot"| AsyncStateSave["异步保存 State 至 S3"]
+  AlignWait -->|"4. 向下游继续下发 Barrier N"| Downstream["广播 Barrier N 给下游"]
 ```
 
 ---

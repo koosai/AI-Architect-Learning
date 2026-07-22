@@ -37,7 +37,7 @@ import QuizCard from '@site/src/components/QuizCard';
 
 ```mermaid
 flowchart TD
-  subgraph TestPyramid["测试金字塔 (Test Pyramid)"]
+  subgraph TestPyramid ["测试金字塔 (Test Pyramid)']"]
     direction TB
     E2E["端到端测试 (E2E Tests)<br/>数量: 少量 (~5%)<br/>特点: 慢、贵、极易Flaky、信心最高"]
     Int["集成测试 (Integration Tests)<br/>数量: 适量 (~25%)<br/>特点: 中速、有网路/数据库依赖、真实性好"]
@@ -47,9 +47,12 @@ flowchart TD
   E2E --> Int
   Int --> Unit
   
-  Note over E2E: 顶层: 模拟真实用户流 (如: 成功报名)
-  Note over Int: 中层: 验证组件协作 (如: API + 数据库)
-  Note over Unit: 底层: 验证函数逻辑 (如: 格式校验)
+  Note_E2E["顶层: 模拟真实用户流 (如: 成功报名)"]
+  E2E -.-> Note_E2E
+  Note_Int["中层: 验证组件协作 (如: API + 数据库)"]
+  Int -.-> Note_Int
+  Note_Unit["底层: 验证函数逻辑 (如: 格式校验)"]
+  Unit -.-> Note_Unit
 ```
 
 | 层 | 测什么 | 特点 |

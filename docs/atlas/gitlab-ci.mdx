@@ -48,15 +48,15 @@ GitLab CI 的核心设计用意在于：**采用反向长轮询（Long Polling�
 
 ```mermaid
 graph TD
-  GitLabServer["GitLab Server("Rails API + Redis + Postgres")"] <-->|1. HTTPS 反向长轮询 (Job Pull)| RunnerAgent["GitLab Runner (Go Agent)"]
+  GitLabServer["GitLab Server('Rails API + Redis + Postgres')"] <--->|"1. HTTPS 反向长轮询 (Job Pull)"| RunnerAgent["GitLab Runner (Go Agent)"]
   
-  subgraph RunnerRuntime["Runner 内部执行环境 (Executor)"]
-    RunnerAgent -->|2. 动态创建容器| DockerExecutor["Docker / K8s Executor"]
-    DockerExecutor -->|3. 执行 .gitlab-ci.yml 指令| JobContainer["Job 隔离容器"]
+  subgraph RunnerRuntime ["Runner 内部执行环境 (Executor)')"]
+    RunnerAgent -->|"2. 动态创建容器"| DockerExecutor["Docker / K8s Executor"]
+    DockerExecutor -->|"3. 执行 .gitlab-ci.yml 指令"| JobContainer["Job 隔离容器"]
   end
   
-  JobContainer -->|4. 下载前置 Job 产物| ArtifactsStore["S3 / MinIO 存储 (Artifacts & Cache)"]
-  JobContainer -->|5. 实时上报构建日志| GitLabServer
+  JobContainer -->|"4. 下载前置 Job 产物"| ArtifactsStore["S3 / MinIO 存储 (Artifacts & Cache)"]
+  JobContainer -->|"5. 实时上报构建日志"| GitLabServer
 ```
 
 <DesignIntent
@@ -151,7 +151,7 @@ graph TB
   
   BuildJobPod <-->|5. 下载/保存依赖缓存| CacheBucket
   BuildJobPod -->|6. 上传编译结果产物| ArtifactBucket
-  TestJobPod <--|7. 下载前置编译产物| ArtifactBucket
+  ArtifactBucket -->|7. 下载前置编译产物| TestJobPod
 
   style PollService fill:#bbdefb,stroke:#1976d2
   style BuildJobPod fill:#c8e6c9,stroke:#2e7d32
@@ -167,7 +167,7 @@ graph TB
 
 ```mermaid
 graph TB
-  subgraph StageBarrier["传统 Stage 屏障调度 (受限最慢 Job)"]
+  subgraph StageBarrier ["传统 Stage 屏障调度 (受限最慢 Job)']"]
     BuildApp1["Build App (耗时 10 分钟)"]
     BuildDocs1["Build Docs (耗时 1 分钟)"]
     
@@ -181,15 +181,15 @@ graph TB
     style Barrier1 fill:#ffcdd2,stroke:#c62828
   end
 
-  subgraph DAGScheduling["GitLab CI DAG 拓扑调度 (needs 关键字)"]
+  subgraph DAGScheduling ["GitLab CI DAG 拓扑调度 (needs 关键字)']"]
     BuildApp2["Build App (耗时 10 分钟)"]
     BuildDocs2["Build Docs (耗时 1 分钟)"]
     
     TestApp2["Test App"]
     TestDocs2["Test Docs"]
     
-    BuildApp2 -->|needs: [Build App]| TestApp2
-    BuildDocs2 -->|needs: [Build Docs] 立即拉起!| TestDocs2
+    BuildApp2 -->|"needs: (Build App)"| TestApp2
+    BuildDocs2 -->|"needs: (Build Docs) 立即拉起!"| TestDocs2
     style TestDocs2 fill:#c8e6c9,stroke:#2e7d32
   end
 ```

@@ -103,33 +103,33 @@ graph LR
 
 ```mermaid
 graph TB
-  subgraph ClusterGlobal["全局控制面"]
+  subgraph ClusterGlobal ["全局控制面']"]
     GCS["全局控制存储 (GCS - C++ Redis-like)"]
   end
 
-  subgraph RayNode["物理计算节点 (Ray Worker Node)"]
-    subgraph Raylet["本地控制守护进程 (Raylet - C++)"]
+  subgraph RayNode ["物理计算节点 (Ray Worker Node)']"]
+    subgraph Raylet ["本地控制守护进程 (Raylet - C++)']"]
       LocalScheduler["本地调度器 (Local Scheduler)"]
       ObjectManager["分布式对象管理器 (Object Manager)"]
     end
     
-    subgraph PlasmaStore["共享内存引擎 (Plasma Object Store)"]
+    subgraph PlasmaStore ["共享内存引擎 (Plasma Object Store)']"]
       SharedMem["POSIX 共享内存段 (/dev/shm)"]
     end
 
-    subgraph Workers["工作进程组 (Python Processes)"]
+    subgraph Workers ["工作进程组 (Python Processes)']"]
       WorkerProcess1["Worker 进程 1 (Stateless Task)"]
       WorkerProcess2["Worker 进程 2 (Stateful Actor)"]
     end
   end
 
-  UserDriver["Driver 驱动端 (@ray.remote)"] -->|1. 注册 Task/Actor| LocalScheduler
-  LocalScheduler <-->|2. 状态汇报/全局寻址| GCS
-  LocalScheduler -->|3. 本地进程拉起| Workers
+  UserDriver["Driver 驱动端 (@ray.remote)"] -->|"1. 注册 Task/Actor"| LocalScheduler
+  LocalScheduler <--->|"2. 状态汇报/全局寻址"| GCS
+  LocalScheduler -->|"3. 本地进程拉起"| Workers
   
-  Workers <-->|4. 零拷贝内存映射 (mmap)| SharedMem
-  ObjectManager <-->|5. 多机间数据拉取 (RPC/RDMA)| SharedMem
-  LocalScheduler <-->|6. 调度路由分配| ObjectManager
+  Workers <--->|"4. 零拷贝内存映射 (mmap)"| SharedMem
+  ObjectManager <--->|"5. 多机间数据拉取 (RPC/RDMA)"| SharedMem
+  LocalScheduler <--->|"6. 调度路由分配"| ObjectManager
 ```
 
 ---

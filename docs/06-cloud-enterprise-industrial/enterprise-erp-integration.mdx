@@ -48,28 +48,28 @@ import QuizCard from '@site/src/components/QuizCard';
 ```mermaid
 graph TD
     subgraph P2P["1. 点对点直连 (Spaghetti Connect)"]
-        A1("(Sys A")) <--> B1("(Sys B"))
-        A1 <--> C1("(Sys C"))
-        B1 <--> C1
-        A1 <--> D1("(Sys D"))
-        B1 <--> D1
-        C1 <--> D1
+        A1(("Sys A")) <---> B1(("Sys B"))
+        A1 <---> C1(("Sys C"))
+        B1 <---> C1
+        A1 <---> D1(("Sys D"))
+        B1 <---> D1
+        C1 <---> D1
         Note1["连接数 N*(N-1)/2 呈平方爆炸"]
     end
 
     subgraph Hub_ESB["2. 企业服务总线 (ESB Hub)"]
-        A2("(Sys A")) --- ESB{{"ESB<br>(总线中枢)"}}
-        B2("(Sys B")) --- ESB
-        C2("(Sys C")) --- ESB
-        D2("(Sys D")) --- ESB
+        A2(("Sys A")) --- ESB{{"ESB<br>(总线中枢)"}}
+        B2(("Sys B")) --- ESB
+        C2(("Sys C")) --- ESB
+        D2(("Sys D")) --- ESB
         Note2["星型解耦，但总线过重易成单点瓶颈"]
     end
 
     subgraph Event_Driven["3. 事件驱动 / 消息队列 (Pub-Sub)"]
-        A3("(Sys A")) -->|发布事件| Broker["["消息队列 / Event Broker"]]
-        Broker -->|异步分发| B3("(Sys B"))
-        Broker -->|订阅消费| C3("(Sys C"))
-        Broker -->|订阅消费| D3("(Sys D"))
+        A3(("Sys A")) -->|发布事件| Broker["消息队列 / Event Broker"]
+        Broker -->|异步分发| B3(("Sys B"))
+        Broker -->|订阅消费| C3(("Sys C"))
+        Broker -->|订阅消费| D3(("Sys D"))
         Note3["极简异步解耦，高吞吐可伸缩"]
     end
 
@@ -119,15 +119,15 @@ graph LR
     end
 
     subgraph ACL["防腐层 (Anti-Corruption Layer)"]
-        Adapter["适配器 (Adapter)<br>适配业务接口"] <--> Translator["翻译器 (Translator)<br>数据模型双向映射"]
+        Adapter["适配器 (Adapter)<br>适配业务接口"] <---> Translator["翻译器 (Translator)<br>数据模型双向映射"]
     end
 
     subgraph Legacy_System["遗留老系统 (Legacy ERP System)"]
         LegacyModel["老旧数据模型<br>(混乱、混杂模型: XML/COBOL)"]
     end
 
-    DomainModel <--> Adapter
-    Translator <--> LegacyModel
+    DomainModel <---> Adapter
+    Translator <---> LegacyModel
 
     style DomainModel fill:#0f766e,stroke:#0d9488,color:#f0fdfa
     style ACL fill:#b45309,stroke:#d97706,color:#fffdfa

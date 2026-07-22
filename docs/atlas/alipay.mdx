@@ -51,25 +51,25 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 graph TD
-  UserClient["全球消费者 (支付宝 App 双 11 零点秒杀)"] -->|1. HTTP / Spanner 协议| EdgeGW["MSPA Client & 边缘流量网关"]
+  UserClient["全球消费者 (支付宝 App 双 11 零点秒杀)"] -->|"1. HTTP / Spanner 协议"| EdgeGW["MSPA Client & 边缘流量网关"]
   
-  subgraph LDCUnitArchitecture["支付宝 LDC 单元化异地多活架构"]
-    EdgeGW <-->|2. 根据 User ID Hash 计算 Routing| LDCRouter["LDC 动态路由网关 (Zone Router)"]
+  subgraph LDCUnitArchitecture ["支付宝 LDC 单元化异地多活架构')"]
+    EdgeGW <--->|"2. 根据 User ID Hash 计算 Routing"| LDCRouter["LDC 动态路由网关 (Zone Router)"]
     
-    subgraph HangzhouDataCenter["杭州数据中心 Zone"]
-      LDCRouter -->|3a. 路由至 RZone 01| RZone01["RZone 01("包含 500 万用户全栈微服务 + OceanBase 副本")"]
+    subgraph HangzhouDataCenter ["杭州数据中心 Zone')"]
+      LDCRouter -->|"3a. 路由至 RZone 01"| RZone01["RZone 01('包含 500 万用户全栈微服务 + OceanBase 副本')"]
     end
     
-    subgraph ShanghaiDataCenter["上海数据中心 Zone"]
-      LDCRouter -->|3b. 路由至 RZone 02| RZone02["RZone 02("包含 500 万用户全栈微服务 + OceanBase 副本")"]
+    subgraph ShanghaiDataCenter ["上海数据中心 Zone')"]
+      LDCRouter -->|"3b. 路由至 RZone 02"| RZone02["RZone 02('包含 500 万用户全栈微服务 + OceanBase 副本')"]
     end
     
-    subgraph GlobalCommonZone["全局共享 Zone"]
-      RZone01 & RZone02 <-->|4. 只读共享| GZone["GZone (全局公共服务: 如基础清算与公共元数据)"]
+    subgraph GlobalCommonZone ["全局共享 Zone')"]
+      RZone01 & RZone02 <--->|"4. 只读共享"| GZone["GZone (全局公共服务: 如基础清算与公共元数据)"]
     end
   end
 
-  RZone01 <-->|5. Paxos 跨城三副本复制 (RPO=0)| OceanBaseCluster["OceanBase 分布式数据库集群"]
+  RZone01 <--->|"5. Paxos 跨城三副本复制 (RPO=0)"| OceanBaseCluster["OceanBase 分布式数据库集群"]
 ```
 
 <DesignIntent
@@ -176,7 +176,7 @@ graph TB
 
 ```mermaid
 graph TB
-  subgraph CentralizedSystem["传统集中式架构 (物理容量墙)"]
+  subgraph CentralizedSystem ["传统集中式架构 (物理容量墙)')"]
     AllUsers["全网 5 亿用户"] --> SingleDB["集中式 Oracle / MySQL 主库"]
     CrashPoint["高并发脉冲 -> DB 连接池爆满 + 死锁挂起!"]
     
@@ -184,9 +184,9 @@ graph TB
     style CrashPoint fill:#ffcdd2,stroke:#c62828
   end
 
-  subgraph LDCSystem["支付宝 LDC 单元化架构 (无限水平扩容)"]
-    UsersGroup1["用户群 A (User_ID % 2 == 0)"] --> RZoneA["RZone A("包含独立 App + OB 数据库")"]
-    UsersGroup2["用户群 B (User_ID % 2 == 1)"] --> RZoneB["RZone B("包含独立 App + OB 数据库")"]
+  subgraph LDCSystem ["支付宝 LDC 单元化架构 (无限水平扩容)')"]
+    UsersGroup1["用户群 A (User_ID % 2 == 0)"] --> RZoneA["RZone A('包含独立 App + OB 数据库')"]
+    UsersGroup2["用户群 B (User_ID % 2 == 1)"] --> RZoneB["RZone B('包含独立 App + OB 数据库')"]
     InfiniteScale["加机房加 RZone 即可线性增加全网 TPS！"]
     
     RZoneA & RZoneB --- InfiniteScale

@@ -71,31 +71,31 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    subgraph Control_Plane["控制面 (Control Plane - Istiod)"]
+    subgraph Control_Plane ["控制面 (Control Plane - Istiod)']"]
         CP_Config["策略/配置规则 (YAML)"]
         CP_CA["CA 证书管理 (证书轮换)"]
-        CP_Config -->|分发路由与安全配置 (xDS API)| SidecarA
-        CP_Config -->|分发路由与安全配置 (xDS API)| SidecarB
-        CP_CA -->|分发 mTLS 证书密钥| SidecarA
-        CP_CA -->|分发 mTLS 证书密钥| SidecarB
+        CP_Config -->|"分发路由与安全配置 (xDS API)"| SidecarA
+        CP_Config -->|"分发路由与安全配置 (xDS API)"| SidecarB
+        CP_CA -->|"分发 mTLS 证书密钥"| SidecarA
+        CP_CA -->|"分发 mTLS 证书密钥"| SidecarB
     end
 
-    subgraph Data_Plane["数据面 (Data Plane - 东西向流量治理)"]
-        subgraph Pod_A["Pod A (服务 A)"]
+    subgraph Data_Plane ["数据面 (Data Plane - 东西向流量治理)']"]
+        subgraph Pod_A ["Pod A (服务 A)']"]
             AppA["业务容器 A<br>(Application A)"]
             SidecarA["边车代理 A<br>(Envoy Sidecar)"]
         end
         
-        subgraph Pod_B["Pod B (服务 B)"]
+        subgraph Pod_B ["Pod B (服务 B)']"]
             AppB["业务容器 B<br>(Application B)"]
             SidecarB["边车代理 B<br>(Envoy Sidecar)"]
         end
     end
 
-    Ingress["API 网关 (Ingress Gateway - 南北向入口)"] -->|1. 外部流量路由| SidecarA
-    AppA -->|2. 发送普通 HTTP 请求| SidecarA
-    SidecarA -->|3. 加密双向认证 (mTLS)| SidecarB
-    SidecarB -->|4. 解密后转发普通 HTTP 请求| AppB
+    Ingress["API 网关 (Ingress Gateway - 南北向入口)"] -->|"1. 外部流量路由"| SidecarA
+    AppA -->|"2. 发送普通 HTTP 请求"| SidecarA
+    SidecarA -->|"3. 加密双向认证 (mTLS)"| SidecarB
+    SidecarB -->|"4. 解密后转发普通 HTTP 请求"| AppB
 
     style Control_Plane fill:#1e293b,stroke:#475569,stroke-width:1px,color:#fee2e2
     style SidecarA fill:#0f766e,stroke:#0d9488,stroke-width:2px,color:#f0fdfa

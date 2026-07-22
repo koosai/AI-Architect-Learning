@@ -200,21 +200,21 @@ PagedAttention 是 vLLM 赖以成名的底层创新。它的工作原理与操�
 
 ```mermaid
 graph TD
-  subgraph PagedAttentionMapping ["PagedAttention 逻辑与物理块映射关系"]
-    subgraph LogicalSequence ["请求 A 的逻辑 KV Cache"]
+  subgraph PagedAttentionMapping ["PagedAttention 逻辑与物理块映射关系']"]
+    subgraph LogicalSequence ["请求 A 的逻辑 KV Cache']"]
       LB0["逻辑块 0 (Token 0-15)"]
       LB1["逻辑块 1 (Token 16-31)"]
     end
     
-    subgraph PageTable ["请求 A 的块映射表 (Block Table)"]
+    subgraph PageTable ["请求 A 的块映射表 (Block Table)']"]
       Map0["逻辑块 0 --> 物理块 7"]
       Map1["逻辑块 1 --> 物理块 2"]
     end
     
-    subgraph PhysicalVRAM ["GPU 离散物理显存空间"]
-      PB2["("物理块 2<br/>(存放 Token 16-31)")"]
-      PB5["("物理块 5 (空闲中)")"]
-      PB7["("物理块 7<br/>(存放 Token 0-15)")"]
+    subgraph PhysicalVRAM ["GPU 离散物理显存空间']"]
+      PB2[("物理块 2<br/>(存放 Token 16-31)")]
+      PB5[("物理块 5 (空闲中)")]
+      PB7[("物理块 7<br/>(存放 Token 0-15)")]
     end
     
     LB0 --> Map0 --> PB7
@@ -238,15 +238,17 @@ vLLM 采用 **连续批处理（Continuous Batching）**，即在**迭代（Iter
 
 ```mermaid
 graph TD
-  subgraph SchedulingComparison ["传统 Batching 与 Continuous Batching 调度对比"]
-    subgraph StaticBatching ["静态 Batching (请求级阻塞等待)"]
-      SB_Iter1["Iter 1: [Req_1, Req_2, Req_3"]"] --> SB_Iter2["Iter 2: [Req_1, Req_2, Req_3"]"]
-      Note over SB_Iter2: Req_2 已经完成, 但由于 Req_1 没完,<br/>必须在 Batch 里无意义占用显存和计算！
+  subgraph SchedulingComparison ["传统 Batching 与 Continuous Batching 调度对比')"]
+    subgraph StaticBatching ["静态 Batching (请求级阻塞等待)')"]
+      SB_Iter1["Iter 1: (Req_1, Req_2, Req_3')"] --> SB_Iter2["Iter 2: (Req_1, Req_2, Req_3"]
+      Note_SB_Iter2["Req_2 已经完成, 但由于 Req_1 没完,<br/>必须在 Batch 里无意义占用显存和计算！"]
+      SB_Iter2 -.-> Note_SB_Iter2
     end
     
-    subgraph ContinuousBatching ["连续 Batching (迭代级即刻插入与退出)"]
-      CB_Iter1["Iter 1: [Req_1, Req_2 (运行中)"]"] --> CB_Iter2["Iter 2: [Req_1, Req_3 (Req_2退出, 替换为新Req_3)"]"]
-      Note over CB_Iter2: 新请求即时插入, 完成请求即刻退出,<br/>GPU 始终饱和工作！
+    subgraph ContinuousBatching ["连续 Batching (迭代级即刻插入与退出)')"]
+      CB_Iter1["Iter 1: (Req_1, Req_2 (运行中)')"] --> CB_Iter2["Iter 2: (Req_1, Req_3 (Req_2退出, 替换为新Req_3)"]
+      Note_CB_Iter2["新请求即时插入, 完成请求即刻退出,<br/>GPU 始终饱和工作！"]
+      CB_Iter2 -.-> Note_CB_Iter2
     end
   end
 ```
@@ -326,13 +328,13 @@ vLLM 内部的显存分页依赖底层的两个关键实体：`Block Table` 与 
 
 ```mermaid
 graph TD
-  subgraph BlockAllocatorLayout ["块映射表与分配器数据结构布局"]
-    subgraph Allocator ["全局块分配器 (Block Allocator)"]
-      FreeList["GPU 空闲物理块链表: [ PB_0, PB_3, PB_9, ... "]"]
+  subgraph BlockAllocatorLayout ["块映射表与分配器数据结构布局']"]
+    subgraph Allocator ["全局块分配器 (Block Allocator)']"]
+      FreeList["GPU 空闲物理块链表: ( PB_0, PB_3, PB_9, ... "]
       AllocList["已分配物理块计数与引用计数表"]
     end
     
-    subgraph RequestPageTable ["Request-1 专用页表 (Block Table)"]
+    subgraph RequestPageTable ["Request-1 专用页表 (Block Table)']"]
       MapItem1["逻辑索引 0 --> 物理块 0 (引用计数=1)"]
       MapItem2["逻辑索引 1 --> 物理块 9 (引用计数=2, 前缀共享中)"]
     end

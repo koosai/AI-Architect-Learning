@@ -74,14 +74,14 @@ graph TD
     classDef online fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
     classDef secure fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
 
-    subgraph OfflineChain ["离线摄取更新数据管道"]
+    subgraph OfflineChain ["离线摄取更新数据管道']"]
         RawDocs["原始文档库"] --> Normalizer["格式清洗与智能分块"]:::offline
         Normalizer --> Embedding["向量编码与指纹 (MD5) 生成"]:::offline
         Embedding --> MetaAcl["元数据与 ACL 权限绑定"]:::offline
-        MetaAcl --> VectorDb["("向量/元数据数据库 (Pinecone/Milvus)")"]:::secure
+        MetaAcl --> VectorDb[("向量/元数据数据库 (Pinecone/Milvus)")]:::secure
     end
 
-    subgraph OnlineChain ["在线自适应问答检索管道"]
+    subgraph OnlineChain ["在线自适应问答检索管道']"]
         UserQuery["用户提问与 ACL Token"] --> Rewrite["查询改写与意图扩展"]:::online
         Rewrite --> SearchEngine["混合检索 (稠密向量 + 关键词 RRF)"]:::online
         SearchEngine --> PreFilter["前置元数据 ACL 硬性过滤"]:::secure

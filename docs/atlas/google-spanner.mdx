@@ -78,7 +78,7 @@ import PyRunner from '@site/src/components/PyRunner';
 ### 2a. 全景架构思维导图
 ```mermaid
 mindmap
-  root("(Google Spanner"))
+  root(("Google Spanner"))
     数据组织与存储
       Spanserver
       Tablet 数据分片
@@ -90,15 +90,15 @@ mindmap
       Paxos Followers 副本就近读
     TrueTime 授时 API
       GPS 授时源
-      原子钟 (温漂备份)
-      时间段最早/最晚 [earliest, latest]
-      时钟漂移上限 ε (小于 7ms)
+      ["原子钟 (温漂备份)"]
+      ["时间段最早/最晚 [earliest, latest"]
+      ["时钟漂移上限 ε (小于 7ms)"]
     分布式事务
       外部一致性
       Commit Wait 提交等待
-      二阶段锁 (2PL) 并发控制
-      二阶段提交 (2PC) 跨组事务
-      Paxos-Backed 2PC (无单点卡死)
+      ["二阶段锁 (2PL) 并发控制"]
+      ["二阶段提交 (2PC) 跨组事务"]
+      ["Paxos-Backed 2PC (无单点卡死)"]
     高阶特性
       无锁只读事务
       自动分片重均衡
@@ -153,10 +153,10 @@ graph TB
     classDef main fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
     classDef third fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-    ClientApp["用户应用程序 (Spanner Client)"]:::client -->|1. 发起 SQL 事务请求| SpannerCluster["Google Spanner 数据库集群"]:::main
+    ClientApp["用户应用程序 (Spanner Client)"]:::client -->|"1. 发起 SQL 事务请求"| SpannerCluster["Google Spanner 数据库集群"]:::main
     
-    SpannerCluster -->|2. 调用物理时钟校正| TrueTimeMaster["TrueTime Master Nodes("原子钟 + GPS")"]:::third
-    SpannerCluster -->|3. 持久化数据与日志| ColossusFileSystem["("Colossus DFS (Google 级分布式文件系统)")"]:::main
+    SpannerCluster -->|"2. 调用物理时钟校正"| TrueTimeMaster["TrueTime Master Nodes('原子钟 + GPS')"]:::third
+    SpannerCluster -->|"3. 持久化数据与日志"| ColossusFileSystem[("Colossus DFS (Google 级分布式文件系统)")]:::main
 ```
 
 ### 3b. Container Diagram (容器结构图)
@@ -168,19 +168,19 @@ graph TB
     classDef node fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
     classDef component fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-    Client["Spanner Client SDK"]:::client -->|1. 写请求路由至分片 Leader| SpanserverLeader["Spanserver Node (Paxos Leader)"]:::container
-    Client -->|2. 只读请求就近路由| SpanserverFollower["Spanserver Node (Paxos Follower)"]:::container
+    Client["Spanner Client SDK"]:::client -->|"1. 写请求路由至分片 Leader"| SpanserverLeader["Spanserver Node (Paxos Leader)"]:::container
+    Client -->|"2. 只读请求就近路由"| SpanserverFollower["Spanserver Node (Paxos Follower)"]:::container
 
-    subgraph SpanserverContainer ["Spanserver 内部容器结构 (以 Leader 节点为例)"]
-        SpanserverLeader -->|3. 调用获取当前时间区间| TrueTimeDaemon["TrueTime Daemon (本地硬件同步进程)"]:::component
-        SpanserverLeader -->|4. 分片并发读写锁定| LockTable["Lock Table (单机二阶段锁 2PL)"]:::component
-        SpanserverLeader -->|5. 事务日志与状态协调| TxManager["Transaction Manager (二阶段提交 2PC 协调/参与者)"]:::component
+    subgraph SpanserverContainer ["Spanserver 内部容器结构 (以 Leader 节点为例)']"]
+        SpanserverLeader -->|"3. 调用获取当前时间区间"| TrueTimeDaemon["TrueTime Daemon (本地硬件同步进程)"]:::component
+        SpanserverLeader -->|"4. 分片并发读写锁定"| LockTable["Lock Table (单机二阶段锁 2PL)"]:::component
+        SpanserverLeader -->|"5. 事务日志与状态协调"| TxManager["Transaction Manager (二阶段提交 2PC 协调/参与者)"]:::component
         
-        SpanserverLeader -->|6. 共识日志同步| PaxosGroup["Paxos Group 共识复制实例"]:::component
+        SpanserverLeader -->|"6. 共识日志同步"| PaxosGroup["Paxos Group 共识复制实例"]:::component
     end
 
-    PaxosGroup -->|7. 异步刷写 SSTable| ColossusStorage["("Colossus Storage (SSTable)")"]:::node
-    SpanserverFollower -->|快照版本读| ColossusStorage
+    PaxosGroup -->|"7. 异步刷写 SSTable"| ColossusStorage[("Colossus Storage (SSTable)")]:::node
+    SpanserverFollower -->|"快照版本读"| ColossusStorage
 ```
 
 ---
@@ -200,15 +200,16 @@ graph TD
     classDef leader fill:#ffebee,stroke:#c62828,stroke-width:2px;
     classDef follower fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-    ClientWrite["Client 写事务请求"] -->|1. 路由至 Paxos Group 3 Leader| Leader3["Paxos Leader Node 3 (AZ-1)"]:::leader
+    ClientWrite["Client 写事务请求"] -->|"1. 路由至 Paxos Group 3 Leader"| Leader3["Paxos Leader Node 3 (AZ-1)"]:::leader
     
-    Leader3 -->|2. 广播 Paxos 提案日志| Follower3_1["Paxos Follower Node 3 (AZ-2)"]:::follower
-    Leader3 -->|2. 广播 Paxos 提案日志| Follower3_2["Paxos Follower Node 3 (AZ-3)"]:::follower
+    Leader3 -->|"2. 广播 Paxos 提案日志"| Follower3_1["Paxos Follower Node 3 (AZ-2)"]:::follower
+    Leader3 -->|"2. 广播 Paxos 提案日志"| Follower3_2["Paxos Follower Node 3 (AZ-3)"]:::follower
     
-    Follower3_1 -->|3. 返回写入成功 ACK| Leader3
-    Note over Leader3: 获得 2/3 多数派确认！<br/>事务本地 Commit 并写入 Colossus
+    Follower3_1 -->|"3. 返回写入成功 ACK"| Leader3
+    Note_Leader3["获得 2/3 多数派确认！<br/>事务本地 Commit 并写入 Colossus"]
+    Leader3 -.-> Note_Leader3
     
-    Leader3 -->|4. 返回客户端写成功| ClientWrite
+    Leader3 -->|"4. 返回客户端写成功"| ClientWrite
 ```
 
 ---
@@ -302,15 +303,15 @@ graph TD
     classDef read fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
     classDef storage fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
 
-    TxWrite["写事务 (在 s=150 写入 data='NewValue')"]:::write -->|1. 准备提交| PaxosLeader["Paxos Leader (AZ-1)"]:::write
+    TxWrite["写事务 (在 s=150 写入 data='NewValue')"]:::write -->|"1. 准备提交"| PaxosLeader["Paxos Leader (AZ-1)"]:::write
     
-    PaxosLeader -->|2. 分配时间戳 s=150 刷写快照| MVCCStorage["("Colossus 存储 (MVCC 多版本)<br/>balance@t=100 : 50<br/>balance@t=150 : 100")"]:::storage
+    PaxosLeader -->|"2. 分配时间戳 s=150 刷写快照"| MVCCStorage[("Colossus 存储 (MVCC 多版本)<br/>balance@t=100 : 50<br/>balance@t=150 : 100")]:::storage
 
-    TxReadOnly["只读事务 (T_read = 120)"]:::read -->|3. 就近携带 T_read 读取| PaxosFollower["Paxos Follower (AZ-2)"]:::read
+    TxReadOnly["只读事务 (T_read = 120)"]:::read -->|"3. 就近携带 T_read 读取"| PaxosFollower["Paxos Follower (AZ-2)"]:::read
     
-    PaxosFollower -->|4. 定位 t <= 120 的最新快照| MVCCStorage
-    MVCCStorage -->|5. 返回 balance@t=100 的值 (50)| PaxosFollower
-    PaxosFollower -->|6. 返回结果给客户端| TxReadOnly
+    PaxosFollower -->|"4. 定位 t <= 120 的最新快照"| MVCCStorage
+    MVCCStorage -->|"5. 返回 balance@t=100 的值 (50)"| PaxosFollower
+    PaxosFollower -->|"6. 返回结果给客户端"| TxReadOnly
 ```
 
 <ResearchNote

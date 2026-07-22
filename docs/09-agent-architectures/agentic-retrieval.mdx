@@ -133,14 +133,14 @@ graph LR
 
     Input["输入 Query"] --> Dec1{"是否需要检索?"}
     
-    Dec1 -->|Output: [Retrieve]| CallDoc["检索生成多个候选片段 (d1, d2)"]:::process
-    Dec1 -->|Output: [NoRetrieval]| Direct["直接生成回复"]
+    Dec1 -->|"Output: (Retrieve)"| CallDoc["检索生成多个候选片段 (d1, d2)"]:::process
+    Dec1 -->|"Output: (NoRetrieval)"| Direct["直接生成回复"]
     
     CallDoc --> AssessRel["评判片段相关性"]:::process
-    AssessRel -->|Output: [IsRel]| GenResponse["基于 d1/d2 生成多条候选回复"]:::process
+    AssessRel -->|"Output: (IsRel)"| GenResponse["基于 d1/d2 生成多条候选回复"]:::process
     
     GenResponse --> GroundingCheck["评估事实 grounding 对齐度"]:::process
-    GroundingCheck -->|Output: [IsSupported]| FinalSelect["评估综合有用度<br/>Output: [IsUseful"]"]:::process
+    GroundingCheck -->|"Output: (IsSupported)"| FinalSelect["评估综合有用度<br/>Output: (IsUseful')"]:::process
     
     FinalSelect --> SelectBest["选择综合得分最高的候选作为最终输出"]
 ```

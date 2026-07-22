@@ -125,24 +125,25 @@ graph TD
     classDef candidate fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
     classDef missed fill:#ffcdd2,stroke:#c62828,stroke-width:1px;
 
-    subgraph DbList ["全库 1,000,000 文档分布"]
+    subgraph DbList ["全库 1,000,000 文档分布')"]
         DocIdeal["真实包含答案文档 A<br/>(排第 45 名)"]:::missed
         DocNoise["粗筛出的各种不含答案噪声文档<br/>(1st ~ 30th)"]:::candidate
     end
 
-    subgraph RecallWindow ["粗排召回窗口 (N = 30)"]
-        RecallQueue["召回候选集: [Doc1, Doc2, ... , Doc30"]"]:::candidate
+    subgraph RecallWindow ["粗排召回窗口 (N = 30)')"]
+        RecallQueue["召回候选集: (Doc1, Doc2, ... , Doc30')"]:::candidate
     end
 
-    subgraph RerankLayer ["重排模型 (Reranker)"]
+    subgraph RerankLayer ["重排模型 (Reranker)')"]
         RerankerRun["对候选集进行 Cross-Encoder 评估"]
     end
 
-    DbList -->|1. 粗排检索截断| RecallWindow
-    RecallWindow -->|2. 输入给重排模型| RerankLayer
-    RerankLayer -->|3. 输出 Top-3| FinalLLMContext["大模型最终上下文 (K=3)"]
+    DbList -->|"1. 粗排检索截断"| RecallWindow
+    RecallWindow -->|"2. 输入给重排模型"| RerankLayer
+    RerankLayer -->|"3. 输出 Top-3"| FinalLLMContext["大模型最终上下文 (K=3)"]
 
-    Note over DocIdeal: 答案文档 A 落在 30名开外！<br/>它无法进入 Recall 召回集，<br/>重排模型没有输入它，<br/>最终大模型绝对无法获取答案。
+    Note_DocIdeal["答案文档 A 落在 30名开外！<br/>它无法进入 Recall 召回集，<br/>重排模型没有输入它，<br/>最终大模型绝对无法获取答案。"]
+    DocIdeal -.-> Note_DocIdeal
 ```
 
 ## 四、落地实践：重排执行与上下文排序闭环

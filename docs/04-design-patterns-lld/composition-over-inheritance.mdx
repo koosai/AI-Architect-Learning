@@ -109,29 +109,29 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-  subgraph FragileBaseClassProblem["脆弱基类改动传导 (Fragile Base Class Propagation Cascade)"]
+  subgraph FragileBaseClassProblem ["脆弱基类改动传导 (Fragile Base Class Propagation Cascade)']"]
     direction TB
     
-    subgraph ParentClass["父类 (Super Class V1)"]
+    subgraph ParentClass ["父类 (Super Class V1)']"]
       Add1["add(item) <br/>{保存数据}"]
       AddAll1["addAll(items) <br/>{循环调用 add(item)}"]
     end
     
-    subgraph ChildClass["子类 (Sub Class)"]
+    subgraph ChildClass ["子类 (Sub Class)']"]
       Count["count = 0 <br/>(记录数据总数)"]
       AddChild["add(item) <br/>{count++; super.add()}"]
       AddAllChild["addAll(items) <br/>{count += items.len; super.addAll()}"]
     end
     
-    AddAll1 -->|V1版本内部依赖| Add1
-    AddChild -.->|继承覆盖| Add1
-    AddAllChild -.->|继承覆盖| AddAll1
+    AddAll1 -->|"V1版本内部依赖"| Add1
+    AddChild -.->|"继承覆盖"| Add1
+    AddAllChild -.->|"继承覆盖"| AddAll1
     
     Trigger["客户端调用 sub.addAll(3个元素)"] --> AddAllChild
-    AddAllChild -->|1. count += 3| Count
-    AddAllChild -->|2. super.addAll()| AddAll1
-    AddAll1 -->|3. 内部循环调用 3次 add()| AddChild
-    AddChild -->|4. count 累加 3次| Count
+    AddAllChild -->|"1. count += 3"| Count
+    AddAllChild -->|"2. super.addAll()"| AddAll1
+    AddAll1 -->|"3. 内部循环调用 3次 add()"| AddChild
+    AddChild -->|"4. count 累加 3次"| Count
     
     Count --> Result["最终 count 等于 6! (产生重复累加 Bug!)"]
   end

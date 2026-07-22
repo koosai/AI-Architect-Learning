@@ -71,8 +71,8 @@ graph TD
     Request["新请求到达: System Prompt + 用户提问"] --> Hash["1. 计算 System Prompt 哈希值"]
     Hash --> CheckCache{"2. 检测 GPU 前缀缓存哈希表"}
     
-    CheckCache -->|哈希命中 (Hit)| Hit["3. 直接复用已有 KV Cache"]
-    CheckCache -->|哈希未命中 (Miss)| Miss["3. 对 System Prompt 运行完整 Prefill 计算"]
+    CheckCache -->|"哈希命中 (Hit)"| Hit["3. 直接复用已有 KV Cache"]
+    CheckCache -->|"哈希未命中 (Miss)"| Miss["3. 对 System Prompt 运行完整 Prefill 计算"]
     
     Hit --> PrefillUser["4. 仅对新增的『用户提问』进行 Prefill (TTFT 暴降)"]
     Miss --> CacheNew["4. 缓存该 System Prompt 的 KV 并标记哈希"]
@@ -85,17 +85,17 @@ graph TD
 
 ```mermaid
 graph TD
-    subgraph Logical["逻辑 Token 序列 (以 Block 为单位)"]
-        LBlock0["Logical Block 0: [Token 0-3"]"]
-        LBlock1["Logical Block 1: [Token 4-7"]"]
+    subgraph Logical ["逻辑 Token 序列 (以 Block 为单位)']"]
+        LBlock0["Logical Block 0: (Token 0-3"]
+        LBlock1["Logical Block 1: (Token 4-7"]
     end
     
-    subgraph Table["vLLM Block Table (块表映射)"]
+    subgraph Table ["vLLM Block Table (块表映射)']"]
         Map0["LBlock 0 --> Physical Frame 7"]
         Map1["LBlock 1 --> Physical Frame 12"]
     end
     
-    subgraph Physical["GPU 物理显存 (Paged Frames)"]
+    subgraph Physical ["GPU 物理显存 (Paged Frames)']"]
         Frame7["Physical Frame 7 (存放 Token 0-3 的 KV)"]
         Frame12["Physical Frame 12 (存放 Token 4-7 的 KV)"]
         FrameEmpty["Physical Frame 9 (空闲，按需动态分配)"]

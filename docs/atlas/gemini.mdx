@@ -60,10 +60,10 @@ Gemini 的设计核心在于**原生早期融合（Early Fusion）**：它在第
 
 ```mermaid
 mindmap
-  root("(Gemini 架构"))
+  root(("Gemini 架构"))
     原生早期融合 Early Fusion
-      统一 Token 序列 (Multimodal Inputs)
-      视觉编码器 (ViT) 像素分块
+      ["统一 Token 序列 (Multimodal Inputs)"]
+      ["视觉编码器 (ViT) 像素分块"]
       音频分段 Spectrogram 转化
     实时搜索 Grounding
       Query 扩展与意图路由
@@ -71,10 +71,10 @@ mindmap
       双向事实归因与引用生成
     Workspace 企业生态
       OAuth2 用户权限门哨
-      私有 RAG 检索 (Docs/Gmail)
+      ["私有 RAG 检索 (Docs/Gmail)"]
       零持久化数据隐私审查
     长序列加速
-      TPU Pod 集群与 Megatron-LM 并行
+      ["TPU Pod 集群与 Megatron-LM 并行"]
       Ring Attention 序列切分
 ```
 
@@ -88,11 +88,11 @@ Gemini 通过统一的多模态输入处理、Grounding 事实网关与 Workspac
 
 ```mermaid
 graph LR
-  User["用户 (User)"] -->|上传图文视频/提问| WebClient["Gemini Web / App Client"]
-  WebClient -->|发起会话 (HTTPS)| GeminiEngine["Gemini 编排核心 (Orchestration Engine)"]
-  GeminiEngine -->|实时搜索校验| SearchGrounding["Google Search Grounding Service"]
-  GeminiEngine -->|OAuth2 授权获取文档| WorkspaceGateway["Workspace API Gateway (Gmail/Docs)"]
-  GeminiEngine -->|推理生成| TPUCluster["TPU v5p 推理集群 (Native Multimodal Model)"]
+  User["用户 (User)"] -->|"上传图文视频/提问"| WebClient["Gemini Web / App Client"]
+  WebClient -->|"发起会话 (HTTPS)"| GeminiEngine["Gemini 编排核心 (Orchestration Engine)"]
+  GeminiEngine -->|"实时搜索校验"| SearchGrounding["Google Search Grounding Service"]
+  GeminiEngine -->|"OAuth2 授权获取文档"| WorkspaceGateway["Workspace API Gateway (Gmail/Docs)"]
+  GeminiEngine -->|"推理生成"| TPUCluster["TPU v5p 推理集群 (Native Multimodal Model)"]
 ```
 
 ### 3b. 容器架构图 (Container)

@@ -147,11 +147,11 @@ graph TB
   classDef main fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
   classDef third fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-  Developer["开发人员 (Developer)"]:::client -->|编写/调试代码| VSCodeApp["VS Code 桌面集成开发环境"]:::main
+  Developer["开发人员 (Developer)"]:::client -->|"编写/调试代码"| VSCodeApp["VS Code 桌面集成开发环境"]:::main
   
-  VSCodeApp <-->|读取/监控代码变更| LocalFS["("本地文件系统 (Local Filesystem)")"]:::main
-  VSCodeApp <-->|获取诊断/自动补全| LanguageServer["外部语言分析服务 (Language Server, e.g. gopls)"]:::third
-  VSCodeApp <-->|挂载断点调试| DebugAdapter["外部调试器 (Debug Adapter, e.g. lldb-vscode)"]:::third
+  VSCodeApp <--->|"读取/监控代码变更"| LocalFS[("本地文件系统 (Local Filesystem)")]:::main
+  VSCodeApp <--->|"获取诊断/自动补全"| LanguageServer["外部语言分析服务 (Language Server, e.g. gopls)"]:::third
+  VSCodeApp <--->|"挂载断点调试"| DebugAdapter["外部调试器 (Debug Adapter, e.g. lldb-vscode)"]:::third
 ```
 
 ### 3b. Container Diagram (容器结构图)
@@ -163,31 +163,31 @@ graph TB
   classDef process fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
   classDef protocol fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-  subgraph ElectronApp ["VS Code 桌面应用程序"]
+  subgraph ElectronApp ["VS Code 桌面应用程序']"]
     MainProcess["Electron Main 进程<br/>(负责窗口创建、菜单、本底文件 I/O)"]:::main
     
-    subgraph UIWindow ["Renderer 渲染窗口进程 (Chromium)"]
+    subgraph UIWindow ["Renderer 渲染窗口进程 (Chromium)']"]
       MonacoUI["Monaco Editor (UI 主界面)<br/>渲染打字、虚拟滚动、文件树"]:::renderer
     end
     
-    subgraph PluginSandbox ["Extension Host 扩展宿主进程 (Node.js)"]
+    subgraph PluginSandbox ["Extension Host 扩展宿主进程 (Node.js)']"]
       ExtensionHost["Extension Host (插件运行环境)<br/>运行 GitLens, Prettier, Copilot 等插件"]:::process
     end
 
-    MainProcess <-->|IPC 信道| MonacoUI
-    MainProcess <-->|IPC 信道| ExtensionHost
-    MonacoUI <-->|跨进程异步 RPC 信道 (无 DOM 直接绑定)| ExtensionHost
+    MainProcess <--->|"IPC 信道"| MonacoUI
+    MainProcess <--->|"IPC 信道"| ExtensionHost
+    MonacoUI <--->|"跨进程异步 RPC 信道 (无 DOM 直接绑定)"| ExtensionHost
   end
 
-  subgraph ExternalProcesses ["外部独立子进程"]
+  subgraph ExternalProcesses ["外部独立子进程']"]
     LS_Process["Language Server (语言服务进程)"]:::protocol
     DAP_Process["Debug Adapter (调试适配器进程)"]:::protocol
     Watcher_Process["File Watcher (文件监控子进程 - chokidar)"]:::process
   end
 
-  ExtensionHost <-->|JSON-RPC 协议 (LSP)| LS_Process
-  ExtensionHost <-->|JSON-RPC 协议 (DAP)| DAP_Process
-  MainProcess <-->|匿名管道 IPC| Watcher_Process
+  ExtensionHost <--->|"JSON-RPC 协议 (LSP)"| LS_Process
+  ExtensionHost <--->|"JSON-RPC 协议 (DAP)"| DAP_Process
+  MainProcess <--->|"匿名管道 IPC"| Watcher_Process
 ```
 
 ---
@@ -233,20 +233,20 @@ graph LR
   classDef host fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
   classDef error fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
 
-  subgraph RendererProcess ["渲染窗口进程 (UI 主线程)"]
+  subgraph RendererProcess ["渲染窗口进程 (UI 主线程)']"]
     Monaco["Monaco Editor (打字输入 60fps)"]:::ui
     UI_DOM["编辑窗口 DOM 树"]:::ui
   end
 
-  subgraph ExtHostProcess ["扩展宿主进程 (隔离 Node.js 进程)"]
+  subgraph ExtHostProcess ["扩展宿主进程 (隔离 Node.js 进程)']"]
     PluginA["常规插件 (e.g., GitLens)"]:::host
     PluginB["异常插件 (发生大死循环 CPU 100%)"]:::error
   end
 
-  Monaco <-->|跨进程异步 IPC 信道 (传递数据包)| ExtensionAPI["vscode API 边界 (序列化)"]
-  ExtensionAPI <--> PluginA & PluginB
+  Monaco <--->|"跨进程异步 IPC 信道 (传递数据包)"| ExtensionAPI["vscode API 边界 (序列化)"]
+  ExtensionAPI <---> PluginA & PluginB
 
-  PluginB -.->|DOM 隔离: 无法直接碰 DOM| UI_DOM
+  PluginB -.->|"DOM 隔离: 无法直接碰 DOM"| UI_DOM
 ```
 
 ---
@@ -306,23 +306,23 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-  subgraph PieceTableState ["Piece Table 修改状态图 (原始: 'Hello World' -> 修改后: 'Hello Git World')"]
-    subgraph Buffers ["缓冲区 (内存不改变 - 仅追加)"]
+  subgraph PieceTableState ["Piece Table 修改状态图 (原始: 'Hello World' -> 修改后: 'Hello Git World')')"]
+    subgraph Buffers ["缓冲区 (内存不改变 - 仅追加)')"]
       OriginalBuf["Original Buffer (只读):<br/>'Hello World' (Len=11)"]
       AddBuf["Add Buffer (只写追加):<br/>' Git ' (Len=5)"]
     end
     
-    subgraph Table ["Piece Table 节点链条 (逻辑拼接表示)"]
-      Piece1["Piece 1:<br/>[Src: Original, Off: 0, Len: 6"]<br/>(逻辑代表: 'Hello ')"]
-      Piece2["Piece 2:<br/>[Src: Add, Off: 0, Len: 5"]<br/>(逻辑代表: ' Git ')"]
-      Piece3["Piece 3:<br/>[Src: Original, Off: 6, Len: 5"]<br/>(逻辑代表: 'World')"]
+    subgraph Table ["Piece Table 节点链条 (逻辑拼接表示)')"]
+      Piece1["Piece 1:<br/>(Src: Original, Off: 0, Len: 6')<br/>(逻辑代表: 'Hello ')"]
+      Piece2["Piece 2:<br/>(Src: Add, Off: 0, Len: 5')<br/>(逻辑代表: ' Git ')"]
+      Piece3["Piece 3:<br/>(Src: Original, Off: 6, Len: 5')<br/>(逻辑代表: 'World')"]
     end
   end
 
   Piece1 --> Piece2 --> Piece3
-  Piece1 -.->|读取数据| OriginalBuf
-  Piece2 -.->|读取数据| AddBuf
-  Piece3 -.->|读取数据| OriginalBuf
+  Piece1 -.->|"读取数据"| OriginalBuf
+  Piece2 -.->|"读取数据"| AddBuf
+  Piece3 -.->|"读取数据"| OriginalBuf
 ```
 
 ---
@@ -340,20 +340,20 @@ graph TB
   classDef dom fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
   classDef hide fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
 
-  subgraph VirtualScrollLayout ["虚拟滚动视口裁剪原理"]
-    HiddenTop["[不可见行 1 ~ 99] (在内存中, 物理不创建 DOM)"]:::hide
+  subgraph VirtualScrollLayout ["虚拟滚动视口裁剪原理']"]
+    HiddenTop["(不可见行 1 ~ 99) (在内存中, 物理不创建 DOM)"]:::hide
     
-    subgraph Viewport ["浏览器当前可见视口 (Viewport)"]
+    subgraph Viewport ["浏览器当前可见视口 (Viewport)']"]
       DOM_Row100["DOM Row #100 (translateY: 2000px)"]:::dom
       DOM_Row101["DOM Row #101 (translateY: 2020px)"]:::dom
       DOM_Row102["DOM Row #102 (translateY: 2040px)"]:::dom
       DOM_Row103["DOM Row #103 (translateY: 2060px)"]:::dom
     end
     
-    HiddenBottom["[不可见行 104 ~ 1000000] (在内存中, 物理不创建 DOM)"]:::hide
+    HiddenBottom["(不可见行 104 ~ 1000000) (在内存中, 物理不创建 DOM)"]:::hide
   end
 
-  Viewport :::view
+  style Viewport fill:#e1f5fe,stroke:#0288d1
 ```
 
 ---

@@ -88,21 +88,21 @@ graph TD
 
 ```mermaid
 mindmap
-  root("(Milvus 架构"))
-    云原生存算分离 (Disaggregated)
-      Proxy Access Node (gRPC / REST 接入)
-      Coordinator (Root / Query / Data / Index)
-      Worker Nodes (Query Node / Index Node)
-      S3 / MinIO + Pulsar / Kafka 日志流
+  root(("Milvus 架构"))
+    ["云原生存算分离 (Disaggregated)"]
+      ["Proxy Access Node (gRPC / REST 接入)"]
+      ["Coordinator (Root / Query / Data / Index)"]
+      ["Worker Nodes (Query Node / Index Node)"]
+      ["S3 / MinIO + Pulsar / Kafka 日志流"]
     Knowhere C++ 向量引擎
-      SIMD (AVX-512 / NEON) 指令集加速
-      GPU 向量计算加速 (CUDA Inner Product)
-      FAISS / HNSWlib 原生封装
-    索引选型与检索 (Indexing & Search)
-      HNSW (高召回图索引, 内存高)
-      IVF-FLAT (倒排索引, 均衡)
-      IVF-PQ (乘积量化, 省 80% 内存)
-      Hybrid Search("向量 + 标量 BitSet 过滤")
+      ["SIMD (AVX-512 / NEON) 指令集加速"]
+      ["GPU 向量计算加速 (CUDA Inner Product)"]
+      ["FAISS / HNSWlib 原生封装"]
+    ["索引选型与检索 (Indexing & Search)"]
+      ["HNSW (高召回图索引, 内存高)"]
+      ["IVF-FLAT (倒排索引, 均衡)"]
+      ["IVF-PQ (乘积量化, 省 80% 内存)"]
+      ["Hybrid Search('向量 + 标量 BitSet 过滤')"]
 ```
 
 ---

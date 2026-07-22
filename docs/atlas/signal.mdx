@@ -250,20 +250,20 @@ graph TD
   classDef dh fill:#ffebee,stroke:#c62828,stroke-width:2px;
   classDef root fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-  RootKey_N["上一代根密钥 (Root Key N-1)"] -->|1. 输入非对称 DH_N 结果| Root_KDF["Root KDF 引擎"]:::root
+  RootKey_N["上一代根密钥 (Root Key N-1)"] -->|"1. 输入非对称 DH_N 结果"| Root_KDF["Root KDF 引擎"]:::root
   
-  Root_KDF -->|2. 派生下一代根密钥| RootKey_Next["("新根密钥 (Root Key N)")"]:::root
-  Root_KDF -->|3. 派生新链条密钥| ChainKey_N["("新链密钥 (Chain Key N_0)")"]:::kdf
+  Root_KDF -->|"2. 派生下一代根密钥"| RootKey_Next[("新根密钥 (Root Key N)")]:::root
+  Root_KDF -->|"3. 派生新链条密钥"| ChainKey_N[("新链密钥 (Chain Key N_0)")]:::kdf
   
-  subgraph KDF_Chain ["对称 KDF 消息棘轮链 (单向演进)"]
-    ChainKey_N -->|4. KDF 步进 1| MsgKey_0["("消息密钥 0 (Message Key 0)<br/>(使用后立刻物理删除!)")"]:::kdf
-    ChainKey_N -->|4. KDF 步进 1| ChainKey_N1["("Chain Key N_1")"]:::kdf
+  subgraph KDF_Chain ["对称 KDF 消息棘轮链 (单向演进)']"]
+    ChainKey_N -->|"4. KDF 步进 1"| MsgKey_0[("消息密钥 0 (Message Key 0)<br/>(使用后立刻物理删除!)")]:::kdf
+    ChainKey_N -->|"4. KDF 步进 1"| ChainKey_N1[("Chain Key N_1")]:::kdf
     
-    ChainKey_N1 -->|5. KDF 步进 2| MsgKey_1["("消息密钥 1 (Message Key 1)")"]:::kdf
-    ChainKey_N1 -->|5. KDF 步进 2| ChainKey_N2["("Chain Key N_2")"]:::kdf
+    ChainKey_N1 -->|"5. KDF 步进 2"| MsgKey_1[("消息密钥 1 (Message Key 1)")]:::kdf
+    ChainKey_N1 -->|"5. KDF 步进 2"| ChainKey_N2[("Chain Key N_2")]:::kdf
   end
 
-  Alice_New_DH["Alice 换新公钥 (触发 ACK)"]:::dh -->|6. 非对称棘轮步进| RootKey_Next
+  Alice_New_DH["Alice 换新公钥 (触发 ACK)"]:::dh -->|"6. 非对称棘轮步进"| RootKey_Next
 ```
 
 ---
@@ -284,16 +284,18 @@ graph TD
   classDef secure fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
   classDef leak fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
 
-  PastMsg["历史已读消息 (已删除 Key)"]:::secure -->|单向哈希链不可逆性| LeakPoint["安全泄露点 (黑客盗取内存当前 Key)"]:::leak
+  PastMsg["历史已读消息 (已删除 Key)"]:::secure -->|"单向哈希链不可逆性"| LeakPoint["安全泄露点 (黑客盗取内存当前 Key)"]:::leak
   
-  LeakPoint -->|黑客可解密该空窗期的消息| WindowMsg["泄露窗口期消息"]:::leak
+  LeakPoint -->|"黑客可解密该空窗期的消息"| WindowMsg["泄露窗口期消息"]:::leak
   
-  WindowMsg -->|双方进行一次 DH 往返更新| HealingPoint["非对称棘轮自愈点 (Root Key刷新)"]:::secure
+  WindowMsg -->|"双方进行一次 DH 往返更新"| HealingPoint["非对称棘轮自愈点 (Root Key刷新)"]:::secure
   
-  HealingPoint -->|新密钥全隔离, 黑客无解| FutureMsg["未来新消息"]:::secure
+  HealingPoint -->|"新密钥全隔离, 黑客无解"| FutureMsg["未来新消息"]:::secure
   
-  Note over PastMsg: [前向安全保障]: 历史已锁死，黑客无法破解！
-  Note over FutureMsg: [后向安全自愈]: 未来已被隔断，系统实现自愈自拔！
+  Note_PastMsg["(前向安全保障): 历史已锁死，黑客无法破解！"]
+  PastMsg -.-> Note_PastMsg
+  Note_FutureMsg["(后向安全自愈): 未来已被隔断，系统实现自愈自拔！"]
+  FutureMsg -.-> Note_FutureMsg
 ```
 
 ---
@@ -317,18 +319,18 @@ graph TD
 
   RecvMsg3["收到消息 3 (头部标记: index=2)"] --> CheckIndex{"Bob 当前 Chain Index 是 0?"}
   
-  CheckIndex -->|发现 index 不匹配 (乱序丢包)| KDF_Advance["1. KDF 接收链空转步进 2 次"]:::chain
+  CheckIndex -->|"发现 index 不匹配 (乱序丢包)"| KDF_Advance["1. KDF 接收链空转步进 2 次"]:::chain
   
   KDF_Advance --> Derive2["2. 派生出 MsgKey_1 (对应消息2) 并剥离"]:::chain
   KDF_Advance --> Derive3["3. 派生出 MsgKey_2 (对应消息3)"]:::chain
   
   Derive3 --> Decrypt3["4. 使用 MsgKey_2 解密消息 3 (成功)"]
   
-  subgraph LocalSecureCache ["本地 SQLite 丢包密钥缓存区"]
-    Derive2 -->|5. 写入加密暂存表| SQLiteRow["SQLite 缓存: { index_1: MsgKey_1 }"]:::cache
+  subgraph LocalSecureCache ["本地 SQLite 丢包密钥缓存区']"]
+    Derive2 -->|"5. 写入加密暂存表"| SQLiteRow["SQLite 缓存: { index_1: MsgKey_1 }"]:::cache
   end
   
-  SQLiteRow -->|6. 迟到的消息 2 到达, 命中提取并解密| Decrypt2["解密消息 2 成功，随即物理删除该缓存行！"]
+  SQLiteRow -->|"6. 迟到的消息 2 到达, 命中提取并解密"| Decrypt2["解密消息 2 成功，随即物理删除该缓存行！"]
 ```
 
 ---

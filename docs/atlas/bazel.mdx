@@ -120,33 +120,33 @@ graph LR
 
 ```mermaid
 graph TB
-  subgraph LocalWorkstation["本地 Workstation"]
+  subgraph LocalWorkstation ["本地 Workstation']"]
     BazelCLI["Bazel CLI (Client)"]
     BazelServer["Bazel Server Daemon (内存驻留)"]
     LocalSandboxEnv["Linux Namespace 沙箱 (Local Sandbox)"]
   end
 
-  subgraph ActionGraphEngine["Action Graph 分析引擎"]
+  subgraph ActionGraphEngine ["Action Graph 分析引擎']"]
     StarlarkEvaluator["Starlark AST Evaluator"]
     ActionGraphBuilder["Action Graph Builder (生成纯函数 DAG)"]
   end
 
-  subgraph RemoteInfrastructure["远程云端基础设施"]
+  subgraph RemoteInfrastructure ["远程云端基础设施']"]
     RemoteCASStore["CAS (Content-Addressed Storage) 存储"]
     RBEWorkerPool["RBE (Remote Build Execution) 弹性集群"]
   end
 
-  BazelCLI -->|1. 发送 Build 命令| BazelServer
-  BazelServer -->|2. 解析 BUILD 文件| StarlarkEvaluator
-  StarlarkEvaluator -->|3. 构建依赖图| ActionGraphBuilder
+  BazelCLI -->|"1. 发送 Build 命令"| BazelServer
+  BazelServer -->|"2. 解析 BUILD 文件"| StarlarkEvaluator
+  StarlarkEvaluator -->|"3. 构建依赖图"| ActionGraphBuilder
   
-  ActionGraphBuilder -->|4. 计算 Action SHA256 Key| RemoteCASStore
+  ActionGraphBuilder -->|"4. 计算 Action SHA256 Key"| RemoteCASStore
   
-  RemoteCASStore --"5a. Cache Hit (命中)"-->|直接返回二进制 Output| BazelServer
-  RemoteCASStore --"5b. Cache Miss (未命中)"-->|派发未命中 Action| RBEWorkerPool
+  RemoteCASStore -->|"5a. Cache Hit (命中): 直接返回二进制 Output"| BazelServer
+  RemoteCASStore -->|"5b. Cache Miss (未命中): 派发未命中 Action"| RBEWorkerPool
   BazelServer -.->|"5c. Cache Miss (离线模式)"| LocalSandboxEnv
 
-  RBEWorkerPool -->|6. 回写编译产物与 Key| RemoteCASStore
+  RBEWorkerPool -->|"6. 回写编译产物与 Key"| RemoteCASStore
 
   style ActionGraphBuilder fill:#bbdefb,stroke:#1976d2
   style RemoteCASStore fill:#c8e6c9,stroke:#2e7d32
@@ -191,15 +191,15 @@ Bazel 的核心加速秘诀在于：**构建前计算 Action Digest**。
 
 ```mermaid
 graph TD
-  subgraph DigestCalculation["Action Digest SHA256 算力求值"]
-    InputFiles["输入文件 Hash: [foo.cc, foo.h"]"]
+  subgraph DigestCalculation ["Action Digest SHA256 算力求值']"]
+    InputFiles["输入文件 Hash: (foo.cc, foo.h"]
     CompileCommand["命令行参数: g++ -O2"]
     CompilerBinary["编译器二进制 Hash"]
   end
 
-  InputFiles & CompileCommand & CompilerBinary -->|SHA256 拼接计算| ActionHash["Action Key: e3b0c44298fc1c149afbf4c8996fb924"]
+  InputFiles & CompileCommand & CompilerBinary -->|"SHA256 拼接计算"| ActionHash["Action Key: e3b0c44298fc1c149afbf4c8996fb924"]
   
-  ActionHash -->|查询 gRPC CAS| CASCheck{"CAS 远程存储库中是否存在 Key?"}
+  ActionHash -->|"查询 gRPC CAS"| CASCheck{"CAS 远程存储库中是否存在 Key?"}
   
   CASCheck -- "Yes (命中!)" --> DownloadBin["直接秒级下载 foo.o (跳过物理编译)"]
   CASCheck -- "No (未命中)" --> ExecuteRBE["送往 RBE 执行物理编译 -> 编译后回写 CAS"]

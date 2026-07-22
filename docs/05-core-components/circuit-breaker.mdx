@@ -31,12 +31,12 @@ import QuizCard from '@site/src/components/QuizCard';
 
 ```mermaid
 flowchart TD
-  User["海量用户请求 (Users)"] -->|高并发打入| Frontend["商品前端展示层 (Frontend Pool) <br/>具有 100 个可用工作线程"]
+  User["海量用户请求 (Users)"] -->|"高并发打入"| Frontend["商品前端展示层 (Frontend Pool) <br/>具有 100 个可用工作线程"]
   
-  subgraph ChainReaction["多米诺骨牌级联雪崩 (Cascading Threads Exhaustion)"]
-    Frontend -->|同步 RPC 调用 (卡死等待)| SrvDetail["商品详情服务 (Product Detail)"]
-    SrvDetail -->|同步 RPC 调用 (卡死等待)| Recommend["推荐依赖服务 (Recommend Service)"]
-    Recommend -->|30秒读写超时| DB["异常卡死的推荐数据库 (Slow DB)"]
+  subgraph ChainReaction ["多米诺骨牌级联雪崩 (Cascading Threads Exhaustion)']"]
+    Frontend -->|"同步 RPC 调用 (卡死等待)"| SrvDetail["商品详情服务 (Product Detail)"]
+    SrvDetail -->|"同步 RPC 调用 (卡死等待)"| Recommend["推荐依赖服务 (Recommend Service)"]
+    Recommend -->|"30秒读写超时"| DB["异常卡死的推荐数据库 (Slow DB)"]
   end
 
   noteExhaust["1. 推荐服务数据库发生死锁变慢，响应高达 30s。 <br/>2. 推荐服务内部线程全部挂起，等待 DB 结果。 <br/>3. 商品详情服务调用推荐服务，亦同步卡死，迅速耗尽 100 个详情线程！ <br/>4. 前端网页线程池枯竭，导致新到的正常商品详情查询也全面超时 504！"]

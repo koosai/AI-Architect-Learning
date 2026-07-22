@@ -148,10 +148,10 @@ graph TB
   classDef main fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
   classDef third fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-  ClientApp["应用程序 Client"]:::client -->|1. 发起 SQL 读写/向量计算| PGCluster["PostgreSQL 数据库实例"]:::main
+  ClientApp["应用程序 Client"]:::client -->|"1. 发起 SQL 读写/向量计算"| PGCluster["PostgreSQL 数据库实例"]:::main
   
-  PGCluster -->|2. 加载外部动态链接库| Extensions["向量/地理插件 (pgvector, PostGIS)"]:::third
-  PGCluster -->|3. 物理读写与持久化| LocalStorage["("本地 NVMe SSD (数据文件 & WAL)")"]:::main
+  PGCluster -->|"2. 加载外部动态链接库"| Extensions["向量/地理插件 (pgvector, PostGIS)"]:::third
+  PGCluster -->|"3. 物理读写与持久化"| LocalStorage[("本地 NVMe SSD (数据文件 & WAL)")]:::main
 ```
 
 ### 3b. Container Diagram (容器结构图)
@@ -163,24 +163,24 @@ graph TB
   classDef mem fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
   classDef disk fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-  Client["客户端 SDK / PgBouncer"]:::client -->|1. 连接请求| Postmaster["Postmaster 主守护进程"]:::process
-  Postmaster -->|2. Fork 派生进程服务连接| BackendProc["Backend Process (服务进程)"]:::process
+  Client["客户端 SDK / PgBouncer"]:::client -->|"1. 连接请求"| Postmaster["Postmaster 主守护进程"]:::process
+  Postmaster -->|"2. Fork 派生进程服务连接"| BackendProc["Backend Process (服务进程)"]:::process
 
-  subgraph SystemMemory ["PostgreSQL 共享内存与进程拓扑"]
-    BackendProc -->|3. 查询与修改缓冲区| SharedBuffers["Shared Buffers (共享缓冲池)"]:::mem
-    BackendProc -->|4. 写入事务日志| WALBuffers["WAL Buffers (WAL 缓冲区)"]:::mem
+  subgraph SystemMemory ["PostgreSQL 共享内存与进程拓扑']"]
+    BackendProc -->|"3. 查询与修改缓冲区"| SharedBuffers["Shared Buffers (共享缓冲池)"]:::mem
+    BackendProc -->|"4. 写入事务日志"| WALBuffers["WAL Buffers (WAL 缓冲区)"]:::mem
     
-    WALWriter["WAL Writer 后台进程"]:::process -->|5. 定期同步日志刷盘| WALFiles
-    BgWriter["BgWriter 后台进程"]:::process -->|6. 异步脏页刷盘| HeapFiles
-    Autovacuum["Autovacuum 后台进程"]:::process -->|7. 物理清扫死亡元组| SharedBuffers
+    WALWriter["WAL Writer 后台进程"]:::process -->|"5. 定期同步日志刷盘"| WALFiles
+    BgWriter["BgWriter 后台进程"]:::process -->|"6. 异步脏页刷盘"| HeapFiles
+    Autovacuum["Autovacuum 后台进程"]:::process -->|"7. 物理清扫死亡元组"| SharedBuffers
   end
 
-  subgraph PhysicalDisk ["磁盘存储空间"]
-    WALFiles["("WAL Log Logs (预写日志)")"]:::disk
-    HeapFiles["("Heap Files & Index (堆表与索引文件)")"]:::disk
+  subgraph PhysicalDisk ["磁盘存储空间']"]
+    WALFiles[("WAL Log Logs (预写日志)")]:::disk
+    HeapFiles[("Heap Files & Index (堆表与索引文件)")]:::disk
   end
   
-  SharedBuffers -->|物理数据读取与刷写| HeapFiles
+  SharedBuffers -->|"物理数据读取与刷写"| HeapFiles
 ```
 
 ---
@@ -209,11 +209,15 @@ graph TD
     TupleV2["元组版本 2 (balance=100)<br/>xmin=105 (已提交)<br/>xmax=0 (激活)"]:::tuple
   end
 
-  Reader["只读事务 (快照: 活跃列表=[105"])"]:::process -->|读取数据| TupleV1
+  Reader["只读事务 (快照: 活跃列表=105)"]:::process -->|读取数据| TupleV1
   Reader -->|读取数据| TupleV2
 
-  Note over Reader, TupleV1: 因为 xmax=105，而 105 在快照中仍算活跃（未提交），<br/>所以 TupleV1 对当前 Reader 可见！
-  Note over Reader, TupleV2: 因为 xmin=105，而 105 对 Reader 属于未提交的活跃事务，<br/>所以新版 TupleV2 对 Reader 不可见！
+  Note1["因为 xmax=105，而 105 在快照中仍算活跃（未提交），<br/>所以 TupleV1 对当前 Reader 可见！"]
+  Reader -.-> Note1
+  TupleV1 -.-> Note1
+  Note2["因为 xmin=105，而 105 对 Reader 属于未提交的活跃事务，<br/>所以新版 TupleV2 对 Reader 不可见！"]
+  Reader -.-> Note2
+  TupleV2 -.-> Note2
 ```
 
 ---
@@ -326,18 +330,18 @@ PostgreSQL 的物理数据块（Page，默认为 8KB）采用槽页结构（Slot
 
 ```mermaid
 graph TD
-  subgraph SlottedPageLayout ["PostgreSQL 8KB 物理数据页布局 (Slotted Page)"]
+  subgraph SlottedPageLayout ["PostgreSQL 8KB 物理数据页布局 (Slotted Page)')"]
     Header["Page Header (页头部元信息 - 24 字节)"]
-    LinePtrs["行指针数组 (Line Pointers / 槽)<br/>[Ptr #1"] [Ptr #2] [Ptr #3] (由前向后生长)"]
+    LinePtrs["行指针数组 (Line Pointers / 槽)<br/>(Ptr #1') (Ptr #2) (Ptr #3) (由前向后生长)"]
     FreeSpace["夹在中间的空闲空间 (Free Space)"]
-    Tuples["物理元组数据 (Tuple Data)<br/>[Tuple #3"] [Tuple #2] [Tuple #1] (由后向前生长)"]
+    Tuples["物理元组数据 (Tuple Data)<br/>(Tuple #3') (Tuple #2) (Tuple #1) (由后向前生长)"]
   end
   
   Header --> LinePtrs
   LinePtrs --> FreeSpace
   Tuples --> FreeSpace
   
-  LinePtrs -->|Ptr #1 指向偏移| Tuples
+  LinePtrs -->|"Ptr #1 指向偏移"| Tuples
 ```
 
 ---

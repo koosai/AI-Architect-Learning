@@ -83,21 +83,21 @@ graph TD
 
 ```mermaid
 mindmap
-  root("(GitHub 架构"))
-    应用与控制平面 (Rails Monolith)
-      Modular Monolith (Packwerk 包隔离)
-      Vitess / Sharded MySQL 数据库
+  root(("GitHub 架构"))
+    ["应用与控制平面 (Rails Monolith)"]
+      ["Modular Monolith (Packwerk 包隔离)"]
+      ["Vitess / Sharded MySQL 数据库"]
       Redis Token Bucket 速率限制
       Elasticsearch 全局代码搜索
-    数据存储平面 (Spokes)
+    ["数据存储平面 (Spokes)"]
       Spokes Router 路由计算
-      三副本一致性 (1 Primary + 2 Replicas)
+      ["三副本一致性 (1 Primary + 2 Replicas)"]
       Git Hook 与文件级锁控制
-      自动修复 (Repair) 与重平衡
-    自动化与执行 (GitHub Actions)
+      ["自动修复 (Repair) 与重平衡"]
+    ["自动化与执行 (GitHub Actions)"]
       Webhook 事件总线
       Workflow DAG 算子解析
-      一次性 Runner 沙箱 (Ephemeral Runner)
+      ["一次性 Runner 沙箱 (Ephemeral Runner)"]
       WebSocket 实时日志流
 ```
 

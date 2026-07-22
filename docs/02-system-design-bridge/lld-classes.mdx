@@ -117,18 +117,18 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-  subgraph TokenBucketLogic["令牌桶核心 allow(now) 逻辑"]
+  subgraph TokenBucketLogic ["令牌桶核心 allow(now) 逻辑')"]
     direction TB
     Start["请求到达 allow(now)"] --> CalcDelta["1. 计算自上次请求以来的时间差:<br/>dt = now - last"]
     CalcDelta --> CalcTokens["2. 计算补充令牌数:<br/>new_tokens = dt * refill_per_sec"]
-    CalcTokens --> UpdateTokens["3. 累加令牌并限制在最大容量内:<br/>tokens = min("capacity, tokens + new_tokens")"]
+    CalcTokens --> UpdateTokens["3. 累加令牌并限制在最大容量内:<br/>tokens = min('capacity, tokens + new_tokens')"]
     UpdateTokens --> SetLast["4. 更新上次请求时间戳:<br/>last = now"]
     SetLast --> CheckTokens{"5. 当前令牌 tokens >= 1?"}
     
-    CheckTokens -->|Yes| Consume["6a. 扣除 1 个令牌:<br/>tokens = tokens - 1"]
+    CheckTokens -->|"Yes"| Consume["6a. 扣除 1 个令牌:<br/>tokens = tokens - 1"]
     Consume --> ReturnTrue["返回 True (放行)"]
     
-    CheckTokens -->|No| ReturnFalse["6b. 拒绝请求"]
+    CheckTokens -->|"No"| ReturnFalse["6b. 拒绝请求"]
     ReturnFalse --> ReturnFalseVal["返回 False (拦截)"]
   end
 ```

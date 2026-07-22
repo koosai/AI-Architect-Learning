@@ -64,22 +64,22 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 mindmap
-  root("(YouTube 推荐"))
+  root(("YouTube 推荐"))
     第一阶段 召回 Candidate Generation
       协同过滤 Extreme Classification
       用户历史特征 Embedding 均值化
-      ANN 向量检索 (FAISS / Hierarchical)
+      ["ANN 向量检索 (FAISS / Hierarchical)"]
     第二阶段 排序 Deep Ranking
-      多层感知机 (MLP) 精细打分
-      异构特征工程 (Categorical / Continuous)
-      连续变量分段正态化 (Normalization)
-    目标优化 Watch-Time Predict
-      加权逻辑回归 (Weighted Logistic)
+      ["多层感知机 (MLP) 精细打分"]
+      ["异构特征工程 (Categorical / Continuous)"]
+      ["连续变量分段正态化 (Normalization)"]
+    ["目标优化 Watch-Time Predict"]
+      ["加权逻辑回归 (Weighted Logistic)"]
       Expected Watch Time 计算
-      点击欺诈 (Clickbait) 智能剔除
+      ["点击欺诈 (Clickbait) 智能剔除"]
     冷启动与时效性
       Age of Video 特征注入
-      新视频探索机制 (Explore)
+      ["新视频探索机制 (Explore)"]
 ```
 
 ---
@@ -97,53 +97,53 @@ graph LR
   WebAPI -->|3. 启动流水线推荐| RecEngine["推荐编排引擎 (Rec Engine)"]
   RecEngine -->|4. 并行拉取视频库| VideoInventory["视频基础数据库 (Video Inventory)"]
   RecEngine -->|5. 深度排序渲染| RecEngine
-  WebAPI -->>User: 6. 渲染最终带有几十个视频的 Home 列表
+  WebAPI -->|"6. 渲染最终带有几十个视频的 Home 列表"| User
 ```
 
 ### 3b. 容器架构图 (Container)
 
 ```mermaid
 graph TB
-  subgraph ClientUI["用户客户端"]
+  subgraph ClientUI ["用户客户端']"]
     UI["YouTube App / Web Interface"]
   end
 
-  subgraph GatewayPlane["API 网关平面"]
+  subgraph GatewayPlane ["API 网关平面']"]
     APIGateway["API 网关 / 流量路由"]
     ProfileLoader["用户特征预加载器"]
   end
 
-  subgraph TwoStageRec["两阶段推荐云服务平面"]
-    subgraph CandidateGen["阶段 1: 召回阶段 (Candidate Generation)"]
+  subgraph TwoStageRec ["两阶段推荐云服务平面']"]
+    subgraph CandidateGen ["阶段 1: 召回阶段 (Candidate Generation)']"]
       RecallModel["召回深度神经网络 (DNN Model)"]
       ANNIndexer["高并发向量索引库 (FAISS / ScaNN Cluster)"]
     end
 
-    subgraph DeepRanking["阶段 2: 排序阶段 (Deep Ranking)"]
+    subgraph DeepRanking ["阶段 2: 排序阶段 (Deep Ranking)']"]
       FeatureCrossing["特征交叉与归一化处理器"]
       RankingModel["排序深度神经网络 (MLP Model)"]
       ScoringEngine["期待观看时长评分算子 (Expected Watch Time Scorer)"]
     end
   end
 
-  subgraph DataBasePlane["数据存储底座"]
+  subgraph DataBasePlane ["数据存储底座']"]
     UserHistory["用户观看与搜索历史数据库"]
     VideoEmbeddings["视频向量索引数据库"]
   end
 
-  UI -->|提请 Home 推荐请求| APIGateway
+  UI -->|"提请 Home 推荐请求"| APIGateway
   APIGateway --> ProfileLoader
-  ProfileLoader <-->|读取最近 50 次观看历史| UserHistory
+  ProfileLoader <--->|"读取最近 50 次观看历史"| UserHistory
   
-  ProfileLoader -->|发送 User Profile| RecallModel
-  RecallModel -->|生成当前 User Embedding 向量| ANNIndexer
-  ANNIndexer <-->|ANN 相似度检索| VideoEmbeddings
-  ANNIndexer -->|返回 Top-N (数百个) 候选视频| FeatureCrossing
+  ProfileLoader -->|"发送 User Profile"| RecallModel
+  RecallModel -->|"生成当前 User Embedding 向量"| ANNIndexer
+  ANNIndexer <--->|"ANN 相似度检索"| VideoEmbeddings
+  ANNIndexer -->|"返回 Top-N (数百个) 候选视频"| FeatureCrossing
   
-  FeatureCrossing <-->|提取视频细节与用户交互交叉特征| UserHistory
-  FeatureCrossing -->|组合特征向量矩阵| RankingModel
+  FeatureCrossing <--->|"提取视频细节与用户交互交叉特征"| UserHistory
+  FeatureCrossing -->|"组合特征向量矩阵"| RankingModel
   RankingModel --> ScoringEngine
-  ScoringEngine -->|Top-50 精选视频排序列表| APIGateway
+  ScoringEngine -->|"Top-50 精选视频排序列表"| APIGateway
   APIGateway --> UI
 ```
 

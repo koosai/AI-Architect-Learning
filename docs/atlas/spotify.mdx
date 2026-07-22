@@ -49,20 +49,20 @@ Spotify 的核心设计用意在于：**基于 CDN 的 Ogg 动态音频切片分
 
 ```mermaid
 graph TD
-  UserClient["Spotify 客户端 (Mobile / Desktop / Car)"] -->|1. 点击播放曲目| CDNProxy["Edge CDN (Fastly / Cloudflare)"]
+  UserClient["Spotify 客户端 (Mobile / Desktop / Car)"] -->|"1. 点击播放曲目"| CDNProxy["Edge CDN (Fastly / Cloudflare)"]
   
-  CDNProxy <-->|2. 16KB 块级预加载 (首帧 < 100ms)| AudioStorage["GCS 音频块存储 (Ogg Vorbis / 320kbps)"]
+  CDNProxy <--->|"2. 16KB 块级预加载 (首帧 < 100ms)"| AudioStorage["GCS 音频块存储 (Ogg Vorbis / 320kbps)"]
   
-  subgraph DiscoverWeeklyPipeline["Discover Weekly 推荐引擎 (每周离线计算)"]
-    PlaylistsData["数亿用户歌单 & 播放行为"] -->|3a. 协同过滤| ALSModel["Implicit ALS 矩阵分解"]
-    MusicBlogs["网络乐评 & 歌单描述文本"] -->|3b. 文本 NLP 向量化| Word2VecNLP["NLP 歌单语义嵌入"]
-    RawAudioWave["原始 Ogg 音频波形"] -->|3c. 频谱图 CNN 分析| AudioCNN["CNN 声学特征提取 (拍子/调性)"]
+  subgraph DiscoverWeeklyPipeline ["Discover Weekly 推荐引擎 (每周离线计算)']"]
+    PlaylistsData["数亿用户歌单 & 播放行为"] -->|"3a. 协同过滤"| ALSModel["Implicit ALS 矩阵分解"]
+    MusicBlogs["网络乐评 & 歌单描述文本"] -->|"3b. 文本 NLP 向量化"| Word2VecNLP["NLP 歌单语义嵌入"]
+    RawAudioWave["原始 Ogg 音频波形"] -->|"3c. 频谱图 CNN 分析"| AudioCNN["CNN 声学特征提取 (拍子/调性)"]
     
-    ALSModel & Word2VecNLP & AudioCNN -->|4. 三路向量融合与 Candidate 交叉| WeeklyGenerator["Personalized 30-Track Generator"]
+    ALSModel & Word2VecNLP & AudioCNN -->|"4. 三路向量融合与 Candidate 交叉"| WeeklyGenerator["Personalized 30-Track Generator"]
   end
   
-  WeeklyGenerator -->|5. 存入分布式 Cache| RedisCache["Redis Weekly Cache"]
-  UserClient <-->|6. 每周一刷新推送到客户端| RedisCache
+  WeeklyGenerator -->|"5. 存入分布式 Cache"| RedisCache["Redis Weekly Cache"]
+  UserClient <--->|"6. 每周一刷新推送到客户端"| RedisCache
 ```
 
 <DesignIntent
@@ -171,7 +171,7 @@ graph TB
 
 ```mermaid
 graph TB
-  subgraph Model1["1. 协同过滤 (Collaborative Filtering)"]
+  subgraph Model1 ["1. 协同过滤 (Collaborative Filtering)']"]
     UserMatrix["用户-歌曲 播放行为矩阵"]
     ALS["Implicit ALS 矩阵分解"]
     VecBehavior["行为隐藏向量 (Behavior Vector)"]
@@ -179,7 +179,7 @@ graph TB
     UserMatrix --> ALS --> VecBehavior
   end
 
-  subgraph Model2["2. 文本 NLP (Natural Language Processing)"]
+  subgraph Model2 ["2. 文本 NLP (Natural Language Processing)']"]
     WebScrape["抓取网络乐评 & 歌单名 (如 'chill evening')"]
     WordEmbedding["Word2Vec 词向量表"]
     VecText["语义风格向量 (Style Vector)"]
@@ -187,7 +187,7 @@ graph TB
     WebScrape --> WordEmbedding --> VecText
   end
 
-  subgraph Model3["3. 原始音频 CNN (Audio Analysis)"]
+  subgraph Model3 ["3. 原始音频 CNN (Audio Analysis)']"]
     RawAudio["原始 Ogg 音频波形"]
     MelSpectrogram["转换成梅尔频谱图 (Mel-Spectrogram)"]
     CNNLayer["卷积神经网络 (提取 Tempo, Key, Timbre)"]
@@ -196,7 +196,7 @@ graph TB
     RawAudio --> MelSpectrogram --> CNNLayer --> VecAudio
   end
 
-  VecBehavior & VecText & VecAudio -->|多路融合 (Cosine Similarity)| FusionEngine["Discover Weekly 推荐合成引擎 (30 曲推荐)"]
+  VecBehavior & VecText & VecAudio -->|"多路融合 (Cosine Similarity)"| FusionEngine["Discover Weekly 推荐合成引擎 (30 曲推荐)"]
   style FusionEngine fill:#c8e6c9,stroke:#2e7d32
 ```
 

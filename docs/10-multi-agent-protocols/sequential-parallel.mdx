@@ -72,13 +72,15 @@ graph LR
 
     TaskInput["总体需求输入"] --> Stage1["1. 研究员 (Researcher Agent)<br/>职责: 获取原始证据"]:::step
     
-    Stage1 -->|基于证据的数据依赖| Stage2["2. 架构师 (Architect Agent)<br/>职责: 根据证据起草方案"]:::step
+    Stage1 -->|"基于证据的数据依赖"| Stage2["2. 架构师 (Architect Agent)<br/>职责: 根据证据起草方案"]:::step
     
-    Stage2 -->|基于草稿的数据依赖| Stage3["3. 审查员 (Reviewer Agent)<br/>职责: 挑出方案安全漏洞"]:::step
+    Stage2 -->|"基于草稿的数据依赖"| Stage3["3. 审查员 (Reviewer Agent)<br/>职责: 挑出方案安全漏洞"]:::step
     
     Stage3 --> Output["输出已审安全方案"]:::done
     
-    Note over Stage1, Stage3: 每一阶段强依赖上一步 Observation<br/>时间呈线性累加 (Total Latency = t1 + t2 + t3)
+    Note_Stage1["每一阶段强依赖上一步 Observation<br/>时间呈线性累加 (Total Latency = t1 + t2 + t3)"]
+    Stage1 -.-> Note_Stage1
+    Stage3 -.-> Note_Stage1
 ```
 
 ### 2. 控制流程：并行扇出聚合（MapReduce）编排模型
@@ -91,19 +93,20 @@ graph TD
 
     Input["评估竞品大任务"] --> Split["1. 扇出任务拆分 (Fan-out)"]:::fan
     
-    subgraph ParallelExecution ["并发执行层 (互相独立无依赖)"]
-        Split -->|子任务 1| AgentA["调研竞品 A (Worker A)"]:::worker
-        Split -->|子任务 2| AgentB["调研竞品 B (Worker B)"]:::worker
-        Split -->|子任务 3| AgentC["调研竞品 C (Worker C)"]:::worker
+    subgraph ParallelExecution ["并发执行层 (互相独立无依赖)']"]
+        Split -->|"子任务 1"| AgentA["调研竞品 A (Worker A)"]:::worker
+        Split -->|"子任务 2"| AgentB["调研竞品 B (Worker B)"]:::worker
+        Split -->|"子任务 3"| AgentC["调研竞品 C (Worker C)"]:::worker
     end
 
-    AgentA -->|结果 A| Merge["2. 聚合结果 (Aggregate)"]:::agg
-    AgentB -->|结果 B| Merge
-    AgentC -->|结果 C| Merge
+    AgentA -->|"结果 A"| Merge["2. 聚合结果 (Aggregate)"]:::agg
+    AgentB -->|"结果 B"| Merge
+    AgentC -->|"结果 C"| Merge
     
     Merge --> FinalReport["输出三竞品汇总对比表"]
     
-    Note over ParallelExecution: 并行执行，系统墙钟延迟 ≈ max(t1, t2, t3)<br/>极大地缩短了耗时，但 Token 开销是串行的总和
+    Note_ParallelExecution["并行执行，系统墙钟延迟 ≈ max(t1, t2, t3)<br/>极大地缩短了耗时，但 Token 开销是串行的总和"]
+    ParallelExecution -.-> Note_ParallelExecution
 ```
 
 ### 3. 折中谱系：顺序与并行模式的延迟与 Token 开销折中

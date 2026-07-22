@@ -48,16 +48,16 @@ Meta（原 Facebook）基于 LevelDB 开源了 **RocksDB**。其核心设计用�
 
 ```mermaid
 graph TD
-  WriteReq["客户端 Key-Value 写入"] -->|1. 顺序追加日志| WAL["WAL 顺序日志文件 (.log)"]
-  WriteReq -->|2. 插入内存跳表| Memtable["Active Memtable (内存 SkipList)"]
+  WriteReq["客户端 Key-Value 写入"] -->|"1. 顺序追加日志"| WAL["WAL 顺序日志文件 (.log)"]
+  WriteReq -->|"2. 插入内存跳表"| Memtable["Active Memtable (内存 SkipList)"]
   
-  Memtable -->|3. 达到阈值 (如 64MB) 冻结| ImmutableMemtable["Immutable Memtable (只读)"]
-  ImmutableMemtable -->|4. Flush 异步刷盘| L0["Level 0 SSTable (允许 Range 重叠)"]
+  Memtable -->|"3. 达到阈值 (如 64MB) 冻结"| ImmutableMemtable["Immutable Memtable (只读)"]
+  ImmutableMemtable -->|"4. Flush 异步刷盘"| L0["Level 0 SSTable (允许 Range 重叠)"]
   
-  subgraph DiskSSTables["磁盘分层 SSTable 库 (Leveled Compaction)"]
-    L0 -->|5. Compaction 归并| L1["Level 1 SSTables (数据无重叠)"]
-    L1 -->|6. 选出重叠文件与下层归并| L2["Level 2 SSTables (容量大 10 倍)"]
-    L2 -->|7. 逐层归并下沉| L3["Level 3 ~ L6 SSTables"]
+  subgraph DiskSSTables ["磁盘分层 SSTable 库 (Leveled Compaction)']"]
+    L0 -->|"5. Compaction 归并"| L1["Level 1 SSTables (数据无重叠)"]
+    L1 -->|"6. 选出重叠文件与下层归并"| L2["Level 2 SSTables (容量大 10 倍)"]
+    L2 -->|"7. 逐层归并下沉"| L3["Level 3 ~ L6 SSTables"]
   end
 ```
 
@@ -82,24 +82,24 @@ graph TD
 
 ```mermaid
 mindmap
-  root("(RocksDB 架构"))
+  root(("RocksDB 架构"))
     内存结构层
-      Active Memtable (SkipList 跳表)
+      ["Active Memtable (SkipList 跳表)"]
       Immutable Memtable
-      Block Cache (LRU / CLOCK)
+      ["Block Cache (LRU / CLOCK)"]
     磁盘文件层
-      WAL (Write-Ahead Log)
-      SSTable 文件 (.sst)
+      ["WAL (Write-Ahead Log)"]
+      ["SSTable 文件 (.sst)"]
       Manifest 元数据清单
-    压实与合并 (Compaction)
-      Leveled Compaction (分级)
-      Size-Tiered Compaction
+    ["压实与合并 (Compaction)"]
+      ["Leveled Compaction (分级)"]
+      ["Size-Tiered Compaction"]
       Universal Compaction
       Tombstone 墓碑清理
     性能加速组件
-      <GlossaryTerm term="Bloom Filter (布隆过滤器)" definition="Bloom Filter：布隆过滤器，用于在不读取磁盘物理页的情况下极速判定 Key 是否存在于某 SSTable 中。">Bloom Filter</GlossaryTerm>
-      Prefix Bloom Filter (前缀过滤)
-      <GlossaryTerm term="Column Family (列族)" definition="Column Family：列族。RocksDB 中逻辑分割独立 Key-Value 空间的机制。同一数据库实例中的不同列族拥有独立内存 Memtable 和 SSTable 集合，但共享同一个 WAL。">Column Family</GlossaryTerm>
+      Bloom Filter
+      ["Prefix Bloom Filter (前缀过滤)"]
+      Column Family
 ```
 
 ---
@@ -112,49 +112,49 @@ RocksDB 单机写流与读流的物理层级划分如下：
 
 ```mermaid
 graph LR
-  DBEngine["上层数据库 (如 TiKV / MyRocks)"] -->|1. C++ API (Put / Get / Scan)| RocksDBLib["RocksDB 嵌入式引擎"]
-  RocksDBLib <-->|2. 顺序落盘 WAL & 刷盘 SST| FlashSSD["高速物理 NVMe SSD 存储"]
+  DBEngine["上层数据库 (如 TiKV / MyRocks)"] -->|"1. C++ API (Put / Get / Scan)"| RocksDBLib["RocksDB 嵌入式引擎"]
+  RocksDBLib <--->|"2. 顺序落盘 WAL & 刷盘 SST"| FlashSSD["高速物理 NVMe SSD 存储"]
 ```
 
 ### 3b. Container Diagram (容器架构)
 
 ```mermaid
 graph TB
-  subgraph ClientProcess["宿主进程 (如 TiKV Node)"]
-    subgraph MemoryEngine["RocksDB 内存组件"]
+  subgraph ClientProcess ["宿主进程 (如 TiKV Node)']"]
+    subgraph MemoryEngine ["RocksDB 内存组件']"]
       ActiveMem["Active Memtable (Concurrent SkipList)"]
       ImmutMem["Immutable Memtables Queue"]
       BlockCacheMemory["Block Cache (LRU 内存解压页)"]
     end
 
-    subgraph ThreadPools["后台并发线程池"]
+    subgraph ThreadPools ["后台并发线程池']"]
       FlushThreads["Flush 刷盘后台线程池"]
       CompactionThreads["Compaction 压实后台线程池"]
     end
   end
 
-  subgraph StorageDisk["磁盘文件系统 (SSD)"]
+  subgraph StorageDisk ["磁盘文件系统 (SSD)']"]
     WalFile["WAL 日志文件 (.log)"]
     
-    subgraph SSTLevels["SSTable 物理分层文件库"]
-      Level0_Files["Level 0 (.sst) [范围交错"]"]
-      Level1_Files["Level 1 (.sst) [按 Key 排序无交错"]"]
-      Level2_Files["Level 2 (.sst) [容量扩大 10 倍"]"]
+    subgraph SSTLevels ["SSTable 物理分层文件库']"]
+      Level0_Files["Level 0 (.sst) (范围交错"]
+      Level1_Files["Level 1 (.sst) (按 Key 排序无交错"]
+      Level2_Files["Level 2 (.sst) (容量扩大 10 倍"]
     end
   end
 
   ClientKV["Put(key, val) / Get(key)"] --> ActiveMem
-  ActiveMem -->|1. 先追加写 WAL| WalFile
-  ActiveMem -->|2. 达到 64MB 冻结为| ImmutMem
+  ActiveMem -->|"1. 先追加写 WAL"| WalFile
+  ActiveMem -->|"2. 达到 64MB 冻结为"| ImmutMem
   
-  ImmutMem -->|3. Flush 线程刷写为| Level0_Files
-  CompactionThreads -->|4. 选出 L0 与 L1 重叠文件归并| Level1_Files
-  CompactionThreads -->|5. L1 超过阈值与 L2 归并下沉| Level2_Files
+  ImmutMem -->|"3. Flush 线程刷写为"| Level0_Files
+  CompactionThreads -->|"4. 选出 L0 与 L1 重叠文件归并"| Level1_Files
+  CompactionThreads -->|"5. L1 超过阈值与 L2 归并下沉"| Level2_Files
   
-  GetReq["Get(key)"] -->|读流程: 1. 查 Active| ActiveMem
-  GetReq -->|读流程: 2. 查 Immutable| ImmutMem
-  GetReq -->|读流程: 3. 查内存缓存页| BlockCacheMemory
-  GetReq -->|读流程: 4. Bloom Filter 过滤后查| Level0_Files
+  GetReq["Get(key)"] -->|"读流程: 1. 查 Active"| ActiveMem
+  GetReq -->|"读流程: 2. 查 Immutable"| ImmutMem
+  GetReq -->|"读流程: 3. 查内存缓存页"| BlockCacheMemory
+  GetReq -->|"读流程: 4. Bloom Filter 过滤后查"| Level0_Files
 
   style ActiveMem fill:#c8e6c9,stroke:#2e7d32
   style Level0_Files fill:#ffecb3,stroke:#ff6f00
@@ -195,20 +195,20 @@ graph TB
 
 ```mermaid
 graph TD
-  subgraph Level0["Level 0 (Key 范围存在重叠)"]
-    L0_F1["SST 1: [Key 10 ~ 100"]"]
-    L0_F2["SST 2: [Key 50 ~ 150"]"]
+  subgraph Level0 ["Level 0 (Key 范围存在重叠)']"]
+    L0_F1["SST 1: (Key 10 ~ 100"]
+    L0_F2["SST 2: (Key 50 ~ 150"]
   end
 
-  subgraph Level1["Level 1 (数据严格排序，无 Key 重叠)"]
-    L1_F1["SST A: [Key 0 ~ 80"]"]
-    L1_F2["SST B: [Key 81 ~ 200"]"]
+  subgraph Level1 ["Level 1 (数据严格排序，无 Key 重叠)']"]
+    L1_F1["SST A: (Key 0 ~ 80"]
+    L1_F2["SST B: (Key 81 ~ 200"]
   end
 
-  L0_F1 & L0_F2 -->|选出与 L1 范围有交集的文件| MultiWayMerge["多路归并排序线程 (Multi-way Merge Sort)"]
-  L1_F1 & L1_F2 -->|剔除旧版本/Tombstone| MultiWayMerge
+  L0_F1 & L0_F2 -->|"选出与 L1 范围有交集的文件"| MultiWayMerge["多路归并排序线程 (Multi-way Merge Sort)"]
+  L1_F1 & L1_F2 -->|"剔除旧版本/Tombstone"| MultiWayMerge
   
-  MultiWayMerge -->|生成全局有序新文件| NewLevel1["更新后的 Level 1 SST 文件"]
+  MultiWayMerge -->|"生成全局有序新文件"| NewLevel1["更新后的 Level 1 SST 文件"]
 ```
 
 ---

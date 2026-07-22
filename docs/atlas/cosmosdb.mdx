@@ -157,11 +157,11 @@ graph TB
 
 ```mermaid
 graph TD
-  Consistency["一致性等级 (高 -> 低)"] --> Strong["1. Strong (最强一致性)<br>[写操作必须等待全球 Quorum 同步返回成功"]"]
-  Consistency --> Bounded["2. Bounded Staleness (界限滞后)<br>[本地落后版本数不超过 K，或落后时间不超过 T"]"]
-  Consistency --> Session["3. Session (会话一致性)<br>[单客户端写后读，读取绝不退化。默认且性价比最高"]"]
-  Consistency --> ConsistentPrefix["4. Consistent Prefix (一致前缀)<br>[返回的数据一定按写入顺序，不会出现时间倒流"]"]
-  Consistency --> Eventual["5. Eventual (最终一致) <br>[副本各自异步合并，没有任何顺序或时间差保障"]"]
+  Consistency["一致性等级 (高 -> 低)"] --> Strong["1. Strong (最强一致性)<br>(写操作必须等待全球 Quorum 同步返回成功"]
+  Consistency --> Bounded["2. Bounded Staleness (界限滞后)<br>(本地落后版本数不超过 K，或落后时间不超过 T"]
+  Consistency --> Session["3. Session (会话一致性)<br>(单客户端写后读，读取绝不退化。默认且性价比最高"]
+  Consistency --> ConsistentPrefix["4. Consistent Prefix (一致前缀)<br>(返回的数据一定按写入顺序，不会出现时间倒流"]
+  Consistency --> Eventual["5. Eventual (最终一致) <br>(副本各自异步合并，没有任何顺序或时间差保障"]
 
   style Strong fill:#ffebee,stroke:#c62828
   style Bounded fill:#fff3e0,stroke:#ef6c00

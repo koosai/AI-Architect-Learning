@@ -102,42 +102,42 @@ graph LR
 
 ```mermaid
 graph TB
-  subgraph ClientContainer["客户端容器"]
+  subgraph ClientContainer ["客户端容器']"]
     AppShell["飞书客户端外壳 (Client Shell)"]
     IMContainer["IM 聊天组件 (Native C++)"]
     DocsEngine["云文档渲染引擎 (JS/WASM)"]
     ApprovalForm["审批渲染组件"]
   end
 
-  subgraph GatewayPlane["边界与网关平面"]
+  subgraph GatewayPlane ["边界与网关平面']"]
     TenantGateway["租户隔离与白名单网关 (Tenant Gateway)"]
     IAMService["统一身份鉴权微服务 (Unified IAM)"]
   end
 
-  subgraph FederatedServices["微服务联邦 (Golang)"]
+  subgraph FederatedServices ["微服务联邦 (Golang)']"]
     IMService["IM 会话微服务"]
     DocsService["云文档微服务"]
     ApprovalService["审批工作流引擎"]
   end
 
-  subgraph InfraPlane["基础数据与总线层"]
-    OrgGraph["("组织架构前缀树数据库 (Prefix Tree DB)")"]
+  subgraph InfraPlane ["基础数据与总线层']"]
+    OrgGraph[("组织架构前缀树数据库 (Prefix Tree DB)")]
     SharedBus["共享信令总线 (Kafka / Redis Cluster)"]
   end
 
-  AppShell -->|路由代理| TenantGateway
-  TenantGateway <-->|租户边界校验| IAMService
+  AppShell -->|"路由代理"| TenantGateway
+  TenantGateway <--->|"租户边界校验"| IAMService
   
-  TenantGateway -->|派发 IM 动作| IMService
-  TenantGateway -->|派发文档动作| DocsService
-  TenantGateway -->|派发审批动作| ApprovalService
+  TenantGateway -->|"派发 IM 动作"| IMService
+  TenantGateway -->|"派发文档动作"| DocsService
+  TenantGateway -->|"派发审批动作"| ApprovalService
   
-  IMService <-->|检索组织架构与汇报链| OrgGraph
-  DocsService <-->|验证下属部门权限| OrgGraph
+  IMService <--->|"检索组织架构与汇报链"| OrgGraph
+  DocsService <--->|"验证下属部门权限"| OrgGraph
   
-  ApprovalService -->|1. 发起审批卡片信号| SharedBus
-  SharedBus -->|2. 实时推送交互卡片到会话| IMService
-  DocsService -->|3. 文档动态提权信号| SharedBus
+  ApprovalService -->|"1. 发起审批卡片信号"| SharedBus
+  SharedBus -->|"2. 实时推送交互卡片到会话"| IMService
+  DocsService -->|"3. 文档动态提权信号"| SharedBus
 ```
 
 ---
@@ -160,15 +160,17 @@ graph TB
 
 ```mermaid
 graph TD
-  OrgRoot["公司 Root (Path: /1)"] -->|包含| TechDept["技术部 (Path: /1/10)"]
-  TechDept -->|包含| ArchGroup["架构组 (Path: /1/10/24)"]
-  ArchGroup -->|包含| AILab["AI 实验室 (Path: /1/10/24/50)"]
+  OrgRoot["公司 Root (Path: /1)"] -->|"包含"| TechDept["技术部 (Path: /1/10)"]
+  TechDept -->|"包含"| ArchGroup["架构组 (Path: /1/10/24)"]
+  ArchGroup -->|"包含"| AILab["AI 实验室 (Path: /1/10/24/50)"]
   
-  Note over AILab: 用户 Alice 归属于此<br/>Alice_Path = '/1/10/24/50'
-  Note over TechDept: 云文档授权此部门可见<br/>Auth_Path = '/1/10'
+  Note_AILab["用户 Alice 归属于此<br/>Alice_Path = '/1/10/24/50'"]
+  AILab -.-> Note_AILab
+  Note_TechDept["云文档授权此部门可见<br/>Auth_Path = '/1/10'"]
+  TechDept -.-> Note_TechDept
   
-  Alice_Path -->|前缀字符串模糊匹配| Match{"Alice_Path LIKE '/1/10%' ?"}
-  Match -->|是 (True)| AccessGranted["直接授权访问，耗时 < 1ms"]
+  Alice_Path -->|"前缀字符串模糊匹配"| Match{"Alice_Path LIKE '/1/10%' ?"}
+  Match -->|"是 (True)"| AccessGranted["直接授权访问，耗时 < 1ms"]
 ```
 
 ### 4b. 共享信令总线与事件驱动流 (Shared Signal Bus)
@@ -182,14 +184,14 @@ graph TD
 
 ```mermaid
 graph TD
-  User["用户端"] -->|1. 发起请假审批| Approval["审批微服务"]
-  Approval -->|2. 发布事件: Approval_Created (内附关联 Doc_ID)| Bus["共享信令总线 (Kafka)"]
+  User["用户端"] -->|"1. 发起请假审批"| Approval["审批微服务"]
+  Approval -->|"2. 发布事件: Approval_Created (内附关联 Doc_ID)"| Bus["共享信令总线 (Kafka)"]
   
-  Bus -->|3a. 消费事件| IM["IM 消息微服务"]
-  Bus -->|3b. 消费事件| Docs["云文档微服务"]
+  Bus -->|"3a. 消费事件"| IM["IM 消息微服务"]
+  Bus -->|"3b. 消费事件"| Docs["云文档微服务"]
   
-  IM -->|4. 向主管会话发送实时交互审批卡片| MgrChat["主管的聊天窗口"]
-  Docs -->|5. 自动为该主管添加文档临时只读权限| DocAuth["文档 ACL 更新"]
+  IM -->|"4. 向主管会话发送实时交互审批卡片"| MgrChat["主管的聊天窗口"]
+  Docs -->|"5. 自动为该主管添加文档临时只读权限"| DocAuth["文档 ACL 更新"]
 ```
 
 ### 4c. 跨租户协作的安全物理边界 (Tenant Boundary Gateway)

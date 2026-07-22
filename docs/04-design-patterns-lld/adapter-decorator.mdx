@@ -32,21 +32,21 @@ import QuizCard from '@site/src/components/QuizCard';
 
 ```mermaid
 flowchart LR
-  subgraph AdapterPattern["适配器模式结构对比 (Adapter Pattern - Translate Interface)"]
+  subgraph AdapterPattern ["适配器模式结构对比 (Adapter Pattern - Translate Interface)']"]
     direction LR
-    Client["客户端 (Client)"] -->|1. 期望调用 pay(amount:元)| TargetInterface["统一支付接口 (Target Interface)"]
+    Client["客户端 (Client)"] -->|"1. 期望调用 pay(amount:元)"| TargetInterface["统一支付接口 (Target Interface)"]
     
-    subgraph AdapterWrapper["适配器包装类 (Adapter)"]
+    subgraph AdapterWrapper ["适配器包装类 (Adapter)']"]
       PaymentAdapter["PaymentAdapter<br/>{ pay(amount) }"]
     end
     
-    TargetInterface -.->|接口继承| PaymentAdapter
+    TargetInterface -.->|"接口继承"| PaymentAdapter
     
-    subgraph AdapteeModule["外部第三方服务 (Adaptee)"]
+    subgraph AdapteeModule ["外部第三方服务 (Adaptee)']"]
       ThirdPartySDK["ThirdPartySDK<br/>{ make_payment(cents) }"]
     end
     
-    PaymentAdapter -->|2. 转换为 cents 并委托委托| ThirdPartySDK
+    PaymentAdapter -->|"2. 转换为 cents 并委托委托"| ThirdPartySDK
   end
 ```
 

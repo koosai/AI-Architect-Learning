@@ -111,7 +111,7 @@ sequenceDiagram
 flowchart TB
   subgraph HashRing["一致性哈希环结构 (Consistent Hash Ring)"]
     direction TB
-    Ring("("哈希空间环 (0 ~ 2^32 - 1")"))
+    Ring(("哈希空间环 (0 ~ 2^32 - 1)"))
     
     NodeA["节点 A (哈希位置 60°)"] -->|顺时针接管| Key1["Key: user_128 (哈希位置 15°)"]
     NodeB["节点 B (哈希位置 180°)"] -->|顺时针接管| Key2["Key: user_256 (哈希位置 120°)"]

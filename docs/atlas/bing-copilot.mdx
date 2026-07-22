@@ -100,41 +100,41 @@ graph LR
 
 ```mermaid
 graph TB
-  subgraph ClientSide["客户端端点"]
+  subgraph ClientSide ["客户端端点']"]
     EdgeBrowser["Edge 浏览器 / Copilot 面板"]
     SSEDecoder["流式解析与引用上标匹配组件"]
   end
 
-  subgraph PrometheusCore["Prometheus 核心服务 (C++ / Go)"]
+  subgraph PrometheusCore ["Prometheus 核心服务 (C++ / Go)']"]
     ControlLoop["Prometheus 控制环 (Orchestration Loop)"]
     QueryGenerator["Query 生成与重写器"]
     ContextAggregator["Context 组装与重排模块"]
     AttributionVerifier["事实归因与校对器 (Grounder)"]
   end
 
-  subgraph BingEngine["Bing 传统计算集群"]
+  subgraph BingEngine ["Bing 传统计算集群']"]
     BingIndexer["Bing 网页爬虫与倒排索引库"]
     BingRanker["Bing 实时网页重排算法服务 (Snippets Generator)"]
   end
 
-  subgraph AzureLLM["大模型计算平面 (Azure)"]
+  subgraph AzureLLM ["大模型计算平面 (Azure)']"]
     GPTInference["GPT-4 / Copilot 专属模型节点"]
   end
 
-  EdgeBrowser <-->|WebSocket / EventSource 长连接| ControlLoop
-  ControlLoop <--> QueryGenerator
-  ControlLoop <--> ContextAggregator
-  ControlLoop <--> AttributionVerifier
+  EdgeBrowser <--->|"WebSocket / EventSource 长连接"| ControlLoop
+  ControlLoop <---> QueryGenerator
+  ControlLoop <---> ContextAggregator
+  ControlLoop <---> AttributionVerifier
 
-  QueryGenerator -->|1. 触发实时搜索指令| BingRanker
-  BingRanker <-->|2. 读取倒排索引与网页快照| BingIndexer
-  BingRanker -->|3. 返回 Top-N 优质网页片段| ContextAggregator
+  QueryGenerator -->|"1. 触发实时搜索指令"| BingRanker
+  BingRanker <--->|"2. 读取倒排索引与网页快照"| BingIndexer
+  BingRanker -->|"3. 返回 Top-N 优质网页片段"| ContextAggregator
   
-  ContextAggregator -->|4. 拼接 Prompt("Context + User Query")| GPTInference
-  GPTInference -->|5. 流式返回生成的候选答案| ControlLoop
+  ContextAggregator -->|"4. 拼接 Prompt('Context + User Query')"| GPTInference
+  GPTInference -->|"5. 流式返回生成的候选答案"| ControlLoop
   
-  ControlLoop <-->|6. 生成结果双向校对| AttributionVerifier
-  ControlLoop -->|7. 输出带引用上标的安全流| EdgeBrowser
+  ControlLoop <--->|"6. 生成结果双向校对"| AttributionVerifier
+  ControlLoop -->|"7. 输出带引用上标的安全流"| EdgeBrowser
 ```
 
 ---

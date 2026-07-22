@@ -85,22 +85,22 @@ graph TD
 
 ```mermaid
 mindmap
-  root("(Iceberg 架构"))
+  root(("Iceberg 架构"))
     元数据三级架构
-      Catalog (JDBC / REST / Nessie)
+      ["Catalog (JDBC / REST / Nessie)"]
       Table Metadata JSON
       Snapshot 快照
-      Manifest List (清单列表)
-      Manifest File (清单文件)
+      ["Manifest List (清单列表)"]
+      ["Manifest File (清单文件)"]
     核心特性
       ACID 事务与 OCC 乐观锁
-      隐式分区 (Hidden Partitioning)
-      分区演进 (Partition Evolution)
-      Schema 原地演进 (添加/重命名/删除列)
-      时间旅行 (Time Travel / Rollover)
-    写/删除模式
-      <GlossaryTerm term="Copy-on-Write (COW)" definition="Copy-on-Write (COW)：写时复制模式。当修改或删除数据时，Iceberg 会直接读取旧的物理 Parquet 文件，在内存中完成更新后重新写出一个全新的 Parquet 文件，并更新快照。读性能极佳，但写放大较大。">Copy-on-Write (COW)</GlossaryTerm>
-      <GlossaryTerm term="Merge-on-Read (MOR)" definition="Merge-on-Read (MOR)：读时合并模式。当删除或更新数据时，写操作仅追加写入极小的 Delete File (记录被删行的位置或 Key)。写速度极快，但读查询时需要实时 Merge 数据文件与删除文件。">Merge-on-Read (MOR)</GlossaryTerm>
+      ["隐式分区 (Hidden Partitioning)"]
+      ["分区演进 (Partition Evolution)"]
+      ["Schema 原地演进 (添加/重命名/删除列)"]
+      ["时间旅行 (Time Travel / Rollover)"]
+    ["写/删除模式"]
+      ["Copy-on-Write (COW)"]
+      ["Merge-on-Read (MOR)"]
 ```
 
 ---

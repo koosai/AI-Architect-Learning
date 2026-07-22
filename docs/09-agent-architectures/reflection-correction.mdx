@@ -79,10 +79,10 @@ graph LR
     classDef check fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
     classDef memory fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
 
-    LLM["LLM 生成器大脑 (Agent Brain)"]:::brain -->|1. 尝试输出 (代码/查询/JSON)| Sandbox["客观沙箱校验器 (Objective Sandbox)<br/>- 编译器 (Compiler)<br/>- 单元测试 (Test Runner)<br/>- 格式校验 (Schema Validator)"]:::check
-    Sandbox -->|2. 返回客观反馈 (Compiler Trace / Test Result)| Evaluator["反思判定与诊断器 (Reflector)"]:::check
-    Evaluator -->|3. 诊断错误并提炼教训| Scratchpad["结构化草稿纸 (Scratchpad Memory)"]:::memory
-    Scratchpad -->|4. 装配纠错 Prompt 提示词| LLM
+    LLM["LLM 生成器大脑 (Agent Brain)"]:::brain -->|"1. 尝试输出 (代码/查询/JSON)"| Sandbox["客观沙箱校验器 (Objective Sandbox)<br/>- 编译器 (Compiler)<br/>- 单元测试 (Test Runner)<br/>- 格式校验 (Schema Validator)"]:::check
+    Sandbox -->|"2. 返回客观反馈 (Compiler Trace / Test Result)"| Evaluator["反思判定与诊断器 (Reflector)"]:::check
+    Evaluator -->|"3. 诊断错误并提炼教训"| Scratchpad["结构化草稿纸 (Scratchpad Memory)"]:::memory
+    Scratchpad -->|"4. 装配纠错 Prompt 提示词"| LLM
 ```
 
 #### 2. Reflexion 范式状态机流转 (Reflexion State Machine Loop)
@@ -93,16 +93,16 @@ graph TD
     classDef decision fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
     classDef memory fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-    Start["初始目标 (Goal)"] --> GenAction["生成行动 A[t]"]:::state
-    GenAction --> Exec["物理执行并获取观测 O[t]"]:::state
+    Start["初始目标 (Goal)"] --> GenAction["生成行动 A('t')"]:::state
+    GenAction --> Exec["物理执行并获取观测 O('t')"]:::state
     
     Exec --> CheckGoal{"是否达成最终目标<br/>或通过客观校验?"}:::decision
     
-    CheckGoal -->|是 (PASS)| Finish["任务成功，输出结果"]
-    CheckGoal -->|否 (FAIL)| CheckRetries{"反思尝试次数<br/>是否达到上限 N?"}:::decision
+    CheckGoal -->|"是 (PASS)"| Finish["任务成功，输出结果"]
+    CheckGoal -->|"否 (FAIL)"| CheckRetries{"反思尝试次数<br/>是否达到上限 N?"}:::decision
     
-    CheckRetries -->|是| Terminate["触发异常拦截，转入人工/优雅停机"]
-    CheckRetries -->|否| SelfReflect["启动自我批判诊断 (Self-Reflection)<br/>提炼语言形式的教训: '因为 X 失败了'"]:::state
+    CheckRetries -->|"是"| Terminate["触发异常拦截，转入人工/优雅停机"]
+    CheckRetries -->|"否"| SelfReflect["启动自我批判诊断 (Self-Reflection)<br/>提炼语言形式的教训: '因为 X 失败了'"]:::state
     
     SelfReflect --> WriteMemory["回写至 Scratchpad 记忆区<br/>(存储历史失败教训)"]:::memory
     WriteMemory --> PrepareNext["基于新记忆与教训重装配 Context"] --> GenAction

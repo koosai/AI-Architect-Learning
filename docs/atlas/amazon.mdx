@@ -81,23 +81,23 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 mindmap
-  root("(Amazon & Dynamo"))
+  root(("Amazon & Dynamo"))
     SOA 架构演进
       Bezos 的 API 宣言
-      双比萨团队 (Two-Pizza Teams)
+      ["双比萨团队 (Two-Pizza Teams)"]
       页面异步服务化组装
       P99.9 SLA 时延契约
     Dynamo 去中心化存储
       一致性哈希环
-      虚拟节点 (Virtual Nodes)
+      ["虚拟节点 (Virtual Nodes)"]
       Gossip 拓扑传播
     高可用写操作
-      Tunable Quorum("W+R<=N")
+      ["Tunable Quorum('W+R<=N')"]
       向量时钟 Vector Clock
-      购物车兄弟版本 (Siblings) 合并
+      ["购物车兄弟版本 (Siblings) 合并"]
     数据自愈防丢失
-      Sloppy Quorum (松散配额)
-      Hinted Handoff (暗示移交)
+      ["Sloppy Quorum (松散配额)"]
+      ["Hinted Handoff (暗示移交)"]
       Merkle Tree 逆熵同步
 ```
 
@@ -163,19 +163,19 @@ graph TB
   classDef service fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
   classDef storage fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-  ClientApp["用户客户端 (User Browser)"] -->|发起主页请求| PageComposer["页面装配器 (Page Composer)<br/>负责并发发起上百个小微服务请求并拼装 Widget"]:::page
+  ClientApp["用户客户端 (User Browser)"] -->|"发起主页请求"| PageComposer["页面装配器 (Page Composer)<br/>负责并发发起上百个小微服务请求并拼装 Widget"]:::page
   
-  subgraph AmazonSOASystem ["面向服务微服务平面 (无全局 SQL DB)"]
-    PageComposer -->|调用/合并数据| PricingService["价格微服务 (Pricing)"]:::service
-    PageComposer -->|调用/合并数据| ReviewService["评论微服务 (Reviews)"]:::service
-    PageComposer -->|调用/合并数据| RecommendService["推荐微服务 (Recommend)"]:::service
-    PageComposer -->|读写操作| CartService["购物车微服务 (Cart Service)"]:::service
+  subgraph AmazonSOASystem ["面向服务微服务平面 (无全局 SQL DB)']"]
+    PageComposer -->|"调用/合并数据"| PricingService["价格微服务 (Pricing)"]:::service
+    PageComposer -->|"调用/合并数据"| ReviewService["评论微服务 (Reviews)"]:::service
+    PageComposer -->|"调用/合并数据"| RecommendService["推荐微服务 (Recommend)"]:::service
+    PageComposer -->|"读写操作"| CartService["购物车微服务 (Cart Service)"]:::service
   end
 
-  subgraph DynamoMasterlessStorage ["Dynamo 去中心化存储容器"]
-    CartService -->|写入 Cart(W=1) / 读 Cart| StorageNodeA["存储节点 Node-A (VNode 1)"]:::storage
-    StorageNodeA <-->|Gossip 拓扑与 Merkle 逆熵| StorageNodeB["存储节点 Node-B (VNode 2)"]:::storage
-    StorageNodeB <-->|Gossip 拓扑与 Merkle 逆熵| StorageNodeC["存储节点 Node-C (VNode 3)"]:::storage
+  subgraph DynamoMasterlessStorage ["Dynamo 去中心化存储容器']"]
+    CartService -->|"写入 Cart(W=1) / 读 Cart"| StorageNodeA["存储节点 Node-A (VNode 1)"]:::storage
+    StorageNodeA <--->|"Gossip 拓扑与 Merkle 逆熵"| StorageNodeB["存储节点 Node-B (VNode 2)"]:::storage
+    StorageNodeB <--->|"Gossip 拓扑与 Merkle 逆熵"| StorageNodeC["存储节点 Node-C (VNode 3)"]:::storage
   end
 ```
 
@@ -199,14 +199,14 @@ graph TD
 
   Start["用户请求主页"] --> PageComposer["1. 页面装配器 (Page Composer)"]:::composer
   
-  PageComposer -->|2a. 并发请求 (Timeout=50ms)| HeaderW["UI Header Widget"]:::widget
-  PageComposer -->|2b. 并发请求 (Timeout=50ms)| PriceW["商品价格 Widget (Pricing Service)"]:::widget
-  PageComposer -->|2c. 并发请求 (Timeout=50ms)| RecommendW["推荐商品 Widget (Recommend Service)"]:::error
+  PageComposer -->|"2a. 并发请求 (Timeout=50ms)"| HeaderW["UI Header Widget"]:::widget
+  PageComposer -->|"2b. 并发请求 (Timeout=50ms)"| PriceW["商品价格 Widget (Pricing Service)"]:::widget
+  PageComposer -->|"2c. 并发请求 (Timeout=50ms)"| RecommendW["推荐商品 Widget (Recommend Service)"]:::error
   
-  RecommendW -->|3. 服务发生异常 (超时未返回)| TimeoutTrigger["触发网关超时判定"]:::error
+  RecommendW -->|"3. 服务发生异常 (超时未返回)"| TimeoutTrigger["触发网关超时判定"]:::error
   
-  HeaderW & PriceW -->|4. 正常返回数据| Merge["5. 动态合并 Widget HTML 片段"]:::composer
-  TimeoutTrigger -->|6. 丢弃推荐片段 (降级处理)| Merge
+  HeaderW & PriceW -->|"4. 正常返回数据"| Merge["5. 动态合并 Widget HTML 片段"]:::composer
+  TimeoutTrigger -->|"6. 丢弃推荐片段 (降级处理)"| Merge
   
   Merge --> Render["7. 返回最终残缺但可买的页面给用户"]:::composer
 ```
@@ -224,8 +224,8 @@ graph TD
 
 ```mermaid
 graph TD
-  subgraph ConsistentHashRing ["Dynamo 一致性哈希 Token 环 (含虚拟节点)"]
-    RingOuter("(Consistent Hashing Ring"))
+  subgraph ConsistentHashRing ["Dynamo 一致性哈希 Token 环 (含虚拟节点)']"]
+    RingOuter(("Consistent Hashing Ring"))
     
     NodeA1["VNode A-1 (物理 Node A)"]
     NodeB1["VNode B-1 (物理 Node B)"]
@@ -235,11 +235,11 @@ graph TD
     NodeC2["VNode C-2 (物理 Node C)"]
   end
 
-  Key1["Key = 'cart_100'<br/>Hash = 12000"] -.->|映射到环| RingOuter
-  RingOuter -->|顺时针寻找最近节点| NodeB1
+  Key1["Key = 'cart_100'<br/>Hash = 12000"] -.->|"映射到环"| RingOuter
+  RingOuter -->|"顺时针寻找最近节点"| NodeB1
   
-  Key2["Key = 'cart_200'<br/>Hash = 35000"] -.->|映射到环| RingOuter
-  RingOuter -->|顺时针寻找最近节点| NodeA2
+  Key2["Key = 'cart_200'<br/>Hash = 35000"] -.->|"映射到环"| RingOuter
+  RingOuter -->|"顺时针寻找最近节点"| NodeA2
 ```
 
 ---
@@ -263,14 +263,14 @@ graph TD
   classDef clock fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
   classDef node fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-  V1["初始购物车 V1<br/>内容: [Book"]<br/>Clock: [A: 1]"]:::clock -->|Node A 修改| V2["购物车 V2<br/>内容: [Book, Pen"]<br/>Clock: [A: 2]"]:::clock
+  V1["初始购物车 V1<br/>内容: (Book')<br/>Clock: (A: 1)"]:::clock -->|"Node A 修改"| V2["购物车 V2<br/>内容: (Book, Pen')<br/>Clock: (A: 2)"]:::clock
   
-  V2 -->|网络断开分叉 1 (Node A 写入)| V3_A["购物车 V3-A<br/>内容: [Book, Pen, Shoes"]<br/>Clock: [A: 3]"]:::clock
-  V2 -->|网络断开分叉 2 (Node B 写入)| V3_B["购物车 V3-B<br/>内容: [Book, Pen, Toy"]<br/>Clock: [A: 2, B: 1]"]:::clock
+  V2 -->|"网络断开分叉 1 (Node A 写入)"| V3_A["购物车 V3-A<br/>内容: (Book, Pen, Shoes')<br/>Clock: (A: 3)"]:::clock
+  V2 -->|"网络断开分叉 2 (Node B 写入)"| V3_B["购物车 V3-B<br/>内容: (Book, Pen, Toy')<br/>Clock: (A: 2, B: 1)"]:::clock
   
-  V3_A & V3_B -->|网络恢复发生 Read / 产生并发冲突 (Siblings)| MergeNode["客户端读取两版本并进行 Sibling 合并"]:::node
+  V3_A & V3_B -->|"网络恢复发生 Read / 产生并发冲突 (Siblings)"| MergeNode["客户端读取两版本并进行 Sibling 合并"]:::node
   
-  MergeNode -->|合并内容取并集并写回| V4["购物车 V4 (合并后)<br/>内容: [Book, Pen, Shoes, Toy"]<br/>Clock: [A: 3, B: 1, Client: 1]"]:::clock
+  MergeNode -->|"合并内容取并集并写回"| V4["购物车 V4 (合并后)<br/>内容: (Book, Pen, Shoes, Toy')<br/>Clock: (A: 3, B: 1, Client: 1)"]:::clock
 ```
 
 ---
@@ -291,22 +291,23 @@ graph TD
   classDef backup fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
   classDef error fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
 
-  subgraph PreferenceList ["正常首选存储列表 (N=3)"]
+  subgraph PreferenceList ["正常首选存储列表 (N=3)']"]
     Node1["Node 1 (写成功)"]:::node
     Node2["Node 2 (已挂掉/卡死)"]:::error
     Node3["Node 3 (写成功)"]:::node
   end
 
   Producer["写请求 W=2"] --> Node1 & Node2
-  Node2 -->|2. 写失败 / 自动降级移交| Node4["Node 4 (临时代管节点)"]:::backup
+  Node2 -->|"2. 写失败 / 自动降级移交"| Node4["Node 4 (临时代管节点)"]:::backup
   
-  Note over Node4: 3. 本地存储为 Hinted Data<br/>“代管 Node 2 的数据”
+  Note_Node4["3. 本地存储为 Hinted Data<br/>“代管 Node 2 的数据”"]
+  Node4 -.-> Note_Node4
   
-  Node4 -->|4. 后台持续 PING 心跳探测| Node2
-  Node2 -->|5. 恢复上线发出信号| Node4
+  Node4 -->|"4. 后台持续 PING 心跳探测"| Node2
+  Node2 -->|"5. 恢复上线发出信号"| Node4
   
-  Node4 -->|6. Hinted Handoff 暗示移交: 物理归还数据| Node2
-  Node4 -->|7. 清空本地代管缓存| Node4
+  Node4 -->|"6. Hinted Handoff 暗示移交: 物理归还数据"| Node2
+  Node4 -->|"7. 清空本地代管缓存"| Node4
 ```
 
 ---
@@ -339,7 +340,7 @@ graph TD
   classDef node fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
   classDef leaf fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-  RootA["Node-1 Root Hash (3f82...)"]:::root <==>|1. 仅通过网络异步比对根哈希是否相同| RootB["Node-2 Root Hash (9a21...)"]:::root
+  RootA["Node-1 Root Hash (3f82...)"]:::root <===>|"1. 仅通过网络异步比对根哈希是否相同"| RootB["Node-2 Root Hash (9a21...)"]:::root
   
   RootA --> SubA1["Hash(Key 0-50): 1a2d"]:::node
   RootA --> SubA2["Hash(Key 51-100): 4c9a"]:::node
@@ -350,7 +351,9 @@ graph TD
   SubA2 --> LeafA1["Hash(Key 60)"]:::leaf
   SubB2 --> LeafB1["Hash(Key 60) (差异!)"]:::leaf
   
-  Note over RootA, RootB: 2. 根哈希不同，向下二分搜索定位出 Key 60 数据不同，仅网络传输 Key 60！
+  Note_RootA["2. 根哈希不同，向下二分搜索定位出 Key 60 数据不同，仅网络传输 Key 60！"]
+  RootA -.-> Note_RootA
+  RootB -.-> Note_RootA
 ```
 
 ---

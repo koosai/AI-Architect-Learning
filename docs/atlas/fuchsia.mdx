@@ -110,13 +110,13 @@ graph LR
 
 ```mermaid
 graph TB
-  subgraph UserSpace["Fuchsia 用户态隔离空间 (Zero-Trust Sandbox Zone)"]
-    subgraph AppSandbox["Nest UI 应用程序组件"]
+  subgraph UserSpace ["Fuchsia 用户态隔离空间 (Zero-Trust Sandbox Zone)']"]
+    subgraph AppSandbox ["Nest UI 应用程序组件']"]
       UIComponent["UI Component Core"]
       UINamespace["私有虚拟命名空间 (无根目录)"]
     end
     
-    subgraph DriverSandbox["用户态传感器驱动组件"]
+    subgraph DriverSandbox ["用户态传感器驱动组件']"]
       LidarDriver["Sensor Driver Component"]
       DriverNamespace["私有传感器挂载命名空间"]
     end
@@ -124,30 +124,30 @@ graph TB
     ComponentManager["组件管理器 (Component Manager)"]
   end
 
-  subgraph ZirconSpace["Zircon 微内核态核心 (Kernel Mode Ring 0)"]
+  subgraph ZirconSpace ["Zircon 微内核态核心 (Kernel Mode Ring 0)']"]
     HandleTable["系统句柄分配表 (Handle Tables)"]
     
-    subgraph KernelObjects["微内核核心对象 (Objects)"]
+    subgraph KernelObjects ["微内核核心对象 (Objects)']"]
       VmoObject["虚拟内存对象 (VMO)"]
       ChannelObject["双向通信通道 (Channel)"]
       VmarObject["虚拟地址空间段 (VMAR)"]
     end
   end
 
-  subgraph PhysicalHardware["主控计算机物理芯片 (ARM / x86_64)"]
+  subgraph PhysicalHardware ["主控计算机物理芯片 (ARM / x86_64)']"]
     PhysicalDRAM["物理内存 (DRAM)"]
     MMU["硬件内存管理单元 (MMU)"]
   end
 
-  UIComponent -->|1. 查询服务契约| ComponentManager
-  ComponentManager -->|2. 在组件命名空间挂载句柄| UINamespace
+  UIComponent -->|"1. 查询服务契约"| ComponentManager
+  ComponentManager -->|"2. 在组件命名空间挂载句柄"| UINamespace
   
-  UIComponent -->|3. 往 Channel 写入数据句柄| ChannelObject
-  LidarDriver -->|4. 传递 VMO 句柄 (只读)| ChannelObject
+  UIComponent -->|"3. 往 Channel 写入数据句柄"| ChannelObject
+  LidarDriver -->|"4. 传递 VMO 句柄 (只读)"| ChannelObject
   
-  ChannelObject <-->|5. 核查发送方/接收方句柄权限| HandleTable
-  VmoObject -->|6. 指向物理内存区块| PhysicalDRAM
-  VmarObject <-->|7. 映射虚拟页面映射| MMU
+  ChannelObject <--->|"5. 核查发送方/接收方句柄权限"| HandleTable
+  VmoObject -->|"6. 指向物理内存区块"| PhysicalDRAM
+  VmarObject <--->|"7. 映射虚拟页面映射"| MMU
 ```
 
 ---

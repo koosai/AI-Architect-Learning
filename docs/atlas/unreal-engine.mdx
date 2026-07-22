@@ -117,21 +117,21 @@ graph LR
 
 ```mermaid
 graph TB
-  subgraph CPUMemoryPlane["CPU 内存与逻辑计算平面 (SOA Chunk Memory)"]
-    TransformArray["Transform Component Array("连续 C++ Struct 内存")"]
-    VelocityArray["Velocity Component Array("连续 C++ Struct 内存")"]
+  subgraph CPUMemoryPlane ["CPU 内存与逻辑计算平面 (SOA Chunk Memory)')"]
+    TransformArray["Transform Component Array('连续 C++ Struct 内存')"]
+    VelocityArray["Velocity Component Array('连续 C++ Struct 内存')"]
     MassProcessorThread["Mass Processor Thread (SIMD 顺序遍历)"]
     
-    TransformArray & VelocityArray <--> MassProcessorThread
+    TransformArray & VelocityArray <---> MassProcessorThread
   end
 
-  subgraph StreamingEngine["空间流送引擎"]
+  subgraph StreamingEngine ["空间流送引擎')"]
     WorldPartitionGrid["World Partition Grid (基于视距 Cell)"]
     AsyncLoader["Async Asset Loader (NVMe 磁盘线程池)"]
-    WorldPartitionGrid <--> AsyncLoader
+    WorldPartitionGrid <---> AsyncLoader
   end
 
-  subgraph GPURenderPlane["GPU 渲染管线平面"]
+  subgraph GPURenderPlane ["GPU 渲染管线平面')"]
     ClusterCulling["Nanite GPU Hardware Cluster Culler"]
     Rasterizer["Micropolygon Rasterizer"]
     LumenLighting["Lumen Dynamic Lighting Pass"]
@@ -156,18 +156,18 @@ graph TB
 
 ```mermaid
 graph TB
-  subgraph OOPAActor["传统 OOP AActor (堆内存随机跳转 - Cache Miss)"]
-    Actor1["Actor 1 Pointer -> [Position | Mesh | Sound | Script]"]
-    Actor2["Actor 2 Pointer -> [Position | Mesh | Sound | Script]"]
+  subgraph OOPAActor ["传统 OOP AActor (堆内存随机跳转 - Cache Miss)')"]
+    Actor1["Actor 1 Pointer -> (Position | Mesh | Sound | Script)"]
+    Actor2["Actor 2 Pointer -> (Position | Mesh | Sound | Script)"]
     CacheMissCrash["CPU 在堆内存中随机指针跳转 -> 90% Cache Miss，极度卡顿!"]
     
     Actor1 & Actor2 --> CacheMissCrash
     style CacheMissCrash fill:#ffcdd2,stroke:#c62828
   end
 
-  subgraph ECSSOA["Mass Entity ECS (SOA 连续内存 - Cache Hit)"]
-    PosBlock["Position Array: [Pos1 | Pos2 | Pos3 | Pos4 | Pos5 ..."] (100% 连续)"]
-    VelBlock["Velocity Array: [Vel1 | Vel2 | Vel3 | Vel4 | Vel5 ..."] (100% 连续)"]
+  subgraph ECSSOA ["Mass Entity ECS (SOA 连续内存 - Cache Hit)')"]
+    PosBlock["Position Array: (Pos1 | Pos2 | Pos3 | Pos4 | Pos5 ...') (100% 连续)"]
+    VelBlock["Velocity Array: (Vel1 | Vel2 | Vel3 | Vel4 | Vel5 ...') (100% 连续)"]
     CacheHitSuccess["CPU L1/L2 Cache 预取顺序读取 -> 性能拉升 50 倍，支持 10 万实体!"]
     
     PosBlock & VelBlock --> CacheHitSuccess

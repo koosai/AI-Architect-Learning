@@ -32,19 +32,22 @@ import QuizCard from '@site/src/components/QuizCard';
 
 ```mermaid
 flowchart TD
-  subgraph LatencyDistribution["延迟长尾分布 (Latency Distribution & Long Tail)"]
+  subgraph LatencyDistribution ["延迟长尾分布 (Latency Distribution & Long Tail)']"]
     direction TB
     A["快请求群 (99%)<br/>延迟: ~20ms"]
     B["慢请求尾部 (1%)<br/>延迟: ~3000ms"]
     
     avg["数据计算平均值<br/>Average Latency = 49.8ms"]
     
-    A -->|99个样本| avg
-    B -->|1个样本| avg
+    A -->|"99个样本"| avg
+    B -->|"1个样本"| avg
     
-    Note over avg: ⚠️ 平均值 ~50ms 掩盖了最痛苦的那 1% 的 3000ms 用户体验!
-    Note over A: p50/p90 = 20ms
-    Note over B: p99 = 3000ms (真实体现尾延迟)
+    Note_avg["⚠️ 平均值 ~50ms 掩盖了最痛苦的那 1% 的 3000ms 用户体验!"]
+    avg -.-> Note_avg
+    Note_A["p50/p90 = 20ms"]
+    A -.-> Note_A
+    Note_B["p99 = 3000ms (真实体现尾延迟)"]
+    B -.-> Note_B
   end
 ```
 
@@ -91,17 +94,18 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-  subgraph USLScale["通用扩展律系统吞吐趋势 (Universal Scalability Law Curves)"]
+  subgraph USLScale ["通用扩展律系统吞吐趋势 (Universal Scalability Law Curves)']"]
     direction TB
     Ideal["理想线性扩展<br/>- 吞吐与节点数成正比 (O(N))<br/>- 几乎不存在"]
     Amdahl["阿姆达尔定律极限<br/>- 串行比例阻碍继续攀升<br/>- 吞吐无限逼近渐近线天花板 (1/s)"]
     USLCurve["USL 吞吐退化曲线<br/>- 考虑节点间数据一致性广播与协调开销 (O(N^2))<br/>- 机器到一定临界点，协调开销占满，吞吐不升反降!"]
   end
 
-  Ideal -->|串行部分制约| Amdahl
-  Amdahl -->|交叉协调/广播开销| USLCurve
+  Ideal -->|"串行部分制约"| Amdahl
+  Amdahl -->|"交叉协调/广播开销"| USLCurve
   
-  Note over USLCurve: ⚠️ 临界点过后，盲目加机器只会拉低吞吐!
+  Note_USLCurve["⚠️ 临界点过后，盲目加机器只会拉低吞吐!"]
+  USLCurve -.-> Note_USLCurve
 ```
 
 

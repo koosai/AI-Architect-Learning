@@ -46,23 +46,23 @@ TikTok 的核心设计用意在于：**采用客户端首 2 秒智能预加载�
 
 ```mermaid
 graph TD
-  UploadClient["创作者上传 15s 竖屏短视频"] -->|1. 极速转码 (ByteVC1)| ByteTranscode["ByteVC1 高效转码引擎"]
+  UploadClient["创作者上传 15s 竖屏短视频"] -->|"1. 极速转码 (ByteVC1)"| ByteTranscode["ByteVC1 高效转码引擎"]
   
-  subgraph TrafficPoolEngine["流量池层级递进分发引擎"]
-    ByteTranscode -->|2. 放入 200 人初始池| Pool1["种子流量池 (200 - 500 真实用户)"]
-    Pool1 -->|3. 监控完播率 & 复播率 & 分享| MetricsCheck{"完播率 > 60% 且点赞率高?"}
+  subgraph TrafficPoolEngine ["流量池层级递进分发引擎']"]
+    ByteTranscode -->|"2. 放入 200 人初始池"| Pool1["种子流量池 (200 - 500 真实用户)"]
+    Pool1 -->|"3. 监控完播率 & 复播率 & 分享"| MetricsCheck{"完播率 > 60% 且点赞率高?"}
     
     MetricsCheck -- "Yes (晋级!)" --> Pool2["中阶流量池 (10,000 ~ 50,000 用户)"]
     MetricsCheck -- "No (淘汰)" --> PoolCold["沉淀入普通搜索池"]
     
-    Pool2 -->|4. 指标持续爆发| Pool3["全网爆款池 (1,000,000+ 热浪)"]
+    Pool2 -->|"4. 指标持续爆发"| Pool3["全网爆款池 (1,000,000+ 热浪)"]
   end
   
-  Pool2 & Pool3 -->|5. 触发 CDN 边缘预热| ByteCDNEgde["ByteCDN PoP 边缘节点"]
+  Pool2 & Pool3 -->|"5. 触发 CDN 边缘预热"| ByteCDNEgde["ByteCDN PoP 边缘节点"]
 
-  subgraph ClientPreloader["客户端智能预加载 (Smart Preloading)"]
-    ByteCDNEgde <-->|6. 静默预加载后 2 个视频的前 2s| LocalMemoryBuffer["客户端 RAM 内存 Buffer (500KB/视频)"]
-    LocalMemoryBuffer -->|7. 下滑瞬间 0ms 秒开| ScreenRender["用户手机屏幕渲染 (Zero Latency)"]
+  subgraph ClientPreloader ["客户端智能预加载 (Smart Preloading)']"]
+    ByteCDNEgde <--->|"6. 静默预加载后 2 个视频的前 2s"| LocalMemoryBuffer["客户端 RAM 内存 Buffer (500KB/视频)"]
+    LocalMemoryBuffer -->|"7. 下滑瞬间 0ms 秒开"| ScreenRender["用户手机屏幕渲染 (Zero Latency)"]
   end
 ```
 
@@ -87,20 +87,20 @@ graph TD
 
 ```mermaid
 mindmap
-  root("(TikTok 架构"))
+  root(("TikTok 架构"))
     短视频转码与分发
       ByteVC1 竖屏高压缩编码
       ByteCDN 全球边缘 PoP 预热
-      客户端 Smart Preloader (首 2 秒 500KB 预加载)
+      ["客户端 Smart Preloader (首 2 秒 500KB 预加载)"]
       无限滑动 0ms 切页控制
-    去中心化推荐算法 (Recommendation)
-      流量池递进机制 (200 -> 1万 -> 100万)
-      完播率 (Completion Rate) 核心加权
-      复播率 (Re-watch) 与转发系数
-      实时风控防刷 (Anti-Fraud)
+    ["去中心化推荐算法 (Recommendation)"]
+      ["流量池递进机制 (200 -> 1万 -> 100万)"]
+      ["完播率 (Completion Rate) 核心加权"]
+      ["复播率 (Re-watch) 与转发系数"]
+      ["实时风控防刷 (Anti-Fraud)"]
     数据与计算底座
-      Abase / TableStore 高并发 Key-Value
-      Real-Time Flink 完播率计算
+      ["Abase / TableStore 高并发 Key-Value"]
+      ["Real-Time Flink 完播率计算"]
       Embedding 近邻召回与重排
 ```
 

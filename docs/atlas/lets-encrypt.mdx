@@ -46,21 +46,21 @@ Let's Encrypt 的核心设计用意在于：**基于 Go 语言构建 <GlossaryTe
 
 ```mermaid
 graph TD
-  CertbotClient["ACME 客户端 (Certbot / Caddy / Cert-Manager)"] -->|1. 提交 ACME New-Order 请求| BoulderRA["Boulder RA (Registration Authority)"]
+  CertbotClient["ACME 客户端 (Certbot / Caddy / Cert-Manager)"] -->|"1. 提交 ACME New-Order 请求"| BoulderRA["Boulder RA (Registration Authority)"]
   
-  subgraph ACMEChallengeValidation["ACME 域名所有权自动化校验 (0 人工)"]
-    BoulderRA -->|2. 派发 Challenge (Token)| BoulderVA["Boulder VA (Validation Authority)"]
-    BoulderVA -->|3a. HTTP-01 Challenge| TargetWebserver["Web 服务器 (/.well-known/acme-challenge/)"]
-    BoulderVA -->|3b. DNS-01 Challenge| DNSNameserver["DNS 权威服务器 (TXT 记录)"]
+  subgraph ACMEChallengeValidation ["ACME 域名所有权自动化校验 (0 人工)']"]
+    BoulderRA -->|"2. 派发 Challenge (Token)"| BoulderVA["Boulder VA (Validation Authority)"]
+    BoulderVA -->|"3a. HTTP-01 Challenge"| TargetWebserver["Web 服务器 (/.well-known/acme-challenge/)"]
+    BoulderVA -->|"3b. DNS-01 Challenge"| DNSNameserver["DNS 权威服务器 (TXT 记录)"]
     
-    TargetWebserver & DNSNameserver -->|4. 校验 Token 响应匹配!| BoulderVA
+    TargetWebserver & DNSNameserver -->|"4. 校验 Token 响应匹配!"| BoulderVA
   end
 
-  subgraph CertificateIssuance["HSM 私钥签名与 90 天证书颁发"]
-    BoulderVA -->|5. 校验成功通知| BoulderRA
-    BoulderRA -->|6. 提交 CSR 请求| BoulderCA["Boulder CA (Certificate Authority)"]
-    BoulderCA <-->|7. 硬件安全模块签名| HSMHardware["HSM (Hardware Security Module)"]
-    BoulderCA -->|8. 颁发 90 天 X.509 TLS 证书| CertbotClient
+  subgraph CertificateIssuance ["HSM 私钥签名与 90 天证书颁发']"]
+    BoulderVA -->|"5. 校验成功通知"| BoulderRA
+    BoulderRA -->|"6. 提交 CSR 请求"| BoulderCA["Boulder CA (Certificate Authority)"]
+    BoulderCA <--->|"7. 硬件安全模块签名"| HSMHardware["HSM (Hardware Security Module)"]
+    BoulderCA -->|"8. 颁发 90 天 X.509 TLS 证书"| CertbotClient
   end
 ```
 

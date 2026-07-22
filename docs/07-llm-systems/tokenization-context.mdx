@@ -33,9 +33,9 @@ import QuizCard from '@site/src/components/QuizCard';
 ```mermaid
 graph LR
     Input["输入文本: 'unhelpful'"] --> Tokenizer["BPE 分词器 (词表检索与切分)"]
-    Tokenizer --> Tokens["切分为 Tokens: ['un', 'help', 'ful'"]"]
+    Tokenizer --> Tokens["切分为 Tokens: ('un', 'help', 'ful'"]
     Tokens --> Mapper["词表映射 (Vocab Lookup)"]
-    Mapper --> IDs["数字 IDs: [1203, 401, 882"]"]
+    Mapper --> IDs["数字 IDs: (1203, 401, 882"]
     IDs --> Model["输入给大模型"]
 ```
 

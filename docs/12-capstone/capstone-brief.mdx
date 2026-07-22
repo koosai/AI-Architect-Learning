@@ -26,7 +26,7 @@ flowchart LR
   UI --> API["Architecture Assistant API"]
   API --> RAG["RAG Service"]
   API --> AG["Agent Orchestrator"]
-  RAG --> VDB["("Local Vector Store")"]
+  RAG --> VDB[("Local Vector Store")]
   AG --> TOOLS["Review Tools"]
   AG --> OBS["Trace Log"]
   API --> LLM["Local Model or Cloud Model"]

@@ -76,19 +76,19 @@ graph TD
     classDef collector fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
     classDef db fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-    subgraph ProductionEnv ["生产环境 (运行态)"]
-        User["用户交互"] -->|产生会话| App["AI 业务应用"]:::prod
-        App -->|记录交互日志| Logger["可观测性 Log / Trace"]:::prod
+    subgraph ProductionEnv ["生产环境 (运行态)']"]
+        User["用户交互"] -->|"产生会话"| App["AI 业务应用"]:::prod
+        App -->|"记录交互日志"| Logger["可观测性 Log / Trace"]:::prod
     end
 
-    subgraph EvaluationPlatform ["平台评估与闭环"]
-        Logger -->|提取负信号| Detector["异常与坏例识别 (Drift/Bad Case Detector)"]:::collector
-        Detector -->|自动回流| Recycler["坏例清洗与去噪 (Bad Case Recycler)"]:::collector
+    subgraph EvaluationPlatform ["平台评估与闭环']"]
+        Logger -->|"提取负信号"| Detector["异常与坏例识别 (Drift/Bad Case Detector)"]:::collector
+        Detector -->|"自动回流"| Recycler["坏例清洗与去噪 (Bad Case Recycler)"]:::collector
         
-        Recycler -->|生成样本/标注| GoldSet["("黄金评估集 (Gold Set)")"]:::db
+        Recycler -->|"生成样本/标注"| GoldSet[("黄金评估集 (Gold Set)")]:::db
     end
 
-    GoldSet -->|反馈拉取| OfflineCI["离线 CI 门禁评估"]
+    GoldSet -->|"反馈拉取"| OfflineCI["离线 CI 门禁评估"]
 ```
 
 ### 2. 控制流程：从生产异常发现到评估集演进的时序

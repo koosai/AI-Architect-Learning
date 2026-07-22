@@ -72,28 +72,28 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-  subgraph ClientSide["客户端 (Users)"]
+  subgraph ClientSide ["客户端 (Users)']"]
     U1["用户 Ada"]
     U2["用户 Bob"]
   end
 
   LB["负载均衡器 (Load Balancer)"]
 
-  subgraph StatelessApp["无状态应用层 (Stateless App Layer - Share Nothing)"]
+  subgraph StatelessApp ["无状态应用层 (Stateless App Layer - Share Nothing)']"]
     ServerA["Server A (无状态)"]
     ServerB["Server B (无状态)"]
     ServerC["Server C (无状态)"]
   end
 
-  subgraph SharedState["共享状态存储层 (Shared State Backend)"]
-    RedisStore["("共享 Redis 缓存集群<br/>(Shared Session Store)")"]
-    DB["("持久化关系数据库<br/>(Master-Slave DB)")"]
+  subgraph SharedState ["共享状态存储层 (Shared State Backend)']"]
+    RedisStore[("共享 Redis 缓存集群<br/>(Shared Session Store)")]
+    DB[("持久化关系数据库<br/>(Master-Slave DB)")]
   end
 
   U1 & U2 --> LB
-  LB -->|路由到任意健康实例| ServerA & ServerB & ServerC
-  ServerA & ServerB & ServerC -->|统一读写状态| RedisStore
-  RedisStore -->|数据最终落盘| DB
+  LB -->|"路由到任意健康实例"| ServerA & ServerB & ServerC
+  ServerA & ServerB & ServerC -->|"统一读写状态"| RedisStore
+  RedisStore -->|"数据最终落盘"| DB
 ```
 
 这正是 <GlossaryTerm term="Twelve-Factor App" definition="一套广泛采用的云原生应用方法论。其中一条核心原则：应用进程应当无状态，任何需要持久化的数据都交给『后端服务』（数据库、缓存等）。">Twelve-Factor</GlossaryTerm> 的核心原则之一。

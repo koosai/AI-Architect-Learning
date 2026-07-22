@@ -79,25 +79,25 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 mindmap
-  root("(Kafka 架构"))
+  root(("Kafka 架构"))
     顺序追加写存储
       LogSegment 分段文件
-      稀疏索引 .index / .timeindex
+      ["稀疏索引 .index / .timeindex"]
       操作系统页缓存 Page Cache
-      定期清理与日志压缩 (Compaction)
+      ["定期清理与日志压缩 (Compaction)"]
     零拷贝与性能优化
-      sendfile() 系统调用
+      ["sendfile() 系统调用"]
       DMA 直接内存存取
-      消息批量发送 (Batching)
+      ["消息批量发送 (Batching)"]
       端到端消息压缩
     高可用与副本机制
       Leader 与 Follower 角色
-      ISR (In-Sync Replicas) 集合
+      ["ISR (In-Sync Replicas) 集合"]
       高水位 HW 与 LEO
       Leader Epoch 解决版本漂移
     集群元数据共识
-      ZooKeeper 依赖 (历史时代)
-      KRaft 协议 (当前标准)
+      ["ZooKeeper 依赖 (历史时代)"]
+      ["KRaft 协议 (当前标准)"]
       Raft Metadata Log
       Active Controller 控制器
 ```
@@ -148,10 +148,10 @@ graph TB
   classDef main fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
   classDef third fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-  Producer["生产者应用 (Producer App)"]:::client -->|1. 发送消息流 (Kafka Protocol)| KafkaCluster["Kafka 分布式事件流集群"]:::main
-  Consumer["消费者应用 (Consumer App)"]:::client <--|2. 主动拉取消息流 (Pull Model)| KafkaCluster
+  Producer["生产者应用 (Producer App)"]:::client -->|"1. 发送消息流 (Kafka Protocol)"| KafkaCluster["Kafka 分布式事件流集群"]:::main
+  KafkaCluster -->|"2. 主动拉取消息流 (Pull Model)"| Consumer["消费者应用 (Consumer App)"]:::client
   
-  KafkaCluster -->|3. 定期冷备份与归档| TieredStorage["("对象存储 (AWS S3 / GCS)")"]:::third
+  KafkaCluster -->|"3. 定期冷备份与归档"| TieredStorage[("对象存储 (AWS S3 / GCS)")]:::third
 ```
 
 ### 3b. Container Diagram (容器结构图)
@@ -163,25 +163,25 @@ graph TB
   classDef mem fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
   classDef disk fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-  Producer["Kafka Producer SDK"]:::client -->|批量压缩消息| SocketLayer["Broker Network Sockets (网络层)"]:::mem
+  Producer["Kafka Producer SDK"]:::client -->|"批量压缩消息"| SocketLayer["Broker Network Sockets (网络层)"]:::mem
   
-  subgraph KafkaBrokerInstance ["Kafka Broker 节点容器内部"]
-    SocketLayer <-->|Acceptor/Processor 线程分发| RequestHandler["Request Handler Threads (请求处理线程池)"]:::process
+  subgraph KafkaBrokerInstance ["Kafka Broker 节点容器内部']"]
+    SocketLayer <--->|"Acceptor/Processor 线程分发"| RequestHandler["Request Handler Threads (请求处理线程池)"]:::process
     
-    RequestHandler -->|1. 写数据至内核缓存| PageCache["OS Page Cache (操作系统页缓存)"]:::mem
+    RequestHandler -->|"1. 写数据至内核缓存"| PageCache["OS Page Cache (操作系统页缓存)"]:::mem
     
-    subgraph LogStorage ["分区分段存储管理器"]
-      PageCache -->|2. 异步顺序刷盘| SegmentFiles["("Log Segment Files (.log)")"]:::disk
-      PageCache -->|3. 写入稀疏索引| IndexFiles["("Index Files (.index / .timeindex)")"]:::disk
+    subgraph LogStorage ["分区分段存储管理器']"]
+      PageCache -->|"2. 异步顺序刷盘"| SegmentFiles[("Log Segment Files (.log)")]:::disk
+      PageCache -->|"3. 写入稀疏索引"| IndexFiles[("Index Files (.index / .timeindex)")]:::disk
     end
 
-    ReplicaManager["Replica Manager (副本管理器)"]:::process -->|4. ISR 副本数据复制同步| PageCache
+    ReplicaManager["Replica Manager (副本管理器)"]:::process -->|"4. ISR 副本数据复制同步"| PageCache
     
-    KRaftController["KRaft Controller (元数据管理器)"]:::process <-->|5. 元数据 Raft 复制| MetadataLog["("Metadata Log")"]:::disk
+    KRaftController["KRaft Controller (元数据管理器)"]:::process <--->|"5. 元数据 Raft 复制"| MetadataLog[("Metadata Log")]:::disk
   end
 
-  Consumer["Kafka Consumer SDK"]:::client -->|6. 发起零拷贝拉取请求| SocketLayer
-  SocketLayer -->|7. 调用 sendfile() 直连网卡| PageCache
+  Consumer["Kafka Consumer SDK"]:::client -->|"6. 发起零拷贝拉取请求"| SocketLayer
+  SocketLayer -->|"7. 调用 sendfile() 直连网卡"| PageCache
 ```
 
 ---
@@ -203,11 +203,11 @@ graph TD
   classDef pagecache fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
   classDef disk fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-  Producer["Producer 写入请求"]:::write -->|1. 顺序调用 write() 系统调用| PageCache["操作系统页缓存 (Page Cache)"]:::pagecache
+  Producer["Producer 写入请求"]:::write -->|"1. 顺序调用 write() 系统调用"| PageCache["操作系统页缓存 (Page Cache)"]:::pagecache
   
-  PageCache -->|2. 数据立刻对读操作可见 (热度直读)| Consumer["Consumer 读请求"]:::pagecache
+  PageCache -->|"2. 数据立刻对读操作可见 (热度直读)"| Consumer["Consumer 读请求"]:::pagecache
   
-  PageCache -->|3. 脏页定期异步刷新 (WAL/pdflush)| HardDisk["("物理磁盘 Log Segment 文件 (顺序写)")"]:::disk
+  PageCache -->|"3. 脏页定期异步刷新 (WAL/pdflush)"| HardDisk[("物理磁盘 Log Segment 文件 (顺序写)")]:::disk
 ```
 
 ---
@@ -226,16 +226,16 @@ graph TB
   classDef mem fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
   classDef app fill:#ffebee,stroke:#c62828,stroke-width:2px;
 
-  subgraph TraditionalPath ["传统网络数据发送 (4次拷贝/4次切换)"]
-    Disk_T["("磁盘")"] -->|1. DMA 拷贝| PageCache_T["Page Cache (内核)"]:::mem
-    PageCache_T -->|2. CPU 拷贝| JVM_T["JVM 内存 (用户态)"]:::app
-    JVM_T -->|3. CPU 拷贝| Socket_T["Socket 缓冲区 (内核)"]:::mem
-    Socket_T -->|4. DMA 拷贝| NIC_T["网卡发送区"]:::mem
+  subgraph TraditionalPath ["传统网络数据发送 (4次拷贝/4次切换)']"]
+    Disk_T[("磁盘")] -->|"1. DMA 拷贝"| PageCache_T["Page Cache (内核)"]:::mem
+    PageCache_T -->|"2. CPU 拷贝"| JVM_T["JVM 内存 (用户态)"]:::app
+    JVM_T -->|"3. CPU 拷贝"| Socket_T["Socket 缓冲区 (内核)"]:::mem
+    Socket_T -->|"4. DMA 拷贝"| NIC_T["网卡发送区"]:::mem
   end
 
-  subgraph ZeroCopyPath ["零拷贝 sendfile() 网络数据发送 (2次拷贝/2次切换)"]
-    Disk_Z["("磁盘")"] -->|1. DMA 拷贝| PageCache_Z["Page Cache (内核)"]:::mem
-    PageCache_Z -->|2. DMA 直接拷贝 (零 CPU 复制)| NIC_Z["网卡发送区"]:::mem
+  subgraph ZeroCopyPath ["零拷贝 sendfile() 网络数据发送 (2次拷贝/2次切换)']"]
+    Disk_Z[("磁盘")] -->|"1. DMA 拷贝"| PageCache_Z["Page Cache (内核)"]:::mem
+    PageCache_Z -->|"2. DMA 直接拷贝 (零 CPU 复制)"| NIC_Z["网卡发送区"]:::mem
   end
 ```
 
@@ -340,13 +340,13 @@ graph TD
   classDef log fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
   classDef search fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
 
-  Query["查询目标 Offset = 12"]:::search -->|1. 二分检索稀疏索引| IndexFile["稀疏索引文件 (.index)<br/>Offset: 0 -> Pos: 0<br/>Offset: 10 -> Pos: 1024<br/>Offset: 20 -> Pos: 2048"]:::index
+  Query["查询目标 Offset = 12"]:::search -->|"1. 二分检索稀疏索引"| IndexFile["稀疏索引文件 (.index)<br/>Offset: 0 -> Pos: 0<br/>Offset: 10 -> Pos: 1024<br/>Offset: 20 -> Pos: 2048"]:::index
   
-  IndexFile -->|2. 定位到小于等于 12 的最大索引项 (10)| FindPos["物理数据起点: Pos 1024"]:::search
+  IndexFile -->|"2. 定位到小于等于 12 的最大索引项 (10)"| FindPos["物理数据起点: Pos 1024"]:::search
   
-  FindPos -->|3. 定位物理文件偏移| LogFile["日志数据文件 (.log)<br/>Pos 1024: Msg 10<br/>Pos 1080: Msg 11<br/>Pos 1140: Msg 12 (命中!)"]:::log
+  FindPos -->|"3. 定位物理文件偏移"| LogFile["日志数据文件 (.log)<br/>Pos 1024: Msg 10<br/>Pos 1080: Msg 11<br/>Pos 1140: Msg 12 (命中!)"]:::log
   
-  LogFile -->|4. 顺序向后扫描找到 12| Result["返回 Msg 12 数据"]:::search
+  LogFile -->|"4. 顺序向后扫描找到 12"| Result["返回 Msg 12 数据"]:::search
 ```
 
 ---

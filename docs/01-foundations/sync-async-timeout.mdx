@@ -107,23 +107,23 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-  subgraph ProducerSide["生产者 (Ingress / API Server)"]
+  subgraph ProducerSide ["生产者 (Ingress / API Server)']"]
     Req["客户端并发请求"] --> CheckQueue{"队列当前大小 < Capacity (1000)?"}
   end
 
-  subgraph QueueSide["有界缓冲区 (Bounded Buffer)"]
+  subgraph QueueSide ["有界缓冲区 (Bounded Buffer)']"]
     Queue["消息队列"]
   end
 
-  subgraph ConsumerSide["消费者 (Email Workers)"]
-    Worker["Worker 处理线程"] -->|从队列拉取消费| Queue
+  subgraph ConsumerSide ["消费者 (Email Workers)']"]
+    Worker["Worker 处理线程"] -->|"从队列拉取消费"| Queue
   end
 
-  CheckQueue -->|Yes (未满)| Enqueue["写入队列并秒回 202 Accept"]
+  CheckQueue -->|"Yes (未满)"| Enqueue["写入队列并秒回 202 Accept"]
   Enqueue --> Queue
   
-  CheckQueue -->|No (已满 - 触发背压保护)| Backpressure["拒绝请求 / 限制发送速 / 丢弃降载"]
-  Backpressure -->|反馈上游| Shed["返回 429 Too Many Requests / 503"]
+  CheckQueue -->|"No (已满 - 触发背压保护)"| Backpressure["拒绝请求 / 限制发送速 / 丢弃降载"]
+  Backpressure -->|"反馈上游"| Shed["返回 429 Too Many Requests / 503"]
 ```
 
 

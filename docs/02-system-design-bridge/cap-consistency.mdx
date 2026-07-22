@@ -34,25 +34,25 @@ import QuizCard from '@site/src/components/QuizCard';
 
 ```mermaid
 flowchart TD
-  subgraph CPPartition["CP 系统（一致性优先 - Partitioned）"]
+  subgraph CPPartition ["CP 系统（一致性优先 - Partitioned）']"]
     direction TB
-    ClientA_CP["客户端 A"] -->|1. 写入数据 X=1| NodeA_CP["节点 A (主)"]
-    NodeA_CP -.-x|2. 网络分区中断 (无法同步)| NodeB_CP["节点 B (从)"]
-    NodeA_CP -->|3. 同步失败, 报错拒绝| ClientA_CP
-    ClientB_CP["客户端 B"] -->|4. 读取数据| NodeB_CP
-    NodeB_CP -->|5. 锁定/返回错误 (保一致性)| ClientB_CP
+    ClientA_CP["客户端 A"] -->|"1. 写入数据 X=1"| NodeA_CP["节点 A (主)"]
+    NodeA_CP -.->|"2. 网络分区中断 (无法同步)"| NodeB_CP["节点 B (从)"]
+    NodeA_CP -->|"3. 同步失败, 报错拒绝"| ClientA_CP
+    ClientB_CP["客户端 B"] -->|"4. 读取数据"| NodeB_CP
+    NodeB_CP -->|"5. 锁定/返回错误 (保一致性)"| ClientB_CP
   end
 ```
 
 ```mermaid
 flowchart TD
-  subgraph APPartition["AP 系统（可用性优先 - Partitioned）"]
+  subgraph APPartition ["AP 系统（可用性优先 - Partitioned）']"]
     direction TB
-    ClientA_AP["客户端 A"] -->|1. 写入数据 X=1| NodeA_AP["节点 A"]
-    NodeA_AP -.-x|2. 网络分区中断 (无法同步)| NodeB_AP["节点 B"]
-    NodeA_AP -->|3. 单侧写入成功, 返回 OK| ClientA_AP
-    ClientB_AP["客户端 B"] -->|4. 读取数据| NodeB_AP
-    NodeB_AP -->|5. 返回旧数据 X=0 (保可用性)| ClientB_AP
+    ClientA_AP["客户端 A"] -->|"1. 写入数据 X=1"| NodeA_AP["节点 A"]
+    NodeA_AP -.->|"2. 网络分区中断 (无法同步)"| NodeB_AP["节点 B"]
+    NodeA_AP -->|"3. 单侧写入成功, 返回 OK"| ClientA_AP
+    ClientB_AP["客户端 B"] -->|"4. 读取数据"| NodeB_AP
+    NodeB_AP -->|"5. 返回旧数据 X=0 (保可用性)"| ClientB_AP
   end
 ```
 

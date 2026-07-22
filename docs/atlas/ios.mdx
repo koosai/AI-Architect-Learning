@@ -97,11 +97,11 @@ iOS 操作系统的整体控制流、沙盒防线以及底层的 GPU 物理交�
 
 ```mermaid
 graph LR
-  User["iPhone 用户"] -->|交互触摸事件| App["App UI (UIKit / SwiftUI)"]
-  App -->|1. 请求硬件能力 (如相机)| IOSKernel["iOS 内核 (MACF/Entitlements)"]
-  App -->|2. 渲染指令流| MetalAPI["Metal 图形驱动 (Ring 0)"]
-  IOSKernel -->|3. 生物特征校验| SecureEnclave["Secure Enclave 安全协处理器"]
-  MetalAPI -->|4. 共享内存直接读取| AppleGPU["A系列/M系列 GPU 核心"]
+  User["iPhone 用户"] -->|"交互触摸事件"| App["App UI (UIKit / SwiftUI)"]
+  App -->|"1. 请求硬件能力 (如相机)"| IOSKernel["iOS 内核 (MACF/Entitlements)"]
+  App -->|"2. 渲染指令流"| MetalAPI["Metal 图形驱动 (Ring 0)"]
+  IOSKernel -->|"3. 生物特征校验"| SecureEnclave["Secure Enclave 安全协处理器"]
+  MetalAPI -->|"4. 共享内存直接读取"| AppleGPU["A系列/M系列 GPU 核心"]
 ```
 
 ### 3b. Container Diagram (容器架构)
@@ -215,15 +215,15 @@ iOS 设备由于采用了 **<GlossaryTerm term="Metal 渲染栈" definition="Met
 
 ```mermaid
 graph TB
-  subgraph StandardPC["传统独立显存架构 (Discrete GPU)"]
-    CPURAM["CPU 物理内存"] -->|PCIe 总线数据拷贝| GPURAM["GPU 独立显存 (VRAM)"]
-    GPURAM -->|渲染读取| PC_GPU["PC 独立 GPU 核心"]
+  subgraph StandardPC ["传统独立显存架构 (Discrete GPU)']"]
+    CPURAM["CPU 物理内存"] -->|"PCIe 总线数据拷贝"| GPURAM["GPU 独立显存 (VRAM)"]
+    GPURAM -->|"渲染读取"| PC_GPU["PC 独立 GPU 核心"]
   end
 
-  subgraph IOS_UMA["iOS 统一内存架构 (Metal UMA)"]
+  subgraph IOS_UMA ["iOS 统一内存架构 (Metal UMA)']"]
     UnifiedRAM["同一个物理内存池 (UMA Shared RAM)"]
-    IOS_CPU["iOS CPU 核心"] -->|直接写入物理指针 ( makeBuffer )| UnifiedRAM
-    UnifiedRAM <-->|零拷贝物理直连 (共享寻址)| IOS_GPU["Apple GPU 核心"]
+    IOS_CPU["iOS CPU 核心"] -->|"直接写入物理指针 ( makeBuffer )"| UnifiedRAM
+    UnifiedRAM <--->|"零拷贝物理直连 (共享寻址)"| IOS_GPU["Apple GPU 核心"]
   end
 ```
 

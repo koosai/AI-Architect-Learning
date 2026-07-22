@@ -47,22 +47,22 @@ IPFS 与 Libp2p 的核心设计用意在于：**基于 <GlossaryTerm term="内�
 
 ```mermaid
 graph TD
-  UserClient["IPFS 客户端 / Libp2p 节点"] -->|1. 输入 CID (内容寻址)| IPFSNode["IPFS Core Engine"]
+  UserClient["IPFS 客户端 / Libp2p 节点"] -->|"1. 输入 CID (内容寻址)"| IPFSNode["IPFS Core Engine"]
   
-  subgraph DHTLookupPlane["Kademlia DHT 发现平面 (XOR 距离)"]
-    IPFSNode -->|2. FIND_PROVIDERS(CID)| KadDHT["Libp2p Kademlia DHT (k-bucket 路由)"]
-    KadDHT -->|3. XOR 距离 d=NodeID ⊕ CID| PeerNodes["找到最近的 20 个 Provider Peers"]
+  subgraph DHTLookupPlane ["Kademlia DHT 发现平面 (XOR 距离)']"]
+    IPFSNode -->|"2. FIND_PROVIDERS(CID)"| KadDHT["Libp2p Kademlia DHT (k-bucket 路由)"]
+    KadDHT -->|"3. XOR 距离 d=NodeID ⊕ CID"| PeerNodes["找到最近的 20 个 Provider Peers"]
   end
 
-  subgraph BitSwapDataPlane["BitSwap 去中心化数据块交换平面"]
-    PeerNodes -->|4. 建立 Libp2p Stream (QUIC / Noise)| PeerConnection["Libp2p Encrypted Session"]
-    IPFSNode -->|5. 发送 Wantlist [CID_Chunk_1, CID_Chunk_2]| PeerConnection
-    PeerConnection -->|6. P2P 并行传输 256KB Chunks| BitSwapEngine["BitSwap Block Exchange"]
+  subgraph BitSwapDataPlane ["BitSwap 去中心化数据块交换平面']"]
+    PeerNodes -->|"4. 建立 Libp2p Stream (QUIC / Noise)"| PeerConnection["Libp2p Encrypted Session"]
+    IPFSNode -->|"5. 发送 Wantlist('CID_Chunk_1, CID_Chunk_2')"| PeerConnection
+    PeerConnection -->|"6. P2P 并行传输 256KB Chunks"| BitSwapEngine["BitSwap Block Exchange"]
   end
 
-  subgraph MerkleDAGAssemble["Merkle DAG 组装与密码学验签"]
-    BitSwapEngine -->|7. 校验 SHA-256 哈希| MerkleAssemble["Merkle DAG Assembler"]
-    MerkleAssemble -->|8. 还原原始文件| LocalFile["本地文件 (100% 密码学防篡改!)"]
+  subgraph MerkleDAGAssemble ["Merkle DAG 组装与密码学验签']"]
+    BitSwapEngine -->|"7. 校验 SHA-256 哈希"| MerkleAssemble["Merkle DAG Assembler"]
+    MerkleAssemble -->|"8. 还原原始文件"| LocalFile["本地文件 (100% 密码学防篡改!)"]
   end
 ```
 

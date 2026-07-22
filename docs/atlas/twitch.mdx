@@ -46,24 +46,24 @@ Twitch 的核心设计用意在于：**采用亚秒级 RTMP 推流入库与动�
 
 ```mermaid
 graph TD
-  Broadcaster["主播 (OBS / RTMP 实时推流)"] -->|1. RTMP 协议 (60fps)| IngestServer["Twitch Ingest POP (推流边缘接入点)"]
+  Broadcaster["主播 (OBS / RTMP 实时推流)"] -->|"1. RTMP 协议 (60fps)"| IngestServer["Twitch Ingest POP (推流边缘接入点)"]
   
-  subgraph RealtimeMediaPipeline["实时媒体处理与转码集群"]
-    IngestServer -->|2. 分发原始视频流| TranscodeCluster["Live Transcoder("Go/C++ GPU GOP 切片")"]
-    TranscodeCluster -->|3. 生成 0.5s 小 Part 切片| LLHLSBuilder["LL-HLS Manifest Engine (.m3u8 Part)"]
+  subgraph RealtimeMediaPipeline ["实时媒体处理与转码集群')"]
+    IngestServer -->|"2. 分发原始视频流"| TranscodeCluster["Live Transcoder('Go/C++ GPU GOP 切片')"]
+    TranscodeCluster -->|"3. 生成 0.5s 小 Part 切片"| LLHLSBuilder["LL-HLS Manifest Engine (.m3u8 Part)"]
   end
   
-  LLHLSBuilder -->|4. 低延迟 HTTP/2 协议| DeliveryEdge["Twitch Edge CDN / AWS IVS"]
+  LLHLSBuilder -->|"4. 低延迟 HTTP/2 协议"| DeliveryEdge["Twitch Edge CDN / AWS IVS"]
 
-  subgraph ChatFanoutSystem["TMI 百万人弹幕扇出系统"]
-    ViewerChat["观众弹幕 (WebSocket / IRC)"] -->|5. 发送弹幕消息| TMIGateway["TMI Front Gateway (WebSocket 网关)"]
-    TMIGateway -->|6. Pub/Sub 广播| RedisPubSub["Redis Cluster Pub/Sub (房间订阅)"]
-    RedisPubSub -->|7. 广播给房间内所有网关| FanoutWorkers["Fanout Worker Engine"]
-    FanoutWorkers -->|8. 环形缓冲区 (Ring Buffer 批次合并/丢帧)| TMIGateway
+  subgraph ChatFanoutSystem ["TMI 百万人弹幕扇出系统')"]
+    ViewerChat["观众弹幕 (WebSocket / IRC)"] -->|"5. 发送弹幕消息"| TMIGateway["TMI Front Gateway (WebSocket 网关)"]
+    TMIGateway -->|"6. Pub/Sub 广播"| RedisPubSub["Redis Cluster Pub/Sub (房间订阅)"]
+    RedisPubSub -->|"7. 广播给房间内所有网关"| FanoutWorkers["Fanout Worker Engine"]
+    FanoutWorkers -->|"8. 环形缓冲区 (Ring Buffer 批次合并/丢帧)"| TMIGateway
   end
 
-  DeliveryEdge <-->|9. 1.5s - 3s 极低延时播放| ViewerClient["观众客户端 App / Web"]
-  TMIGateway <-->|10. 毫秒级弹幕显示| ViewerClient
+  DeliveryEdge <--->|"9. 1.5s - 3s 极低延时播放"| ViewerClient["观众客户端 App / Web"]
+  TMIGateway <--->|"10. 毫秒级弹幕显示"| ViewerClient
 ```
 
 <DesignIntent
@@ -87,20 +87,20 @@ graph TD
 
 ```mermaid
 mindmap
-  root("(Twitch 架构"))
+  root(("Twitch 架构"))
     实时流媒体入库与转码
-      RTMP 协议边缘推流 (Ingest PoP)
-      Go / C++ GPU GOP (Group of Pictures) 实时切片
-      自适应码率 (ABR) 动态转码 (1080p60 ~ 160p)
-      LL-HLS (Low-Latency HLS, < 3s 延时)
+      ["RTMP 协议边缘推流 (Ingest PoP)"]
+      ["Go / C++ GPU GOP (Group of Pictures) 实时切片"]
+      ["自适应码率 (ABR) 动态转码 (1080p60 ~ 160p)"]
+      ["LL-HLS (Low-Latency HLS, < 3s 延时)"]
     TMI 百万房间弹幕系统
-      WebSocket / IRC 接口网关
-      Redis Pub/Sub 订阅分发
-      Fan-out 广播扇出
-      Ring Buffer 批次合并与主动丢帧 (Drop)
+      ["WebSocket / IRC 接口网关"]
+      ["Redis Pub/Sub 订阅分发"]
+      ["Fan-out 广播扇出"]
+      ["Ring Buffer 批次合并与主动丢帧 (Drop)"]
     基础设施与容错
-      AWS IVS (Interactive Video Service)
-      Borg / K8s 转码算力调度
+      ["AWS IVS (Interactive Video Service)"]
+      ["Borg / K8s 转码算力调度"]
       Edge CDN 视频预热
 ```
 

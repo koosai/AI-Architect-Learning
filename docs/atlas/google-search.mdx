@@ -141,7 +141,7 @@ graph TB
     classDef serve fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
     classDef store fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-    subgraph CrawlPlane ["1. 爬取平面"]
+    subgraph CrawlPlane ["1. 爬取平面']"]
         Frontier["URL Frontier<br/>(优先级/礼貌度队列)"]:::crawl
         Googlebot["Googlebot Crawler Fleet<br/>(高并发下载器)"]:::crawl
         PageRepo["Repository<br/>(网页临时中转库)"]:::crawl
@@ -149,22 +149,22 @@ graph TB
         Frontier --> Googlebot --> PageRepo
     end
 
-    subgraph IndexPlane ["2. 索引与数据平面"]
+    subgraph IndexPlane ["2. 索引与数据平面']"]
         Percolator["Percolator Engine<br/>(增量索引构建器)"]:::index
-        BigtableIndex["("Bigtable 倒排库<br/>Lexicon / Postings")"]:::store
+        BigtableIndex[("Bigtable 倒排库<br/>Lexicon / Postings")]:::store
         
         PageRepo --> Percolator --> BigtableIndex
     end
 
-    subgraph ServePlane ["3. 服务平面"]
-        UserApp["用户客户端"] -->|HTTP Query| GwsServer["Google Web Server (GWS)"]:::serve
-        GwsServer -->|调度分发| Superroot["Superroot Router<br/>(并发分发与结果合并)"]:::serve
+    subgraph ServePlane ["3. 服务平面']"]
+        UserApp["用户客户端"] -->|"HTTP Query"| GwsServer["Google Web Server (GWS)"]:::serve
+        GwsServer -->|"调度分发"| Superroot["Superroot Router<br/>(并发分发与结果合并)"]:::serve
         
-        Superroot -->|并发查询 Shards| IndexServers["Index Servers<br/>(驻留内存的倒排检索节点)"]:::serve
-        Superroot -->|获取网页摘要| DocServers["Doc Servers<br/>(摘要生成与片段提取器)"]:::serve
+        Superroot -->|"并发查询 Shards"| IndexServers["Index Servers<br/>(驻留内存的倒排检索节点)"]:::serve
+        Superroot -->|"获取网页摘要"| DocServers["Doc Servers<br/>(摘要生成与片段提取器)"]:::serve
         
-        BigtableIndex -.->|只读同步装载到内存| IndexServers
-        BigtableIndex -.->|装载文档正文| DocServers
+        BigtableIndex -.->|"只读同步装载到内存"| IndexServers
+        BigtableIndex -.->|"装载文档正文"| DocServers
     end
 ```
 
@@ -322,17 +322,17 @@ graph LR
     classDef disk fill:#f1f8e9,stroke:#558b2f,stroke-width:1.5px;
     classDef hits fill:#eceff1,stroke:#37474f,stroke-width:1.5px;
 
-    subgraph Memory ["内存词典表 - Lexicon"]
+    subgraph Memory ["内存词典表 - Lexicon')"]
         Term1["'consistent'"]:::mem --> Pointer1["Offset: 0x08F3"]
         Term2["'hashing'"]:::mem --> Pointer2["Offset: 0x090A"]
     end
 
-    subgraph DiskOrMemory ["倒排链 - Postings List"]
+    subgraph DiskOrMemory ["倒排链 - Postings List')"]
         Pointer1 --> DocA["DocID: 12 (Rank: 0.8)"]:::disk
         DocA --> DocB["DocID: 35 (Rank: 0.6)"]:::disk
         
-        DocA --> HitsA["Hit List: [Pos: 14 (Title), Pos: 120 (Body)"]"]:::hits
-        DocB --> HitsB["Hit List: [Pos: 45 (Body)"]"]:::hits
+        DocA --> HitsA["Hit List: (Pos: 14 (Title), Pos: 120 (Body)')"]:::hits
+        DocB --> HitsB["Hit List: (Pos: 45 (Body)')"]:::hits
     end
 ```
 
@@ -356,12 +356,13 @@ $$PR(A) = (1 - d) + d * (PR(T1)/C(T1) + PR(T2)/C(T2) + ... + PR(Tn)/C(Tn))$$
 graph LR
     classDef node fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
 
-    PageA["网页 A (PR=0.45)"]:::node -->|外链数 C=2| PageB["网页 B (PR分流)"]:::node
-    PageA -->|外链数 C=2| PageC["网页 C (PR分流)"]:::node
+    PageA["网页 A (PR=0.45)"]:::node -->|"外链数 C=2"| PageB["网页 B (PR分流)"]:::node
+    PageA -->|"外链数 C=2"| PageC["网页 C (PR分流)"]:::node
     
-    PageD["网页 D (PR=0.80)"]:::node -->|外链数 C=1| PageB
+    PageD["网页 D (PR=0.80)"]:::node -->|"外链数 C=1"| PageB
     
-    Note over PageB: PR(B) = (1-d) + d * (PR(A)/2 + PR(D)/1)
+    Note_PageB["PR(B) = (1-d) + d * (PR(A)/2 + PR(D)/1)"]
+    PageB -.-> Note_PageB
 ```
 
 在工程落地上，由于链接有向图极其庞大，Google 采用**幂迭代法（Power Iteration）**。将转移概率写成一个巨大的稀疏矩阵，用成千上万台服务器集群（早期基于 MapReduce 的矩阵向量乘法，后基于 Pregel 图计算模型）在后台不断迭代重算该矩阵，直到概率向量收敛。得到的稳态 PageRank 值将被持久化，在 Serving 阶段直接作为静态相关度因子（Static Rank）叠加到网页打分公式中。

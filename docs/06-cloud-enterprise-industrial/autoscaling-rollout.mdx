@@ -43,21 +43,21 @@ import QuizCard from '@site/src/components/QuizCard';
 
 ```mermaid
 graph TD
-    subgraph K8s_Control_Plane["Kubernetes 控制平面"]
+    subgraph K8s_Control_Plane ["Kubernetes 控制平面']"]
         HPA["HPA 控制器 (HPA Controller)"]
         Metrics["指标服务器 (Metrics Server / Prometheus)"]
         Deploy["Deployment / ReplicaSet 控制器"]
     end
     
-    subgraph Data_Plane["数据平面 (工作节点)"]
+    subgraph Data_Plane ["数据平面 (工作节点)']"]
         Pods["工作负载 Pod 副本 (Pods)"]
     end
 
-    Pods -->|1. 收集 CPU/内存/自定义指标| Metrics
-    HPA -->|2. 定期轮询 (默认 15s)| Metrics
-    HPA -->|3. 根据公式计算期望副本数| HPA
-    HPA -->|4. 更新 Scale 对象的 replicas 字段| Deploy
-    Deploy -->|5. 调和实际副本数 (增/删 Pod)| Pods
+    Pods -->|"1. 收集 CPU/内存/自定义指标"| Metrics
+    HPA -->|"2. 定期轮询 (默认 15s)"| Metrics
+    HPA -->|"3. 根据公式计算期望副本数"| HPA
+    HPA -->|"4. 更新 Scale 对象的 replicas 字段"| Deploy
+    Deploy -->|"5. 调和实际副本数 (增/删 Pod)"| Pods
 
     style HPA fill:#0f766e,stroke:#0d9488,stroke-width:2px,color:#f0fdfa
     style Metrics fill:#1e293b,stroke:#475569,stroke-width:1px,color:#e2e8f0
@@ -73,21 +73,21 @@ graph TD
 
 ```mermaid
 flowchart TD
-    Start("[定期触发计算 (默认 15s")]) --> ReadMetrics[读取当前度量指标值]
+    Start(["定期触发计算 (默认 15s)"]) --> ReadMetrics["读取当前度量指标值"]
     ReadMetrics --> Calculate["计算期望副本数 = 当前副本数 * (当前指标 / 目标值)"]
-    Calculate --> CheckTolerance{期望与当前比率在容忍带内?<br>|ratio - 1.0| <= 容忍度 (默认 0.1)}
-    CheckTolerance -->|Yes| KeepCurrent["保持当前副本数 (不动)"]
-    CheckTolerance -->|No| CheckScaleType{期望副本数 > 当前副本数?}
+    Calculate --> CheckTolerance{"期望与当前比率在容忍带内?<br>abs(ratio - 1.0) <= 容忍度 (默认 0.1)"}
+    CheckTolerance -->|"Yes"| KeepCurrent["保持当前副本数 (不动)"]
+    CheckTolerance -->|"No"| CheckScaleType{"期望副本数 > 当前副本数?"}
     
-    CheckScaleType -->|Yes: 扩容| ScaleUp[立即执行扩容]
-    CheckScaleType -->|No: 缩容| Window{是否在缩容稳定窗口内?<br>(默认 5 分钟)}
+    CheckScaleType -->|"Yes: 扩容"| ScaleUp["立即执行扩容"]
+    CheckScaleType -->|"No: 缩容"| Window{"是否在缩容稳定窗口内?<br>(默认 5 分钟)"}
     
-    Window -->|Yes: 处于窗口期| GetMax[评估过去 5m 内的所有推荐值<br>选择其中的最大副本数]
-    GetMax --> CheckChange{选择的副本数 < 当前副本数?}
-    CheckChange -->|No| KeepCurrent
-    CheckChange -->|Yes| ApplyScaleDown[执行安全缩容]
+    Window -->|"Yes: 处于窗口期"| GetMax["评估过去 5m 内的所有推荐值<br>选择其中的最大副本数"]
+    GetMax --> CheckChange{"选择的副本数 < 当前副本数?"}
+    CheckChange -->|"No"| KeepCurrent
+    CheckChange -->|"Yes"| ApplyScaleDown["执行安全缩容"]
     
-    Window -->|No / 窗口已过| ApplyScaleDown
+    Window -->|"No / 窗口已过"| ApplyScaleDown
     
     ScaleUp --> Apply([调整副本数 spec.replicas])
     ApplyScaleDown --> Apply

@@ -121,28 +121,28 @@ graph LR
 
 ```mermaid
 graph TB
-  subgraph RoutingLayer["路由与控制平面"]
+  subgraph RoutingLayer ["路由与控制平面']"]
     MongosRouter["mongos 路由进程"]
     ConfigServerReplica["Config Server 副本集 (保存集合路由表)"]
   end
 
-  subgraph ShardCluster["分布式存储集群 (Sharded Cluster)"]
-    subgraph Shard1["Shard 1 副本集"]
+  subgraph ShardCluster ["分布式存储集群 (Sharded Cluster)']"]
+    subgraph Shard1 ["Shard 1 副本集']"]
       Primary1["Primary 节点 (WiredTiger)"]
       Secondary1["Secondary 节点"]
-      Primary1 -->|Oplog 复制| Secondary1
+      Primary1 -->|"Oplog 复制"| Secondary1
     end
 
-    subgraph Shard2["Shard 2 副本集"]
+    subgraph Shard2 ["Shard 2 副本集']"]
       Primary2["Primary 节点 (WiredTiger)"]
       Secondary2["Secondary 节点"]
-      Primary2 -->|Oplog 复制| Secondary2
+      Primary2 -->|"Oplog 复制"| Secondary2
     end
   end
 
-  MongosRouter <-->|1. 轮询同步 Chunk 区间映射| ConfigServerReplica
-  MongosRouter -->|2. Shard Key 落在 Chunk [min, max] 路由至 Shard 1| Primary1
-  MongosRouter -->|3. Shard Key 落在 Chunk["max, +inf"] 路由至 Shard 2| Primary2
+  MongosRouter <--->|"1. 轮询同步 Chunk 区间映射"| ConfigServerReplica
+  MongosRouter -->|"2. Shard Key 落在 Chunk('min, max') 路由至 Shard 1"| Primary1
+  MongosRouter -->|"3. Shard Key 落在 Chunk('max, +inf') 路由至 Shard 2"| Primary2
   
   style Primary1 fill:#c8e6c9,stroke:#2e7d32
   style Primary2 fill:#c8e6c9,stroke:#2e7d32
@@ -158,7 +158,7 @@ MMAPv1 时代，MongoDB 的物理存储高度依赖操作系统的虚拟内存�
 
 ```mermaid
 graph TB
-  subgraph MMAPv1["MMAPv1 引擎 (早期)"]
+  subgraph MMAPv1 ["MMAPv1 引擎 (早期)')"]
     OS_PageCache1["操作系统 page cache (mmap 机制)"]
     DB_Lock["粗粒度数据库/集合锁 (Coarse-grained Lock)"]
     InPlaceUpdate["原地更新 (分配 Padding 预留空间)"]
@@ -167,8 +167,8 @@ graph TB
     style DB_Lock fill:#ffcdd2,stroke:#c62828
   end
 
-  subgraph WiredTiger["WiredTiger 引擎 (现代)"]
-    WiredTigerCache["WiredTiger 专用内存 Cache("B+Tree/LSM")"]
+  subgraph WiredTiger ["WiredTiger 引擎 (现代)')"]
+    WiredTigerCache["WiredTiger 专用内存 Cache('B+Tree/LSM')"]
     DocLock["文档级并发控制 (MVCC Hazard Pointers)"]
     BlockCompress["透明物理数据块压缩 (Snappy/Zstd)"]
     CheckpointWAL["WiredTiger Checkpoint + WAL 日志"]

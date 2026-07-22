@@ -123,10 +123,10 @@ graph TB
     classDef main fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
     classDef third fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-    User["微信客户端 (App/PC)"]:::client -->|1. 发送消息/抢红包 (长连 TCP)| AccessGate["微信接入网关 (Access Layer)"]:::main
+    User["微信客户端 (App/PC)"]:::client -->|"1. 发送消息/抢红包 (长连 TCP)"| AccessGate["微信接入网关 (Access Layer)"]:::main
     
-    AccessGate -->|2. 路由分发| SETCluster["单元化 SET 逻辑集群 (深圳/广州/上海)"]:::main
-    SETCluster -->|3. 金融级事务同步| PaxosStore["("PaxosStore 强一致分布式存储")"]:::third
+    AccessGate -->|"2. 路由分发"| SETCluster["单元化 SET 逻辑集群 (深圳/广州/上海)"]:::main
+    SETCluster -->|"3. 金融级事务同步"| PaxosStore[("PaxosStore 强一致分布式存储")]:::third
 ```
 
 ### 3b. Container Diagram (容器结构图)
@@ -137,12 +137,12 @@ graph TB
     classDef set fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
     classDef storage fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-    UserApp["微信客户端 (App)"] -->|TCP 长连接| ConnServer["Connection Server<br/>(基于 Libco 的轻量长连接入层)"]:::gateway
+    UserApp["微信客户端 (App)"] -->|"TCP 长连接"| ConnServer["Connection Server<br/>(基于 Libco 的轻量长连接入层)"]:::gateway
     
-    ConnServer -->|根据 UID 哈希路由| SET_A["SET 单元 A (深圳)"]:::set
-    ConnServer -->|根据 UID 哈希路由| SET_B["SET 单元 B (上海)"]:::set
+    ConnServer -->|"根据 UID 哈希路由"| SET_A["SET 单元 A (深圳)"]:::set
+    ConnServer -->|"根据 UID 哈希路由"| SET_B["SET 单元 B (上海)"]:::set
 
-    subgraph SETUnit ["SET 单元内部架构 (例如 SET A)"]
+    subgraph SETUnit ["SET 单元内部架构 (例如 SET A)']"]
         LogicServer["Logic Server<br/>(业务逻辑层 - Libco 驱动)"]
         RedPacketQueue["Red Packet Job Queue<br/>(红包异步结算队列)"]
         DagorFilter["DAGOR Overload Controller<br/>(自适应限流过载控制器)"]
@@ -151,9 +151,9 @@ graph TB
         LogicServer --> RedPacketQueue
     end
 
-    subgraph StorageLayer ["微信强一致数据存储层"]
-        LogicServer --> PaxosStoreA["("PaxosStore (分片 A)")"]:::storage
-        RedPacketQueue -->|异步串行记账| AccountDb["("微信零钱/银行卡数据库")"]:::storage
+    subgraph StorageLayer ["微信强一致数据存储层']"]
+        LogicServer --> PaxosStoreA[("PaxosStore (分片 A)")]:::storage
+        RedPacketQueue -->|"异步串行记账"| AccountDb[("微信零钱/银行卡数据库")]:::storage
     end
     
     SET_A --> SETUnit
@@ -221,21 +221,21 @@ graph TD
     classDef queue fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
     classDef db fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
 
-    UserSend["用户发出红包 100元 (分成 5个)"] --> PreSplit["红包拆分算法: 预先生成 [20, 15, 30, 10, 25"]"]
+    UserSend["用户发出红包 100元 (分成 5个)"] --> PreSplit["红包拆分算法: 预先生成 (20, 15, 30, 10, 25"]
     PreSplit --> PushCache["存入内存 ZSET 缓存中 (分配 5个槽位)"]:::memory
     
-    subgraph GrabChannel ["1. 抢红包通道 (高并发内存占位 - 毫秒级)"]
+    subgraph GrabChannel ["1. 抢红包通道 (高并发内存占位 - 毫秒级)']"]
         UserA["用户 A 点击 '抢'"] --> DecrCache["内存预扣: 剩余个数减 1, 抢到 20 元"]:::memory
-        DecrCache -->|抢成功| MemoryMark["在内存记录占位: UserA -> 20元"]:::memory
+        DecrCache -->|"抢成功"| MemoryMark["在内存记录占位: UserA -> 20元"]:::memory
     end
     
-    subgraph SettleChannel ["2. 拆红包通道 (异步记账排队 - 金融强一致)"]
-        MemoryMark -->|异步入队| MsgQueue["MQS 消息队列 (Red Packet MQ)"]:::queue
+    subgraph SettleChannel ["2. 拆红包通道 (异步记账排队 - 金融强一致)']"]
+        MemoryMark -->|"异步入队"| MsgQueue["MQS 消息队列 (Red Packet MQ)"]:::queue
         MsgQueue --> QueueWorker["Settle Worker (串行消费记账集群)"]:::queue
-        QueueWorker -->|行锁合并与单笔写入| MySQL["("微信零钱/银行卡数据库")"]:::db
+        QueueWorker -->|"行锁合并与单笔写入"| MySQL[("微信零钱/银行卡数据库")]:::db
     end
     
-    MySQL -.->|几分钟延迟落盘后| BalanceUpdate["用户零钱包余额最终增加 20 元"]
+    MySQL -.->|"几分钟延迟落盘后"| BalanceUpdate["用户零钱包余额最终增加 20 元"]
 ```
 
 ---

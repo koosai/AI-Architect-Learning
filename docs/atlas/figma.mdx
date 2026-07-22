@@ -117,11 +117,11 @@ graph TB
     classDef main fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
     classDef third fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-    Designer1["设计师 A (Browser)"]:::client -->|1. 绘制图形 / 移动鼠标 (WebSocket)| RecGateway["Multiplayer Gateway 网关"]:::main
-    Designer2["设计师 B (Browser)"]:::client -->|1. 并发绘制 (WebSocket)| RecGateway
+    Designer1["设计师 A (Browser)"]:::client -->|"1. 绘制图形 / 移动鼠标 (WebSocket)"| RecGateway["Multiplayer Gateway 网关"]:::main
+    Designer2["设计师 B (Browser)"]:::client -->|"1. 并发绘制 (WebSocket)"| RecGateway
     
-    RecGateway -->|2. 串行同步操作流| MultiplayerRust["Multiplayer Sync Server (Rust)"]:::main
-    MultiplayerRust -->|3. 存储文件与资产| AssetS3["S3 资产存储 / metadata DB"]:::third
+    RecGateway -->|"2. 串行同步操作流"| MultiplayerRust["Multiplayer Sync Server (Rust)"]:::main
+    MultiplayerRust -->|"3. 存储文件与资产"| AssetS3["S3 资产存储 / metadata DB"]:::third
 ```
 
 ### 3b. Container Diagram (容器结构图)
@@ -132,23 +132,23 @@ graph TB
     classDef serve fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
     classDef storage fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-    subgraph BrowserSandbox ["设计师浏览器沙箱"]
+    subgraph BrowserSandbox ["设计师浏览器沙箱')"]
         UI["Figma Workspace Web App (JS UI)"]:::client
-        WasmCore["Figma Core Engine("C++ via WebAssembly")"]:::client
+        WasmCore["Figma Core Engine('C++ via WebAssembly')"]:::client
         Canvas["WebGL Viewport (<canvas> 渲染视窗)"]:::client
         
-        UI -->|调用调用| WasmCore
-        WasmCore -->|1. 几何解析与矩阵计算| Canvas
+        UI -->|"调用调用"| WasmCore
+        WasmCore -->|"1. 几何解析与矩阵计算"| Canvas
     end
 
-    WasmCore <-->|2. WebSocket 推送 op| RealtimeGateway["Multiplayer Socket Gateway (Rust)"]:::serve
+    WasmCore <--->|"2. WebSocket 推送 op"| RealtimeGateway["Multiplayer Socket Gateway (Rust)"]:::serve
 
-    subgraph CollaborativeBackends ["协同服务集群"]
+    subgraph CollaborativeBackends ["协同服务集群')"]
         RealtimeGateway --> DocumentServer["Document Service Node<br/>(负责当前设计稿的内存排队与LWW)"]:::serve
         DocumentServer --> PaxosEngine["Consistency Paxos Engine<br/>(操作顺序序列化)"]:::serve
     end
 
-    DocumentServer -->|3. 快照存储| DB["("Figma MetaStore / S3")"]:::storage
+    DocumentServer -->|"3. 快照存储"| DB[("Figma MetaStore / S3")]:::storage
 ```
 
 ---

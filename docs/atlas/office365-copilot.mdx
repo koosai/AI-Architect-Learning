@@ -118,16 +118,16 @@ graph TB
     classDef main fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
     classDef third fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-    UserApp["Office 365 客户端 (Word/Teams)"]:::client -->|1. 发送提示词 (Prompt)| CopilotGateway["M365 Copilot Gateway"]:::main
+    UserApp["Office 365 客户端 (Word/Teams)"]:::client -->|"1. 发送提示词 (Prompt)"| CopilotGateway["M365 Copilot Gateway"]:::main
     
-    CopilotGateway -->|2. Grounding 与编排| Orchestration["Copilot Orchestration Engine"]:::main
+    CopilotGateway -->|"2. Grounding 与编排"| Orchestration["Copilot Orchestration Engine"]:::main
     
-    subgraph EnterpriseTenantBoundary ["企业租户安全边界 (Tenant Boundary)"]
-        Orchestration <-->|3. 语义检索与 ACL 检查| MicrosoftGraph["Microsoft Graph & Semantic Index"]:::main
-        MicrosoftGraph <-->|4. 数据拉取| TenantData["("SharePoint / Outlook 数据存储")"]:::third
+    subgraph EnterpriseTenantBoundary ["企业租户安全边界 (Tenant Boundary)']"]
+        Orchestration <--->|"3. 语义检索与 ACL 检查"| MicrosoftGraph["Microsoft Graph & Semantic Index"]:::main
+        MicrosoftGraph <--->|"4. 数据拉取"| TenantData[("SharePoint / Outlook 数据存储")]:::third
     end
     
-    Orchestration -->|5. 发送合规 Prompt| AzureOpenAI["Azure OpenAI Hosting (GPT-4 模型)"]:::main
+    Orchestration -->|"5. 发送合规 Prompt"| AzureOpenAI["Azure OpenAI Hosting (GPT-4 模型)"]:::main
 ```
 
 ### 3b. Container Diagram (容器结构图)
@@ -140,21 +140,21 @@ graph TB
 
     UserRequest["User Prompt (Office App)"] --> CopilotEngine["Copilot Orchestration Engine<br/>(状态编排器)"]:::serve
     
-    subgraph GraphSemanticPlatform ["语义索引存储引擎"]
-        CopilotEngine -->|1. 召回请求| GraphAPI["Microsoft Graph API"]:::serve
-        GraphAPI -->|2. 检索语义相关性| SemanticIndex["Semantic Index Service<br/>(向量搜索引擎)"]:::data
-        GraphAPI -->|3. 并发提取权限表| ActiveDirectory["Active Directory ACLs<br/>(用户访问控制列表)"]:::data
+    subgraph GraphSemanticPlatform ["语义索引存储引擎']"]
+        CopilotEngine -->|"1. 召回请求"| GraphAPI["Microsoft Graph API"]:::serve
+        GraphAPI -->|"2. 检索语义相关性"| SemanticIndex["Semantic Index Service<br/>(向量搜索引擎)"]:::data
+        GraphAPI -->|"3. 并发提取权限表"| ActiveDirectory["Active Directory ACLs<br/>(用户访问控制列表)"]:::data
     end
 
-    subgraph LLMSecuritySandBox ["LLM 交互与安全网关"]
-        CopilotEngine -->|4. 权限修剪后的安全上下文| MetapromptMaker["Metaprompt Builder<br/>(提示词与上下文拼接器)"]:::serve
-        MetapromptMaker -->|5. 安全 RPC 发送| AzureOpenAIService["Azure OpenAI Service<br/>(模型权重只读、不回传数据)"]:::serve
+    subgraph LLMSecuritySandBox ["LLM 交互与安全网关']"]
+        CopilotEngine -->|"4. 权限修剪后的安全上下文"| MetapromptMaker["Metaprompt Builder<br/>(提示词与上下文拼接器)"]:::serve
+        MetapromptMaker -->|"5. 安全 RPC 发送"| AzureOpenAIService["Azure OpenAI Service<br/>(模型权重只读、不回传数据)"]:::serve
         
-        AzureOpenAIService -->>|6. 返回原始文本| PurviewDLP["Microsoft Purview DLP Filter<br/>(合规安全策略引擎)"]:::policy
-        PurviewDLP -->|7. 敏感标签继承与级联| LabelInheritor["Label Inheritor Engine"]:::policy
+        AzureOpenAIService -->|"6. 返回原始文本"| PurviewDLP["Microsoft Purview DLP Filter<br/>(合规安全策略引擎)"]:::policy
+        PurviewDLP -->|"7. 敏感标签继承与级联"| LabelInheritor["Label Inheritor Engine"]:::policy
     end
 
-    LabelInheritor -->>|8. 返回带有机密标签的答案| UserRequest
+    LabelInheritor -->|"8. 返回带有机密标签的答案"| UserRequest
 ```
 
 ---
@@ -174,13 +174,13 @@ graph TD
     classDef store fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
     DocChange["企业 SharePoint 文档变更事件"] --> Parser["Document Parser & Text Chunker"]:::ingest
-    Parser -->|分段 Chunk| Embedder["Azure Embedding Model"]:::ingest
+    Parser -->|"分段 Chunk"| Embedder["Azure Embedding Model"]:::ingest
     
-    DocChange -->|提取元数据| AclExtractor["Active Directory ACL 提取器"]:::ingest
-    AclExtractor -->|用户/群组权限 IDs| AclPacker["ACL 压缩打包器"]:::ingest
+    DocChange -->|"提取元数据"| AclExtractor["Active Directory ACL 提取器"]:::ingest
+    AclExtractor -->|"用户/群组权限 IDs"| AclPacker["ACL 压缩打包器"]:::ingest
     
-    Embedder -->|向量数据 [0.12, -0.89, ...]| VectorStore["Semantic Index 向量数据库 (租户隔离)"]:::store
-    AclPacker -->|元数据 {"Acl": [GroupA, UserB]}| VectorStore
+    Embedder -->|"向量数据 (0.12, -0.89, ...)"| VectorStore["Semantic Index 向量数据库 (租户隔离)"]:::store
+    AclPacker -->|"元数据 {'Acl': (GroupA, UserB)}"| VectorStore
 ```
 
 ---
@@ -203,14 +203,14 @@ graph TD
     classDef result fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
     UserPrompt["用户 A 发起 Prompt 查询"] --> Orchestrator["Orchestrator 编排器"]:::query
-    Orchestrator -->|并发拉取 A 的权限| AclGet["Active Directory ACL 收集"]:::query
+    Orchestrator -->|"并发拉取 A 的权限"| AclGet["Active Directory ACL 收集"]:::query
     
-    AclGet -->|A 的权限 ID 列表: [Group#1, User#A]| VectorSearch["向量检索语义召回"]:::query
+    AclGet -->|"A 的权限 ID 列表: (Group#1, User#A)"| VectorSearch["向量检索语义召回"]:::query
     
-    subgraph SecurityTrimProcess ["动态安全修剪 (Security Trimming)"]
+    subgraph SecurityTrimProcess ["动态安全修剪 (Security Trimming)']"]
         VectorSearch --> MatchAcl{"检查 Chunk 元数据中的 ACL 是否包含 A 的权限 ID?"}:::trim
-        MatchAcl -->|No| Discard["从结果集中彻底丢弃 (物理隔离)"]:::trim
-        MatchAcl -->|Yes| Keep["保留此 Chunk 作为安全背景上下文"]:::trim
+        MatchAcl -->|"No"| Discard["从结果集中彻底丢弃 (物理隔离)"]:::trim
+        MatchAcl -->|"Yes"| Keep["保留此 Chunk 作为安全背景上下文"]:::trim
     end
     
     Keep --> GetLabels["提取安全 Chunks 的 Sensitivity Labels"]:::result

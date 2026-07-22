@@ -201,17 +201,17 @@ graph TD
   classDef active fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
   classDef instance fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-  subgraph NetworkPartition ["网络分区脑裂状态 (AP 保障)"]
-    subgraph Partition1 ["分区 1 (正常工作)"]
+  subgraph NetworkPartition ["网络分区脑裂状态 (AP 保障)']"]
+    subgraph Partition1 ["分区 1 (正常工作)']"]
       EurekaNodeA["Eureka 节点 A"]:::active
       ServiceX["微服务实例 X"]:::instance
-      ServiceX -->|1. 心跳注册| EurekaNodeA
+      ServiceX -->|"1. 心跳注册"| EurekaNodeA
     end
     
-    subgraph Partition2 ["分区 2 (正常工作)"]
+    subgraph Partition2 ["分区 2 (正常工作)']"]
       EurekaNodeB["Eureka 节点 B"]:::active
       ServiceY["微服务实例 Y"]:::instance
-      ServiceY -->|2. 心跳注册| EurekaNodeB
+      ServiceY -->|"2. 心跳注册"| EurekaNodeB
     end
     
     BrokenLine{{"物理断网 / 脑裂"}}
@@ -219,8 +219,9 @@ graph TD
     BrokenLine -.- EurekaNodeB
   end
 
-  EurekaNodeA -->|3. gossip 异步同步被阻断| EurekaNodeB
-  Note over NetworkPartition: 此时两边 Eureka 依然支持读写，数据最终一致！
+  EurekaNodeA -->|"3. gossip 异步同步被阻断"| EurekaNodeB
+  Note_NetworkPartition["此时两边 Eureka 依然支持读写，数据最终一致！"]
+  NetworkPartition -.-> Note_NetworkPartition
 ```
 
 ---

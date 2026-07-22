@@ -100,10 +100,10 @@ AWS Nitro 操作系统的系统集成与物理卡卸载穿透层级划分如下�
 
 ```mermaid
 graph LR
-  UserVM["用户虚拟机 (Guest VM)"] <-->|1. 极速物理网络 IO (ENA)| VPCNetwork["AWS VPC 云网络 (VPC Nitro ASIC 卡)"]
-  UserVM <-->|2. NVMe 加密卷读写| EBSSan["AWS EBS 存储网络 (EBS Nitro ASIC 卡)"]
-  UserVM <-->|3. 飞地加密通讯| NitroEnclave["Nitro Enclaves 机密飞地 (vSock)"]
-  ZirconCheck["AWS 物理母机控制端 (Nitro Controller)"] <-->|4. 远程控制命令/生命周期监控| UserVM
+  UserVM["用户虚拟机 (Guest VM)"] <--->|"1. 极速物理网络 IO (ENA)"| VPCNetwork["AWS VPC 云网络 (VPC Nitro ASIC 卡)"]
+  UserVM <--->|"2. NVMe 加密卷读写"| EBSSan["AWS EBS 存储网络 (EBS Nitro ASIC 卡)"]
+  UserVM <--->|"3. 飞地加密通讯"| NitroEnclave["Nitro Enclaves 机密飞地 (vSock)"]
+  ZirconCheck["AWS 物理母机控制端 (Nitro Controller)"] <--->|"4. 远程控制命令/生命周期监控"| UserVM
 ```
 
 ### 3b. Container Diagram (容器架构)
@@ -152,29 +152,29 @@ graph TB
 
 ```mermaid
 graph TB
-  subgraph Traditional["传统 KVM / Xen 虚拟化 (Dom0 蚕食)"]
-    KvmHostOS["宿主机系统 (Dom0 / Host OS) <br> [网络交换机、EBS 加密、QEMU 外设模拟"]"]
+  subgraph Traditional ["传统 KVM / Xen 虚拟化 (Dom0 蚕食)']"]
+    KvmHostOS["宿主机系统 (Dom0 / Host OS) <br> (网络交换机、EBS 加密、QEMU 外设模拟"]
     KvmVM1["虚拟机 1"]
     KvmVM2["虚拟机 2"]
     KvmPhysCPU["物理 CPU (部分核心必须分给 Dom0 运行)"]
     
-    KvmHostOS -->|抢占/调度税| KvmPhysCPU
-    KvmVM1 -->|I/O 需要经由 Dom0 软件模拟| KvmHostOS
-    KvmVM2 -->|I/O 需要经由 Dom0 软件模拟| KvmHostOS
+    KvmHostOS -->|"抢占/调度税"| KvmPhysCPU
+    KvmVM1 -->|"I/O 需要经由 Dom0 软件模拟"| KvmHostOS
+    KvmVM2 -->|"I/O 需要经由 Dom0 软件模拟"| KvmHostOS
     
     style KvmHostOS fill:#ffcdd2,stroke:#c62828
   end
 
-  subgraph Nitro["AWS Nitro 卸载架构 (硬件提速)"]
-    NitroCard["专用外置 Nitro Card ASIC 卡 <br> [硬件处理 VPC/EBS, 物理解密"]"]
+  subgraph Nitro ["AWS Nitro 卸载架构 (硬件提速)']"]
+    NitroCard["专用外置 Nitro Card ASIC 卡 <br> (硬件处理 VPC/EBS, 物理解密"]
     NitroVM1["虚拟机 1"]
     NitroVM2["虚拟机 2"]
     NitroPhysCPU["物理 CPU (100% 核心全部分配给虚拟机)"]
     
-    NitroVM1 -->|I/O 直通 PCIe 通道物理连接| NitroCard
-    NitroVM2 -->|I/O 直通 PCIe 通道物理连接| NitroCard
-    NitroVM1 -->|100% 独享核心| NitroPhysCPU
-    NitroVM2 -->|100% 独享核心| NitroPhysCPU
+    NitroVM1 -->|"I/O 直通 PCIe 通道物理连接"| NitroCard
+    NitroVM2 -->|"I/O 直通 PCIe 通道物理连接"| NitroCard
+    NitroVM1 -->|"100% 独享核心"| NitroPhysCPU
+    NitroVM2 -->|"100% 独享核心"| NitroPhysCPU
     
     style NitroCard fill:#c8e6c9,stroke:#2e7d32
   end

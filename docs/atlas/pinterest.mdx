@@ -67,21 +67,21 @@ Pinterest 面临的独特挑战是：
 
 ```mermaid
 mindmap
-  root("(Pinterest 推荐"))
+  root(("Pinterest 推荐"))
     在线 Pixie 实时召回
       二分图内存邻接表拓扑
       度数自适应游走次数 Scaling
       提前剪枝与 Early Stopping
-      多源头并行游走 (Multi-query)
+      ["多源头并行游走 (Multi-query)"]
     离线 PinSage GCN 学习
       局部随机游走邻域抽样
-      图卷积特征聚合 (GCN Layer)
-      基于 Margin-based 的 Pairwise 损失函数
-      向量检索索引 (HNSW / Vector DB)
+      ["图卷积特征聚合 (GCN Layer)"]
+      ["基于 Margin-based 的 Pairwise 损失函数"]
+      ["向量检索索引 (HNSW / Vector DB)"]
     排序与混排 Pipeline
       双塔多特征匹配打分
       时效性过滤与去重
-      惊喜感 (Serendipity) 探索插值
+      ["惊喜感 (Serendipity) 探索插值"]
 ```
 
 ---
@@ -97,10 +97,10 @@ graph LR
   User["开发者与终端用户 (Client UI)"] -->|1. 点击交互与加载 Home Feed| Gateway["API 网关 & 流量路由器"]
   Gateway -->|2. 发起实时图召回请求| Pixie["Pixie 实时随机游走集群 (Pixie Cluster)"]
   Gateway -->|3. 发起向量近邻检索| VectorSearch["向量索引服务 (PinSage Vector DB)"]
-  Pixie <-->|在线查图| GraphDB["分布式内存图数据库 (Pinterest Graph)"]
+  Pixie <--->|在线查图| GraphDB["分布式内存图数据库 (Pinterest Graph)"]
   VectorSearch -->|基于离线 Embedding 查找| VectorIndex["向量相似度索引库 (HNSW Index)"]
   Gateway -->|4. 多路召回结果排序| Ranker["重排与特征混排服务器 (Deep Ranker)"]
-  Ranker -->> User: 5. 渲染推荐视觉 Feeds
+  Ranker -->|"5. 渲染推荐视觉 Feeds"| User
 ```
 
 ### 3b. 容器架构图 (Container)
@@ -164,16 +164,16 @@ graph TD
   QueryPin["起始节点 (Query Pin: P_start)"] --> StartWalk["1. 开启 Pixie 游走器"]
   StartWalk --> Choice{"2. 判定重启条件 (随机数 < alpha)"}
   
-  Choice -->|是 (重启)| Reset["跳回起点 current = P_start"]
-  Choice -->|否 (继续)| Move["随机跳转到邻居画板 Board"]
+  Choice -->|"是 (重启)"| Reset["跳回起点 current = P_start"]
+  Choice -->|"否 (继续)"| Move["随机跳转到邻居画板 Board"]
   
   Reset --> Record["3. 记录当前 Pin 访问次数 (计数加 1)"]
   Move --> MovePin["随机跳转到该画板下的另一个 Pin"]
   MovePin --> Record
   
   Record --> CheckTerm{"4. 是否满足提前终止 (计数器饱和 或 步数耗尽)"}
-  CheckTerm -->|否| Choice
-  CheckTerm -->|是| Output["5. 按照访问计数降序输出 Top-K 候选集"]
+  CheckTerm -->|"否"| Choice
+  CheckTerm -->|"是"| Output["5. 按照访问计数降序输出 Top-K 候选集"]
 ```
 
 ### 4b. PinSage 大大规模分布式图卷积神经网络 (GCN Layer)
@@ -192,7 +192,7 @@ graph TD
   Trans --> Pool["3. 池化层 (Max/Mean Pooling): 聚合为单一邻居向量 n_u"]
   
   TargetNode --> SelfFeat["自身原始特征 (图像 VGG16 向量 + 文本词向量)"]
-  Pool --> Concat["4. 拼接 (Concatenation): [h_u, n_u"]"]
+  Pool --> Concat["4. 拼接 (Concatenation): (h_u, n_u"]
   SelfFeat --> Concat
   
   Concat --> FinalDense["5. 激活与归一化: Output Layer -> 生成 L_2 归一化嵌入向量 z_u"]

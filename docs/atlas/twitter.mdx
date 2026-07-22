@@ -129,11 +129,11 @@ graph TB
     classDef main fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
     classDef third fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-    UserApp["用户客户端 (Mobile/Web)"]:::client -->|1. 发表推文 / 刷新时间线| WebGateway["API Gateway 网关层"]:::main
+    UserApp["用户客户端 (Mobile/Web)"]:::client -->|"1. 发表推文 / 刷新时间线"| WebGateway["API Gateway 网关层"]:::main
     
-    WebGateway -->|2. 调度查询与混合| HomeMixer["Home Mixer 核心编排服务"]:::main
-    HomeMixer -->|3. 查询社交图谱与推文库| SocialGraphDb["FlockDB 社交图谱 / TweetStore"]:::third
-    HomeMixer -.->|4. 高速读写缓存| RedisTimeline["("Redis Timeline Cache 集群")"]:::main
+    WebGateway -->|"2. 调度查询与混合"| HomeMixer["Home Mixer 核心编排服务"]:::main
+    HomeMixer -->|"3. 查询社交图谱与推文库"| SocialGraphDb["FlockDB 社交图谱 / TweetStore"]:::third
+    HomeMixer -.->|"4. 高速读写缓存"| RedisTimeline[("Redis Timeline Cache 集群")]:::main
 ```
 
 ### 3b. Container Diagram (容器结构图)
@@ -149,16 +149,16 @@ graph TB
     
     TweetService --> FanoutRouter{"扇出路由器<br/>(粉丝数判断)"}:::serve
     
-    FanoutRouter -->|普通用户: 粉丝 < 10,000| WriteFanout["Fanout Daemon (Push)<br/>向所有粉丝的 Home Timeline ZSET 复制"]:::data
-    FanoutRouter -->|大 V: 粉丝 >= 10,000| OnlyWriteUser["仅写入 User Timeline Db<br/>不进行全网广播 (Pull 模式地基)"]:::data
+    FanoutRouter -->|"普通用户: 粉丝 < 10,000"| WriteFanout["Fanout Daemon (Push)<br/>向所有粉丝的 Home Timeline ZSET 复制"]:::data
+    FanoutRouter -->|"大 V: 粉丝 >= 10,000"| OnlyWriteUser["仅写入 User Timeline Db<br/>不进行全网广播 (Pull 模式地基)"]:::data
 
     UserRead["刷新主页时间线"] --> HomeMixerNode["Home Mixer Service"]:::serve
     
-    HomeMixerNode -->|1. 读取预计算缓存| RedisHomeCache["("Redis Home Timeline Cache<br/>(滑动窗口 800条 ID 列表)")"]:::cache
-    HomeMixerNode -->|2. 社交图谱查找| GraphService["Social Graph Service (FlockDB)<br/>找出该用户关注的大 V 列表"]:::data
-    GraphService -->|3. 动态拉取大 V 推文| UserTimelineDb["("User Timeline Database")"]:::data
+    HomeMixerNode -->|"1. 读取预计算缓存"| RedisHomeCache[("Redis Home Timeline Cache<br/>(滑动窗口 800条 ID 列表)")]:::cache
+    HomeMixerNode -->|"2. 社交图谱查找"| GraphService["Social Graph Service (FlockDB)<br/>找出该用户关注的大 V 列表"]:::data
+    GraphService -->|"3. 动态拉取大 V 推文"| UserTimelineDb[("User Timeline Database")]:::data
     
-    HomeMixerNode -->|4. 双路归并与重度打分| HeavyRanker["Heavy Ranker (MaskNet ML Model)"]:::serve
+    HomeMixerNode -->|"4. 双路归并与重度打分"| HeavyRanker["Heavy Ranker (MaskNet ML Model)"]:::serve
     
     WriteFanout --> RedisHomeCache
 ```
@@ -181,18 +181,18 @@ graph TD
 
     TweetReq["发表新推文 (Tweet ID: #999)"] --> CheckFollowers{"判断发推者粉丝数是否 >= 10,000?"}
     
-    subgraph PushPath ["写时扇出路 (Push)"]
-        CheckFollowers -->|No (普通用户)| FetchFollowers["读取发推者所有粉丝的 ID 列表"]:::push
+    subgraph PushPath ["写时扇出路 (Push)']"]
+        CheckFollowers -->|"No (普通用户)"| FetchFollowers["读取发推者所有粉丝的 ID 列表"]:::push
         FetchFollowers --> LoopPush["遍历粉丝列表"]:::push
-        LoopPush -->|写入粉丝缓存| PushRedis["追加到粉丝对应的 Redis Home Timeline Cache"]:::push
+        LoopPush -->|"写入粉丝缓存"| PushRedis["追加到粉丝对应的 Redis Home Timeline Cache"]:::push
     end
     
-    subgraph PullPath ["读时拉取路 (Pull)"]
-        CheckFollowers -->|Yes (明星大 V)| OnlyUserDb["仅写入大 V 自己的 User Timeline 缓存中"]:::pull
-        OnlyUserDb -->|不再广播| FinishWrite["写入完毕 (写延迟极低)"]:::pull
+    subgraph PullPath ["读时拉取路 (Pull)']"]
+        CheckFollowers -->|"Yes (明星大 V)"| OnlyUserDb["仅写入大 V 自己的 User Timeline 缓存中"]:::pull
+        OnlyUserDb -->|"不再广播"| FinishWrite["写入完毕 (写延迟极低)"]:::pull
     end
     
-    subgraph ReaderHome ["读取主页时间线流程"]
+    subgraph ReaderHome ["读取主页时间线流程']"]
         Reader["用户 A 刷新主页"] --> ReadCache["1. 读取 A 的 Redis Home Timeline Cache (来自普通用户)"]:::pull
         Reader --> GetCelebrities["2. 查询 A 关注了哪些大 V"]:::pull
         GetCelebrities --> PullCelebrity["3. 动态拉取这些大 V 的 User Timeline"]:::pull

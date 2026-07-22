@@ -48,20 +48,20 @@ Roblox 的核心设计用意在于：**基于 C++ 打造 <GlossaryTerm term="Lua
 
 ```mermaid
 graph TD
-  UGCDeveloper["UGC 开发者 / 玩家客户端"] -->|1. 提交 Luau 脚本与物理 Part| RobloxServer["Roblox Cloud Game Server("C++ Engine")"]
+  UGCDeveloper["UGC 开发者 / 玩家客户端"] -->|"1. 提交 Luau 脚本与物理 Part"| RobloxServer["Roblox Cloud Game Server('C++ Engine')"]
   
-  subgraph LuauSandboxPlane["Luau 安全脚本沙箱平面"]
-    RobloxServer -->|2. 装载至隔离沙箱| LuauEngine["Luau VM("Memory Quota + Instruction Counter")"]
-    LuauEngine -->|3. 监控死循环与危险调用| SecurityGate{"检测到恶意指令或超限?"}
-    SecurityGate -->|4. 强制终止并报错| TerminateScript["Throw Script Timeout Exception"]
-    SecurityGate -->|5. 安全执行逻辑| DataModelTree["DataModel DOM Tree (游戏场景状态)"]
+  subgraph LuauSandboxPlane ["Luau 安全脚本沙箱平面')"]
+    RobloxServer -->|"2. 装载至隔离沙箱"| LuauEngine["Luau VM('Memory Quota + Instruction Counter')"]
+    LuauEngine -->|"3. 监控死循环与危险调用"| SecurityGate{"检测到恶意指令或超限?"}
+    SecurityGate -->|"4. 强制终止并报错"| TerminateScript["Throw Script Timeout Exception"]
+    SecurityGate -->|"5. 安全执行逻辑"| DataModelTree["DataModel DOM Tree (游戏场景状态)"]
   end
 
-  subgraph DistributedPhysicsPlane["Network Ownership 分布式物理求解平面"]
-    DataModelTree <-->|6. 动态评估物理所有权| OwnershipManager["Network Ownership Engine"]
+  subgraph DistributedPhysicsPlane ["Network Ownership 分布式物理求解平面')"]
+    DataModelTree <--->|"6. 动态评估物理所有权"| OwnershipManager["Network Ownership Engine"]
     OwnershipManager -- "7a. 离玩家近: 派发物理计算权" --> ClientA["Player A 手机 (PGS 物理求解器)"]
     OwnershipManager -- "7b. 自由落体: 服务端计算" --> ServerPhysics["Server PGS Solver"]
-    ClientA -->|8. 回传物理位置坐标| RobloxServer
+    ClientA -->|"8. 回传物理位置坐标"| RobloxServer
   end
 ```
 

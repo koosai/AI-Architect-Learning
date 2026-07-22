@@ -44,17 +44,18 @@ L1 里报名记录我们随手存成一个大列表。现在产品要两个功�
 
 ```mermaid
 flowchart TD
-  subgraph Entities["实体与关系模型"]
+  subgraph Entities ["实体与关系模型']"]
     U["用户实体 (Users)<br/>PK: user_id (str)"]
     E["活动实体 (Events)<br/>PK: event_id (str)"]
     
     S["报名关联表 (Signups)<br/>PK: (user_id, event_id)<br/>FK1: user_id (References Users)<br/>FK2: event_id (References Events)"]
   end
 
-  U -->|1 : N| S
-  E -->|1 : N| S
+  U -->|"1 : N"| S
+  E -->|"1 : N"| S
   
-  Note over S: 唯一性约束 (Unique Constraint):<br/>同一对 (user_id, event_id) 不可重复插入!
+  Note_S["唯一性约束 (Unique Constraint):<br/>同一对 (user_id, event_id) 不可重复插入!"]
+  S -.-> Note_S
 ```
 
 两个关键约束：<GlossaryTerm term="Primary Key" definition="主键：唯一标识一条记录的字段（如 user_id）。是引用和查找一条记录的依据。">主键</GlossaryTerm>（唯一标识一条记录）和<GlossaryTerm term="Unique Constraint" definition="唯一约束：保证某字段（或字段组合）不重复，比如同一用户不能报名同一活动两次。是数据完整性的保障。">唯一约束</GlossaryTerm>（同一用户不能报同一活动两次——这把 L6 的幂等下沉到了数据层）。
@@ -69,19 +70,19 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  subgraph NormalizedQuery["规范化单表查询模式 (Normalized Scan - No Index)"]
+  subgraph NormalizedQuery ["规范化单表查询模式 (Normalized Scan - No Index)']"]
     direction TB
     Req1["查询 Event = e1 的所有用户"] --> Scan["全表扫描 (遍历 Signups 列表)"]
-    Scan -->|O(N) 复杂度| Res1["匹配结果: [ada, bob"]"]
+    Scan -->|"O(N) 复杂度"| Res1["匹配结果: (ada, bob"]
   end
 
-  subgraph IndexedQuery["反规范化双向索引模式 (Indexed Lookup - O(1))"]
+  subgraph IndexedQuery ["反规范化双向索引模式 (Indexed Lookup - O(1))']"]
     direction TB
-    Req2["查询 Event = e1 的所有用户"] --> Match1["直接命中哈希索引: by_event['e1'"]"]
-    Req3["查询 User = ada 的所有活动"] --> Match2["直接命中哈希索引: by_user['ada'"]"]
+    Req2["查询 Event = e1 的所有用户"] --> Match1["直接命中哈希索引: by_event('e1'"]
+    Req3["查询 User = ada 的所有活动"] --> Match2["直接命中哈希索引: by_user('ada'"]
     
-    Match1 -->|O(1) 复杂度| Res2["[ada, bob]"]
-    Match2 -->|O(1) 复杂度| Res3["[e1, e2]"]
+    Match1 -->|"O(1) 复杂度"| Res2["(ada, bob)"]
+    Match2 -->|"O(1) 复杂度"| Res3["(e1, e2)"]
   end
 ```
 

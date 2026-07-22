@@ -96,7 +96,7 @@ graph LR
     classDef normal fill:#eceff1,stroke:#607d8b,stroke-width:1px;
     classDef overlap fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
 
-    subgraph SlidingWindow ["滑动窗口切分机制 (Size: 100, Overlap: 30)"]
+    subgraph SlidingWindow ["滑动窗口切分机制 (Size: 100, Overlap: 30)']"]
         Block1["Chunk 1: 字符 0 ~ 100<br/>'我们公司对电子产品的退货政策是支持15天无理由退换。'"]:::normal
         Block1Overlap["重叠区: 70 ~ 100<br/>'支持15天无理由退换。'"]:::overlap
         Block1 --- Block1Overlap
@@ -106,7 +106,9 @@ graph LR
         Block2Overlap --- Block2
     end
     
-    Note over Block1Overlap, Block2Overlap: 重叠区使得跨边界的关键句<br/>“支持15天无理由退换。”<br/>在两端都有完整的物理存在，防止被切断。
+    Note_Block1Overlap["重叠区使得跨边界的关键句<br/>“支持15天无理由退换。”<br/>在两端都有完整的物理存在，防止被切断。"]
+    Block1Overlap -.-> Note_Block1Overlap
+    Block2Overlap -.-> Note_Block1Overlap
 ```
 
 ### 3. 结构感知：基于语法树层级的智能分块

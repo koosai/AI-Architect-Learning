@@ -143,23 +143,23 @@ graph TB
     classDef serve fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
     classDef cache fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
 
-    subgraph ClientA ["编辑客户端 A (Browser)"]
+    subgraph ClientA ["编辑客户端 A (Browser)']"]
         EditorA["Rich Editor UI"]:::client
         BufferA["Client Buffer Manager<br/>(三状态转换器)"]:::client
-        LocalDbA["("IndexedDB Local Store<br/>(离线操作日志)")"]:::cache
+        LocalDbA[("IndexedDB Local Store<br/>(离线操作日志)")]:::cache
         
         EditorA --> BufferA
         BufferA --> LocalDbA
     end
 
-    UserConn["WebSocket Connection"] <--> ServerGateway["Docs Collaborator Server<br/>(权威排队节点)"]:::serve
+    UserConn["WebSocket Connection"] <---> ServerGateway["Docs Collaborator Server<br/>(权威排队节点)"]:::serve
     
-    subgraph ServerBackend ["Docs 协同服务器后端"]
+    subgraph ServerBackend ["Docs 协同服务器后端']"]
         ServerGateway --> OTManager["OT Transformation Core<br/>(冲突裁决与坐标转换机)"]:::serve
-        OTManager --> VersionLog["("Revision Log Database<br/>(存储绝对递增的 op 历史)")"]:::serve
+        OTManager --> VersionLog[("Revision Log Database<br/>(存储绝对递增的 op 历史)")]:::serve
     end
 
-    BufferA <-->|发送并接收 op| UserConn
+    BufferA <--->|"发送并接收 op"| UserConn
 ```
 
 ---

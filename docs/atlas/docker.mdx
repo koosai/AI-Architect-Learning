@@ -149,10 +149,10 @@ graph TB
   classDef main fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
   classDef third fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-  Developer["开发运维人员 (DevOps)"]:::client -->|使用 Docker CLI 命令| HostDaemon["宿主机 Docker 守护进程 (dockerd)"]:::main
+  Developer["开发运维人员 (DevOps)"]:::client -->|"使用 Docker CLI 命令"| HostDaemon["宿主机 Docker 守护进程 (dockerd)"]:::main
   
-  HostDaemon <-->|拉取镜像 (HTTPS)| ImageRegistry["公共/私有镜像仓库 (Docker Hub / Registry)"]:::third
-  HostDaemon <-->|管理存储卷映射| LocalDisk["("本地磁盘目录 (Volumes)")"]:::main
+  HostDaemon <--->|"拉取镜像 (HTTPS)"| ImageRegistry["公共/私有镜像仓库 (Docker Hub / Registry)"]:::third
+  HostDaemon <--->|"管理存储卷映射"| LocalDisk[("本地磁盘目录 (Volumes)")]:::main
 ```
 
 ### 3b. Container Diagram (容器结构图)

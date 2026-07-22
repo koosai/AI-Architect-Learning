@@ -137,18 +137,18 @@ graph LR
     classDef agent fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
     classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
 
-    Attacker["1. 恶意网页/文档<br/>(含对抗指令: '忽略原任务...')"]:::attacker -->|2. 被爬取/检索| VectorDB["3. 向量库/检索工具<br/>(Retrieved Context)"]
-    VectorDB -->|4. 带入上下文| LLM["4. 大脑决策层<br/>(LLM Context Window)"]:::agent
+    Attacker["1. 恶意网页/文档<br/>(含对抗指令: '忽略原任务...')"]:::attacker -->|"2. 被爬取/检索"| VectorDB["3. 向量库/检索工具<br/>(Retrieved Context)"]
+    VectorDB -->|"4. 带入上下文"| LLM["4. 大脑决策层<br/>(LLM Context Window)"]:::agent
     
-    LLM -->|5. 决策失控 (被诱导越权)| ExecuteDanger["6. 危险指令: delete_record"]:::attacker
+    LLM -->|"5. 决策失控 (被诱导越权)"| ExecuteDanger["6. 危险指令: delete_record"]:::attacker
     
-    subgraph Defenses ["硬性防御三道哨卡"]
-        ExecuteDanger -->|哨卡一: 隔离数据与指令| ParseFilter["指令独立解析器"]:::safe
-        ParseFilter -->|哨卡二: 行为网关校验| RiskChecker["Policy Gatekeeper"]:::safe
-        RiskChecker -->|哨卡三: 人在回路确认| HITLGate["HITL 审批"]:::safe
+    subgraph Defenses ["硬性防御三道哨卡']"]
+        ExecuteDanger -->|"哨卡一: 隔离数据与指令"| ParseFilter["指令独立解析器"]:::safe
+        ParseFilter -->|"哨卡二: 行为网关校验"| RiskChecker["Policy Gatekeeper"]:::safe
+        RiskChecker -->|"哨卡三: 人在回路确认"| HITLGate["HITL 审批"]:::safe
     end
 
-    HITLGate -->|7. 阻断并告警| Stop["安全终止 (Audit & Alert)"]:::safe
+    HITLGate -->|"7. 阻断并告警"| Stop["安全终止 (Audit & Alert)"]:::safe
 ```
 
 ---

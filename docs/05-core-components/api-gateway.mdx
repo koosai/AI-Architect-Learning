@@ -35,28 +35,28 @@ import QuizCard from '@site/src/components/QuizCard';
 
 ```mermaid
 flowchart TD
-  subgraph NoGateway["1. 无网关直连模式 (各服务严重冗余横切关注点)"]
+  subgraph NoGateway ["1. 无网关直连模式 (各服务严重冗余横切关注点)']"]
     direction LR
-    ClientA["客户端 (Web/App)"] -->|1. JWT校验 & 限流| SrvUser["用户服务 (User Service)"]
-    ClientA -->|2. JWT校验 & 限流| SrvOrder["订单服务 (Order Service)"]
-    ClientA -->|3. JWT校验 & 限流| SrvPay["支付服务 (Payment Service)"]
+    ClientA["客户端 (Web/App)"] -->|"1. JWT校验 & 限流"| SrvUser["用户服务 (User Service)"]
+    ClientA -->|"2. JWT校验 & 限流"| SrvOrder["订单服务 (Order Service)"]
+    ClientA -->|"3. JWT校验 & 限流"| SrvPay["支付服务 (Payment Service)"]
     
     noteA["痛点：每个微服务都要独立重复实现 JWT 校验、限流、CORS、可观测等代码，维护极其痛苦！"]
   end
 
-  subgraph HasGateway["2. 有网关解耦模式 (收口横切关注点，只发干净请求)"]
+  subgraph HasGateway ["2. 有网关解耦模式 (收口横切关注点，只发干净请求)']"]
     direction LR
-    ClientB["客户端 (Web/App)"] -->|统一入口 (单 VIP)| Gateway["API 网关 (API Gateway)"]
+    ClientB["客户端 (Web/App)"] -->|"统一入口 (单 VIP)"| Gateway["API 网关 (API Gateway)"]
     
-    subgraph GatewayInside["网关内部处理 (统一处理)"]
+    subgraph GatewayInside ["网关内部处理 (统一处理)']"]
       AuthMW["JWT 鉴权校验"] --> LimitMW["防刷限流"]
       LimitMW --> LogMW["统一 Trace/监控"]
     end
     
     Gateway --> GatewayInside
-    GatewayInside -->|L7 路径转发| SrvUserB["用户服务 (User Service)"]
-    GatewayInside -->|L7 路径转发| SrvOrderB["订单服务 (Order Service)"]
-    GatewayInside -->|L7 路径转发| SrvPayB["支付服务 (Payment Service)"]
+    GatewayInside -->|"L7 路径转发"| SrvUserB["用户服务 (User Service)"]
+    GatewayInside -->|"L7 路径转发"| SrvOrderB["订单服务 (Order Service)"]
+    GatewayInside -->|"L7 路径转发"| SrvPayB["支付服务 (Payment Service)"]
   end
 ```
 
@@ -78,7 +78,7 @@ sequenceDiagram
   actor Client as 客户端 (Client)
   participant GW as API 网关入口 (Gateway Engine)
   
-  subgraph MiddlewareChain["网关责任链/中间件管道 (Middleware Pipeline)"]
+  box "网关责任链/中间件管道 (Middleware Pipeline)']"
     participant Trace as 可观测中间件 (TraceMiddleware)
     participant Auth as 鉴权中间件 (AuthMiddleware)
     participant Limit as 限流中间件 (RateLimitMiddleware)

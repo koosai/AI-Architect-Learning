@@ -95,13 +95,13 @@ flowchart TD
     Start([SLO: 30天 99.9% 成功率]) --> Budget["错误预算: 0.1% 请求量"]
     Budget --> Calc["计算当前错误消耗速率: 燃尽率 Burn Rate"]
     
-    Calc --> Level1{"燃尽率 >= 14.4?<br>(1小时消耗 2% 预算)""}
+    Calc --> Level1{"燃尽率 >= 14.4?<br>(1小时消耗 2% 预算)"}
     Level1 -->|Yes| Pager[PAGE 紧急告警<br>半夜叫醒值班 SRE 立即处理]
     
-    Level1 -->|No| Level2{"燃尽率 >= 6.0?<br>(6小时消耗 5% 预算)""}
+    Level1 -->|No| Level2{"燃尽率 >= 6.0?<br>(6小时消耗 5% 预算)"}
     Level2 -->|Yes| Ticket[TICKET 工单告警<br>正常上班时间尽快修复]
     
-    Level2 -->|No| Level3{"燃尽率 >= 1.0?<br>(30天刚好烧光月度预算)""}
+    Level2 -->|No| Level3{"燃尽率 >= 1.0?<br>(30天刚好烧光月度预算)"}
     Level3 -->|Yes| Watch[WATCH 观察看板<br>日常工作排期优化]
     Level3 -->|No| OK[OK 稳定运行<br>错误率在正常预算配额内]
 

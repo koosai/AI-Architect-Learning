@@ -64,10 +64,10 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  subgraph Scale3["宏观部署物理层: 单元化架构 (Cell-based deployment)"]
-    CellA["Cell 1("服务A + 数据库A") <br/>承载 0% ~ 25% 用户"]
-    CellB["Cell 2("服务B + 数据库B") <br/>承载 26% ~ 50% 用户"]
-    CellC["Cell 3("服务C + 数据库C") <br/>承载 51% ~ 100% 用户"]
+  subgraph Scale3 ["宏观部署物理层: 单元化架构 (Cell-based deployment)')"]
+    CellA["Cell 1('服务A + 数据库A') <br/>承载 0% ~ 25% 用户"]
+    CellB["Cell 2('服务B + 数据库B') <br/>承载 26% ~ 50% 用户"]
+    CellC["Cell 3('服务C + 数据库C') <br/>承载 51% ~ 100% 用户"]
     style CellA fill:#f9f,stroke:#333
     style CellB fill:#bbf,stroke:#333
     style CellC fill:#bbf,stroke:#333
@@ -75,14 +75,14 @@ flowchart TD
     CellA -.-> note3
   end
 
-  subgraph Scale2["中观租户层: 多租户隔离 (Tenant quota & pool)"]
+  subgraph Scale2 ["中观租户层: 多租户隔离 (Tenant quota & pool)')"]
     SaaS["SaaS 控制器"] --> TenantA["大客户 VIP 专属隔离池"]
     SaaS --> TenantB["小客户共享配额池"]
     note2["💥 故障边界：某个小客户流量突增被打满，只阻塞小客户池，VIP 资源毫发无损"]
     TenantB -.-> note2
   end
 
-  subgraph Scale1["微观进程内: 依赖级舱壁 (Thread pool / Semaphore isolation)"]
+  subgraph Scale1 ["微观进程内: 依赖级舱壁 (Thread pool / Semaphore isolation)')"]
     Process["Web 进程"] --> BulkheadA["推荐服务专用信号量舱 (限额 20)"]
     Process --> BulkheadB["订单服务专用线程池舱 (容量 50)"]
     note1["💥 故障边界：推荐慢导致舱打满，其他商品详情线程完全不受波及"]

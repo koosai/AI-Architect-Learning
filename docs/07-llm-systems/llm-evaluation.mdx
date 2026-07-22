@@ -93,13 +93,13 @@ graph TD
     Developer["开发者修改 Prompt / 模型"]:::code --> Commit["Git Commit & PR"]:::code
     Commit --> CI["CI/CD 流水线触发"]
     
-    subgraph 回归评测引擎 (Regression Eval Engine)
+    subgraph ______ ["(Regression Eval Engine)"]
         CI --> LoadEvalSet["加载 Golden Set (评测集)"]
         LoadEvalSet --> RunEval["并发运行评测 (Parallel Run)"]
         RunEval --> MetricCalc["计算评测指标 (Avg Score / Latency / Cost)"]
     end
     
-    subgraph 判定逻辑
+    subgraph ____ ["判定逻辑"]
         MetricCalc --> Compare["与基线对比 (New vs Baseline)"]
         Compare --> ThresholdCheck{"通过率低于基线? <br/>(score_new < score_base)"}
     end

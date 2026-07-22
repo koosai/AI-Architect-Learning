@@ -46,20 +46,20 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 graph TD
-  JobQueue["大模型预训练作业 (要求 64 卡: 8x8 整机)"] -->|1. 提交分布式 Job| Scheduler["K8s Volcano / Slurm Scheduler"]
+  JobQueue["大模型预训练作业 (要求 64 卡: 8x8 整机)"] -->|"1. 提交分布式 Job"| Scheduler["K8s Volcano / Slurm Scheduler"]
   
-  subgraph GangSchedulingPlane["Gang Scheduling (全有全无校验)"]
-    Scheduler -->|2. 检查全局空闲 GPU| CheckGang{"集群能否一次性凑齐 64 张合规 GPU?"}
-    CheckGang -->|3. 否 (仅剩 63 卡): 挂起等待 0 占卡| PendingQueue["Pending Queue (保持 0 资源占用, 防死锁)"]
-    CheckGang -->|4. 是 (凑齐 64 卡): 原子出库| TopologyEngine["Topology-Aware Engine (拓扑感知匹配)"]
+  subgraph GangSchedulingPlane ["Gang Scheduling (全有全无校验)']"]
+    Scheduler -->|"2. 检查全局空闲 GPU"| CheckGang{"集群能否一次性凑齐 64 张合规 GPU?"}
+    CheckGang -->|"3. 否 (仅剩 63 卡): 挂起等待 0 占卡"| PendingQueue["Pending Queue (保持 0 资源占用, 防死锁)"]
+    CheckGang -->|"4. 是 (凑齐 64 卡): 原子出库"| TopologyEngine["Topology-Aware Engine (拓扑感知匹配)"]
   end
   
-  subgraph TopologyAwareMatching["物理拓扑感知匹配平面"]
-    TopologyEngine -->|5a. 检查节点内| NVLinkCheck["NVLink / NVSwitch 树匹配 (TP 组分在同一 NVLink)"]
-    TopologyEngine -->|5b. 检查节点间| IBNetworkCheck["Rail-Optimized InfiniBand 网卡对齐 (PP 组分在同一 IB Switch)"]
+  subgraph TopologyAwareMatching ["物理拓扑感知匹配平面']"]
+    TopologyEngine -->|"5a. 检查节点内"| NVLinkCheck["NVLink / NVSwitch 树匹配 (TP 组分在同一 NVLink)"]
+    TopologyEngine -->|"5b. 检查节点间"| IBNetworkCheck["Rail-Optimized InfiniBand 网卡对齐 (PP 组分在同一 IB Switch)"]
   end
 
-  NVLinkCheck & IBNetworkCheck -->|6. 统一绑定并同时启动| ClusterNodes["Node 1~8 (64 卡同步拉起并极速并行)"]
+  NVLinkCheck & IBNetworkCheck -->|"6. 统一绑定并同时启动"| ClusterNodes["Node 1~8 (64 卡同步拉起并极速并行)"]
 ```
 
 <DesignIntent

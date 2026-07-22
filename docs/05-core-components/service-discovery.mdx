@@ -43,13 +43,13 @@ import QuizCard from '@site/src/components/QuizCard';
 
 ```mermaid
 flowchart TD
-  subgraph ClientDiscovery["1. 客户端发现模式 (Client-side Discovery)"]
+  subgraph ClientDiscovery ["1. 客户端发现模式 (Client-side Discovery)']"]
     direction TB
-    ClientA["服务调用方 (Client) <br/>(运行发现 SDK)"] -->|1. 查询服务实例列表| RegistryA["注册中心 (Registry)"]
-    ClientA -->|2. 本地二分/一致性哈希负载均衡| TargetA["选定物理节点"]
-    ClientA -->|3. 直连通信 (低延迟少一跳)| TargetA
+    ClientA["服务调用方 (Client) <br/>(运行发现 SDK)"] -->|"1. 查询服务实例列表"| RegistryA["注册中心 (Registry)"]
+    ClientA -->|"2. 本地二分/一致性哈希负载均衡"| TargetA["选定物理节点"]
+    ClientA -->|"3. 直连通信 (低延迟少一跳)"| TargetA
     
-    subgraph InstancesA["服务后端集群"]
+    subgraph InstancesA ["服务后端集群']"]
       NodeA1["实例 A-1 (10.0.0.1:80)"]
       NodeA2["实例 A-2 (10.0.0.2:80)"]
     end
@@ -57,13 +57,13 @@ flowchart TD
     TargetA --> NodeA2
   end
 
-  subgraph ServerDiscovery["2. 服务端发现模式 (Server-side Discovery)"]
+  subgraph ServerDiscovery ["2. 服务端发现模式 (Server-side Discovery)']"]
     direction TB
-    ClientB["服务调用方 (Client) <br/>(仅认识固定地址)"] -->|1. 发送 HTTP 请求| LBB["物理负载均衡器/K8s Service <br/>(VIP: 1.2.3.4)"]
-    LBB -->|2. 查表获取实例 IP| RegistryB["注册中心 (Registry)"]
-    LBB -->|3. 代为分发路由| TargetB["选定后端物理节点"]
+    ClientB["服务调用方 (Client) <br/>(仅认识固定地址)"] -->|"1. 发送 HTTP 请求"| LBB["物理负载均衡器/K8s Service <br/>(VIP: 1.2.3.4)"]
+    LBB -->|"2. 查表获取实例 IP"| RegistryB["注册中心 (Registry)"]
+    LBB -->|"3. 代为分发路由"| TargetB["选定后端物理节点"]
     
-    subgraph InstancesB["服务后端集群"]
+    subgraph InstancesB ["服务后端集群']"]
       NodeB1["实例 B-1 (10.0.1.1:80)"]
       NodeB2["实例 B-2 (10.0.1.2:80)"]
     end

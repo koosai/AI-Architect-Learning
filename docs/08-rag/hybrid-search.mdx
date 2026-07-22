@@ -96,13 +96,13 @@ graph TD
     Query["用户查询: 'E1042 故障处理'"] --> Sparse["路 1: 稀疏检索 (BM25)"]
     Query --> Dense["路 2: 稠密检索 (向量)"]
 
-    subgraph SparseRank ["BM25 召回排名"]
+    subgraph SparseRank ["BM25 召回排名')"]
         S1["1st: 文档 d3 (精确命中 E1042)"]:::doc
         S2["2nd: 文档 d1 (含故障)"]:::doc
     end
     Sparse --> SparseRank
 
-    subgraph DenseRank ["向量召回排名"]
+    subgraph DenseRank ["向量召回排名')"]
         D1["1st: 文档 d1 (语义高相关)"]:::doc
         D2["2nd: 文档 d2 (语义相关)"]:::doc
         D3["3rd: 文档 d3 (语义低相关)"]:::doc
@@ -112,14 +112,14 @@ graph TD
     SparseRank --> MergeRRF["RRF 融合打分计算 (常数 k=60)"]:::step
     DenseRank --> MergeRRF
 
-    subgraph MergeCalc ["RRF 分数叠加"]
-        M1["d1: 1/(60+2) [BM25"] + 1/(60+1) [向量] = 0.0325"]:::doc
-        M2["d3: 1/(60+1) [BM25"] + 1/(60+3) [向量] = 0.0322"]:::doc
-        M3["d2: 0 [BM25"] + 1/(60+2) [向量] = 0.0161"]:::doc
+    subgraph MergeCalc ["RRF 分数叠加')"]
+        M1["d1: 1/(60+2) (BM25') + 1/(60+1) (向量) = 0.0325"]:::doc
+        M2["d3: 1/(60+1) (BM25') + 1/(60+3) (向量) = 0.0322"]:::doc
+        M3["d2: 0 (BM25') + 1/(60+2) (向量) = 0.0161"]:::doc
     end
     MergeRRF --> MergeCalc
 
-    MergeCalc --> FinalOutput["最终混合排序结果: [d1, d3, d2"]"]:::step
+    MergeCalc --> FinalOutput["最终混合排序结果: (d1, d3, d2')"]:::step
 ```
 
 ### 3. 稳健底座：分数归一化加权 vs RRF 图解

@@ -48,21 +48,21 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 graph TD
-  Client1["玩家 1 (点击释放技能)"] -->|1. UDP 提交按键指令 (Move/Cast)| ServerHub["帧同步中继服务器 (Server Relay Hub)"]
-  Client2["玩家 2 (点击移动)"] -->|1. UDP 提交按键指令 (Move/Cast)| ServerHub
+  Client1["玩家 1 (点击释放技能)"] -->|"1. UDP 提交按键指令 (Move/Cast)"| ServerHub["帧同步中继服务器 (Server Relay Hub)"]
+  Client2["玩家 2 (点击移动)"] -->|"1. UDP 提交按键指令 (Move/Cast)"| ServerHub
   
-  subgraph ServerRelayPlane["服务器逻辑帧收集平面 (66ms / 15 FPS)"]
-    ServerHub -->|2. 收集 66ms 窗口内全员指令| FramePacker["KeyFrame Packer (打包 KeyFrame #1204)"]
+  subgraph ServerRelayPlane ["服务器逻辑帧收集平面 (66ms / 15 FPS)']"]
+    ServerHub -->|"2. 收集 66ms 窗口内全员指令"| FramePacker["KeyFrame Packer (打包 KeyFrame #1204)"]
   end
   
-  subgraph LockstepBroadcastPlane["全员广播与客户端确定性渲染平面"]
-    FramePacker -->|3. KCP/UDP 广播 KeyFrame #1204| Client1Engine["客户端 1 (Fixed-Point 定点数 Engine)"]
-    FramePacker -->|3. KCP/UDP 广播 KeyFrame #1204| Client2Engine["客户端 2 (Fixed-Point 定点数 Engine)"]
+  subgraph LockstepBroadcastPlane ["全员广播与客户端确定性渲染平面']"]
+    FramePacker -->|"3. KCP/UDP 广播 KeyFrame #1204"| Client1Engine["客户端 1 (Fixed-Point 定点数 Engine)"]
+    FramePacker -->|"3. KCP/UDP 广播 KeyFrame #1204"| Client2Engine["客户端 2 (Fixed-Point 定点数 Engine)"]
   end
 
-  subgraph DeterministicExecution["客户端 100% 比特级一致执行"]
-    Client1Engine -->|4. 渲染 60/120 FPS 插值画面| Screen1["手机 1 画面 (英雄命中)"]
-    Client2Engine -->|4. 渲染 60/120 FPS 插值画面| Screen2["手机 2 画面 (英雄命中 - 100% 一致!)"]
+  subgraph DeterministicExecution ["客户端 100% 比特级一致执行']"]
+    Client1Engine -->|"4. 渲染 60/120 FPS 插值画面"| Screen1["手机 1 画面 (英雄命中)"]
+    Client2Engine -->|"4. 渲染 60/120 FPS 插值画面"| Screen2["手机 2 画面 (英雄命中 - 100% 一致!)"]
   end
 ```
 
@@ -87,23 +87,23 @@ graph TD
 
 ```mermaid
 mindmap
-  root("(MOBA 帧同步架构"))
-    同步范式 (Synchronization Model)
-      Lockstep Frame Sync (确定性逻辑帧同步)
-      Server Relay (服务器只做指令中继打包)
-      66ms 逻辑帧 (15 FPS) + 60/120 FPS 视觉插值
-    跨平台确定性 (Determinism)
-      Fixed-Point Math (定点数整数运算)
-      Deterministic Physics (确定性物理碰撞)
-      Deterministic Random (确定性随机数种子)
-    网络传输与弱网 (Reliable UDP)
-      KCP (快速可靠 UDP 协议)
-      FEC (Forward Error Correction 前向纠错)
-      Jitter Buffer (抖动缓冲区平滑)
-    断线重连与反作弊 (Reconnection & Anti-Cheat)
-      Frame Chase Reconnection (历史逻辑帧快速追帧)
-      Keyframe Snapshot (定时状态快照)
-      Server Replay Audit (离线服务器回放反作弊)
+  root(("MOBA 帧同步架构"))
+    ["同步范式 (Synchronization Model)"]
+      ["Lockstep Frame Sync (确定性逻辑帧同步)"]
+      ["Server Relay (服务器只做指令中继打包)"]
+      ["66ms 逻辑帧 (15 FPS) + 60/120 FPS 视觉插值"]
+    ["跨平台确定性 (Determinism)"]
+      ["Fixed-Point Math (定点数整数运算)"]
+      ["Deterministic Physics (确定性物理碰撞)"]
+      ["Deterministic Random (确定性随机数种子)"]
+    ["网络传输与弱网 (Reliable UDP)"]
+      ["KCP (快速可靠 UDP 协议)"]
+      ["FEC (Forward Error Correction 前向纠错)"]
+      ["Jitter Buffer (抖动缓冲区平滑)"]
+    ["断线重连与反作弊 (Reconnection & Anti-Cheat)"]
+      ["Frame Chase Reconnection (历史逻辑帧快速追帧)"]
+      ["Keyframe Snapshot (定时状态快照)"]
+      ["Server Replay Audit (离线服务器回放反作弊)"]
 ```
 
 ---
@@ -126,12 +126,12 @@ graph LR
 
 ```mermaid
 graph TB
-  subgraph MobileClients["手机客户端平面 (确定性计算)"]
+  subgraph MobileClients ["手机客户端平面 (确定性计算)']"]
     ClientA["Player A (Unity Client, 定点数 Math)"]
     ClientB["Player B (Unity Client, 定点数 Math)"]
   end
 
-  subgraph BattleServerCluster["对战中继服务器平面 (Battle Server)"]
+  subgraph BattleServerCluster ["对战中继服务器平面 (Battle Server)']"]
     KCPReceiver["KCP / UDP Transport Layer (FEC 纠错)"]
     FrameCollector["KeyFrame Collector (66ms 定时开帧)"]
     HistoryLogger["Frame History Logger (存储 0~N 历史帧)"]
@@ -143,7 +143,7 @@ graph TB
   FrameCollector --> HistoryLogger
   FrameCollector -- "2. 66ms 广播组包 KeyFrame" --> ClientA & ClientB
 
-  ClientA -.- "|3. 断线拉取历史帧|" HistoryLogger
+  ClientA -.->|"3. 断线拉取历史帧"| HistoryLogger
 
   style FrameCollector fill:#bbdefb,stroke:#1976d2
   style ClientA fill:#c8e6c9,stroke:#2e7d32

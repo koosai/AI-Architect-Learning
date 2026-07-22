@@ -48,19 +48,19 @@ Minecraft 服务端的核心设计用意在于：**从原版单线程演进为 <
 
 ```mermaid
 graph TD
-  PlayerClients["海量玩家 App (HTTP/UDP/TCP)"] -->|1. 玩家移动与交互包| NettyIO["Netty Asynchronous I/O Threads (网络线程池)"]
+  PlayerClients["海量玩家 App (HTTP/UDP/TCP)"] -->|"1. 玩家移动与交互包"| NettyIO["Netty Asynchronous I/O Threads (网络线程池)"]
   
-  subgraph FoliaRegionalEngine["Folia 区域多线程执行平面 (Regional Multithreading)"]
-    NettyIO -->|2. 按照 Chunk 坐标派发| RegionRouter["Region Mesh Router (区域切分路由器)"]
+  subgraph FoliaRegionalEngine ["Folia 区域多线程执行平面 (Regional Multithreading)']"]
+    NettyIO -->|"2. 按照 Chunk 坐标派发"| RegionRouter["Region Mesh Router (区域切分路由器)"]
     
-    RegionRouter -->|3a. 区域 1 (出生点)| Thread1["Tick Thread 1 (Region A: 20 TPS)"]
-    RegionRouter -->|3b. 区域 2 (养鸡场)| Thread2["Tick Thread 2 (Region B: 5 TPS 隔离卡顿)"]
-    RegionRouter -->|3c. 区域 3 (红石基地)| Thread3["Tick Thread 3 (Region C: 20 TPS)"]
+    RegionRouter -->|"3a. 区域 1 (出生点)"| Thread1["Tick Thread 1 (Region A: 20 TPS)"]
+    RegionRouter -->|"3b. 区域 2 (养鸡场)"| Thread2["Tick Thread 2 (Region B: 5 TPS 隔离卡顿)"]
+    RegionRouter -->|"3c. 区域 3 (红石基地)"| Thread3["Tick Thread 3 (Region C: 20 TPS)"]
   end
   
-  subgraph AsyncDiskPlane["异步磁盘与 Chunk 存储平面"]
-    Thread1 & Thread2 & Thread3 <-->|4. 异步读写 Anvil MCA 文件| AsyncChunkWorkers["Async Chunk I/O Workers (线程池)"]
-    AsyncChunkWorkers <-->|5. 读写物理文件| AnvilStorage["Anvil Region Files (.mca 格式)"]
+  subgraph AsyncDiskPlane ["异步磁盘与 Chunk 存储平面']"]
+    Thread1 & Thread2 & Thread3 <--->|"4. 异步读写 Anvil MCA 文件"| AsyncChunkWorkers["Async Chunk I/O Workers (线程池)"]
+    AsyncChunkWorkers <--->|"5. 读写物理文件"| AnvilStorage["Anvil Region Files (.mca 格式)"]
   end
 ```
 
@@ -120,24 +120,24 @@ graph LR
 
 ```mermaid
 graph TB
-  subgraph NetworkGateway["Netty I/O 接入层"]
+  subgraph NetworkGateway ["Netty I/O 接入层')"]
     NettyChannel["Netty Async EventLoop Threads"]
   end
 
-  subgraph FoliaMultithreadedCore["Folia 区域多线程核心 (Regional Core)"]
-    RegionA["Region A Tick Worker (包含 Chunk [0,0"]~[3,3], 20 TPS)"]
-    RegionB["Region B Tick Worker (包含 Chunk [4,0"]~[7,3], 20 TPS)"]
+  subgraph FoliaMultithreadedCore ["Folia 区域多线程核心 (Regional Core)')"]
+    RegionA["Region A Tick Worker (包含 Chunk (0,0')~(3,3), 20 TPS)"]
+    RegionB["Region B Tick Worker (包含 Chunk (4,0')~(7,3), 20 TPS)"]
     LaggyRegionC["Region C Tick Worker (密集成群实体养殖场, 8 TPS 卡顿隔离!)"]
   end
 
-  subgraph AsyncIOPool["后台异步 I/O 线程池"]
+  subgraph AsyncIOPool ["后台异步 I/O 线程池')"]
     ChunkWorkerPool["Async Chunk Loading / Generation Workers"]
     DiskIO["NVMe SSD Anvil File Storage (.mca)"]
   end
 
   NettyChannel --> RegionA & RegionB & LaggyRegionC
-  RegionA & RegionB & LaggyRegionC <-->|1. 提交异步读写| ChunkWorkerPool
-  ChunkWorkerPool <-->|2. NVMe I/O| DiskIO
+  RegionA & RegionB & LaggyRegionC <--->|"1. 提交异步读写"| ChunkWorkerPool
+  ChunkWorkerPool <--->|"2. NVMe I/O"| DiskIO
 
   style RegionA fill:#c8e6c9,stroke:#2e7d32
   style LaggyRegionC fill:#ffebee,stroke:#c62828

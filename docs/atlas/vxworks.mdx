@@ -110,34 +110,34 @@ graph LR
 
 ```mermaid
 graph TB
-  subgraph UserModeSpace["VxWorks 任务运行平面 (无 MMU 物理地址直寻)"]
-    subgraph SpaceTasks["火星探测核心任务"]
+  subgraph UserModeSpace ["VxWorks 任务运行平面 (无 MMU 物理地址直寻)']"]
+    subgraph SpaceTasks ["火星探测核心任务']"]
       TaskHigh["高优先级: 信息总线任务 (Info Bus)"]
       TaskMed["中优先级: 无线通信任务 (Comm)"]
       TaskLow["低优先级: 气象数据任务 (ASI/MET)"]
     end
     
-    subgraph WindOS["Wind 内核服务"]
+    subgraph WindOS ["Wind 内核服务']"]
       Scheduler["硬实时抢占调度器"]
       MutexMgr["信号量管理器 (Semaphore Manager)"]
       WatchdogFeeder["看门狗喂狗任务"]
     end
   end
 
-  subgraph Hardware["火星车物理芯片 (RAD6000 处理器)"]
+  subgraph Hardware ["火星车物理芯片 (RAD6000 处理器)']"]
     SharedRAM["物理共享 SRAM (128MB)"]
     WatchdogChip["看门狗物理芯片 (WDT)"]
   end
 
-  TaskHigh -->|1. 读写共享总线| SharedRAM
-  TaskLow -->|2. 独占获取 Mutex 信号量| MutexMgr
-  TaskHigh -->|3. 请求同一个 Mutex 锁 (阻塞)| MutexMgr
+  TaskHigh -->|"1. 读写共享总线"| SharedRAM
+  TaskLow -->|"2. 独占获取 Mutex 信号量"| MutexMgr
+  TaskHigh -->|"3. 请求同一个 Mutex 锁 (阻塞)"| MutexMgr
   
-  TaskMed -->|4. 抢占低优先级 Task Low (无需锁)| Scheduler
-  Scheduler <-->|5. 轮转任务控制块 TCB| SharedRAM
+  TaskMed -->|"4. 抢占低优先级 Task Low (无需锁)"| Scheduler
+  Scheduler <--->|"5. 轮转任务控制块 TCB"| SharedRAM
   
-  WatchdogFeeder -->|6. 定期写入清零寄存器| WatchdogChip
-  TaskHigh -->|7. 唤醒并驱动| WatchdogFeeder
+  WatchdogFeeder -->|"6. 定期写入清零寄存器"| WatchdogChip
+  TaskHigh -->|"7. 唤醒并驱动"| WatchdogFeeder
 ```
 
 ---

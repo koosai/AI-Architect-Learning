@@ -145,8 +145,8 @@ Prompt Caching 的核心思想是在推理节点共享并复用已计算好的 <
 graph TD
   Request["新请求: System Prompt + 复杂上下文 + 当前提问"] --> Tokenize["Tokenization"]
   Tokenize --> TrieLookup["Trie 树前缀哈希匹配"]
-  TrieLookup -->|缓存命中 (Hit)| LoadCache["直接加载对应段的 KV Cache 显存<br/>跳过 Prefill 注意力矩阵计算"]
-  TrieLookup -->|缓存未命中 (Miss)| PrefillGPU["送入 GPU 执行 Prefill 计算<br/>计算完成后将前缀 KV 写入 Trie 缓存树"]
+  TrieLookup -->|"缓存命中 (Hit)"| LoadCache["直接加载对应段的 KV Cache 显存<br/>跳过 Prefill 注意力矩阵计算"]
+  TrieLookup -->|"缓存未命中 (Miss)"| PrefillGPU["送入 GPU 执行 Prefill 计算<br/>计算完成后将前缀 KV 写入 Trie 缓存树"]
   
   LoadCache --> DecodePhase["执行 Decode 阶段，生成下一个词 (首字延迟 < 100ms)"]
   PrefillGPU --> DecodePhase

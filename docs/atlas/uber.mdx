@@ -197,19 +197,19 @@ graph TB
 
 ```mermaid
 graph TD
-  subgraph GridComparison ["网格空间几何特征对比"]
-    subgraph SquareGrid ["正方形网格 (对角线距离失真)"]
-      SqCenter["中心"] -->|距离 = 1.0| SqEdge["相邻正方形中心"]
-      SqCenter -->|距离 = 1.414 (对角线!)| SqDiag["斜向正方形中心"]
+  subgraph GridComparison ["网格空间几何特征对比']"]
+    subgraph SquareGrid ["正方形网格 (对角线距离失真)']"]
+      SqCenter["中心"] -->|"距离 = 1.0"| SqEdge["相邻正方形中心"]
+      SqCenter -->|"距离 = 1.414 (对角线!)"| SqDiag["斜向正方形中心"]
     end
     
-    subgraph HexagonalGrid ["H3 六边形网格 (完美等距离邻接)"]
-      HexCenter["中心六边形"] -->|距离 = 1.0| HexN1["相邻 1"]
-      HexCenter -->|距离 = 1.0| HexN2["相邻 2"]
-      HexCenter -->|距离 = 1.0| HexN3["相邻 3"]
-      HexCenter -->|距离 = 1.0| HexN4["相邻 4"]
-      HexCenter -->|距离 = 1.0| HexN5["相邻 5"]
-      HexCenter -->|距离 = 1.0| HexN6["相邻 6"]
+    subgraph HexagonalGrid ["H3 六边形网格 (完美等距离邻接)']"]
+      HexCenter["中心六边形"] -->|"距离 = 1.0"| HexN1["相邻 1"]
+      HexCenter -->|"距离 = 1.0"| HexN2["相邻 2"]
+      HexCenter -->|"距离 = 1.0"| HexN3["相邻 3"]
+      HexCenter -->|"距离 = 1.0"| HexN4["相邻 4"]
+      HexCenter -->|"距离 = 1.0"| HexN5["相邻 5"]
+      HexCenter -->|"距离 = 1.0"| HexN6["相邻 6"]
     end
   end
 ```
@@ -232,20 +232,21 @@ graph TB
   classDef node fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
   classDef app fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
 
-  Rider["乘客 (旧金山金融街)"] -->|1. 算得 H3_ID: 8528_etc| Gateway["网关路由"]
+  Rider["乘客 (旧金山金融街)"] -->|"1. 算得 H3_ID: 8528_etc"| Gateway["网关路由"]
   
-  subgraph RingpopRing ["Ringpop 分布式对等哈希环"]
-    Gateway -->|2. 哈希寻址指向唯一 Owner 节点| DiscoNodeA["DISCO 节点 A (旧金山金融街 Owner)"]:::node
+  subgraph RingpopRing ["Ringpop 分布式对等哈希环']"]
+    Gateway -->|"2. 哈希寻址指向唯一 Owner 节点"| DiscoNodeA["DISCO 节点 A (旧金山金融街 Owner)"]:::node
     DiscoNodeB["DISCO 节点 B"]:::node
     DiscoNodeC["DISCO 节点 C"]:::node
     
-    DiscoNodeA <-->|SWIM Gossip 同步活跃节点视图| DiscoNodeB <--> DiscoNodeC
+    DiscoNodeA <--->|"SWIM Gossip 同步活跃节点视图"| DiscoNodeB <---> DiscoNodeC
   end
 
-  Driver1["附近司机 1"] -->|3. 4秒 GPS 上传心跳| DiscoNodeA
-  Driver2["附近司机 2"] -->|3. 4秒 GPS 上传心跳| DiscoNodeA
+  Driver1["附近司机 1"] -->|"3. 4秒 GPS 上传心跳"| DiscoNodeA
+  Driver2["附近司机 2"] -->|"3. 4秒 GPS 上传心跳"| DiscoNodeA
   
-  Note over DiscoNodeA: 4. 在节点 A 本地内存完成匹配！<br/>(无跨节点查询，亚毫秒级撮合)
+  Note_DiscoNodeA["4. 在节点 A 本地内存完成匹配！<br/>(无跨节点查询，亚毫秒级撮合)"]
+  DiscoNodeA -.-> Note_DiscoNodeA
 ```
 
 ---
@@ -302,15 +303,15 @@ graph TD
 
   ClientReq["商户/服务写入行程 JSON"] --> DocstoreClient["Docstore 客户端门面"]:::client
   
-  subgraph PhysicalMySQLShard ["物理 MySQL 关系数据库分片"]
-    DocstoreClient -->|1. 物理写入固定宽表行| LedgerTable["("主物理表 (trips)<br/>字段: uuid, partition_key, version, body(JSON大字段)")"]:::db
+  subgraph PhysicalMySQLShard ["物理 MySQL 关系数据库分片']"]
+    DocstoreClient -->|"1. 物理写入固定宽表行"| LedgerTable[("主物理表 (trips)<br/>字段: uuid, partition_key, version, body(JSON大字段)")]:::db
   end
   
-  LedgerTable -->|2. 生成 Binlog 变更日志| MySQLBinlog:::db
+  LedgerTable -->|"2. 生成 Binlog 变更日志"| MySQLBinlog:::db
   
-  subgraph IndexRebuilder ["异步二级索引引擎"]
-    MySQLBinlog -->|3. CDC 变更拉取监听| IndexPoller["索引提取进程"]:::process
-    IndexPoller -->|4. 异步解析 JSON 中 rider_id 字段| IndexTable["("物理索引辅助表 (idx_trips_by_rider)<br/>字段: rider_id, trip_uuid")"]:::db
+  subgraph IndexRebuilder ["异步二级索引引擎']"]
+    MySQLBinlog -->|"3. CDC 变更拉取监听"| IndexPoller["索引提取进程"]:::process
+    IndexPoller -->|"4. 异步解析 JSON 中 rider_id 字段"| IndexTable[("物理索引辅助表 (idx_trips_by_rider)<br/>字段: rider_id, trip_uuid")]:::db
   end
 ```
 

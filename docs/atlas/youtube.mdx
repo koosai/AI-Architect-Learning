@@ -46,23 +46,23 @@ YouTube 的核心设计用意在于：**采用切片并行分布式转码、Goog
 
 ```mermaid
 graph TD
-  Creator["视频创作者 (Resumable Upload API)"] -->|1. 分块上传 Master 视频| UploadServer["Upload Gateway (断点续传网关)"]
+  Creator["视频创作者 (Resumable Upload API)"] -->|"1. 分块上传 Master 视频"| UploadServer["Upload Gateway (断点续传网关)"]
   
-  subgraph TranscodingPipeline["分布式视频转码管线"]
-    UploadServer -->|2. 按 5 秒物理切片| ChunkSplitter["Chunk Splitter (微切片器)"]
-    ChunkSplitter -->|3. 并发派发| EncoderCluster["Distributed Encoders (H.264 / VP9 / AV1)"]
-    EncoderCluster -->|4. 汇聚生成播放列表| ManifestBuilder["DASH / HLS Manifest (.mpd / .m3u8)"]
+  subgraph TranscodingPipeline ["分布式视频转码管线']"]
+    UploadServer -->|"2. 按 5 秒物理切片"| ChunkSplitter["Chunk Splitter (微切片器)"]
+    ChunkSplitter -->|"3. 并发派发"| EncoderCluster["Distributed Encoders (H.264 / VP9 / AV1)"]
+    EncoderCluster -->|"4. 汇聚生成播放列表"| ManifestBuilder["DASH / HLS Manifest (.mpd / .m3u8)"]
   end
   
-  ManifestBuilder -->|5. 分发推送到边缘| GGCNode["Google Global Cache (GGC 运营商 PoP 节点)"]
+  ManifestBuilder -->|"5. 分发推送到边缘"| GGCNode["Google Global Cache (GGC 运营商 PoP 节点)"]
 
-  subgraph RecommendationEngine["双阶段 DNN 推荐引擎"]
-    UserContext["用户历史行为 & 上下文"] -->|6. 第一阶段: 召回 (Candidate Generation)| DNNRetrieval["DNN Candidate Filter (数十亿 -> 几百个)"]
-    DNNRetrieval -->|7. 第二阶段: 精排 (Ranking)| DNNRanker["DNN Ranker (预估 Watch Time 细排)"]
+  subgraph RecommendationEngine ["双阶段 DNN 推荐引擎']"]
+    UserContext["用户历史行为 & 上下文"] -->|"6. 第一阶段: 召回 (Candidate Generation)"| DNNRetrieval["DNN Candidate Filter (数十亿 -> 几百个)"]
+    DNNRetrieval -->|"7. 第二阶段: 精排 (Ranking)"| DNNRanker["DNN Ranker (预估 Watch Time 细排)"]
   end
 
-  GGCNode <-->|8. 自适应码率 DASH 播放| ViewerClient["终端播放器 (根据网速切换 4K/1080p)"]
-  DNNRanker -->|9. 返回 Top-20 推荐列表| ViewerClient
+  GGCNode <--->|"8. 自适应码率 DASH 播放"| ViewerClient["终端播放器 (根据网速切换 4K/1080p)"]
+  DNNRanker -->|"9. 返回 Top-20 推荐列表"| ViewerClient
 ```
 
 <DesignIntent

@@ -104,36 +104,36 @@ graph LR
 
 ```mermaid
 graph TB
-  subgraph ClientUI["浏览器端"]
+  subgraph ClientUI ["浏览器端']"]
     MainApp["Jira Board 交互应用 (React)"]
     IframeContainer["Secure Iframe 远程插件沙箱"]
   end
 
-  subgraph AtlassianCloud["Atlassian 云服务器平面"]
+  subgraph AtlassianCloud ["Atlassian 云服务器平面']"]
     APIProxy["核心 API 代理网关 (Gateway)"]
     WorkflowEngine["工作流状态机引擎 (Workflow Engine)"]
     
-    subgraph ForgeRuntime["Forge Serverless 沙箱机房 (Golang/V8 Isolate)"]
+    subgraph ForgeRuntime ["Forge Serverless 沙箱机房 (Golang/V8 Isolate)']"]
       HostService["Forge 宿主调度服务"]
       V8Sandbox["V8 Isolate 沙箱容器 (Node.js App)"]
     end
   end
 
-  subgraph TenantData["租户隔离存储平面"]
-    TenantDB["("PostgreSQL 租户数据库")"]
-    ForgeStore["("Forge Key-Value 隔离存储区")"]
+  subgraph TenantData ["租户隔离存储平面']"]
+    TenantDB[("PostgreSQL 租户数据库")]
+    ForgeStore[("Forge Key-Value 隔离存储区")]
   end
 
-  MainApp <-->|Batch REST / gRPC| APIProxy
-  IframeContainer <-->|HTTPS postMessage + JWT| APIProxy
+  MainApp <--->|"Batch REST / gRPC"| APIProxy
+  IframeContainer <--->|"HTTPS postMessage + JWT"| APIProxy
 
-  APIProxy <-->|状态更改触发器| WorkflowEngine
-  WorkflowEngine <-->|读写工单状态| TenantDB
+  APIProxy <--->|"状态更改触发器"| WorkflowEngine
+  WorkflowEngine <--->|"读写工单状态"| TenantDB
 
-  APIProxy -->|启动插件 FaaS 任务| HostService
+  APIProxy -->|"启动插件 FaaS 任务"| HostService
   HostService --> V8Sandbox
-  V8Sandbox -->|有限的系统 API 呼叫 (OAuth Scopes)| APIProxy
-  V8Sandbox <-->|读写插件独占数据| ForgeStore
+  V8Sandbox -->|"有限的系统 API 呼叫 (OAuth Scopes)"| APIProxy
+  V8Sandbox <--->|"读写插件独占数据"| ForgeStore
 ```
 
 ---
@@ -146,15 +146,15 @@ Jira 的灵魂在于其高度可定制的有向工作流图（Workflow DAG）。
 
 ```mermaid
 graph TD
-  StateA["当前状态 (如 In Progress)"] -->|发起 Transition 动作| Cond{"1. 权限条件评估 (Conditions)"}
-  Cond -->|不满足角色| Deny["阻止转换 (UI 按钮置灰)"]
-  Cond -->|角色校验通过| Valid{"2. 数据验证器校验 (Validators)"}
+  StateA["当前状态 (如 In Progress)"] -->|"发起 Transition 动作"| Cond{"1. 权限条件评估 (Conditions)"}
+  Cond -->|"不满足角色"| Deny["阻止转换 (UI 按钮置灰)"]
+  Cond -->|"角色校验通过"| Valid{"2. 数据验证器校验 (Validators)"}
   
-  Valid -->|校验失败 (如未绑定 Commit/缺少备注)| Fail["中断转换 (弹窗报错提示)"]
-  Valid -->|校验通过| Commit["3. 执行状态变更 (Issue.status = 'Done')"]
+  Valid -->|"校验失败 (如未绑定 Commit/缺少备注)"| Fail["中断转换 (弹窗报错提示)"]
+  Valid -->|"校验通过"| Commit["3. 执行状态变更 (Issue.status = 'Done')"]
   
   Commit --> PostFunc["4. 执行后置动作 (Post Functions)"]
-  PostFunc -->|自动指派给主管 / 发送通知 / 触发 Webhook| StateB["目标状态 (Done)"]
+  PostFunc -->|"自动指派给主管 / 发送通知 / 触发 Webhook"| StateB["目标状态 (Done)"]
 ```
 
 1. **条件 (Conditions)**：控制“谁”可以执行此操作（例如：只有研发角色能把工单移到 In Review）。若不满足，客户端上的转换按钮直接置灰不可用。

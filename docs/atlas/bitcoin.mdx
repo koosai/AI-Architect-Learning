@@ -86,31 +86,31 @@ mindmap
 
 ```mermaid
 flowchart TB
-  subgraph Client_Layer["客户端与钱包层"]
+  subgraph Client_Layer ["客户端与钱包层')"]
     Wallet["Mobile SPV Wallet (轻节点)"]
     MiningNode["ASIC Miner Pool (算力矿池)"]
   end
 
-  subgraph Core_P2P["Bitcoin Core 全节点网络 (P2P Mesh)"]
-    Node1["Bitcoin Core Full Node 1("Mempool + DB")"]
-    Node2["Bitcoin Core Full Node 2("Mempool + DB")"]
-    Node3["Bitcoin Core Full Node 3("Mempool + DB")"]
+  subgraph Core_P2P ["Bitcoin Core 全节点网络 (P2P Mesh)')"]
+    Node1["Bitcoin Core Full Node 1('Mempool + DB')"]
+    Node2["Bitcoin Core Full Node 2('Mempool + DB')"]
+    Node3["Bitcoin Core Full Node 3('Mempool + DB')"]
   end
 
-  subgraph Block_Chain["分布式账本 (Blockchain State)"]
+  subgraph Block_Chain ["分布式账本 (Blockchain State)')"]
     Genesis["Block 0 (Genesis)"]
     BlockN["Block N"]
     BlockN1["Block N+1 (PoW Target SHA256 < Difficulty)"]
   end
 
-  Wallet -->|1. 广播 Raw Transaction| Node1
-  MiningNode -->|2. 监听 Mempool 组装新块| Node2
+  Wallet -->|"1. 广播 Raw Transaction"| Node1
+  MiningNode -->|"2. 监听 Mempool 组装新块"| Node2
 
-  Node1 <-->|3. P2P 广播 Block & Tx| Node2
-  Node2 <-->|3. P2P 广播 Block & Tx| Node3
+  Node1 <--->|"3. P2P 广播 Block & Tx"| Node2
+  Node2 <--->|"3. P2P 广播 Block & Tx"| Node3
 
-  BlockN1 -->|4. 挂载到| BlockN
-  BlockN -->|4. 链式追溯| Genesis
+  BlockN1 -->|"4. 挂载到"| BlockN
+  BlockN -->|"4. 链式追溯"| Genesis
 ```
 
 ```mermaid

@@ -48,13 +48,13 @@ npm 的核心设计用意在于：**源站只做写入与元数据维护，将 9
 
 ```mermaid
 graph TD
-  Client["开发者 / CI 节点 (npm / pnpm install)"] -->|1. 查询包元数据 & .tgz| CDNEgde["Fastly / Cloudflare 边缘 CDN 节点"]
+  Client["开发者 / CI 节点 (npm / pnpm install)"] -->|"1. 查询包元数据 & .tgz"| CDNEgde["Fastly / Cloudflare 边缘 CDN 节点"]
   
   CDNEgde --"2a. 99.9% 命中缓存 (Cache Hit)"--> SendTarball["直接返回 .tgz 压缩包"]
   CDNEgde --"2b. 0.1% 未命中 (Cache Miss)"--> SourceMetastore["npm 源站 CouchDB / Postgres 数据库"]
   
-  Client -->|3. 下载 .tgz 并解压至| GlobalStore["全局 CAS 存储 (~/.pnpm-store/v3)"]
-  GlobalStore -->|4. 创建硬链接 (Hardlink)| ProjectNodeModules["项目 node_modules (物理 0 字节重复)"]
+  Client -->|"3. 下载 .tgz 并解压至"| GlobalStore["全局 CAS 存储 (~/.pnpm-store/v3)"]
+  GlobalStore -->|"4. 创建硬链接 (Hardlink)"| ProjectNodeModules["项目 node_modules (物理 0 字节重复)"]
 ```
 
 <DesignIntent
@@ -114,32 +114,32 @@ graph LR
 
 ```mermaid
 graph TB
-  subgraph ClientSide["客户端本地磁盘 (Client System)"]
+  subgraph ClientSide ["客户端本地磁盘 (Client System)']"]
     PackageCLI["pnpm / npm CLI Engine"]
     GlobalCASStore["全局 CAS 存储 (~/.pnpm-store/files/)"]
     
-    subgraph ProjectDir["当前项目目录"]
+    subgraph ProjectDir ["当前项目目录']"]
       VirtualStore["node_modules/.pnpm/ (虚拟符号链接树)"]
       LocalNodeModules["node_modules/ (真实代码入口)"]
     end
   end
 
-  subgraph CloudRegistry["Cloud Infrastructure"]
-    CDN POP["Fastly Edge CDN POP (全球边缘节点)"]
+  subgraph CloudRegistry ["Cloud Infrastructure']"]
+    CDN_POP["Fastly Edge CDN_POP (全球边缘节点)"]
     StorageS3["Tarball Storage (S3 / GCS)"]
     MasterDB["PostgreSQL / CouchDB (包元数据主库)"]
   end
 
-  PackageCLI -->|1. 校验 Lockfile 并查询元数据| CDN POP
-  CDN POP -.->|2. 未命中时源站取回| MasterDB
-  CDN POP -.->|3. 读取物理 .tgz| StorageS3
+  PackageCLI -->|"1. 校验 Lockfile 并查询元数据"| CDN_POP
+  CDN_POP -.->|"2. 未命中时源站取回"| MasterDB
+  CDN_POP -.->|"3. 读取物理 .tgz"| StorageS3
   
-  PackageCLI -->|4. 下载并解压写入| GlobalCASStore
-  GlobalCASStore -->|5. 创建 Hardlink (物理数据入库)| VirtualStore
-  VirtualStore -->|6. 创建 Symlink (符合 Node 规范)| LocalNodeModules
+  PackageCLI -->|"4. 下载并解压写入"| GlobalCASStore
+  GlobalCASStore -->|"5. 创建 Hardlink (物理数据入库)"| VirtualStore
+  VirtualStore -->|"6. 创建 Symlink (符合 Node 规范)"| LocalNodeModules
 
   style GlobalCASStore fill:#c8e6c9,stroke:#2e7d32
-  style CDN POP fill:#bbdefb,stroke:#1976d2
+  style CDN_POP fill:#bbdefb,stroke:#1976d2
 ```
 
 ---
@@ -388,7 +388,7 @@ print("\n[Result] 分片路由与隔离验证成功")
         'D. 强制要求所有前端项目必须转换为单文件 TXT 文本'
       ],
       answer: 1,
-      explain: '读写分离与全球边缘 CDN 是 npm 支撑万亿级流量的精髓。源站专注于写与元数据变更，99.9% 的只读下载流量被 Fastly CDN POP 节点在边缘直接拦截消化。'
+      explain: '读写分离与全球边缘 CDN 是 npm 支撑万亿级流量的精髓。源站专注于写与元数据变更，99.9% 的只读下载流量被 Fastly CDN_POP 节点在边缘直接拦截消化。'
     },
     {
       q: '在 npm v3 的扁平提升（Hoisting）模式中，经常被吐槽的“幽灵依赖（Phantom Dependency）”是指什么问题？',

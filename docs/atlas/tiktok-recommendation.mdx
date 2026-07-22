@@ -127,11 +127,11 @@ graph TB
     classDef main fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
     classDef third fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-    User["开发者 App 客户端"]:::client -->|1. 请求个性化 Feed| RecService["推荐引擎服务 (Serving Cluster)"]:::main
-    User -->|2. 发送埋点交互日志 (Like/Watch)| LogCollector["Kafka 交互日志收集器"]:::main
+    User["开发者 App 客户端"]:::client -->|"1. 请求个性化 Feed"| RecService["推荐引擎服务 (Serving Cluster)"]:::main
+    User -->|"2. 发送埋点交互日志 (Like/Watch)"| LogCollector["Kafka 交互日志收集器"]:::main
     
-    LogCollector -->|3. 实时特征拼装与训练| MonolithCluster["Monolith 分布式训练集群"]:::main
-    MonolithCluster -->|4. 增量更新同步模型参数| RecService
+    LogCollector -->|"3. 实时特征拼装与训练"| MonolithCluster["Monolith 分布式训练集群"]:::main
+    MonolithCluster -->|"4. 增量更新同步模型参数"| RecService
 ```
 
 ### 3b. Container Diagram (容器结构图)
@@ -248,16 +248,16 @@ graph TD
     classDef serving fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
     classDef network fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
 
-    subgraph TrainingSystem ["1. 训练子系统"]
-        TrainingWorker["Training Workers"]:::training -->|高频更新| TrainingPS["Training Parameter Server<br/>(存储完整模型、可读写)"]:::training
+    subgraph TrainingSystem ["1. 训练子系统']"]
+        TrainingWorker["Training Workers"]:::training -->|"高频更新"| TrainingPS["Training Parameter Server<br/>(存储完整模型、可读写)"]:::training
     end
 
-    subgraph ServingSystem ["2. 在线推理子系统"]
-        ServingPS["Serving Parameter Server<br/>(内存只读、高并发)"]:::serving -->|只读加载| ServingWorker["Serving Predictors"]:::serving
+    subgraph ServingSystem ["2. 在线推理子系统']"]
+        ServingPS["Serving Parameter Server<br/>(内存只读、高并发)"]:::serving -->|"只读加载"| ServingWorker["Serving Predictors"]:::serving
     end
 
-    TrainingPS -->|1. 收集被修改的 Embedding Diff| SyncController["增量同步管理器"]:::network
-    SyncController -->|2. 推送 0.1% 参数更新量 (HTTP/2 RPC)| ServingPS
+    TrainingPS -->|"1. 收集被修改的 Embedding Diff"| SyncController["增量同步管理器"]:::network
+    SyncController -->|"2. 推送 0.1% 参数更新量 (HTTP/2 RPC)"| ServingPS
 ```
 
 <ResearchNote
@@ -286,11 +286,11 @@ graph LR
 
     NewKey["新特征 ID: x"] --> HashFn["Cuckoo 哈希计算"]:::hash
     
-    HashFn -->|H1(x)| Bucket1["存储桶 1"]:::bucket
-    HashFn -->|H2(x)| Bucket2["存储桶 2 (已被 元素y 占领)"]:::bucket
+    HashFn -->|"H1(x)"| Bucket1["存储桶 1"]:::bucket
+    HashFn -->|"H2(x)"| Bucket2["存储桶 2 (已被 元素y 占领)"]:::bucket
     
-    NewKey -->|强行占领| Bucket2
-    Bucket2 -.->|驱逐元素y| Kick["元素 y 被迫迁往备用桶 H1(y)"]:::hash
+    NewKey -->|"强行占领"| Bucket2
+    Bucket2 -.->|"驱逐元素y"| Kick["元素 y 被迫迁往备用桶 H1(y)"]:::hash
 ```
 
 ---

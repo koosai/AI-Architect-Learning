@@ -80,18 +80,18 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-  subgraph RefactoringToPatterns["重构向模式演进模型 (Refactoring to Patterns Evolutionary Model)"]
+  subgraph RefactoringToPatterns ["重构向模式演进模型 (Refactoring to Patterns Evolutionary Model)']"]
     direction TB
     
-    StepA["1. 编写朴素直观代码 <br/>(满足当前业务，保持最简设计 YAGNI)"] --> StepB["2. 遇到变化压力/识别出坏味道 <br/>(如: 出现长 switch-case 且不断增加分支)")
+    StepA["1. 编写朴素直观代码 <br/>(满足当前业务，保持最简设计 YAGNI)"] --> StepB["2. 遇到变化压力/识别出坏味道 <br/>(如: 出现长 switch-case 且不断增加分支)"]
     
-    StepB --> StepC["3. 引入特征测试 <br/>(建立回归测试安全网，锁定可观察外部行为)")
+    StepB --> StepC["3. 引入特征测试 <br/>(建立回归测试安全网，锁定可观察外部行为)"]
     
     StepC --> StepD["4. 实施小步安全重构手法 <br/>(运用 Fowler 定义的 Extract Method / Rename Variable)"]
     
     StepD --> StepE["5. 演进出合适的设计模式 <br/>(如: 逐步聚合成 Strategy 策略字典或 Factory 工厂方法)"]
     
-    StepE -->|保持绿灯，拒绝预先设计的臃肿框架| StepA
+    StepE -->|"保持绿灯，拒绝预先设计的臃肿框架"| StepA
   end
 ```
 

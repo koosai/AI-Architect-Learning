@@ -136,27 +136,27 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-  subgraph ExactlyOnceIdeal["理想的端到端 Exactly-Once 模式 (物理上恰好发送一次)"]
+  subgraph ExactlyOnceIdeal ["理想的端到端 Exactly-Once 模式 (物理上恰好发送一次)']"]
     direction LR
-    Client1["发送端"] -->|理想无丢包网络| Server1["接收端 (物理上只收到1次)"]
-    Server1 -->|执行逻辑| DB1["("DB: 变更 1 次")"]
+    Client1["发送端"] -->|"理想无丢包网络"| Server1["接收端 (物理上只收到1次)"]
+    Server1 -->|"执行逻辑"| DB1[("DB: 变更 1 次")]
   end
 
-  subgraph EffectivelyOnceReal["现实的 Effectively-Once 模式 (物理上多次, 效果上一次)"]
+  subgraph EffectivelyOnceReal ["现实的 Effectively-Once 模式 (物理上多次, 效果上一次)']"]
     direction TB
-    Client2["发送端"] -->|网络重发 (At-Least-Once)| Msg1["第1次投递 (Key=K)"]
-    Client2 -->|网络重发 (At-Least-Once)| Msg2["第2次重发 (Key=K)"]
+    Client2["发送端"] -->|"网络重发 (At-Least-Once)"| Msg1["第1次投递 (Key=K)"]
+    Client2 -->|"网络重发 (At-Least-Once)"| Msg2["第2次重发 (Key=K)"]
     
-    subgraph ServerSide["接收端幂等消费过滤"]
+    subgraph ServerSide ["接收端幂等消费过滤']"]
       direction LR
       Msg1 --> Check1{"未见过 key K?"}
       Msg2 --> Check2{"已见过 key K?"}
       
-      Check1 -->|Yes| Exec["真正执行逻辑并落盘DB"]
-      Check2 -->|Yes| Cache["直接阻断, 返回上次结果"]
+      Check1 -->|"Yes"| Exec["真正执行逻辑并落盘DB"]
+      Check2 -->|"Yes"| Cache["直接阻断, 返回上次结果"]
     end
     
-    Exec --> DB2["("DB: 变更 1 次")"]
+    Exec --> DB2[("DB: 变更 1 次")]
     Cache --> DB2
   end
 ```

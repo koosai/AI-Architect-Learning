@@ -163,7 +163,7 @@ graph TB
 
 ```mermaid
 graph TB
-  subgraph TraditionalLogging["传统日志记录 (Logstash / ELK)"]
+  subgraph TraditionalLogging ["传统日志记录 (Logstash / ELK)')"]
     Err1["NullPointer at 0x7f01 (Line 42)"]
     Err2["NullPointer at 0x7f09 (Line 42)"]
     ELKStore["直接存储 2 条日志 (没有聚合，日志数海啸式爆炸!)"]
@@ -172,13 +172,13 @@ graph TB
     style ELKStore fill:#ffcdd2,stroke:#c62828
   end
 
-  subgraph SentryFingerprint["Sentry 堆栈指纹聚合 (Fingerprinting)"]
+  subgraph SentryFingerprint ["Sentry 堆栈指纹聚合 (Fingerprinting)')"]
     ErrA["NullPointer at 0x7f01 (Line 42)"]
     ErrB["NullPointer at 0x7f09 (Line 42)"]
     
     Scrub["清洗动态内存地址与干扰参数"]
     HashGen["生成统一 Hash Key: e3b0c442"]
-    SingleIssue["合并为一个 Issue("计数 +2，页面清爽!")"]
+    SingleIssue["合并为一个 Issue('计数 +2，页面清爽!')"]
     
     ErrA & ErrB --> Scrub --> HashGen --> SingleIssue
     style SingleIssue fill:#c8e6c9,stroke:#2e7d32

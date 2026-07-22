@@ -83,21 +83,21 @@ mindmap
 
 ```mermaid
 flowchart TB
-  subgraph Client_Tier["客户端层"]
-    App["Instagram Mobile App("React Native + Native")"]
+  subgraph Client_Tier ["客户端层')"]
+    App["Instagram Mobile App('React Native + Native')"]
   end
 
-  subgraph Gateway_Tier["网关与负载均衡"]
+  subgraph Gateway_Tier ["网关与负载均衡')"]
     Proxygen["Meta Proxygen (L7 Load Balancer)"]
   end
 
-  subgraph App_Tier["应用单体层 (Django App Cluster)"]
+  subgraph App_Tier ["应用单体层 (Django App Cluster)')"]
     Django1["Django Monolith Node 1"]
     Django2["Django Monolith Node N"]
     Celery["Celery Async Worker Pool"]
   end
 
-  subgraph Cache_Storage_Tier["存储与缓存层"]
+  subgraph Cache_Storage_Tier ["存储与缓存层')"]
     Memcached["Memcached Tier (Feed / Stories Buffer)"]
     PostgreSQL["Sharded PostgreSQL (User & ID Catalog)"]
     Cassandra["Cassandra (Activity & Direct Message)"]
@@ -115,7 +115,7 @@ flowchart TB
   Django1 --> TAO
   Django2 --> Cassandra
 
-  Django1 -->|派发转码/Fanout 任务| Celery
+  Django1 -->|"派发转码/Fanout 任务"| Celery
 ```
 
 ```mermaid

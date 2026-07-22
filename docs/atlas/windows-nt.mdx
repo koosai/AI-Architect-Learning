@@ -97,39 +97,39 @@ Windows NT 操作系统的整体数据流转和组件层级划分如下：
 
 ```mermaid
 graph LR
-  User["系统用户 / 程序员"] -->|发起交互与执行应用| App["Win32 / Linux 应用程序"]
-  App -->|1. 系统 API 呼叫| Subsystems["用户态子系统平面 (Subsystems)"]
-  Subsystems -->|2. 系统调用 (Int 2E / Sysenter)| NTKernel["NT 混合内核空间 (Ring 0)"]
-  NTKernel <-->|3. 设备驱动与硬件控制| HAL["硬件抽象层 (HAL)"]
-  HAL -->|4. 读写寄存器 / DMA| PhysicalHardware["物理芯片与 CPU"]
+  User["系统用户 / 程序员"] -->|"发起交互与执行应用"| App["Win32 / Linux 应用程序"]
+  App -->|"1. 系统 API 呼叫"| Subsystems["用户态子系统平面 (Subsystems)"]
+  Subsystems -->|"2. 系统调用 (Int 2E / Sysenter)"| NTKernel["NT 混合内核空间 (Ring 0)"]
+  NTKernel <--->|"3. 设备驱动与硬件控制"| HAL["硬件抽象层 (HAL)"]
+  HAL -->|"4. 读写寄存器 / DMA"| PhysicalHardware["物理芯片与 CPU"]
 ```
 
 ### 3b. Container Diagram (容器架构)
 
 ```mermaid
 graph TB
-  subgraph UserMode["用户空间 (User Mode - Ring 3)"]
-    subgraph Win32Subsystem["Win32 兼容子系统"]
+  subgraph UserMode ["用户空间 (User Mode - Ring 3)']"]
+    subgraph Win32Subsystem ["Win32 兼容子系统']"]
       Win32App["Win32 应用程序 (exe)"]
       Kernel32["kernel32.dll / user32.dll"]
       Csrss["子系统控制进程 (csrss.exe)"]
     end
     
-    subgraph SystemServices["核心系统服务"]
+    subgraph SystemServices ["核心系统服务']"]
       Lsass["本地安全认证 (lsass.exe)"]
       Ntdll["底层系统调用封装 (ntdll.dll)"]
     end
     
-    subgraph WSL2Subsystem["WSL 2 运行平面"]
+    subgraph WSL2Subsystem ["WSL 2 运行平面']"]
       LinuxApp["Linux 应用程序 (ELF)"]
       Vmlxe["轻量虚拟化宿主 (VMWP.exe)"]
     end
   end
 
-  subgraph KernelMode["内核空间 (Kernel Mode - Ring 0)"]
+  subgraph KernelMode ["内核空间 (Kernel Mode - Ring 0)']"]
     SyscallDispatcher["系统服务调度器 (System Service Dispatcher)"]
     
-    subgraph NTExecutive["NT 执行体 (Executive Services)"]
+    subgraph NTExecutive ["NT 执行体 (Executive Services)']"]
       ObjectMgr["对象管理器"]
       ProcessMgr["进程/线程管理器"]
       VMM["虚拟内存管理器 (Virtual Memory Mgr)"]
@@ -139,25 +139,25 @@ graph TB
     Microkernel["微核心 (Microkernel Scheduling)"]
     HalDll["硬件抽象层 (hal.dll)"]
     
-    subgraph HyperV["轻量虚拟化层"]
+    subgraph HyperV ["轻量虚拟化层']"]
       LinuxKernel["真实 Linux 内核 (WSL 2)"]
     end
   end
 
-  Win32App -->|API Call| Kernel32
-  Kernel32 -->|LPC 通信| Csrss
-  Kernel32 -->|包装跳转| Ntdll
+  Win32App -->|"API Call"| Kernel32
+  Kernel32 -->|"LPC 通信"| Csrss
+  Kernel32 -->|"包装跳转"| Ntdll
   
-  Ntdll -->|系统调用 (syscall)| SyscallDispatcher
-  LinuxApp -->|Linux 内核呼叫| LinuxKernel
+  Ntdll -->|"系统调用 (syscall)"| SyscallDispatcher
+  LinuxApp -->|"Linux 内核呼叫"| LinuxKernel
   
   SyscallDispatcher --> NTExecutive
   NTExecutive --> Microkernel
   Microkernel --> HalDll
   
-  Win32k <-->|直接绘制信号| HalDll
-  LinuxKernel <-->|基于 Hyper-V 硬件共享| HalDll
-  Vmlxe <-->|管理虚拟机| LinuxKernel
+  Win32k <--->|"直接绘制信号"| HalDll
+  LinuxKernel <--->|"基于 Hyper-V 硬件共享"| HalDll
+  Vmlxe <--->|"管理虚拟机"| LinuxKernel
 ```
 
 ---
@@ -218,16 +218,16 @@ graph TD
 
 ```mermaid
 graph TB
-  subgraph WSL1["WSL 1: 系统调用翻译模式 (Translation)"]
-    LinuxApp1["Linux ELF 应用"] -->|发出 Linux Syscall (如 fork)| LxCore["lxcore.sys / lxss.sys 内核驱动"]
-    LxCore -->|翻译为 NT API| WinKernel1["Windows 内核执行体"]
+  subgraph WSL1 ["WSL 1: 系统调用翻译模式 (Translation)']"]
+    LinuxApp1["Linux ELF 应用"] -->|"发出 Linux Syscall (如 fork)"| LxCore["lxcore.sys / lxss.sys 内核驱动"]
+    LxCore -->|"翻译为 NT API"| WinKernel1["Windows 内核执行体"]
   end
 
-  subgraph WSL2["WSL 2: 真实 Linux 内核 + Hyper-V 微虚拟机 (VM)"]
-    LinuxApp2["Linux ELF 应用"] -->|直接发送物理 Syscall| VM["Hyper-V 极其轻量的 VM"]
-    VM -->|完全兼容运行| RealLinux["真实编译的 Linux 内核"]
-    RealLinux <-->|9P 协议 / 共享内存| Hypervisor["Hyper-V 虚拟机监控器"]
-    Hypervisor <-->|硬件级对接| WinKernel2["Windows 内核执行体"]
+  subgraph WSL2 ["WSL 2: 真实 Linux 内核 + Hyper-V 微虚拟机 (VM)']"]
+    LinuxApp2["Linux ELF 应用"] -->|"直接发送物理 Syscall"| VM["Hyper-V 极其轻量的 VM"]
+    VM -->|"完全兼容运行"| RealLinux["真实编译的 Linux 内核"]
+    RealLinux <--->|"9P 协议 / 共享内存"| Hypervisor["Hyper-V 虚拟机监控器"]
+    Hypervisor <--->|"硬件级对接"| WinKernel2["Windows 内核执行体"]
   end
 ```
 

@@ -72,16 +72,19 @@ graph TD
     classDef boundary fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
     classDef mitigation fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
 
-    UserPrompt["用户 Prompt 越狱输入"]:::input -->|边界A: 外部直接输入| Gateway["模型网关拦截面"]:::boundary
-    Note over Gateway: 防御: 输入正则表达式校验 & 长度限制
+    UserPrompt["用户 Prompt 越狱输入"]:::input -->|"边界A: 外部直接输入"| Gateway["模型网关拦截面"]:::boundary
+    Note_Gateway["防御: 输入正则表达式校验 & 长度限制"]
+    Gateway -.-> Note_Gateway
 
     Gateway --> RAGPipeline["RAG 检索合成器"]:::boundary
-    LocalDoc["本地笔记库 (可能遭窜改)"]:::input -->|边界B: 间接提示词注入| RAGPipeline
-    Note over RAGPipeline: 防御: Markdown 隔离标签 + System Prompt 约束
+    LocalDoc["本地笔记库 (可能遭窜改)"]:::input -->|"边界B: 间接提示词注入"| RAGPipeline
+    Note_RAGPipeline["防御: Markdown 隔离标签 + System Prompt 约束"]
+    RAGPipeline -.-> Note_RAGPipeline
 
     RAGPipeline --> LLMAPI["大模型提供商 API"]:::boundary
-    LLMAPI -->|边界C: 幻觉与泄露输出| OutGuard["输出护栏过滤面"]:::boundary
-    Note over OutGuard: 防御: PII 数据脱敏 & 敏感词屏蔽
+    LLMAPI -->|"边界C: 幻觉与泄露输出"| OutGuard["输出护栏过滤面"]:::boundary
+    Note_OutGuard["防御: PII 数据脱敏 & 敏感词屏蔽"]
+    OutGuard -.-> Note_OutGuard
 
     OutGuard --> FinalUser["终端展示"]
 ```

@@ -31,24 +31,24 @@ import QuizCard from '@site/src/components/QuizCard';
 
 ```mermaid
 flowchart TD
-  subgraph HardcodedCoupling["1. 硬编码耦合结构 (Tight Coupling - violates OCP)"]
+  subgraph HardcodedCoupling ["1. 硬编码耦合结构 (Tight Coupling - violates OCP)']"]
     direction TB
     OrderService1["下单核心业务 <br/>(OrderService.place_order)"]
     
-    OrderService1 -->|直接调用| EmailService1["邮件服务 <br/>(EmailService.send)"]
-    OrderService1 -->|直接调用| PointsService1["积分服务 <br/>(PointsService.add)"]
-    OrderService1 -->|直接调用| StockService1["库存服务 <br/>(StockService.update)"]
-    OrderService1 -->|直接调用| SmsService1["短信服务 <br/>(SmsService.send)"]
+    OrderService1 -->|"直接调用"| EmailService1["邮件服务 <br/>(EmailService.send)"]
+    OrderService1 -->|"直接调用"| PointsService1["积分服务 <br/>(PointsService.add)"]
+    OrderService1 -->|"直接调用"| StockService1["库存服务 <br/>(StockService.update)"]
+    OrderService1 -->|"直接调用"| SmsService1["短信服务 <br/>(SmsService.send)"]
   end
 
-  subgraph ObserverDecoupling["2. 观察者解耦结构 (Observer Decoupled - OCP compliant)"]
+  subgraph ObserverDecoupling ["2. 观察者解耦结构 (Observer Decoupled - OCP compliant)']"]
     direction TB
-    OrderService2["下单发布者 <br/>(OrderService / Subject)"] -->|只维护和调用列表| ObserverInterface["观察者抽象接口 <br/>(OrderObserver Interface)"]
+    OrderService2["下单发布者 <br/>(OrderService / Subject)"] -->|"只维护和调用列表"| ObserverInterface["观察者抽象接口 <br/>(OrderObserver Interface)"]
     
-    EmailObserver["邮件观察者 <br/>(EmailObserver)"] -.->|实现 update(order)| ObserverInterface
-    PointsObserver["积分观察者 <br/>(PointsObserver)"] -.->|实现 update(order)| ObserverInterface
-    StockObserver["库存观察者 <br/>(StockObserver)"] -.->|实现 update(order)| ObserverInterface
-    SmsObserver["短信观察者 <br/>(SmsObserver)"] -.->|实现 update(order)| ObserverInterface
+    EmailObserver["邮件观察者 <br/>(EmailObserver)"] -.->|"实现 update(order)"| ObserverInterface
+    PointsObserver["积分观察者 <br/>(PointsObserver)"] -.->|"实现 update(order)"| ObserverInterface
+    StockObserver["库存观察者 <br/>(StockObserver)"] -.->|"实现 update(order)"| ObserverInterface
+    SmsObserver["短信观察者 <br/>(SmsObserver)"] -.->|"实现 update(order)"| ObserverInterface
   end
 ```
 

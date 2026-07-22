@@ -73,24 +73,24 @@ graph TD
 
     UserAlert["1. SRE 告警输入<br/>(e.g., API 5xx 升高)"] --> Orchestrator["2. 编排协调器 (Host Engine)"]
     
-    subgraph AgentBrain ["智能体大脑与状态"]
-        Orchestrator <-->|3. 读取/回灌状态| Scratchpad["3. 记忆草稿纸 (Scratchpad)<br/>- 待解决告警 (Alert)<br/>- 已执行动作 (done)<br/>- 已有发现 (findings)"]:::state
-        Orchestrator -->|4. 组装 Context 发送| LLMBrain["4. 大脑决策层 (ReAct LLM)"]:::brain
-        LLMBrain -->|5. 返回 Thought 与 Action| Orchestrator
+    subgraph AgentBrain ["智能体大脑与状态']"]
+        Orchestrator <--->|"3. 读取/回灌状态"| Scratchpad["3. 记忆草稿纸 (Scratchpad)<br/>- 待解决告警 (Alert)<br/>- 已执行动作 (done)<br/>- 已有发现 (findings)"]:::state
+        Orchestrator -->|"4. 组装 Context 发送"| LLMBrain["4. 大脑决策层 (ReAct LLM)"]:::brain
+        LLMBrain -->|"5. 返回 Thought 与 Action"| Orchestrator
     end
 
-    subgraph ProtectiveShield ["安全控制与边界"]
-        Orchestrator -->|6. 校验与路由动作| Gatekeeper["6. 策略门禁网关"]
-        Gatekeeper -->|A. 只读动作<br/>(query_logs/query_metrics)| ReadTools["只读工具集"]:::tool
-        Gatekeeper -->|B. 危险副作用动作<br/>(restart_service/rollback)| HITL["人在回路审批网 (HITL)"]
+    subgraph ProtectiveShield ["安全控制与边界']"]
+        Orchestrator -->|"6. 校验与路由动作"| Gatekeeper["6. 策略门禁网关"]
+        Gatekeeper -->|"A. 只读动作<br/>(query_logs/query_metrics)"| ReadTools["只读工具集"]:::tool
+        Gatekeeper -->|"B. 危险副作用动作<br/>(restart_service/rollback)"| HITL["人在回路审批网 (HITL)"]
     end
 
-    HITL -->|驳回| Terminate["安全中止并提示"]
-    HITL -->|批准| WriteTools["敏感动作执行器"]:::tool
+    HITL -->|"驳回"| Terminate["安全中止并提示"]
+    HITL -->|"批准"| WriteTools["敏感动作执行器"]:::tool
 
-    ReadTools & WriteTools -->|7. 返回运行结果| Orchestrator
+    ReadTools & WriteTools -->|"7. 返回运行结果"| Orchestrator
     
-    Orchestrator -.->|8. 记录执行轨迹| Tracer["8. 运行日志收集与评测 (Tracer)"]:::monitor
+    Orchestrator -.->|"8. 记录执行轨迹"| Tracer["8. 运行日志收集与评测 (Tracer)"]:::monitor
 ```
 
 ### 2. 时序全景：只读排查与危险动作拦截审批

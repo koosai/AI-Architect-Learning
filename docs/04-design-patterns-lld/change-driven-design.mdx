@@ -31,7 +31,7 @@ import QuizCard from '@site/src/components/QuizCard';
 
 ```mermaid
 flowchart TD
-  subgraph RigidDesign["1. 僵硬的强耦合设计 (Rigid nested if-else)"]
+  subgraph RigidDesign ["1. 僵硬的强耦合设计 (Rigid nested if-else)']"]
     direction TB
     App1["客户端调用"] --> CoreFn1["核心 area(shape) 函数"]
     CoreFn1 -->|"shape=='circle'"| circle_calc["圆形面积计算逻辑"]
@@ -39,14 +39,14 @@ flowchart TD
     CoreFn1 -.->|"shape=='triangle'<br/>(修改核心代码才能新增!)"| tri_calc["三角形面积计算逻辑"]
   end
 
-  subgraph OpenClosedDesign["2. 插件式开闭设计 (Registry/Map-based OCP)"]
+  subgraph OpenClosedDesign ["2. 插件式开闭设计 (Registry/Map-based OCP)']"]
     direction TB
     App2["客户端调用"] --> CoreFn2["核心 area(shape) 函数"]
-    CoreFn2 -->|查表分发| Map["形状算法注册表 (Map)"]
+    CoreFn2 -->|"查表分发"| Map["形状算法注册表 (Map)"]
     
-    Map -->|Key: 'circle'| fn_circle["lambda_circle fn"]
-    Map -->|Key: 'rect'| fn_rect["lambda_rect fn"]
-    Map -.->|Key: 'triangle'<br/>(调用 register 动态扩展, 零改动核心!)| fn_triangle["lambda_triangle fn"]
+    Map -->|"Key: 'circle'"| fn_circle["lambda_circle fn"]
+    Map -->|"Key: 'rect'"| fn_rect["lambda_rect fn"]
+    Map -.->|"Key: 'triangle'<br/>(调用 register 动态扩展, 零改动核心!)"| fn_triangle["lambda_triangle fn"]
   end
 ```
 

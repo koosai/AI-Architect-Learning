@@ -124,7 +124,7 @@ graph TD
     classDef leak fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
     classDef db fill:#eceff1,stroke:#607d8b,stroke-width:1px;
 
-    UserQuery["用户查询: '获取Bob部门的机密预算' <br/>(用户 ACL: ['public'"])"] --> Router{"权限控制方式选择"}
+    UserQuery["用户查询: '获取Bob部门的机密预算' <br/>(用户 ACL: 'public'"] --> Router{"权限控制方式选择"}
     
     subgraph HardFilter ["检索层硬过滤 (100% 物理防泄密)"]
         Router -->|方案 A: ACL 交集过滤| MatchACL["对库中元数据求交集<br/>'public' & 'finance' = 空"]

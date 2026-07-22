@@ -77,17 +77,18 @@ graph LR
 
     Host["编排协调引擎 (Host)"]:::control
     
-    subgraph IterativeLoop ["提议-批评循环"]
-        Host -->|1. 任务指派| Proposer["提议者智能体 (Proposer)"]:::proposer
-        Proposer -->|2. 初版方案| Host
-        Host -->|3. 发送方案评审| Critic["独立的批评者 (Critic)"]:::critic
-        Critic -->|4. 具体建设性意见| Host
-        Host -->|5. 携意见重新生成| Proposer
+    subgraph IterativeLoop ["提议-批评循环']"]
+        Host -->|"1. 任务指派"| Proposer["提议者智能体 (Proposer)"]:::proposer
+        Proposer -->|"2. 初版方案"| Host
+        Host -->|"3. 发送方案评审"| Critic["独立的批评者 (Critic)"]:::critic
+        Critic -->|"4. 具体建设性意见"| Host
+        Host -->|"5. 携意见重新生成"| Proposer
     end
     
-    Host -->|6. 超出最大轮次 / 质量达标| Done(["结束输出"])
+    Host -->|"6. 超出最大轮次 / 质量达标"| Done(["结束输出"])
     
-    Note over Critic: 具有不同的 System Prompt 与关注点，<br/>专注破坏性测试与反例查找
+    Note_Critic["具有不同的 System Prompt 与关注点，<br/>专注破坏性测试与反例查找"]
+    Critic -.-> Note_Critic
 ```
 
 ### 2. 编排演进：多视角辩论（Multi-perspective Debate）与收敛架构

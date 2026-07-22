@@ -54,13 +54,13 @@ graph TD
 
 ```mermaid
 graph TD
-    subgraph TempDiff["不同 Temperature (T) 对概率分布的调整效应"]
+    subgraph TempDiff ["不同 Temperature (T) 对概率分布的调整效应')"]
         direction LR
-        LogitsIn["原始 Logits: [好: 3.0, 不错: 2.0, 烂: 0.1"]"]
+        LogitsIn["原始 Logits: (好: 3.0, 不错: 2.0, 烂: 0.1"]
         
-        LogitsIn -->|T=0.2 低温| Sharp["尖锐分布: [好: 98%, 不错: 1.9%, 烂: 0.1%"] (极高确定性)"]
-        LogitsIn -->|T=1.0 默认| Normal["默认分布: [好: 70%, 不错: 25%, 烂: 5%"] (多样与合理兼顾)"]
-        LogitsIn -->|T=1.5 高温| Flat["平缓分布: [好: 45%, 不错: 35%, 烂: 20%"] (高随机性/易跑偏)"]
+        LogitsIn -->|"T=0.2 低温"| Sharp["尖锐分布: (好: 98%, 不错: 1.9%, 烂: 0.1%') (极高确定性)"]
+        LogitsIn -->|"T=1.0 默认"| Normal["默认分布: (好: 70%, 不错: 25%, 烂: 5%') (多样与合理兼顾)"]
+        LogitsIn -->|"T=1.5 高温"| Flat["平缓分布: (好: 45%, 不错: 35%, 烂: 20%') (高随机性/易跑偏)"]
     end
 ```
 

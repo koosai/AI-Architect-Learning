@@ -78,16 +78,16 @@ graph TD
 
     UserQuery["用户查询 (Question)"] --> CheckScore{"[防线 1] 相似度初审<br/>Max相似度 < 0.35?"}:::check
     
-    CheckScore -->|是 (无相关依据)| AbstainFast["直接弃答 (跳过LLM)<br/>'知识库无相关信息，已转人工'"]:::block
+    CheckScore -->|"是 (无相关依据)"| AbstainFast["直接弃答 (跳过LLM)<br/>'知识库无相关信息，已转人工'"]:::block
     
-    CheckScore -->|否 (有证据支撑)| PromptAssemble["[防线 2] Grounding Prompt 拼装<br/>- 强制证据编号 [1][2]<br/>- 要求只能基于证据作答<br/>- 结构化输出 {answer, citations}"]:::step
+    CheckScore -->|"否 (有证据支撑)"| PromptAssemble["(防线 2) Grounding Prompt 拼装<br/>- 强制证据编号 (1)(2)<br/>- 要求只能基于证据作答<br/>- 结构化输出 {answer, citations}"]:::step
     
     PromptAssemble --> CallLLM["调用大模型生成答案"]
     
     CallLLM --> CheckCitations{"[防线 3] 后置引用对齐校验<br/>- 检查引用 ID 是否越界?<br/>- 检查引用内容是否失真?"}:::check
     
-    CheckCitations -->|越界 / 编造| AbstainIntercept["拦截并转换为安全弃答/转人工"]:::block
-    CheckCitations -->|通过校验| NormalResponse["输出可验证的带引用最终回答"]:::step
+    CheckCitations -->|"越界 / 编造"| AbstainIntercept["拦截并转换为安全弃答/转人工"]:::block
+    CheckCitations -->|"通过校验"| NormalResponse["输出可验证的带引用最终回答"]:::step
 ```
 
 ### 2. 首道防线：证据不足直接弃答的控制流
@@ -121,15 +121,15 @@ graph LR
     classDef failed fill:#ffcdd2,stroke:#c62828,stroke-width:1.5px;
     classDef ev fill:#eceff1,stroke:#607d8b,stroke-width:1px;
 
-    subgraph InputEvidence ["输入给 LLM 的证据集"]
-        Ev1["[1] 15天无理由退货"]:::ev
-        Ev2["[2] 运费由消费者自理"]:::ev
+    subgraph InputEvidence ["输入给 LLM 的证据集')"]
+        Ev1["(1) 15天无理由退货"]:::ev
+        Ev2["(2) 运费由消费者自理"]:::ev
     end
 
-    subgraph ValidationCases ["引用校验器处理实例"]
-        CaseA["情况一: 正常回答<br/>'退货需要自理运费 [2"]'<br/>(验证: 引用 2 处于 [1, 2] 范围内)"] --> CaseAPass["🎉 通过校验 (正常展现)"]:::passed
+    subgraph ValidationCases ["引用校验器处理实例')"]
+        CaseA["情况一: 正常回答<br/>'退货需要自理运费 (2')'<br/>(验证: 引用 2 处于 (1, 2) 范围内)"] --> CaseAPass["🎉 通过校验 (正常展现)"]:::passed
         
-        CaseB["情况二: 幻觉编造<br/>'30天内可换货 [9"]'<br/>(验证: 引用 9 超出最大索引 2)"] --> CaseBIntercept["❌ 拦截并弃答 (警告/转人工)"]:::failed
+        CaseB["情况二: 幻觉编造<br/>'30天内可换货 (9')'<br/>(验证: 引用 9 超出最大索引 2)"] --> CaseBIntercept["❌ 拦截并弃答 (警告/转人工)"]:::failed
     end
 
     InputEvidence -.-> ValidationCases

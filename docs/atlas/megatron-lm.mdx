@@ -48,22 +48,22 @@ Megatron-LM 的核心设计用意在于：**构建 <GlossaryTerm term="3D 混合
 
 ```mermaid
 graph TD
-  GlobalBatch["海量 Training Text Corpus (Global Batch)"] -->|1. DP (数据并行切分)| DPGroup["Data Parallel Group (切分 Batch)"]
+  GlobalBatch["海量 Training Text Corpus (Global Batch)"] -->|"1. DP (数据并行切分)"| DPGroup["Data Parallel Group (切分 Batch)"]
   
-  subgraph Megatron3DPipeline["Megatron-LM 3D 混合并行阵列"]
-    DPGroup -->|2. PP (流水线切分 Layer 1~96)| PPStage1["PP Stage 1 (Layer 1~24)"]
-    PPStage1 -->|3. 1F1B Micro-batch 传递| PPStage2["PP Stage 2 (Layer 25~48)"]
-    PPStage2 -->|4. 1F1B Micro-batch 传递| PPStage3["PP Stage 3 (Layer 49~72)"]
-    PPStage3 -->|5. 1F1B Micro-batch 传递| PPStage4["PP Stage 4 (Layer 73~96)"]
+  subgraph Megatron3DPipeline ["Megatron-LM 3D 混合并行阵列']"]
+    DPGroup -->|"2. PP (流水线切分 Layer 1~96)"| PPStage1["PP Stage 1 (Layer 1~24)"]
+    PPStage1 -->|"3. 1F1B Micro-batch 传递"| PPStage2["PP Stage 2 (Layer 25~48)"]
+    PPStage2 -->|"4. 1F1B Micro-batch 传递"| PPStage3["PP Stage 3 (Layer 49~72)"]
+    PPStage3 -->|"5. 1F1B Micro-batch 传递"| PPStage4["PP Stage 4 (Layer 73~96)"]
     
-    subgraph InsideNode["Node 内 GPU 阵列 (NVLink 900GB/s)"]
-      PPStage1 <-->|6. TP 张量切分 (Column/Row)| GPU0["GPU 0 (MatMul Part 1)"]
-      PPStage1 <-->|6. TP 张量切分 (Column/Row)| GPU1["GPU 1 (MatMul Part 2)"]
-      GPU0 & GPU1 <-->|7. All-Reduce 通信| NVLinkBus["NVLink / NVSwitch 物理总线"]
+    subgraph InsideNode ["Node 内 GPU 阵列 (NVLink 900GB/s)']"]
+      PPStage1 <--->|"6. TP 张量切分 (Column/Row)"| GPU0["GPU 0 (MatMul Part 1)"]
+      PPStage1 <--->|"6. TP 张量切分 (Column/Row)"| GPU1["GPU 1 (MatMul Part 2)"]
+      GPU0 & GPU1 <--->|"7. All-Reduce 通信"| NVLinkBus["NVLink / NVSwitch 物理总线"]
     end
   end
 
-  PPStage4 -->|8. 计算 Loss & 反向传播| LossCompute["Loss & Backward Pass"]
+  PPStage4 -->|"8. 计算 Loss & 反向传播"| LossCompute["Loss & Backward Pass"]
 ```
 
 <DesignIntent
@@ -87,21 +87,21 @@ graph TD
 
 ```mermaid
 mindmap
-  root("(Megatron-LM 架构"))
-    3D 混合并行 (3D Parallelism)
-      Tensor Parallelism (TP: 节点内矩阵切分)
-      Pipeline Parallelism (PP: 节点间网络层切分)
-      Data Parallelism (DP: 全局 Batch 切分)
-      ZeRO / Fully Sharded Data Parallel (FSDP)
-    张量切分与通信原语 (TP Tensor Math)
-      Column Parallel Linear (Self-Attention QKV / MLP 1)
-      Row Parallel Linear (Self-Attention Output / MLP 2)
-      All-Reduce 原语 (Sum / Forward & Backward)
+  root(("Megatron-LM 架构"))
+    ["3D 混合并行 (3D Parallelism)"]
+      ["Tensor Parallelism (TP: 节点内矩阵切分)"]
+      ["Pipeline Parallelism (PP: 节点间网络层切分)"]
+      ["Data Parallelism (DP: 全局 Batch 切分)"]
+      ["ZeRO / Fully Sharded Data Parallel (FSDP)"]
+    ["张量切分与通信原语 (TP Tensor Math)"]
+      ["Column Parallel Linear (Self-Attention QKV / MLP 1)"]
+      ["Row Parallel Linear (Self-Attention Output / MLP 2)"]
+      ["All-Reduce 原语 (Sum / Forward & Backward)"]
       FlashAttention 算子融合
-    调度与显存优化 (Scheduling & Memory)
-      1F1B (One Forward One Backward) 调度
-      Activation Checkpointing (激活值重算)
-      FP8 / BF16 混合精度训练
+    ["调度与显存优化 (Scheduling & Memory)"]
+      ["1F1B (One Forward One Backward) 调度"]
+      ["Activation Checkpointing (激活值重算)"]
+      ["FP8 / BF16 混合精度训练"]
 ```
 
 ---
@@ -158,15 +158,15 @@ graph TB
 
 ```mermaid
 graph TB
-  subgraph TraditionalDP["传统数据并行 DP (显存爆仓 OOM)"]
-    GPUA["GPU A("完整 1T 模型权重 + 完整激活值")"]
+  subgraph TraditionalDP ["传统数据并行 DP (显存爆仓 OOM)')"]
+    GPUA["GPU A('完整 1T 模型权重 + 完整激活值')"]
     OOMCrash["80GB 显存无法容纳 2000GB 模型 -> 物理 OOM 崩溃!"]
     
     GPUA --> OOMCrash
     style OOMCrash fill:#ffcdd2,stroke:#c62828
   end
 
-  subgraph Megatron3D["Megatron-LM 3D 混合并行 (高效切分)"]
+  subgraph Megatron3D ["Megatron-LM 3D 混合并行 (高效切分)')"]
     TPDimension["TP 维度: 单层矩阵切为 8 份 (NVLink 极速 All-Reduce)"]
     PPDimension["PP 维度: 96 层网络切为 4 段 (1F1B 消除气泡)"]
     DPDimension["DP 维度: 海量 Data Batch 切为 N 份 (ZeRO 梯度同步)"]

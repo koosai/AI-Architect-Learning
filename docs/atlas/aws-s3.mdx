@@ -142,24 +142,24 @@ graph TB
     classDef control fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
     classDef payload fill:#ffebee,stroke:#c62828,stroke-width:1.5px;
 
-    UserConn["REST API HTTPS Request"] <--> FrontEnd["Request Router Gateway"]:::control
+    UserConn["REST API HTTPS Request"] <---> FrontEnd["Request Router Gateway"]:::control
 
-    subgraph ControlPlane ["S3 强一致控制平面"]
-        FrontEnd <-->|1. 查询/锁定元数据| MetadataCoordinator["Metadata Coordinator Node"]:::control
-        MetadataCoordinator <-->|2. Paxos 达成一致共识| ConsistentIndexDB["("Distributed Metadata Index DB<br/>(强一致索引数据库)")"]:::control
+    subgraph ControlPlane ["S3 强一致控制平面']"]
+        FrontEnd <--->|"1. 查询/锁定元数据"| MetadataCoordinator["Metadata Coordinator Node"]:::control
+        MetadataCoordinator <--->|"2. Paxos 达成一致共识"| ConsistentIndexDB[("Distributed Metadata Index DB<br/>(强一致索引数据库)")]:::control
     end
 
-    subgraph DataPlane ["S3 高可用物理数据面"]
-        FrontEnd -->|3. 数据块切割与 EC 计算| EcEngine["Erasure Coding Processor"]:::payload
+    subgraph DataPlane ["S3 高可用物理数据面']"]
+        FrontEnd -->|"3. 数据块切割与 EC 计算"| EcEngine["Erasure Coding Processor"]:::payload
         
-        EcEngine -->|4. 分发 Shard 1| StorageNode1["Storage Node (AZ-1)"]:::payload
-        EcEngine -->|4. 分发 Shard 2| StorageNode2["Storage Node (AZ-2)"]:::payload
-        EcEngine -->|4. 分发 Shard N+M| StorageNode3["Storage Node (AZ-3)"]:::payload
+        EcEngine -->|"4. 分发 Shard 1"| StorageNode1["Storage Node (AZ-1)"]:::payload
+        EcEngine -->|"4. 分发 Shard 2"| StorageNode2["Storage Node (AZ-2)"]:::payload
+        EcEngine -->|"4. 分发 Shard N+M"| StorageNode3["Storage Node (AZ-3)"]:::payload
     end
 
-    StorageNode1 -->|写盘| Disk1["("物理 NVMe / HDD Group")"]:::payload
-    StorageNode2 -->|写盘| Disk2["("物理 NVMe / HDD Group")"]:::payload
-    StorageNode3 -->|写盘| Disk3["("物理 NVMe / HDD Group")"]:::payload
+    StorageNode1 -->|"写盘"| Disk1[("物理 NVMe / HDD Group")]:::payload
+    StorageNode2 -->|"写盘"| Disk2[("物理 NVMe / HDD Group")]:::payload
+    StorageNode3 -->|"写盘"| Disk3[("物理 NVMe / HDD Group")]:::payload
 ```
 
 ---
@@ -180,13 +180,13 @@ graph TD
 
     PutRequest["用户发起 PUT bucket/folder/doc.pdf"] --> Router["1. Request Router Gateway 接收"]:::router
     
-    Router -->|2. 元数据写入请求| ControlNode["3. Control Plane Coordinator"]:::control
-    ControlNode -->|3. Paxos 日志同步与锁分配| MetadataDB["("Metadata Consistent Index")"]:::control
+    Router -->|"2. 元数据写入请求"| ControlNode["3. Control Plane Coordinator"]:::control
+    ControlNode -->|"3. Paxos 日志同步与锁分配"| MetadataDB[("Metadata Consistent Index")]:::control
     
-    Router -->|4. 数据分段写入请求| EcProcessor["5. Erasure Coding Processor"]:::data
-    EcProcessor -->|6. 计算 N+M 纠删块并直接落盘| ChunkStorage["("AZ-1 / AZ-2 / AZ-3 Storage Nodes")"]:::data
+    Router -->|"4. 数据分段写入请求"| EcProcessor["5. Erasure Coding Processor"]:::data
+    EcProcessor -->|"6. 计算 N+M 纠删块并直接落盘"| ChunkStorage[("AZ-1 / AZ-2 / AZ-3 Storage Nodes")]:::data
     
-    MetadataDB -->|7. 关联 UUID 指针| ChunkStorage
+    MetadataDB -->|"7. 关联 UUID 指针"| ChunkStorage
 ```
 
 ---

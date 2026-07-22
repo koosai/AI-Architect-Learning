@@ -148,10 +148,10 @@ graph TB
   classDef main fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
   classDef third fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-  ClientApp["业务应用程序 (Redis Client)"]:::client -->|1. 发起命令请求| RedisNode["Redis 单节点 / 集群"]:::main
+  ClientApp["业务应用程序 (Redis Client)"]:::client -->|"1. 发起命令请求"| RedisNode["Redis 单节点 / 集群"]:::main
   
-  RedisNode -->|2. 持久化数据与备份| BackupStorage["("本地持久盘 (RDB 快照/AOF)")"]:::main
-  RedisNode <-->|3. 心跳检测与故障协商| SentinelCluster["Redis Sentinel 哨兵集群"]:::third
+  RedisNode -->|"2. 持久化数据与备份"| BackupStorage[("本地持久盘 (RDB 快照/AOF)")]:::main
+  RedisNode <--->|"3. 心跳检测与故障协商"| SentinelCluster["Redis Sentinel 哨兵集群"]:::third
 ```
 
 ### 3b. Container Diagram (容器结构图)
@@ -163,25 +163,25 @@ graph TB
   classDef thread fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
   classDef storage fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-  Client["Redis 客户端 (SDK)"]:::client -->|TCP Connection| NetworkSocket["网络套接字 (Socket)"]:::thread
+  Client["Redis 客户端 (SDK)"]:::client -->|"TCP Connection"| NetworkSocket["网络套接字 (Socket)"]:::thread
 
-  subgraph RedisServerInstance ["Redis 进程内部架构"]
-    NetworkSocket <-->|多路复用监听| IOThreads["I/O 线程池 (Redis 6.0 引入/并行读写网络缓冲)"]:::thread
+  subgraph RedisServerInstance ["Redis 进程内部架构']"]
+    NetworkSocket <--->|"多路复用监听"| IOThreads["I/O 线程池 (Redis 6.0 引入/并行读写网络缓冲)"]:::thread
     
-    subgraph MainThread ["Redis 主线程 (单线程核心)"]
-      AE_Loop["ae 事件循环 (aeMain)"]:::loop <-->|epoll_wait| NetworkSocket
-      AE_Loop -->|1. 分发文件事件| CommandExecutor["命令执行器 (命令解析与操作)"]:::loop
+    subgraph MainThread ["Redis 主线程 (单线程核心)']"]
+      AE_Loop["ae 事件循环 (aeMain)"]:::loop <--->|"epoll_wait"| NetworkSocket
+      AE_Loop -->|"1. 分发文件事件"| CommandExecutor["命令执行器 (命令解析与操作)"]:::loop
       
-      CommandExecutor <-->|2. 读写操作| MemoryDB["("内存键值数据库 (SDS/Dict/Skiplist)")"]:::storage
-      AE_Loop -->|3. 执行定时器事件| ActiveExpire["定期过期清理 / 渐进式 Rehash"]:::loop
+      CommandExecutor <--->|"2. 读写操作"| MemoryDB[("内存键值数据库 (SDS/Dict/Skiplist)")]:::storage
+      AE_Loop -->|"3. 执行定时器事件"| ActiveExpire["定期过期清理 / 渐进式 Rehash"]:::loop
     end
     
-    CommandExecutor -->|4. 异步刷写/后台清理任务| BioThreads["BIO 后台线程池 (bio_close_file, bio_aof_fsync)"]:::thread
-    CommandExecutor -->|5. 触发物理备份| ForkChild["rdbSaveBackground 子进程 (Fork)"]:::thread
+    CommandExecutor -->|"4. 异步刷写/后台清理任务"| BioThreads["BIO 后台线程池 (bio_close_file, bio_aof_fsync)"]:::thread
+    CommandExecutor -->|"5. 触发物理备份"| ForkChild["rdbSaveBackground 子进程 (Fork)"]:::thread
   end
 
-  ForkChild -->|Copy-on-Write 物理转储| RDBFile["("Disk RDB File")"]:::storage
-  BioThreads -->|fsync 磁盘同步| AOFFile["("Disk AOF File")"]:::storage
+  ForkChild -->|"Copy-on-Write 物理转储"| RDBFile[("Disk RDB File")]:::storage
+  BioThreads -->|"fsync 磁盘同步"| AOFFile[("Disk AOF File")]:::storage
 ```
 
 ---
@@ -225,17 +225,17 @@ graph TD
 
 ```mermaid
 graph TD
-  subgraph ProgressiveRehashState ["dict 渐进式 Rehash 双表内存图 (rehashidx = 2)"]
-    rehashidx["rehashidx = 2<br/>(指向 ht[0"] 待迁移的 Bucket)"]
+  subgraph ProgressiveRehashState ["dict 渐进式 Rehash 双表内存图 (rehashidx = 2)')"]
+    rehashidx["rehashidx = 2<br/>(指向 ht(0') 待迁移的 Bucket)"]
     
-    subgraph ht0 ["ht[0"] (老小哈希表)]
+    subgraph ht0 ["ht(0') (老小哈希表))"]
       B0_ht0["Bucket 0: (已被迁空)"]
       B1_ht0["Bucket 1: (已被迁空)"]
-      B2_ht0["Bucket 2: [KeyA -> ValA"] -> [KeyB -> ValB] (等待本次命令触发迁移)"]
-      B3_ht0["Bucket 3: [KeyC -> ValC"]"]
+      B2_ht0["Bucket 2: (KeyA -> ValA') -> (KeyB -> ValB) (等待本次命令触发迁移)"]
+      B3_ht0["Bucket 3: (KeyC -> ValC"]
     end
     
-    subgraph ht1 ["ht[1"] (新大哈希表 - 正在接收 Key)]
+    subgraph ht1 ["ht(1') (新大哈希表 - 正在接收 Key))"]
       B0_ht1["Bucket 0: (KeyX -> ValX)"]
       B1_ht1["Bucket 1: (KeyY -> ValY)"]
       B2_ht1["Bucket 2: (空)"]
@@ -267,16 +267,16 @@ graph TD
   classDef mem fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px;
   classDef disk fill:#fff9c4,stroke:#fbc02d,stroke-width:1.5px;
 
-  Parent["Redis 主进程 (Master Process)"]:::process -->|1. fork() 子进程| Child["RDB 备份子进程"]:::process
+  Parent["Redis 主进程 (Master Process)"]:::process -->|"1. fork() 子进程"| Child["RDB 备份子进程"]:::process
   
-  Parent <-->|2. 共享只读物理内存页 (Page 100)| Memory["("物理内存 RAM")"]:::mem
-  Child -->|3. 读取并扫描内存 Page 100| Memory
+  Parent <--->|"2. 共享只读物理内存页 (Page 100)"| Memory[("物理内存 RAM")]:::mem
+  Child -->|"3. 读取并扫描内存 Page 100"| Memory
   
-  Parent -->|4. 尝试修改 Page 100 (发生写操作)| OS_COW["操作系统内核 COW 拦截"]:::process
-  OS_COW -->|5. 拷贝 Page 100 -> Page 100_Copy| Memory
-  OS_COW -->|6. 主进程在 Page 100_Copy 上执行写入| Parent
+  Parent -->|"4. 尝试修改 Page 100 (发生写操作)"| OS_COW["操作系统内核 COW 拦截"]:::process
+  OS_COW -->|"5. 拷贝 Page 100 -> Page 100_Copy"| Memory
+  OS_COW -->|"6. 主进程在 Page 100_Copy 上执行写入"| Parent
   
-  Child -->|7. 持续写入静态数据| DiskRDB["("Disk RDB File")"]:::disk
+  Child -->|"7. 持续写入静态数据"| DiskRDB[("Disk RDB File")]:::disk
 ```
 
 ---
@@ -297,15 +297,15 @@ graph TD
   classDef client fill:#e1f5fe,stroke:#0288d1,stroke-width:1.5px;
   classDef node fill:#ffebee,stroke:#c62828,stroke-width:2px;
 
-  Client["Redis 客户端 (SDK)"]:::client -->|1. 查询 key='user:100'| NodeA["Redis Master 节点 A<br/>负责槽位: 0 - 5460"]:::node
+  Client["Redis 客户端 (SDK)"]:::client -->|"1. 查询 key='user:100'"| NodeA["Redis Master 节点 A<br/>负责槽位: 0 - 5460"]:::node
   
-  NodeA -->|2. 计算 slot = CRC16('user:100') % 16384 = 8000| SlotCheck{"槽位 8000 在本节点么?"}
+  NodeA -->|"2. 计算 slot = CRC16('user:100') % 16384 = 8000"| SlotCheck{"槽位 8000 在本节点么?"}
   
-  SlotCheck -->|No| Redirect["3. 返回 MOVED 8000 Node-B (重定向)"]
+  SlotCheck -->|"No"| Redirect["3. 返回 MOVED 8000 Node-B (重定向)"]
   Redirect --> Client
   
-  Client -->|4. 重新路由请求| NodeB["Redis Master 节点 B<br/>负责槽位: 5461 - 10922"]:::node
-  NodeB -->|5. 返回结果数据| Client
+  Client -->|"4. 重新路由请求"| NodeB["Redis Master 节点 B<br/>负责槽位: 5461 - 10922"]:::node
+  NodeB -->|"5. 返回结果数据"| Client
 ```
 
 <ResearchNote
