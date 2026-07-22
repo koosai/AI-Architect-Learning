@@ -53,8 +53,8 @@ graph TD
   subgraph LuauSandboxPlane["Luau 安全脚本沙箱平面"]
     RobloxServer -->|2. 装载至隔离沙箱| LuauEngine["Luau VM (Memory Quota + Instruction Counter)"]
     LuauEngine -->|3. 监控死循环与危险调用| SecurityGate{"检测到恶意指令或超限?"}
-    SecurityGate -- "是" -->|4. 强制终止并报错| TerminateScript["Throw Script Timeout Exception"]
-    SecurityGate -- "否" -->|5. 安全执行逻辑| DataModelTree["DataModel DOM Tree (游戏场景状态)"]
+    SecurityGate -->|4. 强制终止并报错| TerminateScript["Throw Script Timeout Exception"]
+    SecurityGate -->|5. 安全执行逻辑| DataModelTree["DataModel DOM Tree (游戏场景状态)"]
   end
 
   subgraph DistributedPhysicsPlane["Network Ownership 分布式物理求解平面"]
