@@ -55,10 +55,12 @@ flowchart TB
   V --> IDEM["幂等层<br/>L6 idempotency key"]
   IDEM --> SVC["业务编排<br/>L2 模块边界"]
   SVC --> CC["并发控制<br/>L8 乐观锁/容量"]
-  CC --> STORE["("状态层 + 索引<br/>L5 共享状态 / L7 建模")"]
+  CC --> STORE[("状态层 + 索引<br/>L5 共享状态 / L7 建模")]
   SVC --> Q["异步队列<br/>L11 发邮件削峰"]
   SVC --> OBS["可观察性<br/>L1/L12 日志+指标+trace"]
   CFG["配置/密钥<br/>L14 环境注入"] -.-> SVC
+```
+
 ```mermaid
 sequenceDiagram
   autonumber
