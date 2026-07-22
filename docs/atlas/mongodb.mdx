@@ -47,7 +47,7 @@ MongoDB 的核心设计用意在于：**以 <GlossaryTerm term="BSON" definition
 ```mermaid
 graph TD
   Client["客户端 App / 驱动"] -->|1. 访问任意查询| MongosRouter["mongos 智能路由层"]
-  MongosRouter <-->|2. 读取分片路由元数据| ConfigServer["Config Server 副本集"]
+  MongosRouter <--->|2. 读取分片路由元数据| ConfigServer["Config Server 副本集"]
   MongosRouter -->|3. 根据 Shard Key 定向路由| ShardA["Shard A (Replica Set)"]
   MongosRouter -->|3. 根据 Shard Key 定向路由| ShardB["Shard B (Replica Set)"]
   
@@ -112,7 +112,7 @@ MongoDB 分片集群的逻辑架构与数据路由层级如下：
 ```mermaid
 graph LR
   ClientApp["客户端应用 (MongoDB Driver)"] -->|1. 查询/写入请求| Mongos["mongos 路由器"]
-  Mongos <-->|2. 缓存/更新分片映射路由| ConfigDB["Config Server 副本集 (保存 Chunk 元数据)"]
+  Mongos <--->|2. 缓存/更新分片映射路由| ConfigDB["Config Server 副本集 (保存 Chunk 元数据)"]
   Mongos -->|3. 根据 Shard Key 路由到指定分片| Shard_1["Shard 1 (Replica Set)"]
   Mongos -->|3. 根据 Shard Key 路由到指定分片| Shard_2["Shard 2 (Replica Set)"]
 ```

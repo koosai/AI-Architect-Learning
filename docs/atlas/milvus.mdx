@@ -51,7 +51,7 @@ graph TD
   ClientApp["RAG 应用 / LLM Agent (Vector Search Request)"] -->|1. gRPC / SDK| ProxyNode["Proxy Access Node (接入网关)"]
   
   subgraph CoordinatorPlane["协调者平面 (Coordinator Nodes)"]
-    ProxyNode <-->|2. 查元数据与 Segment 映射| RootCoord["Root / Query / Data Coordinator"]
+    ProxyNode <--->|2. 查元数据与 Segment 映射| RootCoord["Root / Query / Data Coordinator"]
   end
 
   subgraph MessageAndStorageFabric["存储与日志消息总线 (Storage Fabric)"]
@@ -60,11 +60,11 @@ graph TD
   end
 
   subgraph WorkerComputeNodes["无状态计算 Worker 平面 (Storage-Compute Disaggregated)"]
-    ObjectStorage <-->|5. 加载 Segment 至内存| QueryNode["Query Node (无状态向量检索)"]
-    ObjectStorage <-->|6. 异步构建索引| IndexNode["Index Node (HNSW / IVF-PQ 构图)"]
+    ObjectStorage <--->|5. 加载 Segment 至内存| QueryNode["Query Node (无状态向量检索)"]
+    ObjectStorage <--->|6. 异步构建索引| IndexNode["Index Node (HNSW / IVF-PQ 构图)"]
   end
 
-  ProxyNode <-->|7. 并发向量 ANN 检索| QueryNode
+  ProxyNode <--->|7. 并发向量 ANN 检索| QueryNode
 ```
 
 <DesignIntent
@@ -116,8 +116,8 @@ Milvus 系统中存算分离 Worker 节点与 Pulsar/S3 拓扑结构如下：
 ```mermaid
 graph LR
   RAGClient["RAG App / LangChain"] -->|1. 向量相似度检索| MilvusProxy["Milvus Proxy Gateway"]
-  MilvusProxy <-->|2. 调度无状态 Query Node| QueryCluster["Query Node Cluster (无状态计算)"]
-  QueryCluster <-->|3. 物理 Segment 数据| S3Storage["AWS S3 / MinIO (对象存储)"]
+  MilvusProxy <--->|2. 调度无状态 Query Node| QueryCluster["Query Node Cluster (无状态计算)"]
+  QueryCluster <--->|3. 物理 Segment 数据| S3Storage["AWS S3 / MinIO (对象存储)"]
 ```
 
 ### 3b. Container Diagram (容器架构)
@@ -144,12 +144,12 @@ graph TB
   end
 
   ProxyGateway --> PulsarStream
-  ProxyGateway <--> QueryCoord
+  ProxyGateway <---> QueryCoord
   QueryCoord --> QueryNode1 & QueryNode2
   
   PulsarStream --> QueryNode1 & QueryNode2
-  QueryNode1 & QueryNode2 <-->|1. 读写 Segment| MinIOObjectStore
-  IndexNodeWorker <-->|2. 抓取原始向量构图并回写| MinIOObjectStore
+  QueryNode1 & QueryNode2 <--->|1. 读写 Segment| MinIOObjectStore
+  IndexNodeWorker <--->|2. 抓取原始向量构图并回写| MinIOObjectStore
 
   style QueryNode1 fill:#bbdefb,stroke:#1976d2
   style MinIOObjectStore fill:#c8e6c9,stroke:#2e7d32
@@ -179,7 +179,7 @@ graph TB
     QueryNodeB["Query Node B (挂载 Segment 11~20)"]
     InfiniteScale["流量暴增只需增加 Query Node 即可秒级扩展！"]
     
-    S3Storage <--> QueryNodeA & QueryNodeB --- InfiniteScale
+    S3Storage <---> QueryNodeA & QueryNodeB --- InfiniteScale
     style InfiniteScale fill:#c8e6c9,stroke:#2e7d32
   end
 ```

@@ -112,8 +112,8 @@ Folia 区域多线程 (Regional Multithreading) 架构与 Chunk 分发拓扑如�
 ```mermaid
 graph LR
   Players["MC 客户端 (Java/Bedrock)"] -->|1. 玩家动作包| NettyLayer["Netty I/O Network Layer"]
-  NettyLayer <-->|2. 按 Chunk 路由分配| FoliaEngine["Folia Multi-Threaded Engine"]
-  FoliaEngine <-->|3. 异步磁盘读写| AnvilFiles["Anvil MCA Region Storage"]
+  NettyLayer <--->|2. 按 Chunk 路由分配| FoliaEngine["Folia Multi-Threaded Engine"]
+  FoliaEngine <--->|3. 异步磁盘读写| AnvilFiles["Anvil MCA Region Storage"]
 ```
 
 ### 3b. Container Diagram (容器架构)

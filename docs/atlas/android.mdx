@@ -160,8 +160,8 @@ graph TB
         LmkDriver["LMK Kernel Module / PSI Monitor"]:::kernel
     end
 
-    BinderProxy <-->|发起 Transaction| BinderDriver
-    AMS <-->|注册并调用| BinderDriver
+    BinderProxy <--->|发起 Transaction| BinderDriver
+    AMS <--->|注册并调用| BinderDriver
     
     LmkDriver -->|通知内存溢出危机| LmkdDaemon["LMKD Userspace Daemon"]:::framework
     LmkdDaemon -->|Kill PID| AppUI

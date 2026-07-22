@@ -154,7 +154,7 @@ graph TB
 
   CandidateGen -->|7. 候选裁剪| RankerEngine
   RankerEngine -->|8. 输出推荐 API| ViewerApp["Viewer App"]
-  ViewerApp <-->|9. 拉取 DASH Chunk| GGCNodeLocal
+  ViewerApp <--->|9. 拉取 DASH Chunk| GGCNodeLocal
 
   style GGCNodeLocal fill:#c8e6c9,stroke:#2e7d32
   style CandidateGen fill:#bbdefb,stroke:#1976d2

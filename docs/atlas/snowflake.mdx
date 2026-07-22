@@ -113,7 +113,7 @@ Snowflake 将系统分工彻底细化为三个独立协作的层次：
 ```mermaid
 graph LR
   User["BI 分析师 / 数据科学家"] -->|1. 发送标准 SQL 查询| Snowflake_Endpoint["Snowflake 云数仓入口"]
-  Snowflake_Endpoint <-->|2. 全局事务与元数据编排| Cloud_Services["云服务控制平面"]
+  Snowflake_Endpoint <--->|2. 全局事务与元数据编排| Cloud_Services["云服务控制平面"]
   Cloud_Services -->|3. 指派执行计划与数据片区| Virtual_Warehouse["无状态计算仓库 (Compute)"]
   Virtual_Warehouse -->|4. 并发 HTTP GET 读取数据| Object_Store["云端对象存储 (Storage)"]
 ```
@@ -148,11 +148,11 @@ graph TB
   end
 
   UserRequest["BI 用户 SQL 语句"] --> SqlParser
-  SqlParser <--> MetadataCatalog
-  TxManager <--> MetadataCatalog
+  SqlParser <---> MetadataCatalog
+  TxManager <---> MetadataCatalog
 
   SqlParser -->|派发包含分区指针的计划| ExecutorNode1
-  ExecutorNode1 <-->|首先查找本地缓存| LocalSSD1
+  ExecutorNode1 <--->|首先查找本地缓存| LocalSSD1
   
   ExecutorNode1 -->|未命中时 HTTP 请求| Partition1
   ExecutorNode2 -->|并发 HTTP 请求| Partition2

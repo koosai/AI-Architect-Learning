@@ -114,8 +114,8 @@ Spotify 系统的音频分发、推荐计算与 Squad 微服务治理拓扑如�
 ```mermaid
 graph LR
   UserApp["Spotify 客户端 App"] -->|1. HTTP / Streaming 请求| APIGateway["Spotify API Gateway (Hermes Router)"]
-  APIGateway <-->|2. 调度自治微服务| MicroservicesCluster["Squad 自主微服务集群 (Backstage 治理)"]
-  APIGateway <-->|3. 拉取播放数据| CDNCluster["Fastly / Akamai CDN (音频块)"]
+  APIGateway <--->|2. 调度自治微服务| MicroservicesCluster["Squad 自主微服务集群 (Backstage 治理)"]
+  APIGateway <--->|3. 拉取播放数据| CDNCluster["Fastly / Akamai CDN (音频块)"]
 ```
 
 ### 3b. Container Diagram (容器架构)
@@ -146,8 +146,8 @@ graph TB
     RedisRankCache["Redis (Discover Weekly 每周缓存)"]
   end
 
-  PlayerCore <-->|1. 动态预加载 16KB Ogg 块| GCSAudio
-  PlayerCore <-->|2. 解密与本地缓存| DRMCache
+  PlayerCore <--->|1. 动态预加载 16KB Ogg 块| GCSAudio
+  PlayerCore <--->|2. 解密与本地缓存| DRMCache
   
   HermesGateway --> UserService & PlaylistService & AudioMetadataService
   
@@ -155,7 +155,7 @@ graph TB
   GCSAudio --> AudioCNNCluster
   SparkALS & AudioCNNCluster --> VectorMerger
   VectorMerger -->|3. 生成每周推荐榜单| RedisRankCache
-  PlaylistService <-->|4. 读取预计算歌单| RedisRankCache
+  PlaylistService <--->|4. 读取预计算歌单| RedisRankCache
 
   style AudioCNNCluster fill:#bbdefb,stroke:#1976d2
   style GCSAudio fill:#c8e6c9,stroke:#2e7d32

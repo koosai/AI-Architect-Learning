@@ -111,7 +111,7 @@ Cassandra 采用全对称无主拓扑结构：
 ```mermaid
 graph LR
   Client["客户端 (Java Driver)"] -->|1. 发送读写CQL| Coord_Node["协调者节点 (Coordinator Node)"]
-  Coord_Node <-->|2. Gossip 协议广播心跳| Peer_Nodes["其他对等节点 (Peer Nodes)"]
+  Coord_Node <--->|2. Gossip 协议广播心跳| Peer_Nodes["其他对等节点 (Peer Nodes)"]
   Coord_Node -->|3. 根据可调CL并发推送/读取数据| Peer_Nodes
   Peer_Nodes -->|4. 单机引擎落盘| SSTable_Store["LSM-Tree 只读 SSTable 磁盘"]
 ```
@@ -151,7 +151,7 @@ graph TB
   end
 
   ClientApp["客户端应用 (CQL 查询)"] -->|1. 任选 Node B 发起写入| Coord_Service_B
-  Gossip_Service_A <-->|Gossip 广播心跳与拓扑映射| Gossip_Service_B
+  Gossip_Service_A <--->|Gossip 广播心跳与拓扑映射| Gossip_Service_B
   
   Coord_Service_B -->|2. 并发写入本地| Memtable_B
   Coord_Service_B -->|3. 并发跨网络路由写入| Memtable_A

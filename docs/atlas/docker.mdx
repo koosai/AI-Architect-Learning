@@ -216,9 +216,9 @@ graph TD
     RealStorage["物理路径 /var/lib/docker/overlay2/"]:::host
   end
 
-  AppProc <-->|物理本质等价| RealPID
-  Eth0 <-->|物理本质桥接| RealBridge
-  RootPath <-->|物理映射| RealStorage
+  AppProc <--->|物理本质等价| RealPID
+  Eth0 <--->|物理本质桥接| RealBridge
+  RootPath <--->|物理映射| RealStorage
 ```
 
 ---
@@ -309,8 +309,8 @@ graph TB
     PhysicalNIC["宿主物理网卡: eth0 (物理层)<br/>IP: 192.168.1.100"]:::device
   end
 
-  Eth0 <-->|1. 通过 veth-pair 虚拟双头网线直连| VethNode
-  VethNode <-->|2. 插在网桥插槽上| Docker0
+  Eth0 <--->|1. 通过 veth-pair 虚拟双头网线直连| VethNode
+  VethNode <--->|2. 插在网桥插槽上| Docker0
   
   Docker0 -->|3. 转发流量并执行 iptables NAT| PhysicalNIC
   PhysicalNIC -->|4. 流入外部物理交换机| Internet["外部网络 (Internet)"]

@@ -178,7 +178,7 @@ graph LR
 
   subgraph ForgeEra["3. 云原生 Forge 时代"]
     JiraSvr["Atlassian Gateway"] -->|轻量隔离执行| V8Isolate["AWS Lambda V8 Isolate 沙箱"]
-    V8Isolate <-->|只能读写独占 KV 数据库| IsolatedKV["Forge Storage (完全物理隔离)"]
+    V8Isolate <--->|只能读写独占 KV 数据库| IsolatedKV["Forge Storage (完全物理隔离)"]
   end
 ```
 

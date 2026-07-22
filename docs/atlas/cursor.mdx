@@ -123,16 +123,16 @@ graph TB
     ApplyLLM["微调版 Fast-Apply 模型 (e.g., Cursor-Small)"]
   end
 
-  IDE <-->|IPC / LSP| LocalAgent
+  IDE <--->|IPC / LSP| LocalAgent
   LocalAgent -->|静态分析| Parser
   LocalAgent -->|读写| LocalIndex
-  LocalAgent <-->|HTTPS / gRPC| Gateway
-  Gateway <--> ContextEngine
-  Gateway <--> ApplyEngine
-  ApplyEngine <--> ShadowRunner
-  ContextEngine <--> Embed
-  ContextEngine <--> BaseLLM
-  ApplyEngine <--> ApplyLLM
+  LocalAgent <--->|HTTPS / gRPC| Gateway
+  Gateway <---> ContextEngine
+  Gateway <---> ApplyEngine
+  ApplyEngine <---> ShadowRunner
+  ContextEngine <---> Embed
+  ContextEngine <---> BaseLLM
+  ApplyEngine <---> ApplyLLM
 ```
 
 ---

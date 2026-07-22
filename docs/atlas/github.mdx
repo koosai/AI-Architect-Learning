@@ -49,7 +49,7 @@ graph TD
   UserApp["开发者 (Git CLI / 浏览器 / API)"] -->|1. Git Push / HTTP 访问| EdgeRouter["Anycast CDN & HAProxy 边缘路由"]
   EdgeRouter -->|2. HTTP / SSH 请求| RailsMonolith["GitHub Rails 模块化单体 (Modular Monolith)"]
   
-  RailsMonolith <-->|3. 查询用户/权限元数据| VitessMySQL["Vitess / Sharded MySQL 集群"]
+  RailsMonolith <--->|3. 查询用户/权限元数据| VitessMySQL["Vitess / Sharded MySQL 集群"]
   RailsMonolith -->|4. 路由 Git 物理读写 RPC| SpokesGateway["Spokes 路由网关 (Spokes Router)"]
   
   subgraph SpokesCluster["Spokes 3-Replica 存储集群"]
@@ -113,8 +113,8 @@ GitHub 的层级划分与 Spokes 存储路由架构如下：
 graph LR
   Client["开发者 / Git 客户端"] -->|1. Git Push / API 查询| HAProxy["HAProxy & 边缘负载均衡器"]
   HAProxy -->|2. Web/API 请求| Monolith["Rails 模块化单体"]
-  Monolith <-->|3. 读写元数据| Vitess["Vitess MySQL 分片数据库"]
-  Monolith <-->|4. 读写仓库物理文件| Spokes["Spokes 分布式 Git 存储集群"]
+  Monolith <--->|3. 读写元数据| Vitess["Vitess MySQL 分片数据库"]
+  Monolith <--->|4. 读写仓库物理文件| Spokes["Spokes 分布式 Git 存储集群"]
   Monolith -->|5. 发送工作流事件| ActionsEngine["GitHub Actions 调度引擎"]
 ```
 
@@ -143,8 +143,8 @@ graph TB
     RunnerVMs["一次性 Runner 虚拟机/容器 (Ephemeral VMs)"]
   end
 
-  RailsApp <-->|1. 边界调用| PackwerkGuard
-  RailsApp <-->|2. 限流校验| RedisCache
+  RailsApp <--->|1. 边界调用| PackwerkGuard
+  RailsApp <--->|2. 限流校验| RedisCache
   RailsApp -->|3. 发起 Git RPC| SpokesRouter
   
   SpokesRouter -->|4. 并发写入主副本| SpokesPrimary

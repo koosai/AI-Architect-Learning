@@ -152,16 +152,16 @@ graph TB
 
   SQLString["SQL 语句: SELECT * FROM users"] --> Parser
   Parser -->|1. 生成 Opcode 指令序列| OpcodeRunner
-  OpcodeRunner <-->|2. 操作算子与数据| Registers
+  OpcodeRunner <--->|2. 操作算子与数据| Registers
   OpcodeRunner -->|3. 游标移动请求数据页| BTreeEngine
   
-  BTreeEngine <-->|4. 查找/读写页面| PageCache
-  PageCache <-->|5. WAL 模式下检查点对齐| WalManager
+  BTreeEngine <--->|4. 查找/读写页面| PageCache
+  PageCache <--->|5. WAL 模式下检查点对齐| WalManager
   
   WalManager -->|6. 通过 VFS 句柄追加| PosixVfs
   PosixVfs -->|7. 物理写入| DbFile
   PosixVfs -->|8. 物理追加| WalLogFile
-  PosixVfs <-->|9. 读写 WAL 映射| ShmIndexFile
+  PosixVfs <--->|9. 读写 WAL 映射| ShmIndexFile
 
   style OpcodeRunner fill:#c8e6c9,stroke:#2e7d32
   style WalManager fill:#bbdefb,stroke:#1976d2

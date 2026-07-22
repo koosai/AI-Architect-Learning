@@ -101,7 +101,7 @@ Fuchsia 操作系统的控制体系与核心数据隔离结构如下：
 ```mermaid
 graph LR
   UserApp["Fuchsia 应用程序组件 (例如 Nest UI)"] -->|1. 声明拉取网络协议句柄| CompManager["组件管理器 (Component Manager)"]
-  CompManager <-->|2. 挂载命名空间 / 授权路由| ZirconKernel["Zircon 微内核 (能力句柄控制)"]
+  CompManager <--->|2. 挂载命名空间 / 授权路由| ZirconKernel["Zircon 微内核 (能力句柄控制)"]
   ZirconKernel -->|3. 发出 VMO 零拷贝硬件控制| NetworkDriver["用户态网卡驱动组件 (Netstack3)"]
   NetworkDriver -->|4. 读写物理网卡| PhysicalNIC["物理以太网 / Wi-Fi 芯片"]
 ```

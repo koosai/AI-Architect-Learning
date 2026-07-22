@@ -116,8 +116,8 @@ IPFS 与 Libp2p 系统中 CID 寻址、Kademlia DHT 路由与 BitSwap 数据传�
 ```mermaid
 graph LR
   ClientApp["IPFS Application / Gateway"] -->|1. Request CID| IPFSNode["IPFS Local Daemon"]
-  IPFSNode <-->|2. DHT Node & Provider Discovery| Libp2pDHT["Libp2p Kademlia DHT Swarm"]
-  IPFSNode <-->|3. BitSwap Block Exchange| P2PPeers["P2P Swarm Peers"]
+  IPFSNode <--->|2. DHT Node & Provider Discovery| Libp2pDHT["Libp2p Kademlia DHT Swarm"]
+  IPFSNode <--->|3. BitSwap Block Exchange| P2PPeers["P2P Swarm Peers"]
 ```
 
 ### 3b. Container Diagram (容器架构)
@@ -138,11 +138,11 @@ graph TB
   end
 
   UnixFSParser --> MerkleTreeBuilder --> RepoBlockStore
-  BitSwapEngine <--> RepoBlockStore
+  BitSwapEngine <---> RepoBlockStore
   
-  BitSwapEngine <--> KadDHTEngine
-  KadDHTEngine <--> SwarmManager
-  SwarmManager <--> RelayNAT
+  BitSwapEngine <---> KadDHTEngine
+  KadDHTEngine <---> SwarmManager
+  SwarmManager <---> RelayNAT
 
   style MerkleTreeBuilder fill:#c8e6c9,stroke:#2e7d32
   style KadDHTEngine fill:#bbdefb,stroke:#1976d2

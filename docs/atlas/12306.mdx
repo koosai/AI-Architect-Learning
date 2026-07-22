@@ -60,7 +60,7 @@ graph TD
     OrderGW -->|4. 令牌桶限流与验证码校验| TokenBucket["Token Bucket & Dynamic Captcha"]
     TokenBucket -->|5. 注入异步排队队列| AsyncQueue["Kafka / Redis Async Queue ('正在排队中...')"]
     AsyncQueue -->|6. 后台匀速消费| BookingEngine["Booking Engine (出票引擎)"]
-    BookingEngine <-->|7. 沿途站区间位图矩阵扣减| BitMatrixEngine["Segment BitMatrix Engine (内存位运算)"]
+    BookingEngine <--->|7. 沿途站区间位图矩阵扣减| BitMatrixEngine["Segment BitMatrix Engine (内存位运算)"]
     BitMatrixEngine -->|8. 扣减成功写 DB| ShardedDB["Sharded Relational DB (订单落盘)"]
     BitMatrixEngine -.->|9. 异步同步余票快照| GemFireCache
   end
@@ -114,9 +114,9 @@ mindmap
 ```mermaid
 graph LR
   Passenger["旅客 / 抢票 App"] -->|1. 千万 QPS 查询余票| ReadGW["Read Query Gateway"]
-  ReadGW <-->|2. 查内存网格| MemoryGrid["GemFire / Redis 内存网格"]
+  ReadGW <--->|2. 查内存网格| MemoryGrid["GemFire / Redis 内存网格"]
   Passenger -->|3. 提交订单| OrderGW["Write Order Gateway"]
-  OrderGW <-->|4. 异步排队与矩阵扣减| BookingSystem["Booking & BitMatrix Engine"]
+  OrderGW <--->|4. 异步排队与矩阵扣减| BookingSystem["Booking & BitMatrix Engine"]
 ```
 
 ### 3b. Container Diagram (容器架构)
@@ -136,13 +136,13 @@ graph TB
     BookingDBCluster["Sharded Order DB (关系型数据库)"]
   end
 
-  QueryGateway <-->|1. 查余票| MemoryGridCluster
+  QueryGateway <--->|1. 查余票| MemoryGridCluster
 
   PassengerClient["旅客 App"] --> OrderGateway
   OrderGateway --> AntiBotCaptcha
   AntiBotCaptcha --> AsyncOrderQueue
   AsyncOrderQueue -->|2. 匀速消费| BitMatrixEngine
-  BitMatrixEngine <-->|3. 内存位运算扣减| BitMatrixEngine
+  BitMatrixEngine <--->|3. 内存位运算扣减| BitMatrixEngine
   BitMatrixEngine -->|4. 落盘| BookingDBCluster
   BitMatrixEngine -.->|5. 异步刷新余票快照| MemoryGridCluster
 

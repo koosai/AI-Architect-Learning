@@ -146,7 +146,7 @@ graph TB
   ClientDevice["用户客户端 (SmartTV / Mobile)"]:::client -->|1. 获取播放配置与 Manifest 凭证| NetflixControlPlane["Netflix 控制面 (AWS 微服务集群)"]:::main
   ClientDevice -->|2. 高速拉取视频数据块| OpenConnectOCA["Open Connect 物理盒子 (部署于 ISP 本地)"]:::third
   
-  NetflixControlPlane <-->|3. 跨机房元数据同步| NetflixControlPlane
+  NetflixControlPlane <--->|3. 跨机房元数据同步| NetflixControlPlane
   NetflixControlPlane -->|4. 夜间闲时推送新片源| OpenConnectOCA
 ```
 
@@ -165,7 +165,7 @@ graph TB
     ZuulGateway -->|2. 带 Ribbon 客户端负载均衡路由| RecommendationService["推荐微服务 (Recommendation)"]:::scale
     ZuulGateway -->|3. 熔断隔离链路保护| PlaybackService["播放授权微服务 (Playback)"]:::scale
     
-    RecommendationService & PlaybackService <-->|4. 注册心跳与实例寻址| EurekaServer["Eureka AP 注册中心集群"]:::gateway
+    RecommendationService & PlaybackService <--->|4. 注册心跳与实例寻址| EurekaServer["Eureka AP 注册中心集群"]:::gateway
     
     subgraph ServiceResilience ["Hystrix 保护层"]
       HystrixCircuit["Hystrix 熔断拦截器"]:::gateway <.-> PlaybackService

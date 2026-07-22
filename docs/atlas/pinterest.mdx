@@ -133,7 +133,7 @@ graph TB
 
   UI -->|请求推荐 Pin 列表| APIGateway
   APIGateway --> PixieRunner
-  PixieRunner <-->|高速读图| InMemGraph
+  PixieRunner <--->|高速读图| InMemGraph
   APIGateway --> HNSWIndex
   
   MapReduce -->|每日更新大图快照| InMemGraph

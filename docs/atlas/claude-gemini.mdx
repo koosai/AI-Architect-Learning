@@ -119,14 +119,14 @@ graph TB
     RunnerVM["gVisor 独立沙箱微容器"]
   end
 
-  MainUI <-->|HTTPS / SSE| APIGateway
-  MainUI <-->|postMessage 通信| ArtifactsIframe
-  APIGateway <--> CacheManager
-  CacheManager <-->|前缀哈希查找| KVServer
-  APIGateway <--> GPUNode
-  GPUNode <-->|读取/写入| KVServer
-  APIGateway <--> SandboxController
-  SandboxController <-->|启动/销毁/管道| RunnerVM
+  MainUI <--->|HTTPS / SSE| APIGateway
+  MainUI <--->|postMessage 通信| ArtifactsIframe
+  APIGateway <---> CacheManager
+  CacheManager <--->|前缀哈希查找| KVServer
+  APIGateway <---> GPUNode
+  GPUNode <--->|读取/写入| KVServer
+  APIGateway <---> SandboxController
+  SandboxController <--->|启动/销毁/管道| RunnerVM
 ```
 
 ---

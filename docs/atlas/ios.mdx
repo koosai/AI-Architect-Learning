@@ -148,10 +148,10 @@ graph TB
   MetalDriver -->|组装缓冲指令| CommandQueue
   
   CommandQueue -->|DMA 调度| A_GPU
-  SharedMemory <-->|零拷贝物理直连| A_GPU
+  SharedMemory <--->|零拷贝物理直连| A_GPU
   
-  MACF <-->|运行时弹窗核验| TCCD
-  EnclaveProcessor <-->|隔离验证密钥| AMFI
+  MACF <--->|运行时弹窗核验| TCCD
+  EnclaveProcessor <--->|隔离验证密钥| AMFI
   BootROM -->|启动首阶段核验| SecureSubsystem
 ```
 

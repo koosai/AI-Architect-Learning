@@ -125,17 +125,17 @@ graph TB
   end
 
   UI -->|流式提问| APIGateway
-  APIGateway <--> QueryRouter
-  QueryRouter <-->|并发调度| Coordinator
+  APIGateway <---> QueryRouter
+  QueryRouter <--->|并发调度| Coordinator
   
-  Coordinator <-->|1. 并行调用| WebSearch["外部搜索 / Bing API"]
-  Coordinator <-->|2. 并发爬取| ScraperPool
-  Coordinator <-->|3. 片段缓存| SnippetCache
+  Coordinator <--->|1. 并行调用| WebSearch["外部搜索 / Bing API"]
+  Coordinator <--->|2. 并发爬取| ScraperPool
+  Coordinator <--->|3. 片段缓存| SnippetCache
   
   Coordinator -->|4. 召回原始 Chunks| Reranker
   Reranker -->|5. 压缩后 Top-K Chunks| APIGateway
-  APIGateway <-->|6. 输入 Context + System Prompt| BaseLLM
-  APIGateway <--> Attributor
+  APIGateway <--->|6. 输入 Context + System Prompt| BaseLLM
+  APIGateway <---> Attributor
   Attributor --> StreamReader
 ```
 

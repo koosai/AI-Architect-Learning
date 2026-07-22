@@ -158,7 +158,7 @@ graph TB
         
         FlinkJoiner -->|7. 输入样本流| MonolithTraining["Monolith Training Workers<br/>(分布式训练执行机)"]:::inference
         
-        MonolithTraining <-->|8. 读写大参数| TrainingPS["Training Parameter Server<br/>(存储万亿特征权重)"]:::inference
+        MonolithTraining <--->|8. 读写大参数| TrainingPS["Training Parameter Server<br/>(存储万亿特征权重)"]:::inference
         TrainingPS -->|9. 定时增量推送修改| ServingPS["Serving Parameter Server<br/>(只读同步权重副本)"]:::inference
         
         ServingPS -.->|只读加载参数| MonolithServing

@@ -113,8 +113,8 @@ Let's Encrypt 系统中 ACME 客户端与 Boulder 服务端拓扑结构如下：
 ```mermaid
 graph LR
   ACMEClient["ACME Client (Certbot / Caddy)"] -->|1. ACME 协议交互| BoulderServer["Let's Encrypt Boulder CA Server"]
-  BoulderServer <-->|2. HTTP / DNS 回调校验| WebDNSInfrastucture["Web 站点 / DNS 服务器"]
-  BoulderServer <-->|3. 硬件安全签名| HSMHardware["Physical HSM Module"]
+  BoulderServer <--->|2. HTTP / DNS 回调校验| WebDNSInfrastucture["Web 站点 / DNS 服务器"]
+  BoulderServer <--->|3. 硬件安全签名| HSMHardware["Physical HSM Module"]
 ```
 
 ### 3b. Container Diagram (容器架构)
@@ -140,10 +140,10 @@ graph TB
   CertManager -- "1. POST /acme/new-order" --> FrontendWFE
   FrontendWFE --> RAWorker
   RAWorker --> VAWorker
-  VAWorker <-->|2. 发起 HTTP-01 / DNS-01 探测| CertManager
+  VAWorker <--->|2. 发起 HTTP-01 / DNS-01 探测| CertManager
   RAWorker --> CAWorker
-  CAWorker <--> StorageSA
-  CAWorker <-->|3. 硬件隔离签名| HSMDevice
+  CAWorker <---> StorageSA
+  CAWorker <--->|3. 硬件隔离签名| HSMDevice
 
   style FrontendWFE fill:#bbdefb,stroke:#1976d2
   style HSMDevice fill:#c8e6c9,stroke:#2e7d32

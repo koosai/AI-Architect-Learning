@@ -113,7 +113,7 @@ Kubernetes 结合 Volcano 智算调度器在 GPU 万卡集群上的拓扑结构�
 ```mermaid
 graph LR
   AIEngineer["AI 算法工程师 (Job Submit)"] -->|1. 提交 PyTorchJob / PodGroup| VolcanoController["Volcano Scheduler Controller"]
-  VolcanoController <-->|2. 读取 GPU NVLink 硬件拓扑| K8sAPIServer["K8s API Server & Node Topology Driver"]
+  VolcanoController <--->|2. 读取 GPU NVLink 硬件拓扑| K8sAPIServer["K8s API Server & Node Topology Driver"]
   VolcanoController -->|3. 原子绑定并开闸| GPUNodes["Node 1~N (GPU 智算节点)"]
 ```
 
@@ -138,8 +138,8 @@ graph TB
     end
   end
 
-  APIServer <--> VolcanoScheduler
-  VolcanoScheduler <--> QueueManager
+  APIServer <---> VolcanoScheduler
+  VolcanoScheduler <---> QueueManager
   
   VolcanoScheduler -- "1. Gang 检查: 凑齐 8 卡整机" --> NodeA
   VolcanoScheduler -- "2. 拓扑避坑: 跳过破损的 Node B 供 TP 作业使用" --> NodeA

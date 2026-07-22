@@ -93,7 +93,7 @@ Darwin 操作系统的架构分为用户态应用框架、XNU 核心内核以及
 graph LR
   UserApp["Cocoa 应用程序 (User Space App)"] -->|1. 库调用与 POSIX API| CocoaLib["系统核心库 (libSystem.dylib)"]
   CocoaLib -->|2. 发送系统调用 / Mach 消息| XNUKernel["XNU 混合内核 (Ring 0 XNU)"]
-  XNUKernel <-->|3. 设备驱动调用| IOKit["I/O Kit 驱动框架"]
+  XNUKernel <--->|3. 设备驱动调用| IOKit["I/O Kit 驱动框架"]
   XNUKernel -->|4. 代码签名校验请求| AMFIDaemon["AMFI 安全守护进程 (Ring 3)"]
   XNUKernel -->|5. 读写物理硬件| Hardware["硬件层 (Apple Silicon / Secure Enclave)"]
 ```

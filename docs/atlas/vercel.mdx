@@ -103,7 +103,7 @@ graph LR
   Github -->|2. Webhook 触发| Build_Pipeline["Vercel 自动化构建系统"]
   Build_Pipeline -->|3. 生成只读包与唯一 URL| Storage_Bucket["Vercel 只读构建产物存储仓"]
   End_User["全球浏览终端"] -->|4. 浏览页面| Edge_Network["Vercel 全球边缘 CDN 网络"]
-  Edge_Network <-->|5. 根据路由指针拉取页面内容| Storage_Bucket
+  Edge_Network <--->|5. 根据路由指针拉取页面内容| Storage_Bucket
 ```
 
 ### 3b. Container Diagram (容器架构)

@@ -150,9 +150,9 @@ graph TB
   FastDDS --> Rtps
   Rtps --> NetworkCard
   
-  LidarCBG <-->|调度管理| CPUTasks
-  PlannerCBG <-->|调度管理| CPUTasks
-  BehaviorTreeEngine <-->|驱动动作回调| PlannerCBG
+  LidarCBG <--->|调度管理| CPUTasks
+  PlannerCBG <--->|调度管理| CPUTasks
+  BehaviorTreeEngine <--->|驱动动作回调| PlannerCBG
 ```
 
 ---

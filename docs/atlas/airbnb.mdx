@@ -60,7 +60,7 @@ graph TD
 
   subgraph ServiceBlocksArchitecture["Service Blocks 统一服务块"]
     UserApp -->|6. 点击预订| BookingBlock["Booking Service Block (聚合预订/日历/支付)"]
-    BookingBlock <-->|7. 日历分布式锁防重| RedisLock["Redis Redlock (Calendar Lock)"]
+    BookingBlock <--->|7. 日历分布式锁防重| RedisLock["Redis Redlock (Calendar Lock)"]
     BookingBlock -->|8. 异步写入主库| MySQLDB["Listing & Calendar MySQL DB"]
   end
 ```
@@ -84,21 +84,23 @@ graph TD
 
 ## 2. 系统功能全景
 
+为了完整支撑全球数百万非标房源的搜索、推荐与交易撮合，Airbnb 系统划分为三大核心能力板块：**架构收敛演进**、**非标房源搜推引擎** 与 **日历分布式交易一致性**。
+
 ```mermaid
 mindmap
-  root("(Airbnb 架构"))
-    服务化演进 (Architecture Evolution)
+  root(("Airbnb 架构"))
+    ["服务化演进 (Architecture Evolution)"]
       Monolith 单体 Rails
-      Microservices 极度拆分 (依赖地狱教训)
-      Service Blocks (模块化服务块)
+      ["Microservices 极度拆分 (依赖地狱教训)"]
+      ["Service Blocks (模块化服务块)"]
       OneTouch 开发者交付平台
-    非标房源搜推引擎 (Search & AI)
+    ["非标房源搜推引擎 (Search & AI)"]
       Geohash 空间地理索引召回
-      Listing Embedding (房源向量化)
-      GBDT + DNN 两级重排算法
+      ["Listing Embedding (房源向量化)"]
+      ["GBDT + DNN 两级重排算法"]
       Smart Pricing 动态定价引擎
-    交易与日历 consistency
-      Calendar Availability Locking (防双重预订)
+    ["交易与日历一致性 (Consistency)"]
+      ["Calendar Availability Locking (防双重预订)"]
       Redis Redlock 分布式锁
       MySQL 事务分库
 ```
@@ -107,18 +109,22 @@ mindmap
 
 ## 3. 最新架构总览
 
-Airbnb 系统的 Service Blocks 服务分层与搜推拓扑结构如下：
+Airbnb 系统采用 **Service Blocks 强内聚模块化** 的服务拓扑结构。整体分为 GraphQL 统一网关层、Service Blocks 业务域、搜推与定价 AI 平面以及底层悲观锁/分库存储底座：
 
 ### 3a. System Context (系统上下文)
+
+Airbnb 系统的顶层上下文描述了移动终端房客、GraphQL 统一网关、Service Blocks 业务服务块与 Elasticsearch + Embedding 搜推引擎之间的交互关系：
 
 ```mermaid
 graph LR
   Guest["房客 / 移动 App"] -->|1. 地理位置搜索 & 预订| APIEntry["Airbnb Unified Gateway"]
-  APIEntry <-->|2. 聚合处理| ServiceBlocks["Service Blocks 集群 (Listing / Booking / User Blocks)"]
-  ServiceBlocks <-->|3. 地理召回与向量重排| SearchEngine["Elasticsearch + Embedding Rec Engine"]
+  APIEntry <--->|2. 聚合处理| ServiceBlocks["Service Blocks 集群 (Listing / Booking / User Blocks)"]
+  ServiceBlocks <--->|3. 地理召回与向量重排| SearchEngine["Elasticsearch + Embedding Rec Engine"]
 ```
 
 ### 3b. Container Diagram (容器架构)
+
+在容器级视图中，GraphQL 统一网关将流量智能路由至对应的 Service Blocks（Listing Block、Booking Block、User Block），搜索与 AI 引擎负责实时地理索引召回与个性化 Embedding 重排，存储底座通过 Redis Redlock 实现日历悲观排他锁：
 
 ```mermaid
 graph TB
@@ -145,9 +151,9 @@ graph TB
 
   UnifiedGateway --> ListingBlock & BookingBlock & UserBlock
 
-  ListingBlock <--> ESGeohashCluster
-  ListingBlock <--> ListingEmbeddingModel
-  BookingBlock <-->|1. 日历悲观排他锁| CalendarRedis
+  ListingBlock <---> ESGeohashCluster
+  ListingBlock <---> ListingEmbeddingModel
+  BookingBlock <--->|1. 日历悲观排他锁| CalendarRedis
   BookingBlock -->|2. 订单落盘| MainMySQL
   
   SmartPricingEngine -.->|3. 动态调整定价| ListingBlock

@@ -118,7 +118,7 @@ mindmap
 graph LR
   Player1["玩家 1 App (iOS)"] -->|1. 提交按键指令| BattleServer["MOBA Battle Server (帧中继)"]
   Player2["玩家 2 App (Android)"] -->|1. 提交按键指令| BattleServer
-  BattleServer <-->|2. 广播全员 KeyFrame| Player1 & Player2
+  BattleServer <--->|2. 广播全员 KeyFrame| Player1 & Player2
   BattleServer -.->|3. 异步转储战斗日志| ReplayStore["Replay Store (离线反作弊审计)"]
 ```
 

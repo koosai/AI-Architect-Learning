@@ -120,9 +120,9 @@ graph TB
   ClientApp -->|1. 定义并编译| StateGraphClass
   StateGraphClass -->|2. 生成可执行图| Compiler
   Compiler -->|3. 实例化执行| PregelEngine
-  PregelEngine <-->|通道读写| Channels
-  PregelEngine <-->|4. 自动保存/恢复快照| CheckpointerBase
-  CheckpointerBase <-->|5. SQL存储| DBSaving
+  PregelEngine <--->|通道读写| Channels
+  PregelEngine <--->|4. 自动保存/恢复快照| CheckpointerBase
+  CheckpointerBase <--->|5. SQL存储| DBSaving
   PregelEngine -->|6. 调用| LLM["外部大模型 API"]
 ```
 

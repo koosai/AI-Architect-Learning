@@ -122,7 +122,7 @@ mindmap
 ```mermaid
 graph LR
   ClientApp["支付宝 App 客户端"] -->|1. 发起双 11 支付| EntryRouter["MSPA 边缘接入网关"]
-  EntryRouter <-->|2. User ID 哈希定位 RZone| LDCRouter["LDC 动态单元路由器"]
+  EntryRouter <--->|2. User ID 哈希定位 RZone| LDCRouter["LDC 动态单元路由器"]
   LDCRouter -->|3. 单元内闭环交易| RZoneNode["RZone 逻辑数据中心 (微服务 + DB)"]
 ```
 
@@ -159,7 +159,7 @@ graph TB
   TradeService1 --> AccountService1 --> OBNode1
   TradeService2 --> AccountService2 --> OBNode2
   
-  OBNode1 <-->|3. Paxos 强一致复制| OBNode2
+  OBNode1 <--->|3. Paxos 强一致复制| OBNode2
   AccountService1 -.->|4. 异步汇总| ClearingService
 
   style RZoneCluster1 fill:#bbdefb,stroke:#1976d2

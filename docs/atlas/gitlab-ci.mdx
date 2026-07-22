@@ -113,8 +113,8 @@ GitLab CI 的交互组件与 Runner 调度框架如下：
 ```mermaid
 graph LR
   Developer["开发者 (Git Push / MR)"] -->|1. 触发代码提交| GitLabServer["GitLab Server (Web / Git API)"]
-  GitLabServer <-->|2. 长轮询请求 Job| RunnerManager["GitLab Runner 集群"]
-  RunnerManager <-->|3. 上传/下载 Cache 与 Artifacts| S3Storage["对象存储 (S3 / MinIO)"]
+  GitLabServer <--->|2. 长轮询请求 Job| RunnerManager["GitLab Runner 集群"]
+  RunnerManager <--->|3. 上传/下载 Cache 与 Artifacts| S3Storage["对象存储 (S3 / MinIO)"]
 ```
 
 ### 3b. Container Diagram (容器架构)
@@ -142,14 +142,14 @@ graph TB
     ArtifactBucket["S3 Artifacts Bucket (传递 dist.zip)"]
   end
 
-  PollService <-->|1. HTTPS 长轮询拉取 Job| JobQueue
-  JobQueue <-->|2. 状态读写| DbMetadata
+  PollService <--->|1. HTTPS 长轮询拉取 Job| JobQueue
+  JobQueue <--->|2. 状态读写| DbMetadata
   
   PollService -->|3. 分发任务| DockerExec
   DockerExec -->|4. 动态创建| BuildJobPod
   DockerExec -->|4. 动态创建| TestJobPod
   
-  BuildJobPod <-->|5. 下载/保存依赖缓存| CacheBucket
+  BuildJobPod <--->|5. 下载/保存依赖缓存| CacheBucket
   BuildJobPod -->|6. 上传编译结果产物| ArtifactBucket
   ArtifactBucket -->|7. 下载前置编译产物| TestJobPod
 

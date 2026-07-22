@@ -135,7 +135,7 @@ graph TB
   BotListener -->|2. 鉴权与获取额度| UserTracker
   BotListener -->|3. 创建 Job 并推入| QueueManager
   
-  QueueManager <-->|4. 动态分发| Dispatcher
+  QueueManager <--->|4. 动态分发| Dispatcher
   Dispatcher -->|5. 并行加载 Prompt| Diffusor
   
   Diffusor -->|6. 30%/60%/90% 中间潜空间张量| LatentDecoder

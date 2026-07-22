@@ -117,7 +117,7 @@ graph LR
   Creator["创作者 App"] -->|1. 上传 15s 短视频| IngestGateway["Byte Ingest Gateway"]
   IngestGateway -->|2. ByteVC1 极速转码| Transcoder["ByteVC1 Transcoder"]
   Transcoder -->|3. 注入初始流量池| RecEngine["Recommend Engine (流量池递进)"]
-  RecEngine <-->|4. 自动预热热点视频| ByteCDN["ByteCDN 边缘 PoP 节点"]
+  RecEngine <--->|4. 自动预热热点视频| ByteCDN["ByteCDN 边缘 PoP 节点"]
   Viewer["观众 App (Smart Preloader)"] <-->|5. 0ms 秒开自适应播放| ByteCDN
 ```
 
@@ -149,7 +149,7 @@ graph TB
   AntiFraudEngine -->|2. 计算真实完播分| PoolTracker
   
   PoolTracker -- "3. 完播率爆表 -> 晋级大池" --> ByteCDNEgeNode
-  ByteCDNEgeNode <-->|4. 静默预下载前 2s 块| ClientPreloadManager
+  ByteCDNEgeNode <--->|4. 静默预下载前 2s 块| ClientPreloadManager
 
   style PoolTracker fill:#bbdefb,stroke:#1976d2
   style ClientPreloadManager fill:#c8e6c9,stroke:#2e7d32

@@ -117,8 +117,8 @@ Triton Inference Server 系统中动态批处理与多后端执行拓扑结构�
 ```mermaid
 graph LR
   ClientApp["AI 应用程序 (HTTP/gRPC/C-API)"] -->|1. 单请求推理| Gateway["Triton Front Gateway"]
-  Gateway <-->|2. 动态组 Batch & 派发| CoreEngine["Triton Core Engine & Dynamic Scheduler"]
-  CoreEngine <-->|3. 调用 GPU 插件| CAPIBackends["TensorRT / ONNX / PyTorch Backends"]
+  Gateway <--->|2. 动态组 Batch & 派发| CoreEngine["Triton Core Engine & Dynamic Scheduler"]
+  CoreEngine <--->|3. 调用 GPU 插件| CAPIBackends["TensorRT / ONNX / PyTorch Backends"]
 ```
 
 ### 3b. Container Diagram (容器架构)
@@ -144,8 +144,8 @@ graph TB
   BatchScheduler -- "Batch Size = 16" --> ModelInstance1
   BatchScheduler -- "Batch Size = 8" --> ModelInstance2
 
-  ModelInstance1 <-->|1. 零拷贝传递 Tensor| CUDAPtrMemory
-  CUDAPtrMemory <-->|2. 零拷贝读取 Tensor| ModelInstance2
+  ModelInstance1 <--->|1. 零拷贝传递 Tensor| CUDAPtrMemory
+  CUDAPtrMemory <--->|2. 零拷贝读取 Tensor| ModelInstance2
 
   style BatchScheduler fill:#bbdefb,stroke:#1976d2
   style CUDAPtrMemory fill:#c8e6c9,stroke:#2e7d32

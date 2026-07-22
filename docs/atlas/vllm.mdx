@@ -174,11 +174,11 @@ graph TB
     ModelExecutor -->|4. 张量权重切片前向传播| RayWorker1["Ray GPU-Worker 0 (卡0)"]:::engine
     ModelExecutor -->|4. 张量权重切片前向传播| RayWorker2["Ray GPU-Worker 1 (卡1)"]:::engine
     
-    RayWorker1 <-->|5. NCCL 极速 All-Reduce| RayWorker2
+    RayWorker1 <--->|5. NCCL 极速 All-Reduce| RayWorker2
   end
   
   RayWorker1 -->|6. PagedAttention 算子读取/写入| VRAM_Blocks["GPU 物理显存块表 (VRAM Blocks)"]:::hardware
-  BlockManager <-->|7. 显存超载时，调度块交换| CPU_RAM_Blocks["CPU 内存交换区 (CPU Swapping blocks)"]:::hardware
+  BlockManager <--->|7. 显存超载时，调度块交换| CPU_RAM_Blocks["CPU 内存交换区 (CPU Swapping blocks)"]:::hardware
 ```
 
 ---

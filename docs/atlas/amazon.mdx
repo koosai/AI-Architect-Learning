@@ -149,10 +149,10 @@ graph TB
 
   Customer["消费者设备 (Customer App)"]:::client -->|发起选购/结算请求| AmazonPortal["Amazon 页面展示门户 (Web/App)"]:::main
   
-  AmazonPortal <-->|读取价格/商品明细| CatalogService["商品目录服务 (Catalog Service)"]:::main
-  AmazonPortal <-->|读写购物车快照| CartService["购物车服务 (Cart Service)"]:::main
+  AmazonPortal <--->|读取价格/商品明细| CatalogService["商品目录服务 (Catalog Service)"]:::main
+  AmazonPortal <--->|读写购物车快照| CartService["购物车服务 (Cart Service)"]:::main
   
-  CartService <-->|高速持久化无锁读写| DynamoRing["Dynamo 对等存储环 (Masterless P2P)"]:::third
+  CartService <--->|高速持久化无锁读写| DynamoRing["Dynamo 对等存储环 (Masterless P2P)"]:::third
 ```
 
 ### 3b. Container Diagram (容器结构图)

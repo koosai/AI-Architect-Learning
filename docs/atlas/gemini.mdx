@@ -126,16 +126,16 @@ graph TB
 
   UI -->|媒体流| MediaEncoder
   MediaEncoder -->|交织 Token 数据流| Gateway
-  Gateway <--> GroundingEngine
-  Gateway <--> WorkspaceProxy
+  Gateway <---> GroundingEngine
+  Gateway <---> WorkspaceProxy
   
-  GroundingEngine <-->|1. 意图路由/并发搜索| SearchEngine
-  WorkspaceProxy <-->|2. OAuth2 安全调用| WorkspaceAPIs
+  GroundingEngine <--->|1. 意图路由/并发搜索| SearchEngine
+  WorkspaceProxy <--->|2. OAuth2 安全调用| WorkspaceAPIs
   
-  Gateway <-->|3. 多模态 Token 串行流| TPUOrchestrator
-  TPUOrchestrator <--> TextAttention
-  TPUOrchestrator <--> VisionAttention
-  TPUOrchestrator <--> AudioAttention
+  Gateway <--->|3. 多模态 Token 串行流| TPUOrchestrator
+  TPUOrchestrator <---> TextAttention
+  TPUOrchestrator <---> VisionAttention
+  TPUOrchestrator <---> AudioAttention
 ```
 
 ---

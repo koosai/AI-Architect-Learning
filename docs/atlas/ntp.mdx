@@ -108,7 +108,7 @@ flowchart TB
   GPS -->|PPS 脉冲信号| S1A
   AtomicClock -->|RS232/PCI| S1B
 
-  S1A <-->|Peer 对等校准| S1B
+  S1A <--->|Peer 对等校准| S1B
 
   S1A -->|NTP UDP 123 报文| AWS_NTP
   S1B -->|NTP UDP 123 报文| Corp_NTP

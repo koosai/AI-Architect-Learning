@@ -56,7 +56,7 @@ graph TD
   
   subgraph GPURenderingPipeline["Nanite & Lumen GPU 渲染平面"]
     MassProcessor -->|4. 提交微簇 Mesh 数据| NaniteEngine["Nanite Engine (Cluster 剔除 & 微多边形渲染)"]
-    NaniteEngine <-->|5. 实时光线追踪弹射| LumenGI["Lumen Engine (Real-time Dynamic Global Illumination)"]
+    NaniteEngine <--->|5. 实时光线追踪弹射| LumenGI["Lumen Engine (Real-time Dynamic Global Illumination)"]
   end
 
   LumenGI -->|6. 输出 4K 画面| FrameBuffer["GPU Display Frame Buffer"]
@@ -109,7 +109,7 @@ UE5 中 Mass Entity 数据流与 Nanite/Lumen 渲染管线拓扑结构如下：
 ```mermaid
 graph LR
   GameLogic["游戏逻辑 / AI / 物理"] -->|1. SOA 连续内存更新| MassEntitySystem["UE5 Mass Entity (ECS Engine)"]
-  MassEntitySystem <-->|2. 异步流送资产| WorldPartition["World Partition Streaming"]
+  MassEntitySystem <--->|2. 异步流送资产| WorldPartition["World Partition Streaming"]
   MassEntitySystem -->|3. 提交顶点微簇| NaniteLumen["Nanite & Lumen GPU Pipeline"]
 ```
 

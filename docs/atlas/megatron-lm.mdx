@@ -115,8 +115,8 @@ Megatron-LM 系统在 DGX 万卡集群上的 3D 并行与 NVLink 通信拓扑如
 ```mermaid
 graph LR
   ClusterManager["万卡 AI 集群调度器"] -->|1. 派发 3D 拓扑结构| MegatronEngine["Megatron-LM 3D Engine"]
-  MegatronEngine <-->|2. 节点内 900GB/s 互联| NVLinkMesh["NVLink / NVSwitch (TP 组)"]
-  MegatronEngine <-->|3. 节点间 400Gbps RDMA| IBNetwork["InfiniBand RDMA (PP & DP 组)"]
+  MegatronEngine <--->|2. 节点内 900GB/s 互联| NVLinkMesh["NVLink / NVSwitch (TP 组)"]
+  MegatronEngine <--->|3. 节点间 400Gbps RDMA| IBNetwork["InfiniBand RDMA (PP & DP 组)"]
 ```
 
 ### 3b. Container Diagram (容器架构)
@@ -127,14 +127,14 @@ graph TB
     GPU0["GPU 0 (Col Parallel QKV)"]
     GPU1["GPU 1 (Row Parallel Out)"]
     NVLink1["NVSwitch (900GB/s 节点内 All-Reduce)"]
-    GPU0 <--> NVLink1 <--> GPU1
+    GPU0 <---> NVLink1 <--> GPU1
   end
 
   subgraph Node2["DGX Node 2 (TP Group 2, PP Stage 2)"]
     GPU8["GPU 8 (Col Parallel MLP 1)"]
     GPU9["GPU 9 (Row Parallel MLP 2)"]
     NVLink2["NVSwitch (900GB/s 节点内 All-Reduce)"]
-    GPU8 <--> NVLink2 <--> GPU9
+    GPU8 <---> NVLink2 <--> GPU9
   end
 
   subgraph NetworkFabric["节点间 InfiniBand RDMA 网络Fabric"]

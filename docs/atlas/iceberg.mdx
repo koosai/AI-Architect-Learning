@@ -114,7 +114,7 @@ Iceberg 湖仓表格式在引擎计算层与底层物理文件之间的拓扑结
 ```mermaid
 graph LR
   Engine["计算引擎 (Spark / Flink / Trino / StarRocks)"] -->|1. 获取最新 Snapshot 引用| Catalog["Iceberg Catalog"]
-  Engine <-->|2. 读取 Manifest 树元数据做过滤| MetadataStore["S3 / HDFS 元数据目录"]
+  Engine <--->|2. 读取 Manifest 树元数据做过滤| MetadataStore["S3 / HDFS 元数据目录"]
   Engine -->|3. 只物理读取命中的 Parquet| DataStore["S3 / HDFS 物理 Parquet 数据块"]
 ```
 

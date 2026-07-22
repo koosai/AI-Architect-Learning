@@ -103,7 +103,7 @@ Cloudflare Workers 的网络就近引流与边缘 V8 沙箱架构层级如下：
 graph LR
   User_US["美国用户 (User US)"] -->|Anycast IP 路由| US_Edge["东美边缘 PoP 节点"]
   User_EU["欧洲用户 (User EU)"] -->|Anycast IP 路由| EU_Edge["西欧边缘 PoP 节点"]
-  US_Edge <-->|2. 全球数据实时对齐| EU_Edge
+  US_Edge <--->|2. 全球数据实时对齐| EU_Edge
   Developer["开发者 CLI (Wrangler)"] -->|3. 一键编译 Regionless 发布| CF_Global_Registry["Cloudflare 全球代码注册中心"]
   CF_Global_Registry -->|4. 秒级分发只读镜像| US_Edge
 ```
@@ -144,11 +144,11 @@ graph TB
   EventLoop -->|1. 触发回调绑定并执行| JsRuntime1
   EventLoop -->|2. 触发回调绑定并执行| JsRuntime2
   
-  JsRuntime1 <-->|3. 读写物理堆数据| PrivateHeap1
-  JsRuntime2 <-->|4. 读写物理堆数据| PrivateHeap2
+  JsRuntime1 <--->|3. 读写物理堆数据| PrivateHeap1
+  JsRuntime2 <--->|4. 读写物理堆数据| PrivateHeap2
   
   JsRuntime1 -->|5. 秒级写入数据缓存| LocalKV
-  V8GarbageCollector <-->|6. 周期性并发回收空间| PrivateHeap1
+  V8GarbageCollector <--->|6. 周期性并发回收空间| PrivateHeap1
 ```
 
 ---

@@ -301,7 +301,7 @@ graph TD
     StandbyController2["Standby Controller Node 3 (Raft Follower)"]:::standby
   end
 
-  ActiveController <-->|Raft 日志强同步元数据| StandbyController1 & StandbyController2
+  ActiveController <--->|Raft 日志强同步元数据| StandbyController1 & StandbyController2
   
   subgraph DataPlaneBrokers ["数据平面普通 Broker 节点"]
     Broker1["Kafka Broker A"]:::broker

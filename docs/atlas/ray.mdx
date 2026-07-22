@@ -96,7 +96,7 @@ graph LR
   HeadNode -->|2. 元数据与状态查询| GCS["全局服务中心 (Global Control Store)"]
   HeadNode -->|3. 分发调度指令| WorkerNode1["工作节点 1 (Worker Node)"]
   HeadNode -->|4. 分发调度指令| WorkerNode2["工作节点 2 (Worker Node)"]
-  WorkerNode1 <-->|5. 多机数据同步| WorkerNode2
+  WorkerNode1 <--->|5. 多机数据同步| WorkerNode2
 ```
 
 ### 3b. 容器架构图 (Container)

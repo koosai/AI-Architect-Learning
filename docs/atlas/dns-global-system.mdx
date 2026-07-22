@@ -117,8 +117,8 @@ DNS 系统中终端、Local DNS、Root/TLD/Authoritative 拓扑结构如下：
 ```mermaid
 graph LR
   ClientApp["Client Stub Resolver"] -->|1. UDP/53 DoH Query| LocalDNS["Local DNS / Recursive Resolver"]
-  LocalDNS <-->|2. BGP Anycast Iterative Lookup| GlobalDNSRoot["Global DNS Hierarchy (Root / TLD / Auth)"]
-  GlobalDNSRoot <-->|3. BGP Anycast Routing| BGPInstances["1,500+ Anycast Physical Nodes"]
+  LocalDNS <--->|2. BGP Anycast Iterative Lookup| GlobalDNSRoot["Global DNS Hierarchy (Root / TLD / Auth)"]
+  GlobalDNSRoot <--->|3. BGP Anycast Routing| BGPInstances["1,500+ Anycast Physical Nodes"]
 ```
 
 ### 3b. Container Diagram (容器架构)
@@ -130,7 +130,7 @@ graph TB
     LocalDNSEngine["Recursive Resolver (Unbound / BIND9)"]
     RAMCacheStore["In-Memory TTL Cache Store"]
     
-    StubResolver --> LocalDNSEngine <--> RAMCacheStore
+    StubResolver --> LocalDNSEngine <---> RAMCacheStore
   end
 
   subgraph GlobalHierarchyPlane["全球 DNS 层级与 Anycast 冗余"]
@@ -145,7 +145,7 @@ graph TB
   LocalDNSEngine -- "3. 查询 TLD" --> TLDServer
   TLDServer -- "4. 返回 Authoritative NS" --> LocalDNSEngine
   LocalDNSEngine -- "5. 携带 ECS Client IP 查询" --> AuthoritativeServer
-  AuthoritativeServer <--> ECSScheduler
+  AuthoritativeServer <---> ECSScheduler
   AuthoritativeServer -- "6. 返回最佳 CDN IP & TTL" --> LocalDNSEngine
 
   style LocalDNSEngine fill:#c8e6c9,stroke:#2e7d32

@@ -133,8 +133,8 @@ graph TB
   FormulaBar -->|公式文本| FormulaCompiler
   FormulaCompiler -->|AST 依赖分析| DAGManager
   
-  DAGManager <-->|维护节点边关系| SparseStorage
-  DirtyTracer <-->|读写单元格 Dirty Flags| SparseStorage
+  DAGManager <--->|维护节点边关系| SparseStorage
+  DirtyTracer <--->|读写单元格 Dirty Flags| SparseStorage
   
   DirtyTracer -->|脏节点子集| ConcurrentScheduler
   ConcurrentScheduler -->|分派入度为 0 的求值任务| WorkQueue
@@ -142,8 +142,8 @@ graph TB
   WorkQueue --> Worker1
   WorkQueue --> Worker2
   
-  Worker1 <-->|读取计算依赖| SparseStorage
-  Worker2 <-->|读取计算依赖| SparseStorage
+  Worker1 <--->|读取计算依赖| SparseStorage
+  Worker2 <--->|读取计算依赖| SparseStorage
 ```
 
 ---

@@ -171,11 +171,11 @@ token 一生成就立即推给用户（streaming），让用户"边想边说"地
 flowchart TB
   subgraph Node["单台 GPU 服务器"]
     G1["GPU"] <-->|"NVLink 超高带宽"| G2["GPU"]
-    G2 <-->|"NVLink"| G3["GPU ×8"]
+    G2 <--->|"NVLink"| G3["GPU ×8"]
   end
   subgraph Cluster["超算集群（数千张卡）"]
-    Node <-->|"InfiniBand 低延迟互联"| Node2["GPU 服务器"]
-    Node2 <-->|"InfiniBand"| Node3["GPU 服务器 ……"]
+    Node <--->|"InfiniBand 低延迟互联"| Node2["GPU 服务器"]
+    Node2 <--->|"InfiniBand"| Node3["GPU 服务器 ……"]
   end
 ```
 

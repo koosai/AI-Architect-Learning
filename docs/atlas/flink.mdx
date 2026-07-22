@@ -53,7 +53,7 @@ graph TD
   OperatorA -->|3. Barrier 抵达窗口算子| WindowOp["Window Aggregate 算子"]
   
   WindowOp -->|4. 屏障对齐对齐后异步快照| JobManagerCoordinator["JobManager Checkpoint Coordinator"]
-  JobManagerCoordinator <-->|5. 保存分布式状态元数据| DistributedStorage["持久化 HDFS / S3 镜像库"]
+  JobManagerCoordinator <--->|5. 保存分布式状态元数据| DistributedStorage["持久化 HDFS / S3 镜像库"]
 ```
 
 <DesignIntent
@@ -109,7 +109,7 @@ Flink 集群的作业编译、执行与状态管理架构如下：
 ```mermaid
 graph LR
   UpstreamStreams["上游消息队列 (Kafka / Pulsar)"] -->|1. 实时事件流| FlinkCluster["Flink 计算集群 (JobManager + TaskManagers)"]
-  FlinkCluster <-->|2. 定期备份异步 Checkpoint| DistributedSnapshotStore["远程对象存储 (S3 / HDFS)"]
+  FlinkCluster <--->|2. 定期备份异步 Checkpoint| DistributedSnapshotStore["远程对象存储 (S3 / HDFS)"]
   FlinkCluster -->|3. 端到端 2PC 精确一次写入| DownstreamSink["下游数仓 / 数据库 (Kafka / ClickHouse)"]
 ```
 
@@ -143,8 +143,8 @@ graph TB
   KafkaCluster -->|1. Data Stream| Slot1
   Slot1 -->|2. Task 网络数据传输| Slot3
   
-  Slot1 <-->|3. 读写局部 Keyed State| LocalState1
-  Slot3 <-->|4. 读写局部 Keyed State| LocalState2
+  Slot1 <--->|3. 读写局部 Keyed State| LocalState1
+  Slot3 <--->|4. 读写局部 Keyed State| LocalState2
   
   CheckpointCoordinator -->|5. 广播 Checkpoint Barrier 触发信号| Slot1
   LocalState1 -.->|6. 异步刷写快照文件| StorageFs

@@ -123,10 +123,10 @@ graph TB
   FrontGate -->|1. 路由检查| Placement
   Placement -->|2. 分配网络 ENI| ENIPool
   Placement -->|3. 发起调用指令| MicroVMM
-  MicroVMM <-->|4. 虚拟接口映射| KVMDriver
+  MicroVMM <--->|4. 虚拟接口映射| KVMDriver
   MicroVMM -->|5. 启动控制| JailerSandbox
   JailerSandbox --> MicroVM
-  MicroVM <-->|读写数据| SnapshotStorage["本地闪存 SSD 快照区"]
+  MicroVM <--->|读写数据| SnapshotStorage["本地闪存 SSD 快照区"]
 ```
 
 ---

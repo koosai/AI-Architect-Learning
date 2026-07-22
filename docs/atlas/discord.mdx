@@ -122,15 +122,15 @@ graph TB
     RedisCache["热点消息缓存 (Redis / Memcached)"]
   end
 
-  ClientApp <-->|WebSocket 长连接| ElixirNode
-  ElixirNode <--> SessionProcess
-  SessionProcess <-->|C 接口直接调用| RustParser
-  ElixirNode <-->|内部 RPC| RoutingEngine
-  RoutingEngine <--> GuildSupervisor
-  ElixirNode <-->|写入/读取消息| ScyllaCluster
-  ScyllaCluster <--> ScyllaNode1
-  ScyllaCluster <--> ScyllaNode2
-  ElixirNode <-->|读写热点缓存| RedisCache
+  ClientApp <--->|WebSocket 长连接| ElixirNode
+  ElixirNode <---> SessionProcess
+  SessionProcess <--->|C 接口直接调用| RustParser
+  ElixirNode <--->|内部 RPC| RoutingEngine
+  RoutingEngine <---> GuildSupervisor
+  ElixirNode <--->|写入/读取消息| ScyllaCluster
+  ScyllaCluster <---> ScyllaNode1
+  ScyllaCluster <---> ScyllaNode2
+  ElixirNode <--->|读写热点缓存| RedisCache
 ```
 
 ---

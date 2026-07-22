@@ -117,7 +117,7 @@ Auth0 / Okta 系统中 PKCE 授权码与 JWKS 微服务验签拓扑结构如下�
 graph LR
   SPAClient["单页应用 SPA / App"] -->|1. PKCE 登录授权| Auth0Server["Auth0 / Okta IDaaS Server"]
   SPAClient -->|2. Bearer JWT 请求| APIGateway["API Gateway / Microservice"]
-  APIGateway <-->|3. 0 查库获取公钥| JWKSEndpoint["Auth0 JWKS Endpoint"]
+  APIGateway <--->|3. 0 查库获取公钥| JWKSEndpoint["Auth0 JWKS Endpoint"]
 ```
 
 ### 3b. Container Diagram (容器架构)

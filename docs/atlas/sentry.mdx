@@ -57,7 +57,7 @@ graph TD
   
   RelayProxy -->|4. 异步削峰写入| KafkaStream["Kafka 消息队列 (Event Stream)"]
   KafkaStream -->|5. 消费并持久化| SnubaLayer["Snuba (ClickHouse 列存抽象服务)"]
-  SnubaLayer <-->|6. 聚合查询与大屏展示| SentryWebUI["Sentry Web UI / 告警通知"]
+  SnubaLayer <--->|6. 聚合查询与大屏展示| SentryWebUI["Sentry Web UI / 告警通知"]
 ```
 
 <DesignIntent
@@ -110,7 +110,7 @@ Sentry 系统中边缘 Relay 接收与后端 Kafka / Snuba 存储拓扑如下：
 ```mermaid
 graph LR
   SDKs["客户端 SDKs (Browser, iOS, Android, Node)"] -->|1. 上报 Event Envelope| Relay["Sentry Relay (Rust 边缘代理)"]
-  Relay <-->|2. 配额限制| Redis["Redis Quota"]
+  Relay <--->|2. 配额限制| Redis["Redis Quota"]
   Relay -->|3. 削峰写入| Kafka["Kafka Event Bus"]
   Kafka -->|4. 批量消费持久化| Snuba["Snuba + ClickHouse 数据服务"]
 ```
@@ -138,7 +138,7 @@ graph TB
   end
 
   SDKs["App SDKs"] -->|1. 发送 HTTP Envelope| RelayRust
-  RelayRust <-->|2. 校验限流| RedisStore
+  RelayRust <--->|2. 校验限流| RedisStore
   RelayRust -->|3. 内存脱敏| PIIScrubber
   RelayRust -->|4. 写入队列| KafkaQueue
   

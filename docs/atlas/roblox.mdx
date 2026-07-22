@@ -113,9 +113,9 @@ Roblox 系统中 Luau 脚本沙箱与 Network Ownership 拓扑结构如下：
 ```mermaid
 graph LR
   UGCCode["非信任 Luau 脚本"] -->|1. 运行在沙箱内| LuauVM["Luau VM & Security Boundary"]
-  LuauVM <-->|2. 修改属性| DataModel["DataModel DOM Tree"]
-  DataModel <-->|3. 物理计算派发| NetworkOwnership["Network Ownership Engine"]
-  NetworkOwnership <-->|4. 客户端卸载物理| ClientGPU["Player Client Physics"]
+  LuauVM <--->|2. 修改属性| DataModel["DataModel DOM Tree"]
+  DataModel <--->|3. 物理计算派发| NetworkOwnership["Network Ownership Engine"]
+  NetworkOwnership <--->|4. 客户端卸载物理| ClientGPU["Player Client Physics"]
 ```
 
 ### 3b. Container Diagram (容器架构)
@@ -134,8 +134,8 @@ graph TB
     PlayerB["Player B Client (仅接收位置复制)"]
   end
 
-  LuauSandboxGroup <--> DataModelDOM
-  DataModelDOM <--> OwnershipController
+  LuauSandboxGroup <---> DataModelDOM
+  DataModelDOM <---> OwnershipController
   OwnershipController -- "1. 派发 NetworkOwnership" --> PlayerA
   PlayerA -- "2. 回传物理坐标" --> SanityChecker
   SanityChecker --> DataModelDOM

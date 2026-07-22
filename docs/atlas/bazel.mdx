@@ -51,7 +51,7 @@ graph TD
   
   subgraph ExecutionEngine["Bazel 物理执行引擎"]
     ActionGraph -->|3. 计算 Action SHA256 Key| HashEngine["Action Digest 计算 (Inputs Hash)"]
-    HashEngine <-->|4. 查询/命中毒热缓存| RemoteCAS["远程 CAS 缓存 (Content-Addressed Storage)"]
+    HashEngine <--->|4. 查询/命中毒热缓存| RemoteCAS["远程 CAS 缓存 (Content-Addressed Storage)"]
     
     HashEngine -.->|5. 未命中 -> 派发云端| RBEWorkers["Remote Build Execution (RBE 集群)"]
     HashEngine -.->|6. 未命中 -> 本地执行| LocalSandbox["Linux Namespace 物理沙箱"]
@@ -112,8 +112,8 @@ Bazel 构建引擎与远程 RBE / CAS 拓扑结构如下：
 ```mermaid
 graph LR
   Developer["开发者 / CI 节点"] -->|1. 执行 bazel build //...| BazelClient["Bazel Client & Daemon"]
-  BazelClient <-->|2. 查/存 SHA256 Action 缓存| CASServer["远程 CAS 缓存服务器 (S3 / gRPC)"]
-  BazelClient <-->|3. 派发编译任务| RBECluster["RBE 远程构建集群 (数万核 Worker)"]
+  BazelClient <--->|2. 查/存 SHA256 Action 缓存| CASServer["远程 CAS 缓存服务器 (S3 / gRPC)"]
+  BazelClient <--->|3. 派发编译任务| RBECluster["RBE 远程构建集群 (数万核 Worker)"]
 ```
 
 ### 3b. Container Diagram (容器架构)

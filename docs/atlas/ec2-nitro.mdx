@@ -198,7 +198,7 @@ graph TD
   NitroHypervisor -->|2. 物理剥夺 CPU/内存核心| PhysicalCores["指定的物理 CPU 与内存分区"]
   
   PhysicalCores -->|3. 独立装载运行| EnclaveSandbox["Nitro Enclave 沙箱 (无网卡/无磁盘)"]
-  ParentVM <-->|4. 仅允许使用 vSock 通道加密通信| EnclaveSandbox
+  ParentVM <--->|4. 仅允许使用 vSock 通道加密通信| EnclaveSandbox
 ```
 
 - **隔离性**：Nitro Enclave 沙箱内部绝对没有外接网络，无法直连物理硬盘。父虚拟机（Parent VM）的 root 超级用户也无法通过内核态窥探 Enclave 的内存空间。数据交换被强行限制在 Zircon-like 环路 vSock 加密通道中，是密码学密钥存储与敏感机密训练的终极隔离墙。

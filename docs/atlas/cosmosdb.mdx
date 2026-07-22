@@ -106,7 +106,7 @@ Cosmos DB 的全球多活读写拓扑与底层复制架构如下：
 graph LR
   US_User["美国用户 (Client US)"] -->|1. 读写本地实例| US_Datacenter["东美 Cosmos DB 实例 (多主)"]
   Asia_User["亚洲用户 (Client Asia)"] -->|2. 读写本地实例| Asia_Datacenter["东亚 Cosmos DB 实例 (多主)"]
-  US_Datacenter <-->|3. 跨大洋异步 RTPS 复制通道| Asia_Datacenter
+  US_Datacenter <--->|3. 跨大洋异步 RTPS 复制通道| Asia_Datacenter
   CosmosController["Cosmos 全球资源管理器"] -->|4. 动态调整复制分区| US_Datacenter
 ```
 
@@ -139,8 +139,8 @@ graph TB
   ApiLayer_US --> CoordinationGroup_US
   CoordinationGroup_US --> StorageEngine_US
   
-  CoordinationGroup_US <-->|3. 异步跨洲数据同步| ReplicationLayer_US
-  ReplicationLayer_US <-->|4. 跨大洋物理光纤通道| ReplicationLayer_Asia
+  CoordinationGroup_US <--->|3. 异步跨洲数据同步| ReplicationLayer_US
+  ReplicationLayer_US <--->|4. 跨大洋物理光纤通道| ReplicationLayer_Asia
   
   ReplicationLayer_US -->|5. 遇到多主并发冲突查询| GlobalConsensus
   LwwClock -.->|校验时钟戳| StorageEngine_US

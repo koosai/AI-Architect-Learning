@@ -56,12 +56,12 @@ graph TD
     
     subgraph InsidePod["Pod 101 内部独立栈"]
       Pod101 --> RailsApp["Rails App 实例 (无状态)"]
-      RailsApp <-->|3. 原子预扣减| RedisPod["Pod 专属 Redis (Lua 脚本防超卖)"]
-      RailsApp <-->|4. 异步落盘| MySQLPod["Pod 专属 Sharded MySQL"]
+      RailsApp <--->|3. 原子预扣减| RedisPod["Pod 专属 Redis (Lua 脚本防超卖)"]
+      RailsApp <--->|4. 异步落盘| MySQLPod["Pod 专属 Sharded MySQL"]
     end
   end
 
-  DedicatedPod <-->|5. 大流量完全物理隔离| DedicatedMySQL["Dedicated MySQL (不影响其他 Pod!)"]
+  DedicatedPod <--->|5. 大流量完全物理隔离| DedicatedMySQL["Dedicated MySQL (不影响其他 Pod!)"]
 ```
 
 <DesignIntent
@@ -113,7 +113,7 @@ Shopify 系统中边缘路由与多 Pod 物理隔离拓扑结构如下：
 ```mermaid
 graph LR
   Shopper["消费者 / 浏览器"] -->|1. 访问 shop.com| EdgeRouter["Shopify Edge Router"]
-  EdgeRouter <-->|2. 查找 Tenant -> Pod 映射| SortingHat["Sorting Hat (租户路由数据库)"]
+  EdgeRouter <--->|2. 查找 Tenant -> Pod 映射| SortingHat["Sorting Hat (租户路由数据库)"]
   EdgeRouter -->|3. 精准转发| TargetPod["Target Pod N (物理隔离容器栈)"]
 ```
 
@@ -143,14 +143,14 @@ graph TB
     BigQueryWarehouse["Snowflake / BigQuery 归集数仓"]
   end
 
-  EdgeHAProxy <-->|1. 查商户所属 Pod| SortingHatDB
+  EdgeHAProxy <--->|1. 查商户所属 Pod| SortingHatDB
   EdgeHAProxy --"2a. 商户 A 属于 Pod 1"--> RailsInst1
   EdgeHAProxy --"2b. 网红商户 B 属于 Pod 999"--> RailsInst999
 
-  RailsInst1 <-->|3. Lua 原子扣减| Redis1
+  RailsInst1 <--->|3. Lua 原子扣减| Redis1
   RailsInst1 -->|4. 异步订单写入| MySQL1
   
-  RailsInst999 <-->|5. 极速 Lua 扣减| Redis999
+  RailsInst999 <--->|5. 极速 Lua 扣减| Redis999
   RailsInst999 -->|6. 异步订单写入| MySQL999
   
   MySQL1 & MySQL999 -.->|7. Binlog CDC / Kafka| KafkaCluster

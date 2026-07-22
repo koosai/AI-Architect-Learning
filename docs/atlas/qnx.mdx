@@ -102,7 +102,7 @@ graph LR
   Sensor["雷达 / 倒车影像外设"] -->|1. 硬件中断信号| QNUKernel["QNX Neutrino 微内核 (Ring 0)"]
   QNUKernel -->|2. 中断重定向分发| UserDriver["用户态驱动 (Ring 3 Driver)"]
   UserDriver -->|3. 同步 IPC 回应数据| DashboardApp["液晶仪表盘程序 (ASIL B 级)"]
-  QNUKernel <-->|4. 算力分区限制| APS_System["APS 自适应分区管理器"]
+  QNUKernel <--->|4. 算力分区限制| APS_System["APS 自适应分区管理器"]
 ```
 
 ### 3b. Container Diagram (容器架构)
@@ -139,14 +139,14 @@ graph TB
   Dashboard -->|1. MsgSend 同步请求数据| FileService
   FileService -->|2. MsgReply 解封应答| Dashboard
   
-  DisplayDriver <-->|3. 屏幕绘制 IPC| Dashboard
+  DisplayDriver <--->|3. 屏幕绘制 IPC| Dashboard
   SLM -->|4. 实时信号监控与自动重启| FileService
   
-  IPCRouter <--> Scheduler
-  Scheduler <--> InterruptMgr
+  IPCRouter <---> Scheduler
+  Scheduler <---> InterruptMgr
   
-  InterruptMgr <-->|5. 中断路由到用户态驱动| NVIC
-  Scheduler <-->|6. 配置硬件页表| AppleSilicon
+  InterruptMgr <--->|5. 中断路由到用户态驱动| NVIC
+  Scheduler <--->|6. 配置硬件页表| AppleSilicon
 ```
 
 ---

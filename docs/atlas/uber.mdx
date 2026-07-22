@@ -148,9 +148,9 @@ graph TB
   RiderApp["乘客端手机 APP (Rider)"]:::client -->|1. 发起乘车请求与经纬度| UberGateway["Uber API 接入网关"]:::main
   DriverApp["司机端手机 APP (Driver)"]:::client -->|2. 每 4 秒上传 GPS 轨迹心跳| UberGateway
   
-  UberGateway <-->|3. 司乘就近撮合匹配| DiscoDispatch["DISCO 实时调度引擎集群"]:::main
+  UberGateway <--->|3. 司乘就近撮合匹配| DiscoDispatch["DISCO 实时调度引擎集群"]:::main
   
-  DiscoDispatch <-->|4. 物理行程流水落盘| DocstoreCluster["Docstore 分片数据库集群"]:::third
+  DiscoDispatch <--->|4. 物理行程流水落盘| DocstoreCluster["Docstore 分片数据库集群"]:::third
 ```
 
 ### 3b. Container Diagram (容器结构图)
@@ -170,7 +170,7 @@ graph TB
   H3Resolver -->|2. 哈希 Ringpop 寻址路由| DiscoNodeB["DISCO 调度节点-B (旧金山码头区 Owner)"]:::dispatch
   
   subgraph RingpopCluster ["Ringpop 去中心化对等网络 (SWIM 协议广播)"]
-    DiscoNodeA <-->|3. gossip 心跳健康度比对| DiscoNodeB
+    DiscoNodeA <--->|3. gossip 心跳健康度比对| DiscoNodeB
   end
   
   DiscoNodeA -->|4. 达成匹配，生成行程| DocstoreClient["Docstore 存取客户端"]:::database

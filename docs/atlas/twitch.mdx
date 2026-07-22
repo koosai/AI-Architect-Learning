@@ -115,9 +115,9 @@ Twitch 系统的实时视频转码与 TMI 弹幕扇出网关拓扑结构如下�
 ```mermaid
 graph LR
   Broadcaster["主播 (OBS / RTMP)"] -->|1. 实时视频推流| IngestEdge["Twitch Ingest Edge"]
-  IngestEdge <-->|2. GOP 实时转码| TranscodeFarm["Transcode Farm (GPU 集群)"]
+  IngestEdge <--->|2. GOP 实时转码| TranscodeFarm["Transcode Farm (GPU 集群)"]
   TranscodeEdge["AWS IVS / Twitch Edge"] <-->|3. LL-HLS 低延迟切片播放| Viewer["观众 Client"]
-  Viewer <-->|4. WebSocket 弹幕收发| TMISystem["TMI 聊天扇出系统"]
+  Viewer <--->|4. WebSocket 弹幕收发| TMISystem["TMI 聊天扇出系统"]
 ```
 
 ### 3b. Container Diagram (容器架构)
@@ -147,7 +147,7 @@ graph TB
   GPUTranscoder --> LLHLSServer
   LLHLSServer --> EdgePOPNode
 
-  WSFronting <-->|1. 投递弹幕| RedisPubSubCluster
+  WSFronting <--->|1. 投递弹幕| RedisPubSubCluster
   RedisPubSubCluster --> FanoutWorker
   FanoutWorker --> RingBufferQueue
   RingBufferQueue -->|2. 批量推送到| WSFronting

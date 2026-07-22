@@ -45,7 +45,7 @@ VxWorks 被设计为航空级硬实时操作系统的核心目标：
 graph TD
   SpaceSystem["航天器控制系统"] -->|微秒级抢占| WindKernel["VxWorks Wind 内核 (硬实时)"]
   WindKernel -->|Mutex 保护共享总线| DataBus["信息交换总线 (Information Bus)"]
-  WindKernel <-->|喂狗信号| Watchdog["物理看门狗芯片"]
+  WindKernel <--->|喂狗信号| Watchdog["物理看门狗芯片"]
   Watchdog -->|超时未喂狗触发| HWReset["物理强制整机断电重启"]
 ```
 
@@ -100,7 +100,7 @@ VxWorks 操作系统的整体硬件对齐与 Pathfinder 系统任务级隔离如
 ```mermaid
 graph LR
   WatchdogHardware["看门狗芯片 (Watchdog)"] <-->|1. 喂狗信号 / 超时重启| CPU["主控计算机 (Radiation Hardened CPU)"]
-  CPU <-->|2. 硬实时调度控制| VxWorksKernel["VxWorks Wind 内核"]
+  CPU <--->|2. 硬实时调度控制| VxWorksKernel["VxWorks Wind 内核"]
   VxWorksKernel -->|3. 定时读取气象计数据| ASI_Sensor["气象传感器 (ASI/MET)"]
   VxWorksKernel -->|4. 无线电回传地球| CommTransceiver["高增益无线电通信设备"]
   VxWorksKernel -->|5. 数据写入共享总线| SharedBus["系统信息总线 (Information Bus)"]

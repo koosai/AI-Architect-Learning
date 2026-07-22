@@ -52,7 +52,7 @@ graph TD
     ETAModel -->|2. 计算预估出餐与送达时间| Dispatcher["Global Dispatcher (每 30s 全局 KM 撮合)"]
     
     subgraph BatchingEngine["Dynamic Order Batching 拼单器"]
-      Dispatcher <-->|3. 计算 H3 六边形网格顺路度| H3SpatialIndex["H3 空间网格 & 骑手 GPS 轨迹"]
+      Dispatcher <--->|3. 计算 H3 六边形网格顺路度| H3SpatialIndex["H3 空间网格 & 骑手 GPS 轨迹"]
       H3SpatialIndex -->|4. 顺路度 > 80%? 组合拼单| SingleRiderTask["打包 N 个订单为 Rider Task Batch"]
     end
   end
@@ -108,7 +108,7 @@ mindmap
 ```mermaid
 graph LR
   Customer["顾客 App"] -->|1. 下单| OrderSystem["Order System"]
-  OrderSystem <-->|2. 预测送达时间| ETAEngine["ETA Deep Learning Engine"]
+  OrderSystem <--->|2. 预测送达时间| ETAEngine["ETA Deep Learning Engine"]
   OrderSystem -->|3. 提交待派订单| DispatchCluster["Real-Time Dispatch Cluster"]
   Rider["骑手 App (GPS 上报)"] <-->|4. 3s 高频 GPS & 推送 Task| DispatchCluster
 ```

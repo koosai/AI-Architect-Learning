@@ -107,7 +107,7 @@ ClickHouse 的引擎内部结构与执行流层级如下：
 ```mermaid
 graph LR
   User["BI 报表工具 / 监控系统"] -->|1. 发送海量数据过滤聚合查询| ClickHouse_Endpoint["ClickHouse 服务节点"]
-  ClickHouse_Endpoint <-->|2. 稀疏索引比对| MergeTree_Index["控制平面 (稀疏元数据)"]
+  ClickHouse_Endpoint <--->|2. 稀疏索引比对| MergeTree_Index["控制平面 (稀疏元数据)"]
   ClickHouse_Endpoint -->|3. 并发批量加载所需字段| Disk_Storage["高速 SSD (列式二进制文件)"]
   Disk_Storage -->|4. 打包为 Block 送入| Vector_Engine["向量化执行器 (SIMD 并行)"]
 ```
