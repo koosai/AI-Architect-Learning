@@ -1,0 +1,42 @@
+name: 内容质量门禁 (Content Quality Gate)
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'docs/**'
+      - 'labs/**'
+      - 'scripts/quality-gate.mjs'
+      - '.github/workflows/quality-gate.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'labs/**'
+      - 'scripts/quality-gate.mjs'
+      - '.github/workflows/quality-gate.yml'
+  workflow_dispatch: {}
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 门禁不依赖任何 npm 包，纯 Node 标准库实现，无需 npm install。
+      # 当前内容仍存在 P0/P1 存量违规，治理期先用 report-only 保证可见但不红。
+      # 存量清零后，把下面这步改成 `npm run quality-gate`（严格模式，违规即 fail）。
+      - name: Run content quality gate (report-only during remediation)
+        run: node scripts/quality-gate.mjs --report-only --json | tee quality-gate-report.txt
+
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-gate-report
+          path: quality-gate-report.txt
