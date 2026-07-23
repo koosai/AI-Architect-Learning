@@ -12,7 +12,9 @@
     "serve": "docusaurus serve",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "quality-gate": "node scripts/quality-gate.mjs",
+    "quality-gate:report": "node scripts/quality-gate.mjs --report-only"
   },
   "dependencies": {
     "@docusaurus/core": "3.10.1",

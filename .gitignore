@@ -10,6 +10,7 @@
 
 # Temporary debug scripts and logs
 *.mjs
+!/scripts/quality-gate.mjs
 mermaid_errors.json
 /*.py
 !/scripts/audit_quality_gates.py
