@@ -332,7 +332,7 @@ timeline
 在下方控制台中调试 TikTok 流量池晋级与客户端首 2 秒预加载仿真代码，观察短视频分发：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="短视频冷启动分发与边缘缓存验证成功"
   rows={25}
   code={`class Video:
     def __init__(self, video_id: str, title: str):
@@ -399,7 +399,7 @@ preloader = SmartPreloader()
 preloader.preload_next_videos(feed, current_index=0)
 preloader.swipe_next(v1)
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 短视频冷启动分发与边缘缓存验证成功")
 `}
 />
 

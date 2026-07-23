@@ -352,7 +352,7 @@ timeline
 在下方控制台中调试 Flink Watermark 与 Checkpoint 屏障仿真代码，观察乱序窗口计算与分布式快照过程：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="有状态流计算checkpoint对齐与exactly-once验证成功"
   rows={25}
   code={`class Event:
     def __init__(self, event_time: int, key: str, value: float):
@@ -414,7 +414,7 @@ print("\\n--- 4. 验证 Checkpoint 1 状态持久化未受后续故障破坏 ---
 print(f"历史 Checkpoint 1 保存的状态镜像: {op.checkpoint_store[1]}")
 print(f"当前算子最新的实时状态: {op.state}")
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 有状态流计算checkpoint对齐与exactly-once验证成功")
 `}
 />
 

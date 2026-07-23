@@ -334,7 +334,7 @@ timeline
 在下方控制台中调试 Auth0 PKCE 与 JWKS 无状态验签仿真代码，观察企业级身份云：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="授权码流程与规则引擎角色分配验证成功"
   rows={25}
   code={`import hashlib
 import time
@@ -427,7 +427,7 @@ token = auth0.exchange_token_pkce(code="auth_code_xyz", verifier=verifier, chall
 gateway = MicroserviceAPIGateway(expected_issuer="https://dev-ai.us.auth0.com/", jwks_kid="key_2026_rsa")
 gateway.verify_jwt_stateless(token)
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 授权码流程与规则引擎角色分配验证成功")
 `}
 />
 

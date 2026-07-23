@@ -338,7 +338,7 @@ timeline
 在下方控制台中调试 Cosmos DB 仿真代码，观察五档柔性一致性是如何处理数据分歧的：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="五级一致性Bounded与Session读验证成功"
   rows={25}
   code={`class CosmosReplica:
     def __init__(self, location: str, lag_cycles: int):
@@ -449,6 +449,7 @@ db.read_data(client_location="East_Asia", level="Bounded_Staleness") # 全局 V5
 
 print("\\n--- 4. Session 会话写后读测试 (客户端曾写入 V4，持有 token V4) ---")
 db.read_data(client_location="East_Asia", level="Session", client_session_token=4) # 触发写后读机制，返回 V4
+print("[Gate] 五级一致性Bounded与Session读验证成功")
 `}
 />
 

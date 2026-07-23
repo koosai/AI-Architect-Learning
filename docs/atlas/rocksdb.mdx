@@ -346,7 +346,7 @@ timeline
 在下方控制台中调试 RocksDB LSM-Tree 与 Bloom Filter 仿真代码，观察数据刷盘与读取拦截过程：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="LSM memtable刷盘与compaction验证成功"
   rows={25}
   code={`class MockBloomFilter:
     def __init__(self, keys: list):
@@ -438,7 +438,7 @@ db.get("user_101") # 应命中 SST_1
 print("\\n--- 3. 检索不存在的 Key (测试 Bloom Filter 拦截能力) ---")
 db.get("user_999") # Bloom Filter 应当成功拦截并跳过磁盘读取
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] LSM memtable刷盘与compaction验证成功")
 `}
 />
 

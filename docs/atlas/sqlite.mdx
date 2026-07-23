@@ -369,7 +369,7 @@ timeline
 在下方控制台中调试 SQLite Pager 与 WAL 仿真代码，观察预写日志追加与 Checkpoint 刷盘过程：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="单文件B-tree页与WAL事务验证成功"
   rows={25}
   code={`class WalManager:
     def __init__(self):
@@ -454,7 +454,7 @@ print("\\n--- 5. Checkpoint 后再次验证读操作与主 DB 文件 ---")
 pager.read_page(2)
 print(f"[检查主 DB 文件] 主 .db 文件中的 Page 2 已被成功更新: '{pager.db_file[2]}'")
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 单文件B-tree页与WAL事务验证成功")
 `}
 />
 

@@ -347,7 +347,7 @@ timeline
 在下方控制台中调试 支付宝 LDC 单元化路由与 Paxos 写入仿真代码，观察异地多活与金融级高可用：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="双11单元化LDC路由与洪峰限流验证成功"
   rows={25}
   code={`import hashlib
 
@@ -408,7 +408,7 @@ cell_a.process_payment(user_a, 199.00)
 cell_b = router.route_user(user_b)
 cell_b.process_payment(user_b, 599.00)
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 双11单元化LDC路由与洪峰限流验证成功")
 `}
 />
 

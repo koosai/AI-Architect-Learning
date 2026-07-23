@@ -294,7 +294,7 @@ timeline
 在下方控制台中调试 Vercel 的 ISR / SWR 仿真代码，观察缓存新鲜度转移与异步后台执行的生命周期：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="不可变构建产物与边缘ISR验证成功"
   rows={25}
   code={`class VercelEdgeCache:
     def __init__(self):
@@ -359,6 +359,7 @@ vercel.request_page("/home")
 # 4. 时钟走到 t=15 (在 t=12 时已完成重建)，用户再次查询，此时应能直接读取到重建后的 v2 新页面
 vercel.clock = 15
 vercel.request_page("/home")
+print("[Gate] 不可变构建产物与边缘ISR验证成功")
 `}
 />
 

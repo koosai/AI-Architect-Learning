@@ -351,7 +351,7 @@ timeline
 在下方控制台中调试 Cassandra 无主一致性仿真代码，观察可调一致性参数对 CAP 定理折中的实际影响：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="无主复制可调一致性与提示移交验证成功"
   rows={25}
   code={`class ReplicaNode:
     def __init__(self, node_id: int):
@@ -480,6 +480,7 @@ nodes[1].is_online = True
 
 # 6. 执行强一致读：CL = QUORUM。此时会核对 2 个节点，自动发现 Node_3 的过期，并触发 Read Repair
 coord.read("user_profile", cl="QUORUM")
+print("[Gate] 无主复制可调一致性与提示移交验证成功")
 `}
 />
 

@@ -330,7 +330,7 @@ timeline
 在下方控制台中调试 Minecraft Tick 循环与区域多线程隔离仿真代码，观察游戏服务端：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="区块加载与tick循环调度验证成功"
   rows={25}
   code={`import time
 import threading
@@ -378,7 +378,7 @@ region_chicken_farm.start()
 region_spawn.join()
 region_chicken_farm.join()
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 区块加载与tick循环调度验证成功")
 `}
 />
 

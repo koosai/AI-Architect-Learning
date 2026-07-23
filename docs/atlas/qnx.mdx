@@ -323,7 +323,7 @@ timeline
 在下方控制台中运行准备好的同步 IPC 仿真程序，通过改变调用顺序，观察通道是如何对发送方执行硬性时钟阻塞控制的：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="微内核消息传递与确定性延迟验证成功"
   rows={25}
   code={`class Message:
     def __init__(self, sender_id: str, content: str):
@@ -391,6 +391,7 @@ if server_msg:
 # 5. 验证客户端被唤醒后，成功得到数据并恢复就绪
 if client_token.replied:
     print(f"\\n[Thread 'Dashboard_App'] 重新获得 CPU 调度，读取到应答: '{client_token.reply_data}'")
+print("[Gate] 微内核消息传递与确定性延迟验证成功")
 `}
 />
 

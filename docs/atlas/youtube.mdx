@@ -342,7 +342,7 @@ timeline
 在下方控制台中调试 YouTube 视频微切片转码与 DASH 动态自适应码率仿真代码，观察流媒体自适应分发：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="上传转码多码率分发与Vitess分库验证成功"
   rows={25}
   code={`class VideoChunk:
     def __init__(self, chunk_id: int, start_sec: int, duration_sec: int, resolution: str):
@@ -395,7 +395,7 @@ bandwidth_timeline = [25.0, 22.0, 5.0, 4.5]
 player = DASHPlayer()
 player.play_stream(manifest, bandwidth_timeline)
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 上传转码多码率分发与Vitess分库验证成功")
 `}
 />
 

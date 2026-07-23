@@ -334,7 +334,7 @@ timeline
 在下方控制台中调试 DNS 递归查询与 EDNS0 ECS 智能调度仿真代码，观察互联网隐形中枢：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="层级委托解析与TTL缓存过期验证成功"
   rows={25}
   code={`import time
 
@@ -409,7 +409,7 @@ time.sleep(6)
 # 4. 再次查询 (触发 TTL 过期刷新重新查询)
 resolver.query("ai-architect.org", client_ip="116.228.10.55")
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 层级委托解析与TTL缓存过期验证成功")
 `}
 />
 

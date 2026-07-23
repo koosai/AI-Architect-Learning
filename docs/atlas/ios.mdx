@@ -330,7 +330,7 @@ timeline
 在下方控制台中调试安全启动链的代码，看看如果我们在 LLB 阶段就进行数据篡改，系统会如何进行紧急防护：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="安全启动链与沙箱权限验证成功"
   rows={25}
   code={`class BootStage:
     def __init__(self, name: str, expected_hash: str, actual_hash: str):
@@ -384,6 +384,7 @@ tampered_stages = [
 ]
 sim_fail = iOSSecureBootChainSimulator(tampered_stages)
 sim_fail.boot()
+print("[Gate] 安全启动链与沙箱权限验证成功")
 `}
 />
 

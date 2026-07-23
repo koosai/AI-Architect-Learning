@@ -326,7 +326,7 @@ timeline
 在下方控制台中调试 Sentry 堆栈脱敏与 Fingerprint 指纹归平仿真代码，观察错误海啸中的数据提炼：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="错误指纹聚合与洪峰削峰验证成功"
   rows={25}
   code={`import re
 import hashlib
@@ -404,7 +404,7 @@ fp3 = relay.compute_fingerprint(evt3)
 print(f"📩 原始消息脱敏后: '{msg3}' | 计算指纹 Key: {fp3[:8]}")
 backend.process_event(fp3, evt3, msg3)
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 错误指纹聚合与洪峰削峰验证成功")
 `}
 />
 

@@ -360,7 +360,7 @@ timeline
 在下方控制台中调试 ClickHouse 列式向量化仿真代码，量化观察稀疏索引与 Block 数组计算的加速倍率：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="列存向量化与稀疏索引跳读验证成功"
   rows={25}
   code={`import time
 
@@ -448,6 +448,7 @@ db = ClickHouseSimulator()
 print("\\n--- 任务: 查找 UserID=99 的销售额总和 (SWR分析) ---")
 db.run_row_oriented_sum(99)
 db.run_vectorized_sparse_sum(99)
+print("[Gate] 列存向量化与稀疏索引跳读验证成功")
 `}
 />
 

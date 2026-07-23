@@ -348,7 +348,7 @@ timeline
 在下方控制台中调试 Iceberg Snapshot 与时间旅行仿真代码，观察元数据提交与历史回溯过程：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="快照隔离与元数据层时间旅行验证成功"
   rows={25}
   code={`import time
 
@@ -425,7 +425,7 @@ table.scan_current()
 print("\\n--- 4. 执行时间旅行：回溯查询 Snapshot 1 的历史数据 ---")
 table.scan_time_travel(target_snapshot_id=1)
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 快照隔离与元数据层时间旅行验证成功")
 `}
 />
 

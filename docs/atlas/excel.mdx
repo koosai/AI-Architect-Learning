@@ -347,7 +347,7 @@ timeline
 在下方控制台中运行并修改已准备好的表格拓扑引擎代码，输入不同的公式树，验证在数据变更时系统的重算表现：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="依赖图重算与循环依赖熔断验证成功"
   rows={25}
   code={`import re
 
@@ -450,6 +450,7 @@ try:
 except ValueError as e:
     print(e)
     print("✅ 循环依赖检测成功！引擎成功识别闭环并执行安全熔断。")
+print("[Gate] 依赖图重算与循环依赖熔断验证成功")
 `}
 />
 

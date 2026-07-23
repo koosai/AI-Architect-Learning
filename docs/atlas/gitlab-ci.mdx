@@ -326,7 +326,7 @@ timeline
 在下方控制台中调试 GitLab CI DAG 拓扑调度与 Runner 轮询仿真代码，观察依赖解锁与并发执行：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="流水线DAG调度与Runner隔离验证成功"
   rows={25}
   code={`class CIJob:
     def __init__(self, name: str, needs: list, duration_sec: int):
@@ -408,7 +408,7 @@ runner.run_step()
 # Step 4: 最后执行 test_app
 runner.run_step()
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 流水线DAG调度与Runner隔离验证成功")
 `}
 />
 

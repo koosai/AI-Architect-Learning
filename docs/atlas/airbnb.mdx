@@ -349,7 +349,7 @@ timeline
 在下方控制台中调试 Airbnb 搜推重排与日历防重锁仿真代码，观察非标搜推与交易一致性：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="日历房态锁定与并发预订防冲突验证成功"
   rows={25}
   code={`import math
 
@@ -425,7 +425,7 @@ booking_block.book_date(top_pick.listing_id, "2026-10-01")
 # 再次重复预订同一天
 booking_block.book_date(top_pick.listing_id, "2026-10-01")
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 日历房态锁定与并发预订防冲突验证成功")
 `}
 />
 

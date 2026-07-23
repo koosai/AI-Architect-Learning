@@ -346,7 +346,7 @@ timeline
 在下方控制台中调试 Gang 调度锁与 NVLink 拓扑感知仿真代码，观察 GPU 集群调度：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="gang scheduling与拓扑感知调度验证成功"
   rows={25}
   code={`class GPUNode:
     def __init__(self, node_id: int, free_gpus=8, nvlink_ok=True):
@@ -397,7 +397,7 @@ scheduler.schedule_pod_group("LLaMA3_Pretrain_Job", min_available=8, require_nvl
 print("\\n--- 2. 提交作业 B (要求 6 卡) -> 尝试申请但全局仅剩 4 卡 ---")
 scheduler.schedule_pod_group("Eval_Job_B", min_available=6, require_nvlink=False)
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] gang scheduling与拓扑感知调度验证成功")
 `}
 />
 

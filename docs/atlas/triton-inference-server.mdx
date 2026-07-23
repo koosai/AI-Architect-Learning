@@ -342,7 +342,7 @@ timeline
 在下方控制台中调试 Triton 动态批处理与多后端分发仿真代码，观察高吞吐 AI 推理：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="多框架动态批处理与模型集成验证成功"
   rows={25}
   code={`import time
 import queue
@@ -394,7 +394,7 @@ print("\\n--- 3. 提交 1 个剩余单请求 -> 触发 5ms 时间窗口超时强
 triton.submit_request("Req_05", 50.0)
 triton.flush_if_needed(force=True)
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 多框架动态批处理与模型集成验证成功")
 `}
 />
 

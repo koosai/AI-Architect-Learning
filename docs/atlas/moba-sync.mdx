@@ -336,7 +336,7 @@ timeline
 在下方控制台中调试 MOBA 确定性帧同步与断线追帧仿真代码，观察实时游戏同步：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="帧同步确定性锁步与断线重连验证成功"
   rows={25}
   code={`class BattleRelayServer:
     def __init__(self):
@@ -407,7 +407,7 @@ client_iOS.apply_frame(frame3)
 # Android 客户端发起追帧重连，从服务器拉取 frame2 与 frame3 历史帧
 client_Android.chase_frames(server.frame_history[1:]) # 从 index 1 (Frame 2) 开始追
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 帧同步确定性锁步与断线重连验证成功")
 `}
 />
 
@@ -457,7 +457,10 @@ print("\\n[Result] 分片路由与隔离验证成功")
 
 ## 来源
 
-- [High-Performance Real-Time Frame Synchronization Architecture in Honor of Kings (Tencent GDC Technical Presentation)](https://game.qq.com/)
-- [Deterministic Lockstep and Fixed-Point Math Mechanics for Mobile MOBA (IEEE Transactions on Games)](https://ieeexplore.ieee.org/)
-- [Reliable UDP (KCP) and FEC Forward Error Correction in Weak Cellular Networks (ACM Queue Systems)](https://queue.acm.org/)
-- [Frame Chase Reconnection and Deterministic State Machine Practice (Unity Developer Manual)](https://docs.unity3d.com/)
+:::caution 关于来源与置信度
+本案例的具体数值与实现细节为**基于公开技术分享的教学重构**，非官方架构文档。帧同步（Lockstep）、确定性定点数运算、追帧重连等机制有公开资料佐证；具体到某一款游戏的内部参数请以官方为准。下列为可延伸查证的公开资料方向（按名称检索）：
+:::
+
+- 腾讯游戏 / 游戏开发者大会（GDC）关于《王者荣耀》帧同步方案的公开技术分享。
+- 帧同步 vs 状态同步、确定性锁步（Deterministic Lockstep）的通用原理 —— 见公开的实时多人游戏网络同步资料。
+- KCP（可靠 UDP 协议，开源项目）与 FEC 前向纠错在弱网下的应用。

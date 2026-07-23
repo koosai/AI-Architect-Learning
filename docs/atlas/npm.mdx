@@ -318,7 +318,7 @@ timeline
 在下方控制台中调试 pnpm 内容寻址与 Hardlink 依赖树仿真代码，观察物理磁盘去重过程：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="依赖解析与CDN分发缓存验证成功"
   rows={25}
   code={`import hashlib
 
@@ -367,7 +367,7 @@ engine.install("Project_Beta", "lodash", "4.17.21", pkg_code)
 
 print(f"\\n📊 [Disk Summary] 全局 CAS 真正占用的物理包数量: {len(cas_store.files)} (实现 100% 磁盘去重!)")
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 依赖解析与CDN分发缓存验证成功")
 `}
 />
 

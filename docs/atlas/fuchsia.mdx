@@ -362,7 +362,7 @@ timeline
 在下方控制台中调试 Zircon 句柄安全控制仿真代码，观察能力安全机制是如何隔离与防护物理内存的：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="能力安全微内核与组件隔离验证成功"
   rows={25}
   code={`class ZirconObject:
     def __init__(self, obj_id: str, content: str = ""):
@@ -479,6 +479,7 @@ except SecurityException as e:
     print(e)
 
 print("\\n=== 仿真验证完毕：Zircon 能力检查机制成功拦截了全部访问漏洞！ ===")
+print("[Gate] 能力安全微内核与组件隔离验证成功")
 `}
 />
 

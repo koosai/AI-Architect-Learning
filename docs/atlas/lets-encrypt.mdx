@@ -326,7 +326,7 @@ timeline
 在下方控制台中调试 ACME 自动化校验与 90 天证书续期仿真代码，观察自动化 PKI 架构：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="ACME HTTP-01校验与90天证书轮转验证成功"
   rows={25}
   code={`import time
 
@@ -397,7 +397,7 @@ for day in range(1, 62):
     if day == 1 or day == 60:
         client.check_cron_daily(current_day=day)
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] ACME HTTP-01校验与90天证书轮转验证成功")
 `}
 />
 

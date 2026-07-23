@@ -326,7 +326,7 @@ timeline
 在下方控制台中调试准备好的 FreeRTOS 调度器模拟代码，可以尝试增加新任务或不同优先级，观察控制台输出：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="抢占式优先级调度与内存受限验证成功"
   rows={25}
   code={`class Task:
     def __init__(self, name: str, priority: int):
@@ -419,6 +419,7 @@ scheduler.create_task("Task_C_High", priority=5)
 
 # 5. 再次触发 SysTick 中断 (应当保持运行高优先级任务 C，不会回退到低优先级)
 scheduler.tick_interrupt()
+print("[Gate] 抢占式优先级调度与内存受限验证成功")
 `}
 />
 

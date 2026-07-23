@@ -303,7 +303,7 @@ graph LR
 在下方控制台中运行并调试已经准备好的 Jira 状态机有向流转仿真代码，修改转换验证器观察对状态变更的影响：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="工作流状态机流转与插件隔离验证成功"
   rows={25}
   code={`class Issue:
     def __init__(self, key: str, summary: str, status="To Do", assignee=None):
@@ -404,6 +404,7 @@ engine.execute_transition(issue_task, "In Review", "Developer")
 
 # D. QA 成员接手并归档完成
 engine.execute_transition(issue_task, "Done", "QA")
+print("[Gate] 工作流状态机流转与插件隔离验证成功")
 `}
 />
 

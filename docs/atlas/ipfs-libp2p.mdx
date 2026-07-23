@@ -326,7 +326,7 @@ timeline
 在下方控制台中调试 IPFS Kademlia DHT 与 BitSwap 块交换仿真代码，观察去中心化 Web 架构：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="内容寻址CID与DHT路由验证成功"
   rows={25}
   code={`import hashlib
 
@@ -392,7 +392,7 @@ provider = dht.find_providers_xor(cid)
 # 4. 通过 BitSwap 协议下载块
 data = bitswap.fetch_block(provider, cid)
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 内容寻址CID与DHT路由验证成功")
 `}
 />
 

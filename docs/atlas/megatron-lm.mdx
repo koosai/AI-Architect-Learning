@@ -314,7 +314,7 @@ timeline
 在下方控制台中调试 Megatron-LM 张量切分与 1F1B 调度仿真代码，观察大模型分布式训练：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="张量与流水线3D并行切分验证成功"
   rows={25}
   code={`import math
 
@@ -358,7 +358,7 @@ print("🎯 [TP MatMul Output] 张量切分输出向量: %s" % str(out))
 scheduler = Pipeline1F1BScheduler()
 scheduler.calculate_bubble(stages=4, micro_batches=16)
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 张量与流水线3D并行切分验证成功")
 `}
 />
 
