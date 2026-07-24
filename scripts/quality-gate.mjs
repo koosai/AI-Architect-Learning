@@ -184,6 +184,39 @@ for (const file of files) {
     }
   }
 
+  // ---- 组件参数约定 (P1)：能编译、结构齐全，但约定漂移会导致静默渲染/判分错误 ----
+  const quote = /(['"`])(?:\\.|(?!\1).)*\1/g;
+  // QuizCard: 数字 answer 须落在选项区间；选项 >= 2
+  for (const qm of content.matchAll(/options:\s*\[([\s\S]*?)\]\s*,\s*answer:\s*([^\n,]+)/g)) {
+    const nOpts = (qm[1].match(quote) || []).length;
+    const ans = qm[2].trim().replace(/,$/, '');
+    const line = lineOf(content, qm[0].slice(0, 24));
+    if (nOpts < 2) findings.p1.push(`[QUIZ] ${relPath}:${line} — QuizCard 选项仅 ${nOpts} 个`);
+    if (/^\d+$/.test(ans) && (Number(ans) < 0 || Number(ans) >= nOpts))
+      findings.p1.push(`[QUIZ] ${relPath}:${line} — QuizCard answer=${ans} 越出选项区间 0..${nOpts - 1}`);
+  }
+  // TradeoffExplorer: scores 长度须 == dimensions 长度；分值统一 0-5 刻度
+  for (const tm of content.matchAll(/<TradeoffExplorer\b/g)) {
+    const start = tm.index;
+    const nextIdx = content.indexOf('<TradeoffExplorer', start + 5);
+    const blk = content.slice(start, nextIdx === -1 ? start + 4000 : nextIdx);
+    const dm = blk.match(/dimensions=\{\[([\s\S]*?)\]\}/);
+    if (!dm) continue;
+    const nDim = (dm[1].match(quote) || []).length;
+    for (const sm of blk.matchAll(/scores:\s*\[([\d,\s.]+)\]/g)) {
+      const sc = sm[1].match(/[\d.]+/g) || [];
+      if (sc.length !== nDim) findings.p1.push(`[TRADEOFF] ${relPath}:${lineOf(content, blk.slice(0, 24))} — scores(${sc.length})≠dimensions(${nDim})`);
+      if (sc.some((x) => Number(x) > 5)) findings.p1.push(`[TRADEOFF] ${relPath} — scores 超出 0-5 刻度`);
+    }
+  }
+  // GlossaryTerm 须有 definition（P1）；ResearchNote 须有 href（P2）
+  for (const gt of content.matchAll(/<GlossaryTerm\b[^>]*>/g)) {
+    if (!/definition=/.test(gt[0])) findings.p1.push(`[GLOSSARY] ${relPath} — GlossaryTerm 缺 definition`);
+  }
+  for (const rn of content.matchAll(/<ResearchNote\b[\s\S]*?\/>/g)) {
+    if (!/href=/.test(rn[0])) findings.p2.push(`[RESEARCHNOTE] ${relPath} — ResearchNote 缺 href`);
+  }
+
   // ---- 占位引用 (P1) ----
   const urls = extractSourceUrls(content);
   const hollow = urls.filter(isHollowUrl);

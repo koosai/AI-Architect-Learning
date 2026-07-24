@@ -51,7 +51,7 @@ import PyRunner from '@site/src/components/PyRunner';
 
 ```mermaid
 graph TD
-  UserClient["全球消费者 (支付宝 App 双 11 零点秒杀)"] -->|"1. HTTP / Spanner 协议"| EdgeGW["MSPA Client & 边缘流量网关"]
+  UserClient["全球消费者 (支付宝 App 双 11 零点秒杀)"] -->|"1. HTTPS / RPC (mPaaS MGS 移动网关)"| EdgeGW["MGS Client & 边缘流量网关"]
   
   subgraph LDCUnitArchitecture ["支付宝 LDC 单元化异地多活架构')"]
     EdgeGW <--->|"2. 根据 User ID Hash 计算 Routing"| LDCRouter["LDC 动态路由网关 (Zone Router)"]

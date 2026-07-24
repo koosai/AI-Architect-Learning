@@ -414,7 +414,7 @@ Kafka 从 LinkedIn 内部的一个日志数据传输组件，演变为了世界�
   after={
     <div style={{ padding: '20px', background: '#e8f5e9', border: '1px solid #2e7d32', borderRadius: '8px', height: '100%', color: '#333' }}>
       <strong>Kafka 顺序写拉取型日志架构</strong>
-      <p style={{ marginTop: '10px', fontSize: '0.9rem' }}>采用磁盘顺序写日志，消息在保留期内永不删除。采用 Pull（拉取）模型，消费者带着 offset 自主去 Broker 批量拉数据，Broker 属于纯无状态的消息路由器。优点是吞吐高达百万级，支持重复重放消费与完美的历史积压能力；缺点是无法支持复杂的消息优先路由。</p>
+      <p style={{ marginTop: '10px', fontSize: '0.9rem' }}>采用磁盘顺序写日志，消息在保留期内永不删除。采用 Pull（拉取）模型，消费者带着 offset 自主去 Broker 批量拉数据，消费进度（offset）由消费者维护，Broker 本身不跟踪每个消费者的读位置。注意 Broker 是有状态的——它把分区日志持久化在本地磁盘上；这里"轻状态"仅指它不记录消费者进度。优点是吞吐高达百万级，支持重复重放消费与完美的历史积压能力；缺点是无法支持复杂的消息优先路由。</p>
     </div>
   }
   labels={['RabbitMQ 传统队列', 'Kafka 日志流架构']}
