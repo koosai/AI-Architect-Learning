@@ -321,6 +321,15 @@ Zoom 根据动态检测到的网络丢包率（Packet Loss Rate），实时调�
   ]}
 />
 
+## 来源
+
+:::caution 关于来源
+Zoom 未公开完整架构论文；下列为其依赖技术的一手标准，SFU 级联与弱网对抗的具体机制为**基于公开信息的教学重构**。
+:::
+
+- [RFC 8831: WebRTC Data Channels (IETF)](https://datatracker.ietf.org/doc/html/rfc8831) 及 RTCWEB 系列标准 —— 实时音视频传输的一手规范。
+- [SFU 选择性转发单元开源实现（mediasoup）](https://mediasoup.org/documentation/v3/) —— 与 Zoom 类似的 SFU 媒体路由架构的可查证参考。
+
 <ResearchNote
   title="Zoom 架构与实时音视频技术白皮书"
   source="Zoom Technical Whitepaper & Engineering Architecture"
