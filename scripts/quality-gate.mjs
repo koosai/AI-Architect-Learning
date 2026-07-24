@@ -101,7 +101,9 @@ function extractPyRunners(content) {
  */
 function extractSourceUrls(content) {
   // 注意：不能用 \b —— JS 的 \b 只识别 ASCII 词边界，"来源\b" 在中文后永不匹配。
-  const headingRe = /^#{1,4}\s.*(来源|参考文献|参考资料|参考|References|Sources)\s*$/im;
+  // 兼容三种小节标题形式：`## 来源`、`## 来源清单`、`## 11. 自测题与来源清单`。
+  // `(清单)?` 精确放行"清单"后缀，同时排除"文献参考卡片"/"(来源/标题…)"等非来源小节的误判。
+  const headingRe = /^#{1,4}\s.*(来源|参考文献|参考资料|参考|References|Sources)(清单)?\s*$/im;
   const m = content.match(headingRe);
   if (!m) return null;
   const scope = content.slice(content.indexOf(m[0]));
