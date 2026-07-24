@@ -16,10 +16,16 @@ labs 不存在、`expect` 校验被复制粘贴、来源用域名首页占位—
 |---|---|---|
 | **P0** | `LAB-REF` | 教材中引用的 `labs/...` 实验路径必须真实存在。缺失 = 学员一上手即 `No such file or directory`。 |
 | **P1** | `EXPECT-DUP` | 同一 `expect` 校验串被 ≥3 个不相干文件复制粘贴 = 招牌"运行即验证"形同虚设。 |
-| **P1** | `EXPECT-SOUND` | `<PyRunner>` 的 `expect` 串必须出现在其 `code` 输出里，否则校验绿灯永远点不亮。 |
-| **P1** | `CITE-HOLLOW`（全占位） | 某文件"来源"全是域名首页、无一条具体文章链接 = 伪造引用。 |
-| **P2** | `CITE-HOLLOW`（含占位） | 文件含个别域名首页占位引用（白名单放行 DDIA/raft 等权威单页站）。 |
-| **P2** | `STRUCT` | 正式章节图 ≥3 / 交互 ≥1 / 测验 ≥3（元信息页豁免）。 |
+| **P1** | `QUIZ` | QuizCard 数字 `answer` 须落在选项区间、选项 ≥2（防"字母答案判错"类静默 bug）。 |
+| **P1** | `TRADEOFF` | TradeoffExplorer `scores` 长度须 == `dimensions` 长度、分值统一 0–5 刻度。 |
+| **P1** | `GLOSSARY` | `<GlossaryTerm>` 须有 `definition`。 |
+| **P1** | `CITE-HOLLOW`（Atlas） | Atlas 案例来源含域名首页占位/编造引用即失败（可信度硬门禁）。 |
+| **P1** | `CITE-THIN`（Atlas） | Atlas 案例须有 ≥2 条具体一手来源。 |
+| **P2** | `EXPECT-SOUND` | `expect` 串非 code 字面量（运行时 f-string 拼接会误报，故仅提示）。 |
+| **P2** | `CITE-HOLLOW`（非 Atlas） | 非 Atlas 文档含个别域名首页占位引用（白名单放行权威官方站/规范）。 |
+| **P2** | `RESEARCHNOTE` / `STRUCT` | ResearchNote 须有 href；正式章节图 ≥3 / 交互 ≥1 / 测验 ≥3。 |
+
+> 引用检查只对"含正式『来源』小节的文档"（即 Atlas 案例）生效——课程章节用内联上下文链接、正文里的示例 URL（example.com 等）不会被误判为引用。
 
 阈值与白名单集中在脚本顶部 `THRESHOLDS` / `CANONICAL_HOMEPAGES` / `JUNK_HOSTS`，可按需调整。
 

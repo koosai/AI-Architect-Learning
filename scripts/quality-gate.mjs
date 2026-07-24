@@ -93,25 +93,40 @@ function extractPyRunners(content) {
   return blocks;
 }
 
-/** 从"来源/参考/References"小节里抽取 URL；若无该小节则退回全文 */
+/**
+ * 从"来源/参考/References"小节里抽取 URL。
+ * 只在存在正式来源小节时才返回 URL——课程章节用内联上下文链接（非来源清单），
+ * 正文里的示例 URL（example.com、acme token 等）也不应被当作引用来判。
+ * 返回 null 表示"该文档没有正式来源小节"，调用方据此跳过引用质量检查。
+ */
 function extractSourceUrls(content) {
-  const headingRe = /^#{1,4}\s*(来源|参考|参考文献|参考资料|References|Sources|来源清单)\b/im;
+  // 注意：不能用 \b —— JS 的 \b 只识别 ASCII 词边界，"来源\b" 在中文后永不匹配。
+  const headingRe = /^#{1,4}\s.*(来源|参考文献|参考资料|参考|References|Sources)\s*$/im;
   const m = content.match(headingRe);
-  const scope = m ? content.slice(content.indexOf(m[0])) : content;
-  const urls = (scope.match(/https?:\/\/[^\s)\]"'>]+/g) || []).map((u) => u.replace(/[.,);]+$/, ''));
-  return urls;
+  if (!m) return null;
+  const scope = content.slice(content.indexOf(m[0]));
+  return (scope.match(/https?:\/\/[^\s)\]"'>]+/g) || []).map((u) => u.replace(/[.,);]+$/, ''));
 }
 
 // 合法的"权威单页/单主题"引用：其主页本身即是该引用（书、协议规范、单一理念站），不算占位。
 const CANONICAL_HOMEPAGES = new Set([
   'dataintensive.net', 'raft.github.io', 'jepsen.io', '12factor.net', 'dora.dev',
-  'principlesofchaos.org', 'use-the-index-luke.com', 'hyrumslaw.com', 'highscalability.com',
-  'rocksdb.org', 'flink.apache.org', 'volcano.sh', 'slurm.schedmd.com',
+  'principlesofchaos.org', 'use-the-index-luke.com', 'hyrumslaw.com', 'www.hyrumslaw.com',
+  'highscalability.com', 'rocksdb.org', 'flink.apache.org', 'volcano.sh', 'slurm.schedmd.com',
   // 权威规范/单主题官方站——主页本身即是该引用
   'c4model.com', 'modelcontextprotocol.io', 'finops.org', 'www.finops.org',
   'adr.github.io', 'opencontainers.org', 'gdpr.eu', 'artificialintelligenceact.eu',
   'enterpriseintegrationpatterns.com', 'www.enterpriseintegrationpatterns.com',
   'continuousdelivery.com', 'luau-lang.org',
+  // 真实的官方工程博客 / 官方文档 / 作者站——是一手来源，只是链到了首页
+  'netflixtechblog.com', 'slack.engineering', 'engineering.atspotify.com', 'backstage.io',
+  'qnx.com', 'www.qnx.com', 'bazel.build', 'emscripten.org', 'developer.nvidia.com',
+  'developer.arm.com', 'hypothesis.readthedocs.io', 'docs.sentry.io', 'developers.notion.com',
+  'blog.npmjs.org', 'docs.midjourney.com', 'minecraft.wiki', 'design.ros2.org',
+  'eprosima.com', 'www.eprosima.com', 'perspectives.mvdirona.com', 'newosxbook.com',
+  'research.google', 'open.feishu.cn', 'datagravitas.com', 'infrastructure-as-code.com',
+  'geode.apache.org', 'mediasoup.org', 'core.telegram.org', 'bittorrent.org',
+  'developer.okta.com', 'auth0.com', 'tech.meituan.com',
 ]);
 // 明显的占位/示例域名：永远算占位，无论是否只有域名
 const JUNK_HOSTS = new Set(['example.com', 'www.example.com', 'google.com', 'www.google.com']);
@@ -217,22 +232,26 @@ for (const file of files) {
     if (!/href=/.test(rn[0])) findings.p2.push(`[RESEARCHNOTE] ${relPath} — ResearchNote 缺 href`);
   }
 
-  // ---- 占位引用 (P1) ----
+  // ---- 引用质量 (仅对含正式"来源"小节的文档：Atlas 案例) ----
   const urls = extractSourceUrls(content);
-  const hollow = urls.filter(isHollowUrl);
-  const specific = urls.filter((u) => !isHollowUrl(u));
-  if (hollow.length && specific.length === 0 && urls.length > 0) {
-    findings.p1.push(`[CITE-HOLLOW] ${relPath} — 来源全部为域名首页占位(${hollow.length} 条)，无任何具体文章/论文链接`);
-  } else if (hollow.length) {
-    findings.p2.push(`[CITE-HOLLOW] ${relPath} — 含 ${hollow.length} 条域名首页占位引用: ${hollow.slice(0, 3).join(', ')}${hollow.length > 3 ? ' …' : ''}`);
+  if (urls !== null) {
+    const hollow = urls.filter(isHollowUrl);
+    const specific = urls.filter((u) => !isHollowUrl(u));
+    const isAtlas = relPath.startsWith('docs/atlas/') && !meta;
+    // Atlas 案例的来源可信度已硬门禁化（P1，不可回退）：
+    //   · 不得含编造/占位首页引用（CITE-HOLLOW）
+    //   · 须有 >=2 条具体一手来源（CITE-THIN）
+    // 非 Atlas 文档保持 P2 提示。
+    if (hollow.length) {
+      const tier = isAtlas ? findings.p1 : findings.p2;
+      tier.push(`[CITE-HOLLOW] ${relPath} — 含 ${hollow.length} 条域名首页占位引用: ${hollow.slice(0, 3).join(', ')}${hollow.length > 3 ? ' …' : ''}`);
+    }
+    if (isAtlas && specific.length < 2) {
+      findings.p1.push(`[CITE-THIN] ${relPath} — 具体一手来源仅 ${specific.length} 条(<2)，需补真实来源`);
+    }
   }
-  // CITE-THIN (P2 · 可信度工作清单)：Atlas 案例应有 >=2 条具体一手来源。
-  // 用作可信度攻坚的进度追踪；全部达标后可提升为 P1 硬门禁。
-  if (relPath.startsWith('docs/atlas/') && !meta && specific.length < 2) {
-    findings.p2.push(`[CITE-THIN] ${relPath} — 具体一手来源仅 ${specific.length} 条(<2)，需补真实来源`);
-  }
-
-  perFile.push({ relPath, meta, mermaid, interactive, quizQuestions, hollow: hollow.length });
+  const hollowCount = (urls || []).filter(isHollowUrl).length;
+  perFile.push({ relPath, meta, mermaid, interactive, quizQuestions, hollow: hollowCount });
 }
 
 // ---- LAB-REF: 检查引用的 labs 路径是否存在 (P0) ----
