@@ -347,6 +347,14 @@ timeline
   ]}
 />
 
+<ResearchNote
+  title="task + actor:一套抽象覆盖全部 AI 负载"
+  source="Moritz et al. (2018), Ray: A Distributed Framework for Emerging AI Applications (OSDI)"
+  href="https://www.usenix.org/system/files/osdi18-moritz.pdf"
+  insight="Ray 用统一的 task(无状态) + actor(有状态)抽象 + 共享内存对象存储(Plasma),让同一套 API 既跑并行计算又跑有状态服务,成为 RLHF 与分布式训练的通用底座。"
+  application="架构启示:分布式框架的通用性来自「无状态 task + 有状态 actor」两把抽象 + 零拷贝对象共享,比单一范式(纯 MapReduce)更能覆盖 AI 负载。"
+/>
+
 ## 来源
 
 - [Ray: A Distributed Framework for Emerging AI Applications (Philipp Moritz et al., OSDI '18)](https://www.usenix.org/system/files/osdi18-moritz.pdf)

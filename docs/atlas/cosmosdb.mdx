@@ -497,6 +497,14 @@ print("[Gate] 五级一致性Bounded与Session读验证成功")
   ]}
 />
 
+<ResearchNote
+  title="一致性是光谱,不是布尔"
+  source="Azure Cosmos DB Documentation, Consistency Levels"
+  href="https://learn.microsoft.com/en-us/azure/cosmos-db/consistency-levels"
+  insight="Cosmos DB 把一致性做成 5 档可选(强 → 有界滞后 → 会话 → 一致前缀 → 最终),让开发者按业务在「一致性 vs 延迟/可用性」上精确取舍。"
+  application="架构启示:一致性不是非强即弱的布尔,而是一条光谱——做成可配置档位,比二选一更贴合真实业务的分层需求。"
+/>
+
 ## 来源
 
 - [Azure Cosmos DB Tunable Consistency Levels Specification (Microsoft Technical Whitepapers)](https://learn.microsoft.com/en-us/azure/cosmos-db/consistency-levels)

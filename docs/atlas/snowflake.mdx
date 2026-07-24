@@ -564,6 +564,14 @@ print("[Gate] 存算分离虚拟仓库弹性验证成功")
   ]}
 />
 
+<ResearchNote
+  title="存算分离:云数仓的范式革命"
+  source="Dageville et al. (2016), The Snowflake Elastic Data Warehouse (SIGMOD)"
+  href="https://dl.acm.org/doi/10.1145/2882903.2903741"
+  insight="Snowflake 把存储与计算彻底分离——数据在对象存储、算力是可弹性起停的虚拟仓库,多个仓库共享同一份数据,实现按需付费与零争用。"
+  application="架构启示:存算分离让计算不再绑定数据位置,扩容/隔离/降本因此解耦——同一思想见于 vLLM 显存分页与 Iceberg 元数据层。"
+/>
+
 ## 来源
 
 - [The Snowflake Elastic Data Warehouse: Decoupling Storage and Compute in Cloud-Native Databases (ACM SIGMOD Conference)](https://dl.acm.org/doi/10.1145/2882903.2903741)

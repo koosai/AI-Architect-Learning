@@ -498,6 +498,14 @@ print("[Gate] 依赖图重算与循环依赖熔断验证成功")
   ]}
 />
 
+<ResearchNote
+  title="依赖图 + 脏传播:增量重算的通用招式"
+  source="Microsoft Docs, Excel Recalculation"
+  href="https://learn.microsoft.com/en-us/office/client-developer/excel/excel-recalculation"
+  insight="Excel 计算引擎维护一张单元格依赖图,改一个格子只重算受影响的下游(脏标记 + 拓扑序),而非全表重算。"
+  application="架构启示:增量重算的通用招式是「依赖图 + 脏传播」——同样的思想驱动构建系统(Bazel)、响应式前端(React)与流计算。"
+/>
+
 ## 来源
 
 - [Recalculation in Microsoft Excel (Microsoft MSDN Library)](https://learn.microsoft.com/en-us/office/client-developer/excel/excel-recalculation)
