@@ -456,6 +456,14 @@ print("\\n[Result] 流水线DAG调度与Runner隔离验证成功")
   ]}
 />
 
+<ResearchNote
+  title="流水线即 DAG:Runner 架构"
+  source="GitLab CI/CD Documentation"
+  href="https://docs.gitlab.com/ee/ci/"
+  insight="GitLab CI 把流水线建模成阶段化的有向无环图(DAG),由无状态 Runner 拉取作业执行,用 needs 声明跨阶段依赖以最大化并行。"
+  application="架构启示:CI/CD 的本质是「作业 DAG + 无状态执行器 + 门禁」——把构建/测试/部署表达成依赖图,调度与并行就自然涌现。"
+/>
+
 ## 来源
 
 - [GitLab CI/CD Architecture and Runner Executing Engine Specification (GitLab Official Docs)](https://docs.gitlab.com/ee/ci/)

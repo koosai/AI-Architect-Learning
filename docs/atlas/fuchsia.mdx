@@ -527,6 +527,14 @@ print("[Gate] 能力安全微内核与组件隔离验证成功")
   ]}
 />
 
+<ResearchNote
+  title="能力安全微内核:下一代 OS 的实验"
+  source="Fuchsia, Zircon Kernel Concepts"
+  href="https://fuchsia.dev/fuchsia-src/concepts"
+  insight="Fuchsia 的 Zircon 是能力(capability)安全微内核:进程默认无权限,只能通过显式传递的 handle 访问资源,用户态组件化——把最小权限做进内核对象模型。"
+  application="架构启示:安全的默认态应是「零权限 + 显式授予」而非「默认可访问再限制」——能力模型让越权在设计上就不可能。"
+/>
+
 ## 来源
 
 - [Fuchsia OS Technical Documentation: Concepts and Principles (Google Developers Guide)](https://fuchsia.dev/fuchsia-src/concepts)

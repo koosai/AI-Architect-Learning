@@ -502,6 +502,14 @@ print("\\n[Result] 单文件B-tree页与WAL事务验证成功")
   ]}
 />
 
+<ResearchNote
+  title="世界部署量最大的数据库:单文件极简"
+  source="SQLite, The Architecture of SQLite"
+  href="https://www.sqlite.org/arch.html"
+  insight="SQLite 把整个数据库(表、索引、事务)放进一个单文件,零配置、进程内嵌入、用 WAL 做并发读写——极简到可以进每一部手机、浏览器与飞机。"
+  application="架构启示:不是所有场景都需要 C/S 数据库;当数据本地、并发有限时,进程内嵌入式引擎(单文件 + WAL)是更简单可靠的选择。"
+/>
+
 ## 来源
 
 - [Architecture of SQLite Engine and VDBE Opcode Virtual Machine Specifications (SQLite Official Architecture Docs)](https://www.sqlite.org/arch.html)

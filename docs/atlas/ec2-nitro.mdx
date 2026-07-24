@@ -464,6 +464,14 @@ print("[Gate] 虚拟化卸载与EBS队列处理验证成功")
   ]}
 />
 
+<ResearchNote
+  title="把虚拟化卸载到专用硬件"
+  source="AWS, The Nitro System"
+  href="https://aws.amazon.com/ec2/nitro/"
+  insight="Nitro 把网络、存储、安全的虚拟化从主 CPU 卸载到专用 Nitro 卡,让宿主机几乎把全部算力交给客户 VM,同时用硬件信任根做隔离。"
+  application="架构启示:当软件虚拟化的开销成为瓶颈,把它下沉到专用硬件(DPU/加速卡)是既提性能又强隔离的一招——同思想见于智能网卡与 GPU 直通。"
+/>
+
 ## 来源
 
 - [The Nitro System: Hardening EC2 Virtualization with Specialized Hardware (AWS Technical Whitepaper)](https://aws.amazon.com/ec2/nitro/)
