@@ -226,6 +226,11 @@ for (const file of files) {
   } else if (hollow.length) {
     findings.p2.push(`[CITE-HOLLOW] ${relPath} — 含 ${hollow.length} 条域名首页占位引用: ${hollow.slice(0, 3).join(', ')}${hollow.length > 3 ? ' …' : ''}`);
   }
+  // CITE-THIN (P2 · 可信度工作清单)：Atlas 案例应有 >=2 条具体一手来源。
+  // 用作可信度攻坚的进度追踪；全部达标后可提升为 P1 硬门禁。
+  if (relPath.startsWith('docs/atlas/') && !meta && specific.length < 2) {
+    findings.p2.push(`[CITE-THIN] ${relPath} — 具体一手来源仅 ${specific.length} 条(<2)，需补真实来源`);
+  }
 
   perFile.push({ relPath, meta, mermaid, interactive, quizQuestions, hollow: hollow.length });
 }
