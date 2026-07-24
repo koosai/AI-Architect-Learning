@@ -458,7 +458,18 @@ print("\\n[Result] 双11单元化LDC路由与洪峰限流验证成功")
 
 ## 来源
 
-- [Alipay LDC Architecture: Scaling Financial-Grade Multi-Region Active-Active Systems (Ant Group Engineering Publications)](https://www.antgroup.com/)
-- [OceanBase: A Distributed Vision of Financial-Grade Relational Database (VLDB Conference Paper)](https://www.vldb.org/)
-- [Double 11 Peak Flow Control and Flexible Service Degradation Mechanics (Alibaba Tech Blog)](https://alibabatech.com/)
-- [Paxos Consensus and Cell-Based Routing in OceanBase Database Engine (ACM SIGMOD Conference)](https://dl.acm.org/doi/10.1145/)
+:::caution 关于来源
+支付宝未公开完整 LDC 架构论文。下列 OceanBase 论文为可查证的一手来源；单元化路由（RZone/GZone/CZone）与柔性限流降级的具体细节为**基于公开技术分享的教学重构**。
+:::
+
+- [OceanBase: A 707 Million tpmC Distributed Relational Database System (VLDB 2022, PVLDB Vol.15 No.12, pp.3385-3397)](https://vldb.org/pvldb/vol15/p3385-xu.pdf) —— OceanBase 的 Paxos 强一致复制、多租户与分布式事务的一手论文。
+- [OceanBase 官方论文库（GitHub: oceanbase/publications）](https://github.com/oceanbase/publications) —— 历年 VLDB/SIGMOD 论文合集。
+- 蚂蚁集团 / 支付宝技术团队关于双 11 单元化 LDC、异地多活与限流降级的公开技术分享（按名称检索）。
+
+<ResearchNote
+  title="OceanBase：从 TPC-C 榜首看金融级分布式数据库"
+  source="Xu et al. (2022), OceanBase: A 707 Million tpmC Distributed Relational Database System (VLDB)"
+  href="https://vldb.org/pvldb/vol15/p3385-xu.pdf"
+  insight="OceanBase 用 Paxos 组内多数派复制保证跨机房宕机下 RPO=0，配合 LSM-Tree 存储引擎与多租户隔离，在 1500+ 服务器、三地部署上跑出 7.07 亿 tpmC。"
+  application="架构启示：金融级『异地多活』的地基是共识协议（Paxos/Raft）而非主备切换——把强一致复制下沉到存储层，上层单元化（LDC）才敢做无损切流。"
+/>
