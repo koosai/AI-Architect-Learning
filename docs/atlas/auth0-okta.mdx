@@ -477,7 +477,15 @@ print("\\n[Result] 授权码流程与规则引擎角色分配验证成功")
 
 ## 来源
 
-- [Auth0 Architecture: OAuth 2.0, OpenID Connect, and Multi-Tenant Identity (Auth0 Technical Documentation)](https://auth0.com/docs)
-- [Okta Identity Cloud: Zero Trust Architecture and JWKS Key Management (Okta Developer Portal)](https://developer.okta.com/)
-- [RFC 7636: Proof Key for Code Exchange by OAuth Public Clients (IETF Standard)](https://datatracker.ietf.org/doc/html/rfc7636)
-- [Stateless JWT Verification and Asymmetric RS256 Key Rotation Mechanics (ACM Queue Systems)](https://queue.acm.org/)
+- [RFC 6749: The OAuth 2.0 Authorization Framework (IETF)](https://datatracker.ietf.org/doc/html/rfc6749) —— 授权码/令牌流程的一手标准。
+- [RFC 7636: Proof Key for Code Exchange (PKCE) by OAuth Public Clients (IETF)](https://datatracker.ietf.org/doc/html/rfc7636) —— 公共客户端防授权码拦截的一手标准。
+- [OpenID Connect Core 1.0（OpenID Foundation 官方规范）](https://openid.net/specs/openid-connect-core-1_0.html) —— 身份层与 ID Token 的一手规范。
+- [Auth0 官方文档：Architecture / Tokens](https://auth0.com/docs) 与 [Okta Developer](https://developer.okta.com/) —— 商用 IdP 的实现参考。
+
+<ResearchNote
+  title="密码永不出域：授权码流程的核心设计"
+  source="RFC 6749 & RFC 7636（IETF OAuth 2.0 标准）"
+  href="https://datatracker.ietf.org/doc/html/rfc6749"
+  insight="OAuth2 授权码流程让用户凭据只提交给身份提供方（IdP），第三方应用拿到的只是短期授权码 → 换取令牌，全程密码不经过应用。PKCE（7636）再用一次性 code_verifier 堵住公共客户端上授权码被拦截的漏洞。"
+  application="架构启示：把『信任边界』收敛到最小可信主体（IdP），其余方只持有可撤销、短生命周期的凭证——这是零信任身份体系与 API 鉴权的通用范式。"
+/>

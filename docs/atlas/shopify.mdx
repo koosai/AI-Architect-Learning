@@ -458,9 +458,17 @@ print("\\n[Result] 多租户Pod隔离与闪购限流验证成功")
 ## 来源
 
 :::caution 关于来源
-以下为 Shopify 官方工程博客（Shopify Engineering）公开分享的文章标题，可按名称检索原文。文中的秒杀防超卖等具体数值为**教学示意**，非官方参数。
+下列为 Shopify 官方工程博客（Shopify Engineering）的一手文章；文中秒杀防超卖等具体数值为**教学示意**，非官方参数。
 :::
 
-- Shopify Engineering —— 《Deconstructing the Monolith》：从 Rails 单体拆分与模块化边界（Pods 多租户架构的背景）。
-- Shopify Engineering —— 《Sorting Hat》：如何把海量请求路由到相互独立的 Pod（请求分片路由）。
+- [Deconstructing the Monolith: Designing Software that Maximizes Developer Productivity (Shopify Engineering)](https://shopify.engineering/deconstructing-monolith-designing-software-maximizes-developer-productivity) —— 从 Rails 单体到模块化单体的一手记述。
+- [Under Deconstruction: The State of Shopify's Monolith (Shopify Engineering)](https://shopify.engineering/shopify-monolith) —— 模块化改造进展与 Pods 多租户隔离。
 - 高并发闪购防超卖的通用模式（Redis 原子扣减 / Lua 脚本）—— 见业界公开的秒杀系统设计资料。
+
+<ResearchNote
+  title="模块化单体：不拆微服务也能治理复杂度"
+  source="Shopify Engineering, Deconstructing the Monolith"
+  href="https://shopify.engineering/deconstructing-monolith-designing-software-maximizes-developer-productivity"
+  insight="Shopify 拥有全球最大的 Rails 单体之一（280 万+行）。它没有盲目拆微服务，而是先做『模块化单体』——用清晰的组件边界与依赖约束治理复杂度，数据层则按 shop_id 分片成独立 Pod 实现租户隔离。"
+  application="架构启示：『单体 vs 微服务』不是二选一。先把边界在单体内理清（模块化），再按真正的扩展瓶颈（这里是数据库）做物理隔离——比一上来就拆分布式更稳。"
+/>
