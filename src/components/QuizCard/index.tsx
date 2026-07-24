@@ -22,13 +22,23 @@ export default function QuizCard({ questions }: QuizCardProps): JSX.Element {
   const question = questions[currentIdx];
   if (!question) return <div className={styles.card}>暂无测验题目</div>;
 
-  // Find index of correct answer
+  // Find index of correct answer.
+  // Supports three author conventions:
+  //   1. numeric index (answer: 1)         -> used by the vast majority of chapters
+  //   2. full option text (answer: "先查缓存…") -> exact string match
+  //   3. option letter  (answer: "B")      -> match the option whose text starts with "B." / "B、" / "B)"
   let correctOptIdx = 0;
   if (typeof question.answer === 'number') {
     correctOptIdx = question.answer;
   } else {
-    // string matching
-    const idx = question.options.findIndex((opt) => opt.trim() === question.answer.toString().trim());
+    const target = question.answer.toString().trim();
+    // (2) exact full-text match
+    let idx = question.options.findIndex((opt) => opt.trim() === target);
+    // (3) single-letter answer matching a lettered option prefix ("B" -> "B. …")
+    if (idx === -1 && /^[A-Za-z]$/.test(target)) {
+      const letterRe = new RegExp('^' + target + '\\s*[.)、\\uFF0E]', 'i');
+      idx = question.options.findIndex((opt) => letterRe.test(opt.trim()));
+    }
     if (idx !== -1) correctOptIdx = idx;
   }
 

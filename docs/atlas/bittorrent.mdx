@@ -229,13 +229,13 @@ d(x, y) = x ^ y
   options={[
     {
       name: 'Rarest-First + Tit-for-Tat P2P 架构 (BitTorrent 方案)',
-      scores: [100, 50, 98, 40],
+      scores: [5, 3, 5, 2],
       note: '服务端带宽成本为 0，热门文件越抢越快；但数据块乱序下载无法做在线视频边下边播，且冷门无人做种文件会永久死亡。',
       whenToUse: '超大文件（ISO/客户端安装包/高精模型）的大规模分发。'
     },
     {
       name: '顺序下载 (Sequential Download) + CDN 托管',
-      scores: [20, 100, 20, 95],
+      scores: [1, 5, 1, 5],
       note: '支持视频边下边看，冷门文件由 CDN 兜底；但源站/CDN 带宽成本极度高昂。',
       whenToUse: '在线视频点播 (VOD) 平台。'
     }
@@ -284,7 +284,7 @@ d(x, y) = x ^ y
         'C. 自动加速 DNS 解析',
         'D. 避免硬盘写入过快打爆缓存'
       ],
-      answer: 'B',
+      answer: 1,
       explain: 'Tit-for-Tat 是 BitTorrent 的博弈论内核，它将上传带宽作为硬通货，实现了节点间的自我激励与公平交易。'
     },
     {
@@ -295,7 +295,7 @@ d(x, y) = x ^ y
         'C. 为了节省客户端内存',
         'D. 提升加密强度'
       ],
-      answer: 'B',
+      answer: 1,
       explain: '最稀缺优先算法能最大化集群中数据分片的熵，防止因做种者突然离线而导致文件最后几个块永久缺失。'
     },
     {
@@ -306,7 +306,7 @@ d(x, y) = x ^ y
         'C. 局域网广播 (UDP Broadcast)',
         'D. HTTP/2 多路复用'
       ],
-      answer: 'A',
+      answer: 0,
       explain: 'Mainline DHT 将全球所有 BT 客户端节点连成一张巨大的去中心化哈希网，依靠 160-bit XOR 距离算法定位 InfoHash 的持有者。'
     }
   ]}

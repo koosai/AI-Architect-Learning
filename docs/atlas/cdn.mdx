@@ -235,13 +235,13 @@ VirtualNodeID_{i, j} = Hash(NodeIP_i + "#VNODE-" + j)
   options={[
     {
       name: '边缘强缓存 + 长 TTL + 异步 Purge (CDN 方案)',
-      scores: [98, 70, 95, 80],
+      scores: [5, 4, 5, 4],
       note: '延迟极低，源站负载降至 1%；但内容更新存在全球 Purge 传播延迟（约 1-5 秒）。',
       whenToUse: '静态资源、富媒体文件、高并发读多写少的 Web / App 应用。'
     },
     {
       name: '直连源站 + 彻底无边缘缓存',
-      scores: [40, 100, 30, 95],
+      scores: [2, 5, 2, 5],
       note: '保证绝对的实时强一致性；但全球延迟高，且源站极易崩溃。',
       whenToUse: '金融核心交易、实时强一致性库存扣减（非查询）接口。'
     }
@@ -290,7 +290,7 @@ VirtualNodeID_{i, j} = Hash(NodeIP_i + "#VNODE-" + j)
         'C. 为了将 IPv4 地址自动转换为 IPv6',
         'D. 为了加密 DNS 报文'
       ],
-      answer: 'B',
+      answer: 1,
       explain: 'EDNS0 附带了客户端真实 IP 的前缀，使 GSLB 能精准计算用户与边缘机房的物理距离。'
     },
     {
@@ -301,7 +301,7 @@ VirtualNodeID_{i, j} = Hash(NodeIP_i + "#VNODE-" + j)
         'C. 为了自动压缩图片尺寸',
         'D. 提升 TLS 握手速度'
       ],
-      answer: 'B',
+      answer: 1,
       explain: '一致性哈希极大地提高了 PoP 机房整体的有效内存/SSD 利用率，避免了多节点重复缓存造成的浪费。'
     },
     {
@@ -312,7 +312,7 @@ VirtualNodeID_{i, j} = Hash(NodeIP_i + "#VNODE-" + j)
         'C. 强制限制用户打字速度',
         'D. 自动关闭 CDN 所有节点'
       ],
-      answer: 'A',
+      answer: 0,
       explain: 'Collapse Forwarding 能将并发读穿透收敛为单次写预热，是保护源站的关键关卡。'
     }
   ]}

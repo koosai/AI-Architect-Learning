@@ -254,13 +254,13 @@ $$ LANGUAGE plpgsql;
   options={[
     {
       name: 'Python/Django 单体 + 下沉存储分片 (Instagram 方案)',
-      scores: [95, 75, 85, 88],
+      scores: [5, 4, 4, 4],
       note: '保持业务代码在单个代码库中，开发与重构极其迅速；性能瓶颈通过 C 扩展与底层 DB 分片解决。',
       whenToUse: '团队规模适中、业务快速迭代、希望避免微服务治理噩梦的互联网平台。'
     },
     {
       name: '拆分为数百个 Go/Java 微服务 (Netflix/Uber 方案)',
-      scores: [60, 95, 60, 92],
+      scores: [3, 5, 3, 5],
       note: '单节点性能极高，服务间隔离好；但分布式事务、RPC 延迟与跨团队沟通成本巨大。',
       whenToUse: '数千名工程师的大型组织、各子业务边界极度清晰的复杂系统。'
     }
@@ -310,7 +310,7 @@ $$ LANGUAGE plpgsql;
         'C. 因为 PL/pgSQL 比 C++ 运行速度快 10 倍',
         'D. 为了防止数据库主机挂掉'
       ],
-      answer: 'B',
+      answer: 1,
       explain: '在数据库内部生成 ID 避免了额外的网络跳数（Network Hop），同时借助 Postgres 的 Sequence 机制实现了极高的确定性与可靠性。'
     },
     {
@@ -321,7 +321,7 @@ $$ LANGUAGE plpgsql;
         'C. 强制给所有粉丝发送手机短信通知',
         'D. 增加 10 倍的 Python 服务器'
       ],
-      answer: 'B',
+      answer: 1,
       explain: '混合 Fanout 策略对粉丝多的账号采用 Pull（读扩散），避免瞬间向数亿粉丝的 Feed 列表批量写入 Cache。'
     },
     {
@@ -332,7 +332,7 @@ $$ LANGUAGE plpgsql;
         'C. 将所有内存数据保存在 GPU 显存中',
         'D. 强制限制每个 Worker 只能处理 1 个请求'
       ],
-      answer: 'A',
+      answer: 0,
       explain: 'uWSGI 的 Copy-on-Write 机制容易被 Python GC 遍历对象时的引用计数修改破坏。Instagram 团队通过重构 GC，大幅提升了 CoW 共享内存效率。'
     }
   ]}
