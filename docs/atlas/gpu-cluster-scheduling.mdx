@@ -447,7 +447,14 @@ print("\\n[Result] gang scheduling与拓扑感知调度验证成功")
 
 ## 来源
 
-- [Volcano: A Cloud-Native Batch Scheduling System for High-Performance AI Workloads (CNCF Documentation)](https://volcano.sh/)
-- [Slurm Workload Manager Architecture: HPC Batch Scheduling and Resource Allocation (SchedMD Technical Papers)](https://slurm.schedmd.com/)
-- [Topology-Aware GPU Scheduling in Large-Scale AI Clusters (IEEE/ACM Transactions on Networking)](https://ieeexplore.ieee.org/)
-- [Gang Scheduling and De-fragmentation Mechanics in 10,000-GPU Training Fabrics (ACM SIGCOMM)](https://dl.acm.org/)
+- [Large-scale cluster management at Google with Borg (Verma et al., EuroSys 2015)](https://research.google/pubs/large-scale-cluster-management-at-google-with-borg/) —— 大规模集群调度与 gang scheduling 思想的奠基论文（K8s 的前身）。
+- [Volcano 官方文档：云原生批调度（gang-scheduling / fair-share）](https://volcano.sh/en/docs/) —— K8s 上 AI 批处理调度的一手文档。
+- [Slurm Workload Manager 官方文档](https://slurm.schedmd.com/documentation.html) —— HPC 批调度与资源分配的一手参考。
+
+<ResearchNote
+  title="Gang Scheduling：分布式训练的『全有或全无』"
+  source="Verma et al. (2015), Large-scale cluster management at Google with Borg (EuroSys)"
+  href="https://research.google/pubs/large-scale-cluster-management-at-google-with-borg/"
+  insight="多卡分布式训练要求所有 worker 同时就位（否则先到的卡空等、死锁）。gang scheduling 把一组任务当作原子单位——要么全部调度、要么都不调度，避免部分占用导致的资源碎片与相互等待。"
+  application="架构启示：当任务之间有『强同步依赖』（如 All-Reduce），调度粒度必须是『组』而非『单个』——这和数据库事务的原子性、Kafka 事务是同一种『全有或全无』约束。"
+/>

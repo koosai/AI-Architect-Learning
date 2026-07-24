@@ -257,13 +257,13 @@ ParentHash = SHA256(LeftChildHash + RightChildHash)
   options={[
     {
       name: 'PoW 共识 + 1MB/SegWit 块小容量 (Bitcoin 方案)',
-      scores: [99, 20, 30, 20],
+      scores: [5, 1, 2, 1],
       note: '极致的去中心化与物理防篡改抗审查力；但 TPS 极低（仅 7 次/秒），确认延迟需 10-60 分钟，能源消耗巨大。',
       whenToUse: '作为全球去中心化价值存储（数字黄金）与高结算层。'
     },
     {
       name: 'PoS 权益证明 + 快速出块/大块容量 (Ethereum 2.0 / Solana 方案)',
-      scores: [75, 90, 85, 95],
+      scores: [4, 5, 4, 5],
       note: '零物理能源消耗，TPS 高达数千；但共识存在富者愈富（Staking Centralization）与无利害关系 (Nothing at Stake) 的权衡。',
       whenToUse: '高频 DeFi 应用、NFT 交易与智能合约应用平台。'
     }
@@ -312,7 +312,7 @@ ParentHash = SHA256(LeftChildHash + RightChildHash)
         'C. 占用的硬盘空间固定为 1KB',
         'D. 不需要使用密码学私钥'
       ],
-      answer: 'B',
+      answer: 1,
       explain: 'UTXO 模型天然解耦，使得并行交易验证与 Merkle 树剪枝变得极其高效。'
     },
     {
@@ -323,7 +323,7 @@ ParentHash = SHA256(LeftChildHash + RightChildHash)
         'C. 防止磁盘空间不足',
         'D. 自动清空 Mempool'
       ],
-      answer: 'B',
+      answer: 1,
       explain: '难度自适应调节机制是比特币自我调控代币发行速度与网络安全性的基石。'
     },
     {
@@ -334,11 +334,16 @@ ParentHash = SHA256(LeftChildHash + RightChildHash)
         'C. 选择最新的那条链',
         'D. 由中本聪手动决定'
       ],
-      answer: 'B',
+      answer: 1,
       explain: '最长链法则（最大累积算力链）是去中心化无中介拜占庭共识的核心机制。'
     }
   ]}
 />
+
+## 来源
+
+- [Bitcoin: A Peer-to-Peer Electronic Cash System (Satoshi Nakamoto, 2008)](https://bitcoin.org/bitcoin.pdf) —— 比特币奠基白皮书（UTXO / PoW / 最长链）。
+- [Bitcoin Improvement Proposals（BIPs, GitHub: bitcoin/bips）](https://github.com/bitcoin/bips) —— 协议演进的一手提案集。
 
 <ResearchNote
   title="比特币创世白皮书"

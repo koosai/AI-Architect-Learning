@@ -406,9 +406,16 @@ print("\\n[Result] 张量与流水线3D并行切分验证成功")
   ]}
 />
 
+<ResearchNote
+  title="张量并行:让单层大到放不下也能训练"
+  source="Shoeybi et al. (2019), Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism (arXiv:1909.08053)"
+  href="https://arxiv.org/abs/1909.08053"
+  insight="Megatron-LM 把单层的大矩阵按行/列切到多卡,仅在必要处做 All-Reduce,使大到单卡放不下的层也能训练。"
+  application="架构启示:3D 并行(数据/张量/流水线)的选择取决于通信与显存瓶颈——张量并行省显存但通信密集,适合 NVLink 高带宽的机内。"
+/>
+
 ## 来源
 
 - [Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism (NVIDIA Architecture Paper)](https://arxiv.org/abs/1909.08053)
 - [Efficient Large-Scale Language Model Training with Megatron-LM: 3D Parallelism (NVIDIA Technical Report)](https://arxiv.org/abs/2104.04473)
-- [1F1B Pipeline Schedule and Activation Recomputation Mechanics for Trillion-Parameter Models (ACM/IEEE SC Conference)](https://dl.acm.org/)
 - [Megatron-Core Architecture: Scaling LLMs on High-Speed NVLink Networks (NVIDIA Developer Portal)](https://developer.nvidia.com/)

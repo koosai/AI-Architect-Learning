@@ -467,9 +467,16 @@ print("[Gate] 抢占式优先级调度与内存受限验证成功")
   ]}
 />
 
+<ResearchNote
+  title="几 KB RAM 里的抢占式调度器"
+  source="FreeRTOS, Mastering the FreeRTOS Real Time Kernel"
+  href="https://www.freertos.org/Documentation/RTOS_book.html"
+  insight="FreeRTOS 在几 KB RAM 的 MCU 上实现优先级抢占式调度、队列与信号量,内核极简到可被完整审计——把实时性做成确定的优先级 + 时间片。"
+  application="架构启示:资源极度受限时,确定性 > 功能丰富;一个可完整理解、可审计的极简内核,比通用 OS 更适合硬实时嵌入式。"
+/>
+
 ## 来源
 
 - [Mastering the FreeRTOS Real Time Kernel: A Hands-On Tutorial Guide (Richard Barry / Amazon Web Services)](https://www.freertos.org/Documentation/RTOS_book.html)
 - [FreeRTOS Heap Memory Management: heap_1.c to heap_5.c detailed design (FreeRTOS Official Reference)](https://www.freertos.org/a00111.html)
 - [Cortex-M3/M4 Context Switching and PendSV exception mechanism analysis (ARM Whitepaper)](https://developer.arm.com/)
-- [Solving Priority Inversion with Priority Inheritance Algorithms in Microcontrollers (Embedded System Research)](https://www.eetimes.com/)

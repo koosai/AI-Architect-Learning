@@ -445,6 +445,14 @@ print("\\n[Result] Spokes三副本存储与一致性路由验证成功")
   ]}
 />
 
+<ResearchNote
+  title="Spokes 三副本:让 Git 仓库高可用"
+  source="GitHub Engineering Blog"
+  href="https://github.blog/engineering/"
+  insight="GitHub 用 Spokes 把每个 Git 仓库存三副本、跨故障域放置,并在读写路径上做一致性路由,让「单机文件系统上的 Git」变成高可用分布式服务。"
+  application="架构启示:把单机工具(Git)规模化,关键是在其存储层加复制 + 一致性路由——不改上层语义,只在下面做冗余。"
+/>
+
 ## 来源
 
 - [How GitHub Scaled Its Infrastructure and Modular Monolith (GitHub Engineering Blog)](https://github.blog/engineering/)

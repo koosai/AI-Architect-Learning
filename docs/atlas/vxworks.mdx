@@ -497,7 +497,14 @@ print("[Gate] 硬实时优先级反转防护验证成功")
 
 ## 来源
 
-- [What really happened on Mars? Pathfinder Priority Inversion Incident (Glenn Reeves, Lead Software Engineer for Pathfinder)](https://www.rapitasystems.com/blog/what-really-happened-on-mars)
-- [Introduction to Priority Inversion and Priority Inheritance Protocols (VxWorks Developer Reference Guide)](https://www.windriver.com/)
-- [Watchdog Timers and System Reset Mechanisms in Aerospace Onboard Computers (NASA Technical Reports)](https://ntrs.nasa.gov/)
-- [Real-Time Systems and Scheduling Deadlock Prevention: Mutex Strategies (Aerospace Engineering Journal)](https://www.windriver.com/)
+- [What really happened on Mars? — Pathfinder 优先级反转事故复盘（Rapita Systems 转述 Glenn Reeves 的一手说明）](https://www.rapitasystems.com/blog/what-really-happened-on-mars) —— 火星探路者因优先级反转触发看门狗重启，最终靠远程开启优先级继承修复的经典事故。
+- What Really Happened on Mars Rover Pathfinder（Glenn E. Reeves, JPL Pathfinder 软件负责人，1997 广为流传的一手邮件说明）—— 事故根因与修复的当事人记述（按名称检索）。
+- 优先级反转（Priority Inversion）与优先级继承 / 天花板协议（Sha, Rajkumar & Lehoczky, 1990, IEEE Transactions on Computers）—— 实时调度的经典理论来源。
+
+<ResearchNote
+  title="火星上的优先级反转：实时系统最著名的一课"
+  source="Glenn E. Reeves (1997), What Really Happened on Mars Rover Pathfinder"
+  href="https://www.rapitasystems.com/blog/what-really-happened-on-mars"
+  insight="Pathfinder 落火后频繁重启：一个低优先级任务持有共享互斥锁、被中优先级任务抢占，导致高优先级任务被无限期阻塞（优先级反转），看门狗超时触发系统复位。修复方式是远程打开 VxWorks 互斥锁的优先级继承选项。"
+  application="架构启示：共享锁 + 抢占式优先级调度 = 优先级反转风险。任何硬实时系统在用互斥量时都要默认开启优先级继承/天花板协议——这也是并发设计里『锁的持有者优先级』常被忽视的一环。"
+/>

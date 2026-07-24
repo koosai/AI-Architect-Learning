@@ -449,7 +449,18 @@ print("\\n[Result] 短视频冷启动分发与边缘缓存验证成功")
 
 ## 来源
 
-- [Monolith: Real-Time Recommendation System with Hyper-Sparse Features (ByteDance Architecture Paper)](https://arxiv.org/abs/2209.07663)
-- [ByteCDN and Video Edge Pre-warming Architecture for Ultra-Low Latency Short Videos (ByteDance Technical Publications)](https://bytedance.com/)
-- [ByteVC1 Video Codec vs. H.264/H.265 Compression Performance (IEEE Transactions on Multimedia)](https://ieeexplore.ieee.org/)
-- [Client-Side Smart Preloading and Zero-Latency Video Feed Mechanics (ACM Queue / Mobile Computing)](https://queue.acm.org/)
+:::caution 关于来源
+下列 Monolith 论文为字节跳动公开的一手来源；边缘预热、客户端预加载等细节为**基于公开信息的教学重构**，非官方架构文档。
+:::
+
+- [Monolith: Real Time Recommendation System With Collisionless Embedding Table (Liu et al., ByteDance, arXiv:2209.07663, 2022)](https://arxiv.org/abs/2209.07663) —— 无冲突哈希嵌入表 + 在线实时训练的一手论文。
+- 字节跳动 / BytePlus 关于短视频推荐、边缘分发与客户端预加载的公开技术分享（按名称检索）。
+- 推荐系统两阶段召回-排序、实时特征与冷启动的通用资料（如 YouTube/Wukong 等公开论文，可横向对照）。
+
+<ResearchNote
+  title="Monolith：为实时推荐而生的无冲突嵌入表"
+  source="Liu et al. (2022), Monolith: Real Time Recommendation System With Collisionless Embedding Table (arXiv:2209.07663)"
+  href="https://arxiv.org/abs/2209.07663"
+  insight="通用深度学习框架（TF/PyTorch）对动态稀疏特征支持差、且训练与服务分离。Monolith 用无冲突哈希嵌入表 + 可过期/频率过滤，实现了低延迟在线训练，并主动用『系统可靠性换实时性』。"
+  application="架构启示：推荐这类时效敏感场景，『分钟级模型新鲜度』的价值可能高于强一致——这是一个和支付/账务完全相反的取舍方向。"
+/>

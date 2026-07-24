@@ -468,9 +468,16 @@ print("\\n[Result] 远程缓存命中与增量重建验证成功")
   ]}
 />
 
+<ResearchNote
+  title="远程缓存 + 沙箱 = 可复现构建"
+  source="Bazel 官方文档:Hermeticity"
+  href="https://bazel.build/basics/hermeticity"
+  insight="Bazel 要求每个构建动作声明全部输入输出并在沙箱内执行,相同输入必得相同输出(hermetic),从而可以安全地跨机器复用远程缓存——改一行只重建受影响的目标。"
+  application="架构启示:可复现 = 显式声明依赖 + 隔离执行;这让缓存从「碰运气」变成「可证明命中」,是大规模单仓构建的地基。"
+/>
+
 ## 来源
 
 - [Bazel: Build and Test System Overview and Architecture (Bazel Official Specifications)](https://bazel.build/)
 - [Build in the Large: Google's Experience with Blaze and Monorepo Infrastructure (ACM Queue)](https://queue.acm.org/detail.cfm?id=2857274)
 - [Remote Build Execution (RBE) and Content-Addressed Storage (CAS) Protocol (Google Open Source)](https://github.com/bazelbuild/remote-apis)
-- [Hermeticity and Sandboxing Mechanics in Distributed Build Engines (IEEE Software Engineering)](https://ieeexplore.ieee.org/)

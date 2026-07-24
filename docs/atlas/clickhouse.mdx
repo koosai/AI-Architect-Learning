@@ -496,6 +496,14 @@ print("[Gate] 列存向量化与稀疏索引跳读验证成功")
   ]}
 />
 
+<ResearchNote
+  title="列存 + 向量化:为什么分析快 1000 倍"
+  source="Schulze et al. (2020), ClickHouse SIGMOD 论文"
+  href="https://dl.acm.org/doi/10.1145/3318464.3386129"
+  insight="ClickHouse 靠列存 + 向量化执行 + MergeTree 稀疏索引,让分析查询只读「需要的列的需要的块」,聚合比行存快 100–1000 倍。"
+  application="架构启示:OLAP 与 OLTP 的分野在物理存储布局——按列存 + 向量化是分析型系统的地基,和 OLTP 的行存/B+ 树是两条路。"
+/>
+
 ## 来源
 
 - [ClickHouse: Lightning-Fast Column-Oriented Open-Source Analytical Database (ACM SIGMOD Conference)](https://dl.acm.org/doi/10.1145/3318464.3386129)

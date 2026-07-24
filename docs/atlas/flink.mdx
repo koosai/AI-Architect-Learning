@@ -462,6 +462,14 @@ print("\\n[Result] 有状态流计算checkpoint对齐与exactly-once验证成功
   ]}
 />
 
+<ResearchNote
+  title="对齐的 checkpoint:有状态流的 exactly-once"
+  source="Carbone et al. (2015), Apache Flink: Stream and Batch Processing in a Single Engine"
+  href="https://flink.apache.org/"
+  insight="Flink 用分布式快照(Chandy-Lamport 变体)在数据流中插入 barrier 对齐,周期性把算子状态一致地存档,故障后从最近 checkpoint 恢复,实现有状态计算的 exactly-once。"
+  application="架构启示:流处理的 exactly-once 不靠「不丢消息」,而靠「可回放的源 + 一致的状态快照」——把正确性建立在可恢复的检查点上。"
+/>
+
 ## 来源
 
 - [Apache Flink: Stream and Batch Processing in a Single Engine (IEEE Data Engineering Bulletin)](https://flink.apache.org/)

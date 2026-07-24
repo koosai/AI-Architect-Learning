@@ -528,9 +528,16 @@ print("[Gate] 无主复制可调一致性与提示移交验证成功")
   ]}
 />
 
+<ResearchNote
+  title="从 Dynamo 到 Cassandra:无主复制的可用性哲学"
+  source="DeCandia et al. (2007), Dynamo: Amazon Highly Available Key-value Store (SOSP)"
+  href="https://dl.acm.org/doi/10.1145/1294261.1294281"
+  insight="Cassandra 继承 Dynamo 的无主复制 + 一致性哈希 + 可调 Quorum(R+W>N),用最终一致性换来无单点、跨机房线性扩展与可用性优先。"
+  application="架构启示:当可用性与分区容忍比强一致更重要(购物车、feed),无主 + 读修复/提示移交比主从更抗故障。"
+/>
+
 ## 来源
 
 - [Dynamo: Amazon’s Highly Available Key-value Store (ACM SOSP Conference - Principles of Leaderless Replication)](https://dl.acm.org/doi/10.1145/1294261.1294281)
 - [Cassandra - A Decentralized Structured Storage System (ACM SIGOPS Operating Systems Review)](https://dl.acm.org/doi/10.1145/1773912.1773922)
 - [Tunable Consistency and Merkle Tree Anti-Entropy Protocols in Apache Cassandra Specifications (Apache Software Foundation)](https://cassandra.apache.org/doc/latest/architecture/dynamo.html)
-- [Leader-based Consensus (Raft/Paxos) vs. Leaderless Replication Tradeoffs in Globally Distributed Databases (VLDB Endowment)](https://www.vldb.org/)

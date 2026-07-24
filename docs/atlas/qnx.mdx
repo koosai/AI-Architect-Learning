@@ -439,6 +439,14 @@ print("[Gate] 微内核消息传递与确定性延迟验证成功")
   ]}
 />
 
+<ResearchNote
+  title="微内核 + 自适应分区:让实时与容错共存"
+  source="QNX Neutrino 系统架构指南"
+  href="https://www.qnx.com/developers/docs/7.1/index.html"
+  insight="QNX 把驱动、文件系统、网络栈全放到用户态,内核只管调度与同步 IPC,一个驱动崩溃不会拖垮系统;自适应分区调度器给每组任务保底 CPU 份额,空闲时又允许借用——兼顾硬实时保证与利用率。"
+  application="架构启示:安全关键系统要「故障隔离」——把可能出错的组件赶出内核态,用进程边界把爆炸半径限制在单个服务;调度上用份额保底而非硬隔离,换取利用率。"
+/>
+
 ## 来源
 
 - [QNX Neutrino Real-Time Operating System: System Architecture Guide (BlackBerry QNX Documentation)](https://www.qnx.com/developers/docs/7.1/index.html)

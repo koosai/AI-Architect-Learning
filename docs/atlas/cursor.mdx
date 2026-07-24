@@ -167,7 +167,7 @@ graph TD
   source="Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks"
   href="https://arxiv.org/abs/1908.10084"
   insight="虽然句子向量模型（Sentence Embeddings）在捕捉高维语义上表现优秀，但在遇到特定的代码符号、短方法名或精准类名时，字面量（BM25）与编译符号（AST）的准确率是高维向量无法替代的。两者混合检索能将代码定位准确率提升 40% 以上。"
-  application="在设计代码级 RAG 时，不可单纯使用向量检索。必须在客户端提取 AST 符号树，建立基于符号引用与关键字（BM25）的复合关联，再利用 <GlossaryTerm term='RRF' definition='Reciprocal Rank Fusion (互惠排名融合)，一种把向量检索与 BM25 字面量检索等多个检索源各自输出的候选列表按排名分值进行加权合并，从而完成统一重排的无监督算法。'>RRF</GlossaryTerm> 进行重排合并。"
+  application="在设计代码级 RAG 时，不可单纯使用向量检索。必须在客户端提取 AST 符号树，建立基于符号引用与关键字（BM25）的复合关联，再利用 RRF（Reciprocal Rank Fusion，互惠排名融合：把向量检索与 BM25 字面量检索等多个检索源各自输出的候选列表按排名分值加权合并，完成统一重排的无监督算法）进行重排合并。"
 />
 
 ### 4b. 二阶段代码快速应用与微调模型 (Fast-Apply)

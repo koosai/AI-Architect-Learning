@@ -677,6 +677,14 @@ else:
 
 ---
 
+<ResearchNote
+  title="PagedAttention:给 KV Cache 做虚拟内存分页"
+  source="PagedAttention 论文(SOSP 2023)"
+  href="https://arxiv.org/abs/2309.06180"
+  insight="LLM 推理的 KV cache 长度不定、易碎片化浪费显存;vLLM 借操作系统分页思想,把 KV cache 切成固定小块非连续存储,按需分配、多请求共享前缀块,显存利用率逼近满载;配合连续批处理,一个序列结束就立刻插入新请求。"
+  application="架构启示:把成熟的 OS 抽象(分页/虚拟内存)迁移到新领域常有奇效——KV cache 的碎片问题本质同物理内存碎片,分页 + 按需分配是同一副解药。"
+/>
+
 ## 来源清单
 
 *   [Kwon, W., Li, Z., Zhuang, S., Sheng, Y., Zheng, L., Yu, C., Gonzalez, J. E., Zhang, H., & Stoica, I. (2023). Efficient Memory Management for Large Language Model Serving with PagedAttention (SOSP 2023 Paper)](https://arxiv.org/abs/2309.06180)

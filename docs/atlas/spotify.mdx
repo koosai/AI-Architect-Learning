@@ -454,6 +454,14 @@ print("\\n[Result] 音频分发与Discover Weekly推荐管线验证成功")
   ]}
 />
 
+<ResearchNote
+  title="Discover Weekly:协同过滤 + CNN 听懂新歌"
+  source="Spotify 工程博客"
+  href="https://engineering.atspotify.com/"
+  insight="Spotify 主用协同过滤(听相似歌的人还听什么)推荐,但冷门新歌没有播放数据,于是叠加卷积神经网络直接「听」音频波形提取风格特征,让没人听过的歌也能被召回——两路信号互补。"
+  application="架构启示:推荐系统的冷启动要靠「内容特征」补「行为信号」的空——协同过滤精但怕冷启动,内容模型糙但无需历史,组合起来覆盖全库。"
+/>
+
 ## 来源
 
 - [Discover Weekly: How Spotify Analyzes Audio with Convolutional Neural Networks (Spotify Engineering Blog)](https://engineering.atspotify.com/)

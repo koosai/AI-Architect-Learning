@@ -439,9 +439,15 @@ print("\\n[Result] HNSW向量索引召回与存算分离验证成功")
   ]}
 />
 
+<ResearchNote
+  title="向量库:HNSW/IVF 与存算分离"
+  source="Milvus Engineering Blog"
+  href="https://milvus.io/blog/"
+  insight="Milvus 用存算分离架构承载海量向量检索,索引层可选 HNSW(高召回低延迟)或 IVF(省内存),在召回率、延迟与内存之间按场景取舍。"
+  application="架构启示:ANN 检索没有万能索引——HNSW 与 IVF 是「延迟/内存」光谱的两端;向量库的价值在于把索引选型与存算扩展解耦。"
+/>
+
 ## 来源
 
-- [Milvus 2.0: A Cloud-Native Vector Database with Storage-Compute Disaggregation (VLDB Conference Paper)](https://www.vldb.org/)
 - [Knowhere C++ Vector Search Engine Architecture and SIMD Acceleration (Milvus Engineering Blog)](https://milvus.io/blog/)
 - [HNSW vs. IVF-PQ: Vector Index Performance and Memory Trade-offs (ACM SIGMOD Conference)](https://dl.acm.org/doi/10.1145/)
-- [Hybrid Search and Pre-filtering Vector Retrieval in RAG Applications (IEEE Transactions on Knowledge and Data Engineering)](https://ieeexplore.ieee.org/)

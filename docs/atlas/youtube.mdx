@@ -443,9 +443,15 @@ print("\\n[Result] 上传转码多码率分发与Vitess分库验证成功")
   ]}
 />
 
+<ResearchNote
+  title="召回 + 排序:大规模推荐的通用漏斗"
+  source="Covington et al. (2016), Deep Neural Networks for YouTube Recommendations (RecSys)"
+  href="https://research.google/pubs/pub45530/"
+  insight="YouTube 推荐用两阶段——候选生成把百万视频缩到数百、再精排到几十;并从「点击」目标转向「观看时长」目标以对抗标题党。"
+  application="架构启示:大规模推荐的通用骨架是「召回 + 排序」两阶段漏斗;优化目标的选择(时长 vs 点击)直接塑造内容生态。"
+/>
+
 ## 来源
 
 - [Deep Neural Networks for YouTube Recommendations (ACM RecSys Conference)](https://research.google/pubs/pub45530/)
 - [Scaling YouTube Infrastructure with Vitess and GGC Edge Nodes (Google Engineering Publications)](https://research.google/)
-- [Dynamic Adaptive Streaming over HTTP (DASH) Architecture Standard (ISO/IEC 23009-1)](https://www.iso.org/)
-- [Building a Distributed Video Transcoding Pipeline at Scale (ACM Queue System Architecture)](https://queue.acm.org/)

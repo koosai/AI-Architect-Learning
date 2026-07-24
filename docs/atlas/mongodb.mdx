@@ -490,9 +490,16 @@ print("\\n[Result] 文档分片路由与副本集选主验证成功")
   ]}
 />
 
+<ResearchNote
+  title="换存储引擎:并发上限由锁粒度决定"
+  source="MongoDB Documentation, WiredTiger Storage Engine"
+  href="https://www.mongodb.com/docs/manual/core/wiredtiger/"
+  insight="MongoDB 从 MMAPv1 换到 WiredTiger,获得文档级并发(而非库级锁) + 压缩 + MVCC,才真正支撑高并发写。"
+  application="架构启示:数据库的并发上限往往由存储引擎的锁粒度决定——从库锁到文档/行锁的一次换引擎,比加机器更能提升写吞吐。"
+/>
+
 ## 来源
 
 - [WiredTiger Storage Engine Integration and Multi-Version Concurrency Control (MongoDB Technical Architecture)](https://www.mongodb.com/docs/manual/core/wiredtiger/)
 - [MongoDB Distributed Architecture: Replication and Sharding Specification (ACM Queue)](https://dl.acm.org/doi/10.1145/2492408.2492414)
 - [BSON Binary JSON Specification Version 1.1 (bsonspec.org)](http://bsonspec.org/spec.html)
-- [Consistency and Durability Guarantees with Write Concern Majority in Distributed NoSQL (VLDB Journal)](https://www.vldb.org/)

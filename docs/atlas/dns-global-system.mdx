@@ -457,9 +457,16 @@ print("\\n[Result] 层级委托解析与TTL缓存过期验证成功")
   ]}
 />
 
+<ResearchNote
+  title="层级委托:一个没有中心的全球目录"
+  source="Mockapetris (1987), RFC 1034: Domain Names - Concepts and Facilities"
+  href="https://datatracker.ietf.org/doc/html/rfc1034"
+  insight="DNS 把全球命名空间按层级(根 → TLD → 权威)委托出去,配合缓存 TTL,让一个没有中央数据库的系统承载全球查询——每一级只需知道下一跳问谁。"
+  application="架构启示:超大规模目录靠「层级委托 + 缓存」而非中心库——把权威分散、把热点用 TTL 缓存吸收,是一切分布式命名(服务发现)的原型。"
+/>
+
 ## 来源
 
 - [DNS Architecture: Concepts and Facilities (RFC 1034 & RFC 1035 Standards)](https://datatracker.ietf.org/doc/html/rfc1034)
-- [Operation of Anycast Services for DNS Root Name Servers (ICANN Technical Report)](https://www.icann.org/)
 - [Client Subnet in DNS Queries: EDNS0 Extension for Geographic CDN Scheduling (RFC 7871)](https://datatracker.ietf.org/doc/html/rfc7871)
 - [DNS Security Extensions (DNSSEC) Architecture (IETF RFC 4033 Specification)](https://datatracker.ietf.org/doc/html/rfc4033)

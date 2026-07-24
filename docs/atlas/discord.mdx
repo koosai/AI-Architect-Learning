@@ -347,6 +347,14 @@ Discord 团队在选择和重写底层基础组件时，始终在性能、复杂
   ]}
 />
 
+<ResearchNote
+  title="分区键决定生死:Discord 的万亿消息存储"
+  source="Discord Engineering, How Discord Stores Billions of Messages"
+  href="https://discord.com/blog/how-discord-stores-billions-of-messages"
+  insight="Discord 消息存储从 MongoDB → Cassandra → ScyllaDB,核心是为「海量写 + 按 channel 时间范围读」选对分区键(channel_id + 时间桶),避免热点与墓碑风暴。"
+  application="架构启示:大规模消息/时序存储的成败在分区键设计——让读写都落在有序、有界的分区上,比换数据库更根本。"
+/>
+
 ## 来源
 
 - [Discord Blog: How Discord Stores Billions of Messages (Cassandra Era)](https://discord.com/blog/how-discord-stores-billions-of-messages)

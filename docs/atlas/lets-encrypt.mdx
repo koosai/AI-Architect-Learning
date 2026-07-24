@@ -445,9 +445,16 @@ print("\\n[Result] ACME HTTP-01校验与90天证书轮转验证成功")
   ]}
 />
 
+<ResearchNote
+  title="ACME:把 HTTPS 变成默认值"
+  source="Let us Encrypt Documentation"
+  href="https://letsencrypt.org/docs/"
+  insight="Let us Encrypt 用 ACME 协议自动化「证明域名控制权 → 签发 → 续期」全流程,配合 90 天短生命周期证书,把 HTTPS 从手动、昂贵、易过期变成免费、自动、默认。"
+  application="架构启示:让正确的事变成默认——用自动化 + 短生命周期(强制轮转)消除人工运维,既提安全又降负担(同思想见于密钥轮转、令牌短 TTL)。"
+/>
+
 ## 来源
 
 - [Let's Encrypt Architecture and Boulder ACME Server Design (ISRG Technical Documentation)](https://letsencrypt.org/docs/)
 - [RFC 8555: Automatic Certificate Management Environment (ACME) (IETF Standard Specification)](https://datatracker.ietf.org/doc/html/rfc8555)
-- [Short-Lived Certificates and 90-Day Renewal Mechanics (ACM Queue Architecture Series)](https://queue.acm.org/)
 - [Cert-Manager Cloud-Native TLS Automation in Kubernetes (CNCF Documentation)](https://cert-manager.io/docs/)

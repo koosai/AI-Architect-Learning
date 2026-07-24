@@ -331,6 +331,14 @@ timeline
   ]}
 />
 
+<ResearchNote
+  title="Prometheus:把传统搜索接进 LLM 的编排层"
+  source="Microsoft, Building the New Bing"
+  href="https://blogs.bing.com/search/february-2023/Building-the-New-Bing"
+  insight="新 Bing 用 Prometheus 编排层在查询与 LLM 之间插入检索:先判断是否需要实时搜索,取回结果做 grounding,再让模型带引用生成——把会编造的模型约束在可核验的事实上。"
+  application="架构启示:LLM 产品化的关键不是模型本身,而是「检索-grounding-生成-引用」的编排——让不可靠的生成锚定在可核验的检索证据上。"
+/>
+
 ## 来源
 
 - [Microsoft Research: The Prometheus Engine - Integration of LLMs with Web Search Indexes](https://blogs.bing.com/search/february-2023/Building-the-New-Bing)

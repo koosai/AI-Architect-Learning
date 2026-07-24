@@ -335,6 +335,14 @@ timeline
   ]}
 />
 
+<ResearchNote
+  title="Firecracker：让每次函数调用都住进一个微型 VM"
+  source="Agache et al. (2020), Firecracker: Lightweight Virtualization for Serverless Applications (NSDI)"
+  href="https://www.usenix.org/conference/nsdi20/presentation/agache"
+  insight="Firecracker microVM 用极简设备模型(仅几个模拟设备、无 BIOS)把 VM 启动压到约 125ms、每实例内存开销 <5MB,让「每个函数一个强隔离沙箱」在经济上可行。"
+  application="架构启示:强隔离与低开销不是二选一——砍掉通用 VM 的冗余,就能同时拿到 VM 级安全边界与接近容器的启动速度。"
+/>
+
 ## 来源
 
 - [Firecracker: Lightweight Virtualization for Serverless Workloads (Alexandru Agache et al., NSDI '20)](https://www.usenix.org/conference/nsdi20/presentation/agache)

@@ -455,6 +455,14 @@ print("\\n[Result] 帧同步确定性锁步与断线重连验证成功")
   ]}
 />
 
+<ResearchNote
+  title="帧同步:只传输入,各机器算出同一个世界"
+  source="GafferOnGames:Deterministic Lockstep"
+  href="https://gafferongames.com/post/deterministic_lockstep/"
+  insight="MOBA 帧同步不传状态只传操作指令,每个客户端用完全确定的逻辑跑同一份模拟,算出一模一样的战局;弱网下用 KCP(可靠 UDP)压低延迟,靠帧缓冲吸收抖动。"
+  application="架构启示:当状态量巨大而输入量很小时,「同步输入 + 确定性重算」比「同步状态」省几个数量级带宽——代价是必须消灭一切不确定性(浮点、随机数、遍历序)。"
+/>
+
 ## 来源
 
 :::caution 关于来源与置信度
@@ -463,4 +471,5 @@ print("\\n[Result] 帧同步确定性锁步与断线重连验证成功")
 
 - 腾讯游戏 / 游戏开发者大会（GDC）关于《王者荣耀》帧同步方案的公开技术分享。
 - 帧同步 vs 状态同步、确定性锁步（Deterministic Lockstep）的通用原理 —— 见公开的实时多人游戏网络同步资料。
-- KCP（可靠 UDP 协议，开源项目）与 FEC 前向纠错在弱网下的应用。
+- [KCP：A Fast and Reliable ARQ Protocol（开源项目 GitHub: skywind3000/kcp）](https://github.com/skywind3000/kcp) —— 弱网下可靠 UDP 传输的一手实现。
+- [GafferOnGames：Deterministic Lockstep（确定性锁步网络同步）](https://gafferongames.com/post/deterministic_lockstep/) —— 帧同步原理的经典公开资料。

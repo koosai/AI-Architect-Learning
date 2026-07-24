@@ -462,6 +462,14 @@ print("[Gate] block数据模型与权限树验证成功")
   ]}
 />
 
+<ResearchNote
+  title="分片键要顺着查询边界选"
+  source="Notion Engineering, Sharding Notion PostgreSQL Database"
+  href="https://www.notion.so/blog/sharding-notions-postgresql-database"
+  insight="Notion 把「万物皆 block」的数据存进分片的 Postgres,按 workspace 分片保证同一空间的数据落在同库,避免昂贵的跨分片 join。"
+  application="架构启示:分片键要顺着最常见的查询边界(这里是 workspace)选——让绝大多数查询落在单分片,才不被跨库 join 反噬。"
+/>
+
 ## 来源
 
 - [How Notion Sharded Its PostgreSQL Database (Notion Engineering Blog)](https://www.notion.so/blog/sharding-notions-postgresql-database)

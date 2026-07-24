@@ -442,7 +442,15 @@ print("\\n[Result] 内容寻址CID与DHT路由验证成功")
 
 ## 来源
 
-- [IPFS Specification: Content Addressing, Merkle DAGs, and UnixFS (Protocol Labs Documentation)](https://docs.ipfs.tech/)
-- [Libp2p Specification: Modular P2P Network Stack and Kademlia DHT (Libp2p Technical Specs)](https://libp2p.io/)
-- [Kademlia: A Peer-to-Peer Information System Based on the XOR Metric (Petar Maymounkov & David Mazières)](https://pdos.csail.mit.edu/)
-- [BitSwap Protocol and GraphSync Architecture for Decentralized Data Exchange (IEEE P2P Systems)](https://ieeexplore.ieee.org/)
+- [IPFS - Content Addressed, Versioned, P2P File System (Juan Benet, arXiv:1407.3561, 2014)](https://arxiv.org/abs/1407.3561) —— IPFS 内容寻址、Merkle DAG 与自证明命名空间的奠基论文。
+- [libp2p 官方规范（GitHub: libp2p/specs）](https://github.com/libp2p/specs) —— 模块化 P2P 网络栈与 Kademlia DHT 的一手规范。
+- [IPFS 官方文档：Content Addressing 概念](https://docs.ipfs.tech/concepts/content-addressing/) —— CID 与内容寻址的官方说明。
+- Kademlia: A Peer-to-Peer Information System Based on the XOR Metric（Maymounkov & Mazières, 2002）—— DHT 路由的经典论文（按名称检索）。
+
+<ResearchNote
+  title="内容寻址：把『在哪』变成『是什么』"
+  source="Benet, J. (2014), IPFS - Content Addressed, Versioned, P2P File System (arXiv:1407.3561)"
+  href="https://arxiv.org/abs/1407.3561"
+  insight="IPFS 用内容哈希（CID）作为地址，配合 Merkle DAG 与 DHT，让数据不再依赖『某台服务器的位置』，而由内容本身自证明——同一内容天然去重、可校验、可跨节点复用。"
+  application="架构启示：内容寻址是 Git、区块链、CDN 去重、构建缓存（见 Bazel）背后共通的思想——当你需要『不可变 + 可校验 + 天然去重』时，用内容哈希做 key。"
+/>

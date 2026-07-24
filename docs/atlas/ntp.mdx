@@ -269,13 +269,13 @@ flowchart TD
   options={[
     {
       name: '纯软件 NTP / Chrony 架构 (通用 NTP 方案)',
-      scores: [100, 75, 95, 70],
+      scores: [5, 4, 5, 4],
       note: '零硬件成本，完全基于现有网络 IP 报文；精度受公网 BGP 抖动影响（1-10ms）。',
       whenToUse: '99% 的 Web 应用、微服务、通用企业数据中心。'
     },
     {
       name: 'Google TrueTime (GPS + 原子钟硬件机架)',
-      scores: [20, 99, 30, 95],
+      scores: [1, 5, 2, 5],
       note: '精度达到微秒级（控制在 1ms 以内），可用于分布式 SQL 外部一致性；但机柜硬件成本极其高昂。',
       whenToUse: 'Google Spanner 等需要全球分布式无锁 SQL 事务的顶级基座。'
     }
@@ -326,7 +326,7 @@ flowchart TD
         'C. 因为 Linux 内核不支持直接修改时间',
         'D. 为了防止网络封包被拦截'
       ],
-      answer: 'B',
+      answer: 1,
       explain: 'Slewing 机制通过渐进改变晶振滴答频率来平滑修正时间，维持了物理时间的单调递增性。'
     },
     {
@@ -337,7 +337,7 @@ flowchart TD
         'C. 客户端的地理位置 GPS 坐标',
         'D. 报文的 AES 加密密钥'
       ],
-      answer: 'B',
+      answer: 1,
       explain: '4-Timestamp 交叉抵消方程能精准分离出网络双向传输延迟与两台机器之间的实际时间偏差 Offset。'
     },
     {
@@ -348,11 +348,16 @@ flowchart TD
         'C. 普通云服务器节点',
         'D. 互联网根域名服务器'
       ],
-      answer: 'B',
+      answer: 1,
       explain: 'Stratum 0 是高精度的硬件参考源，直接与 Stratum 1 主时间服务器物理相连。'
     }
   ]}
 />
+
+## 来源
+
+- [RFC 5905: Network Time Protocol Version 4 — Protocol and Algorithms Specification (IETF)](https://datatracker.ietf.org/doc/html/rfc5905) —— NTPv4 的一手标准。
+- [RFC 5906: Network Time Protocol Version 4 — Autokey Specification (IETF)](https://datatracker.ietf.org/doc/html/rfc5906) —— NTP 安全认证一手标准。
 
 <ResearchNote
   title="NTPv4 官方 RFC 规范"

@@ -480,7 +480,18 @@ print("\\n[Result] 预估送达与骑手路径调度验证成功")
 
 ## 来源
 
-- [Meituan Real-Time Delivery Dispatching and Order Batching System (Meituan Tech Blog)](https://tech.meituan.com/)
-- [DoorDash Logistics Engine: Deep Learning for ETA and Dynamic Batching (DoorDash Engineering Blog)](https://doordash.engineering/)
-- [ETA Prediction and Bipartite Matching for On-Demand Food Delivery (IEEE Transactions on Knowledge and Data Engineering)](https://ieeexplore.ieee.org/)
-- [Uber H3: Hexagonal Hierarchical Spatial Index for On-Demand Routing (ACM SIGSPATIAL Papers)](https://dl.acm.org/doi/10.1145/)
+:::caution 关于来源
+美团/DoorDash 未公开完整调度论文；下列为可查证的官方工程博客与相关一手资料，具体派单/ETA 数值为**教学示意**。
+:::
+
+- [美团技术团队博客（tech.meituan.com）](https://tech.meituan.com/) —— 即时配送调度、ETA 预估与订单聚合的官方工程分享。
+- [DoorDash Engineering Blog](https://careersatdoordash.com/engineering-blog/) —— 物流引擎、ETA 深度学习与动态批量派单的官方工程博客。
+- [H3: Uber's Hexagonal Hierarchical Spatial Index (Uber Engineering)](https://www.uber.com/blog/h3/) —— 即时配送常用的六边形地理索引一手来源。
+
+<ResearchNote
+  title="即时配送：把『派单』变成一个实时优化问题"
+  source="Uber Engineering, H3: Hexagonal Hierarchical Spatial Index"
+  href="https://www.uber.com/blog/h3/"
+  insight="外卖履约的核心是在『骑手位置、订单时效、路径、商家出餐』多约束下做实时撮合。H3 把地图切成分层六边形网格，让『附近骑手/订单』查询与聚合变成快速的网格 join，是派单与 ETA 的地理索引地基。"
+  application="架构启示：把连续的地理空间离散成分层网格（H3/S2/GeoHash），空间邻近查询就退化为整数索引查表——这是一切 LBS（打车/外卖/地图）撮合系统的通用第一步。"
+/>

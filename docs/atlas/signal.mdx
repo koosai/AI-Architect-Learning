@@ -687,6 +687,14 @@ else:
 
 ---
 
+<ResearchNote
+  title="双棘轮:每条消息一把新钥匙,泄露也能自愈"
+  source="Signal 双棘轮算法规范"
+  href="https://signal.org/docs/specifications/doubleratchet/"
+  insight="Signal 用 X3DH 让双方离线也能异步协商初始密钥,再用双棘轮为每条消息派生新密钥并即刻丢弃旧的——前向保密(旧密钥泄露解不开新消息)+ 后向自愈(一次泄露后,新的 DH 交换把攻击者甩掉)。"
+  application="架构启示:端到端加密的高级形态是「密钥不断进化」——一次一密 + 定期重新 DH,把单次密钥泄露的爆炸半径压缩到极小的时间窗,而非一把长期密钥定生死。"
+/>
+
 ## 来源清单
 
 *   [Marlinspike, M., & Trevor, J. (2016). The Double Ratchet Algorithm (Signal Protocol Official Specifications)](https://signal.org/docs/specifications/doubleratchet/)

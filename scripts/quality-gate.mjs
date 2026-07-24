@@ -93,25 +93,42 @@ function extractPyRunners(content) {
   return blocks;
 }
 
-/** 从"来源/参考/References"小节里抽取 URL；若无该小节则退回全文 */
+/**
+ * 从"来源/参考/References"小节里抽取 URL。
+ * 只在存在正式来源小节时才返回 URL——课程章节用内联上下文链接（非来源清单），
+ * 正文里的示例 URL（example.com、acme token 等）也不应被当作引用来判。
+ * 返回 null 表示"该文档没有正式来源小节"，调用方据此跳过引用质量检查。
+ */
 function extractSourceUrls(content) {
-  const headingRe = /^#{1,4}\s*(来源|参考|参考文献|参考资料|References|Sources|来源清单)\b/im;
+  // 注意：不能用 \b —— JS 的 \b 只识别 ASCII 词边界，"来源\b" 在中文后永不匹配。
+  // 兼容三种小节标题形式：`## 来源`、`## 来源清单`、`## 11. 自测题与来源清单`。
+  // `(清单)?` 精确放行"清单"后缀，同时排除"文献参考卡片"/"(来源/标题…)"等非来源小节的误判。
+  const headingRe = /^#{1,4}\s.*(来源|参考文献|参考资料|参考|References|Sources)(清单)?\s*$/im;
   const m = content.match(headingRe);
-  const scope = m ? content.slice(content.indexOf(m[0])) : content;
-  const urls = (scope.match(/https?:\/\/[^\s)\]"'>]+/g) || []).map((u) => u.replace(/[.,);]+$/, ''));
-  return urls;
+  if (!m) return null;
+  const scope = content.slice(content.indexOf(m[0]));
+  return (scope.match(/https?:\/\/[^\s)\]"'>]+/g) || []).map((u) => u.replace(/[.,);]+$/, ''));
 }
 
 // 合法的"权威单页/单主题"引用：其主页本身即是该引用（书、协议规范、单一理念站），不算占位。
 const CANONICAL_HOMEPAGES = new Set([
   'dataintensive.net', 'raft.github.io', 'jepsen.io', '12factor.net', 'dora.dev',
-  'principlesofchaos.org', 'use-the-index-luke.com', 'hyrumslaw.com', 'highscalability.com',
-  'rocksdb.org', 'flink.apache.org', 'volcano.sh', 'slurm.schedmd.com',
+  'principlesofchaos.org', 'use-the-index-luke.com', 'hyrumslaw.com', 'www.hyrumslaw.com',
+  'highscalability.com', 'rocksdb.org', 'flink.apache.org', 'volcano.sh', 'slurm.schedmd.com',
   // 权威规范/单主题官方站——主页本身即是该引用
   'c4model.com', 'modelcontextprotocol.io', 'finops.org', 'www.finops.org',
   'adr.github.io', 'opencontainers.org', 'gdpr.eu', 'artificialintelligenceact.eu',
   'enterpriseintegrationpatterns.com', 'www.enterpriseintegrationpatterns.com',
   'continuousdelivery.com', 'luau-lang.org',
+  // 真实的官方工程博客 / 官方文档 / 作者站——是一手来源，只是链到了首页
+  'netflixtechblog.com', 'slack.engineering', 'engineering.atspotify.com', 'backstage.io',
+  'qnx.com', 'www.qnx.com', 'bazel.build', 'emscripten.org', 'developer.nvidia.com',
+  'developer.arm.com', 'hypothesis.readthedocs.io', 'docs.sentry.io', 'developers.notion.com',
+  'blog.npmjs.org', 'docs.midjourney.com', 'minecraft.wiki', 'design.ros2.org',
+  'eprosima.com', 'www.eprosima.com', 'perspectives.mvdirona.com', 'newosxbook.com',
+  'research.google', 'open.feishu.cn', 'datagravitas.com', 'infrastructure-as-code.com',
+  'geode.apache.org', 'mediasoup.org', 'core.telegram.org', 'bittorrent.org',
+  'developer.okta.com', 'auth0.com', 'tech.meituan.com',
 ]);
 // 明显的占位/示例域名：永远算占位，无论是否只有域名
 const JUNK_HOSTS = new Set(['example.com', 'www.example.com', 'google.com', 'www.google.com']);
@@ -184,17 +201,59 @@ for (const file of files) {
     }
   }
 
-  // ---- 占位引用 (P1) ----
-  const urls = extractSourceUrls(content);
-  const hollow = urls.filter(isHollowUrl);
-  const specific = urls.filter((u) => !isHollowUrl(u));
-  if (hollow.length && specific.length === 0 && urls.length > 0) {
-    findings.p1.push(`[CITE-HOLLOW] ${relPath} — 来源全部为域名首页占位(${hollow.length} 条)，无任何具体文章/论文链接`);
-  } else if (hollow.length) {
-    findings.p2.push(`[CITE-HOLLOW] ${relPath} — 含 ${hollow.length} 条域名首页占位引用: ${hollow.slice(0, 3).join(', ')}${hollow.length > 3 ? ' …' : ''}`);
+  // ---- 组件参数约定 (P1)：能编译、结构齐全，但约定漂移会导致静默渲染/判分错误 ----
+  const quote = /(['"`])(?:\\.|(?!\1).)*\1/g;
+  // QuizCard: 数字 answer 须落在选项区间；选项 >= 2
+  for (const qm of content.matchAll(/options:\s*\[([\s\S]*?)\]\s*,\s*answer:\s*([^\n,]+)/g)) {
+    const nOpts = (qm[1].match(quote) || []).length;
+    const ans = qm[2].trim().replace(/,$/, '');
+    const line = lineOf(content, qm[0].slice(0, 24));
+    if (nOpts < 2) findings.p1.push(`[QUIZ] ${relPath}:${line} — QuizCard 选项仅 ${nOpts} 个`);
+    if (/^\d+$/.test(ans) && (Number(ans) < 0 || Number(ans) >= nOpts))
+      findings.p1.push(`[QUIZ] ${relPath}:${line} — QuizCard answer=${ans} 越出选项区间 0..${nOpts - 1}`);
+  }
+  // TradeoffExplorer: scores 长度须 == dimensions 长度；分值统一 0-5 刻度
+  for (const tm of content.matchAll(/<TradeoffExplorer\b/g)) {
+    const start = tm.index;
+    const nextIdx = content.indexOf('<TradeoffExplorer', start + 5);
+    const blk = content.slice(start, nextIdx === -1 ? start + 4000 : nextIdx);
+    const dm = blk.match(/dimensions=\{\[([\s\S]*?)\]\}/);
+    if (!dm) continue;
+    const nDim = (dm[1].match(quote) || []).length;
+    for (const sm of blk.matchAll(/scores:\s*\[([\d,\s.]+)\]/g)) {
+      const sc = sm[1].match(/[\d.]+/g) || [];
+      if (sc.length !== nDim) findings.p1.push(`[TRADEOFF] ${relPath}:${lineOf(content, blk.slice(0, 24))} — scores(${sc.length})≠dimensions(${nDim})`);
+      if (sc.some((x) => Number(x) > 5)) findings.p1.push(`[TRADEOFF] ${relPath} — scores 超出 0-5 刻度`);
+    }
+  }
+  // GlossaryTerm 须有 definition（P1）；ResearchNote 须有 href（P2）
+  for (const gt of content.matchAll(/<GlossaryTerm\b[^>]*>/g)) {
+    if (!/definition=/.test(gt[0])) findings.p1.push(`[GLOSSARY] ${relPath} — GlossaryTerm 缺 definition`);
+  }
+  for (const rn of content.matchAll(/<ResearchNote\b[\s\S]*?\/>/g)) {
+    if (!/href=/.test(rn[0])) findings.p2.push(`[RESEARCHNOTE] ${relPath} — ResearchNote 缺 href`);
   }
 
-  perFile.push({ relPath, meta, mermaid, interactive, quizQuestions, hollow: hollow.length });
+  // ---- 引用质量 (仅对含正式"来源"小节的文档：Atlas 案例) ----
+  const urls = extractSourceUrls(content);
+  if (urls !== null) {
+    const hollow = urls.filter(isHollowUrl);
+    const specific = urls.filter((u) => !isHollowUrl(u));
+    const isAtlas = relPath.startsWith('docs/atlas/') && !meta;
+    // Atlas 案例的来源可信度已硬门禁化（P1，不可回退）：
+    //   · 不得含编造/占位首页引用（CITE-HOLLOW）
+    //   · 须有 >=2 条具体一手来源（CITE-THIN）
+    // 非 Atlas 文档保持 P2 提示。
+    if (hollow.length) {
+      const tier = isAtlas ? findings.p1 : findings.p2;
+      tier.push(`[CITE-HOLLOW] ${relPath} — 含 ${hollow.length} 条域名首页占位引用: ${hollow.slice(0, 3).join(', ')}${hollow.length > 3 ? ' …' : ''}`);
+    }
+    if (isAtlas && specific.length < 2) {
+      findings.p1.push(`[CITE-THIN] ${relPath} — 具体一手来源仅 ${specific.length} 条(<2)，需补真实来源`);
+    }
+  }
+  const hollowCount = (urls || []).filter(isHollowUrl).length;
+  perFile.push({ relPath, meta, mermaid, interactive, quizQuestions, hollow: hollowCount });
 }
 
 // ---- LAB-REF: 检查引用的 labs 路径是否存在 (P0) ----

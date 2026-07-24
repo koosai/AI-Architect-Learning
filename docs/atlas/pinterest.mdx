@@ -421,6 +421,14 @@ else:
   ]}
 />
 
+<ResearchNote
+  title="PinSage:把图神经网络做到工业级规模"
+  source="Ying et al. (2018), Graph Convolutional Neural Networks for Web-Scale Recommender Systems (arXiv:1806.01973)"
+  href="https://arxiv.org/abs/1806.01973"
+  insight="PinSage 在数十亿节点的图上用随机游走采样邻居 + GraphSAGE 聚合,让 GNN 第一次在工业级规模跑通视觉推荐。"
+  application="架构启示:大图上做 GNN 的关键是「采样而非全图」——用随机游走近邻替代全邻接,把不可扩展的图卷积变成可采样的 mini-batch。"
+/>
+
 ## 来源
 
 - [Graph Convolutional Neural Networks for Web-Scale Recommender Systems (Ying et al., KDD '18)](https://arxiv.org/abs/1806.01973)
