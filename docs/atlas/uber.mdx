@@ -628,6 +628,14 @@ else:
 
 ---
 
+<ResearchNote
+  title="H3 六边形网格:把地球切成可索引的蜂窝"
+  source="Uber 工程博客:H3"
+  href="https://www.uber.com/en-US/blog/h3/"
+  insight="Uber 用六边形(而非方格)把地球分层网格化——六边形到邻居距离均等,避免方格的对角失真;供需、定价、派单都在网格单元里做聚合与匹配,再用一致性哈希(Ringpop)把单元分布到集群。"
+  application="架构启示:地理实时匹配的地基是空间索引——选六边形是因为它的邻接均匀性让「附近」计算无偏;网格 + 一致性哈希让地理分区能随负载弹性伸缩。"
+/>
+
 ## 来源清单
 
 *   [Brodsky, A. (2018), H3: Uber\'s Hexagonal Hierarchical Spatial Index (Uber Engineering Blog / GitHub)](https://www.uber.com/en-US/blog/h3/)

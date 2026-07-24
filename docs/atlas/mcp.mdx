@@ -696,6 +696,14 @@ else:
 
 ---
 
+<ResearchNote
+  title="借鉴 LSP:让 M×N 的集成塌缩成 M+N"
+  source="Model Context Protocol 官方规范"
+  href="https://modelcontextprotocol.io/"
+  insight="MCP 学 LSP 的思路——过去每个 AI 应用对接每个工具都要单独写胶水(M×N),MCP 定义统一的 Host-Client-Server 协议(基于 JSON-RPC),工具方只实现一次 Server、应用方只实现一次 Client,集成量从 M×N 降到 M+N。"
+  application="架构启示:生态互通的关键是「立一个薄标准协议」——像 USB/LSP 那样定义窄接口,把 N×M 的点对点集成变成人人对标准编程,边际接入成本趋近零。"
+/>
+
 ## 来源清单
 
 *   [Model Context Protocol Specifications (Anthropic MCP Official Portal & SDK Specs)](https://modelcontextprotocol.io/)

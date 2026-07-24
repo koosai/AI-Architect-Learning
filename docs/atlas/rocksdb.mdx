@@ -486,6 +486,14 @@ print("\\n[Result] LSM memtable刷盘与compaction验证成功")
   ]}
 />
 
+<ResearchNote
+  title="LSM-Tree:用顺序写换随机写,再用 compaction 还债"
+  source="Log-Structured Merge-Tree 原始论文"
+  href="https://link.springer.com/article/10.1007/s002360050048"
+  insight="RocksDB 把随机写先攒在内存 memtable,满了顺序刷成不可变 SST,读时多层归并;代价是同一数据被 compaction 反复重写(写放大),于是它提供分层/通用 compaction 让你在写放大、读放大、空间放大间调三角。"
+  application="架构启示:存储引擎没有免费午餐——LSM 用写放大换高写吞吐,B-Tree 反之;选型即明确你的读写比,然后在 RUM(读/更新/内存)三角里选边。"
+/>
+
 ## 来源
 
 - [RocksDB: A Persistent Key-Value Store for Flash and RAM Storage (Meta RocksDB Technical Specs)](https://rocksdb.org/)

@@ -442,6 +442,14 @@ print("\\n[Result] 多框架动态批处理与模型集成验证成功")
   ]}
 />
 
+<ResearchNote
+  title="动态批处理:把零散请求攒成高效大批"
+  source="NVIDIA Triton 官方文档"
+  href="https://developer.nvidia.com/triton-inference-server"
+  insight="Triton 在服务端设一个短暂窗口,把同一模型的并发请求动态凑成一个 batch 再上 GPU,把利用率从「一条条喂」拉满;同一块卡还能并发跑多个模型实例,多框架(TF/PyTorch/ONNX/TensorRT)统一在一个后端抽象下。"
+  application="架构启示:GPU 推理的吞吐关键是「批」——用毫秒级窗口把随机到达的请求聚合成批,是延迟换吞吐的经典整流;统一后端抽象让运维不必为每种框架搭一套服务。"
+/>
+
 ## 来源
 
 - [Triton Inference Server Architecture: High-Throughput Multi-Backend Execution (NVIDIA Developer Documentation)](https://developer.nvidia.com/triton-inference-server)

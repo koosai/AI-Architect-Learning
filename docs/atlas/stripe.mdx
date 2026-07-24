@@ -689,6 +689,14 @@ else:
 
 ---
 
+<ResearchNote
+  title="幂等键:网络重试而不重复扣款的定海神针"
+  source="Stripe 工程博客:Idempotency"
+  href="https://stripe.com/blog/idempotency"
+  insight="Stripe 让客户端给每次支付请求带一个幂等键,服务端记录「键→结果」,重试同一键直接返回首次结果而不再执行——把「不确定是否成功」的网络重试变安全;API 版本用适配器让老客户端永不被破坏。"
+  application="架构启示:任何「重试可能重复」的写操作都该幂等化——用客户端生成的幂等键 + 服务端去重表,把「至少一次」投递安全地变成「恰好一次」效果。"
+/>
+
 ## 来源清单
 
 *   [Stripe Engineering Blog: Designing robust APIs with idempotency keys & retries](https://stripe.com/blog/idempotency)

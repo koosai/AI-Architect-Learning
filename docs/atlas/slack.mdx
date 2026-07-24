@@ -412,6 +412,14 @@ except SecurityError as e:
   ]}
 />
 
+<ResearchNote
+  title="Flannel:把工作区启动数据缓存到边缘"
+  source="Slack 工程博客:Flannel"
+  href="https://slack.engineering/flannel-an-edge-cache-for-slack/"
+  insight="Slack 客户端启动要拉整个工作区的用户/频道元数据,大工作区能拖垮启动;Flannel 是部署在边缘的缓存推荐器,按需增量下发用户可能用到的对象,把「启动即全量」变成「用到才取」;后端 MySQL 用 Vitess 按工作区分片。"
+  application="架构启示:超大租户的启动风暴要靠「边缘缓存 + 懒加载」——把冷数据留在边缘按需取,而非启动时全量灌;分片键选租户(工作区)让数据天然隔离。"
+/>
+
 ## 来源
 
 - [How Slack Scales Its Real-Time Messaging Infrastructure (Slack Engineering Blog)](https://slack.engineering/)

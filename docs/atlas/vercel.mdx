@@ -407,6 +407,14 @@ print("[Gate] 不可变构建产物与边缘ISR验证成功")
   ]}
 />
 
+<ResearchNote
+  title="不可变构建 + 指针切换:部署即原子换页"
+  source="RFC 5861(stale-while-revalidate)"
+  href="https://datatracker.ietf.org/doc/html/rfc5861"
+  insight="Vercel 每次构建产出一份内容寻址、永不修改的产物,上线只是把路由指针原子地指向新版本——回滚就是把指针切回去;ISR 用 stale-while-revalidate:先返回旧静态页,后台悄悄再生,兼顾静态的快与动态的新。"
+  application="架构启示:安全部署的地基是「不可变 + 原子切换」——新旧版本共存、切换是一次指针写,让上线/回滚都无中间态;缓存新鲜度用 SWR 把「快」与「新」解耦。"
+/>
+
 ## 来源
 
 - [RFC 5861: HTTP Cache-Control Extensions for Stale-While-Revalidate (IETF Standards Document)](https://datatracker.ietf.org/doc/html/rfc5861)

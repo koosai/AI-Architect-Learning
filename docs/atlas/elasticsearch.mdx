@@ -469,6 +469,14 @@ $$Shard = (Hash(routing\_value) + ID) \% number\_of\_primary\_shards$$
 
 ---
 
+<ResearchNote
+  title="近实时不是实时:Refresh 与 Flush 的分工"
+  source="Elastic 官方文档:Translog"
+  href="https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules-translog.html"
+  insight="写入先进 Index Buffer + Translog(保证持久),默认每秒 refresh 把 buffer 变成可搜索的新段(near-real-time),而真正落盘合并靠 flush——把「可搜索」与「已持久化」两件事解耦成不同节奏。"
+  application="架构启示:近实时搜索的秘诀是分层承诺——用 WAL(translog)先兜住持久性,再用低频刷新换取搜索可见性,让吞吐与可靠性各走各的时钟。"
+/>
+
 ## 来源清单
 
 *   [Banon (2010), Compass to Elasticsearch: The Evolution of Distributed Search](https://www.elastic.co/about/history-of-elasticsearch)

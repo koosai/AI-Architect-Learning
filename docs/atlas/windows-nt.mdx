@@ -484,6 +484,14 @@ print("[Gate] 混合内核HAL与子系统隔离验证成功")
   ]}
 />
 
+<ResearchNote
+  title="子系统架构:一个内核之上并存多种人格"
+  source="Windows Internals(Russinovich)"
+  href="https://learn.microsoft.com/en-us/sysinternals/resources/windows-internals"
+  insight="NT 内核之上跑多个环境子系统(当年 Win32/POSIX/OS2),各自把系统调用翻译成 NT 原语,同一内核能装不同「人格」;WSL1 曾用这招把 Linux 系统调用翻成 NT,WSL2 则改用轻量虚拟机跑真 Linux 内核——翻译层的兼容天花板催生了架构转向。"
+  application="架构启示:兼容层有极限——语法翻译(WSL1)省资源但语义总有对不齐的角落;当兼容度要求逼近 100%,不如直接跑真内核(WSL2),这是「模拟 vs 虚拟化」的经典抉择。"
+/>
+
 ## 来源
 
 - [Windows Internals, Seventh Edition: Part 1 (Mark Russinovich et al.)](https://learn.microsoft.com/en-us/sysinternals/resources/windows-internals)

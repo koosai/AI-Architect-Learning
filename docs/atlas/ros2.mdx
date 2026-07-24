@@ -495,6 +495,14 @@ print("[Gate] 互斥回调组多线程隔离验证成功")
   ]}
 />
 
+<ResearchNote
+  title="去掉 Master:DDS 让节点自己发现彼此"
+  source="ROS 2 设计文档"
+  href="https://design.ros2.org/"
+  insight="ROS 1 的中心 Master 是单点;ROS 2 换成 DDS,节点靠分布式发现协议自动组网,发布订阅带 QoS(可靠性、时限、历史),无中心也能在实时/弱网下协商通信契约。"
+  application="架构启示:去中心化的代价是发现与一致性协议更复杂,收益是没有单点、可按 QoS 精细匹配供需——机器人这类高可靠场景值这个复杂度。"
+/>
+
 ## 来源
 
 - [ROS 2 Design Patterns and DDS Middleware Specifications (Open Source Robotics Foundation - OSRF)](https://design.ros2.org/)

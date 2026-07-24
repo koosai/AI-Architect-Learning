@@ -440,6 +440,14 @@ print("\\n[Result] 直播转码集群与百万房间聊天验证成功")
   ]}
 />
 
+<ResearchNote
+  title="百万房间的聊天扇出:改造 IRC 撑起弹幕"
+  source="Twitch 工程博客"
+  href="https://blog.twitch.tv/en/tags/engineering/"
+  insight="Twitch 聊天基于改造的 IRC 协议,每个直播间即一个频道,消息通过分层边缘 fanout 集群广播给百万观众;视频侧实时转码出多档码率(ABR ladder),用 LL-HLS 把直播延迟压到秒级。"
+  application="架构启示:一对多实时广播(弹幕/直播)的核心是扇出树——在边缘分层复制消息,让源头只发一次;码率自适应用多档转码换「人人都能流畅看」。"
+/>
+
 ## 来源
 
 - [Twitch Architecture: Scaling Live Video Streaming and Chat to Millions (Twitch Engineering Blog)](https://blog.twitch.tv/en/tags/engineering/)

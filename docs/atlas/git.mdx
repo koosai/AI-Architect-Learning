@@ -671,6 +671,14 @@ else:
 
 ---
 
+<ResearchNote
+  title="内容寻址:提交图是一棵不可变的 Merkle DAG"
+  source="Pro Git — Git Internals"
+  href="https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain"
+  insight="Git 把每个文件/目录/提交按内容算哈希存成对象,提交指向父提交构成有向无环图;改一个字节哈希全变,历史天然防篡改;分支只是一个指向某提交的可变指针,创建分支几乎零成本。"
+  application="架构启示:内容寻址 = 去重 + 完整性 + 不可变——相同内容只存一份,哈希即校验,历史无法悄悄改;把「分支」做成轻量指针,鼓励了随手开分支的工作流。"
+/>
+
 ## 来源清单
 
 *   [Torvalds, L. (2007), Tech Talk: Linus Torvalds on Git (Google Talk)](https://www.youtube.com/watch?v=4XpnKHJAok8)

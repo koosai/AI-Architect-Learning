@@ -695,6 +695,14 @@ else:
 
 ---
 
+<ResearchNote
+  title="购物车宁可冲突也不宕机:Dynamo 的可用性优先"
+  source="Dynamo 论文(SOSP 2007)"
+  href="https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf"
+  insight="Dynamo 为「永远可加购」牺牲强一致——写永不拒绝,分区冲突留到读时用向量时钟检测,购物车合并取并集(宁可复活已删商品也不丢加购);Bezos API mandate 则强制一切团队只经服务接口通信,逼出了 SOA。"
+  application="架构启示:高可用系统要按业务容忍度选一致性——购物车「多一件」可接受、「加不进」不可接受,于是选 AP + 应用层合并;组织上用 API 强制解耦比架构图更能造出微服务。"
+/>
+
 ## 来源清单
 
 *   [DeCandia, G., et al. (2007), Dynamo: Amazon's Highly Available Key-Value Store (SOSP 2007)](https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf)

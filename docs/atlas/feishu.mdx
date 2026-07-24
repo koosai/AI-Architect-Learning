@@ -459,6 +459,14 @@ print("[Gate] 组织权限树继承与策略解析验证成功")
   ]}
 />
 
+<ResearchNote
+  title="组织架构即服务:前缀路径索引撑起权限"
+  source="飞书开放平台文档"
+  href="https://open.feishu.cn/"
+  insight="飞书把组织架构抽成独立服务,用物化前缀路径(materialized path)索引替代递归查询,一次范围扫描即取整棵子树成员;IM、文档、审批共享同一事件总线做实时协同。"
+  application="架构启示:企业 SaaS 的隐藏地基是组织架构——用前缀路径把树查询压成范围查询,权限判定从「递归遍历」降为「一次索引命中」。"
+/>
+
 ## 来源
 
 - [Scaling Organization Structure Services in Enterprise Collaborations (Lark Engineering Blog)](https://open.feishu.cn/)

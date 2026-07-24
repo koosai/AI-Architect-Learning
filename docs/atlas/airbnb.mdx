@@ -473,6 +473,14 @@ print("\\n[Result] 日历房态锁定与并发预订防冲突验证成功")
   ]}
 />
 
+<ResearchNote
+  title="用 Embedding 把搜索变成个性化召回"
+  source="Real-time Personalization using Embeddings(KDD 2018)"
+  href="https://dl.acm.org/doi/10.1145/3219819.3219885"
+  insight="Airbnb 把房源和用户会话训练进同一向量空间,点击/预订序列定义「相似」,于是搜索排序不再只看关键词匹配,而是「与你此刻意图相近的房源」;冷启动房源靠属性 embedding 兜底。"
+  application="架构启示:搜索排序的护城河在信号工程——把用户行为序列变成 embedding,让「相关」由真实转化数据定义,而非人工规则。"
+/>
+
 ## 来源
 
 - [Refactoring Microservices to Service Blocks: Airbnb's Architecture Journey (Airbnb Engineering Blog)](https://medium.com/airbnb-engineering)

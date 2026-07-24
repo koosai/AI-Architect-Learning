@@ -415,6 +415,14 @@ print("\\n[Result] 依赖解析与CDN分发缓存验证成功")
   ]}
 />
 
+<ResearchNote
+  title="依赖解析演进:从嵌套地狱到内容寻址硬链"
+  source="pnpm 技术架构"
+  href="https://pnpm.io/blog/2020/05/27/flat-node-modules-is-not-the-only-way"
+  insight="npm 早期嵌套 node_modules 把同一包复制无数份;pnpm 改用全局内容寻址存储 + 硬链接,每个版本只存一份,项目里是符号链接——既省磁盘又严格隔离幻影依赖;registry 本身则 CDN 化,tarball 就近命中。"
+  application="架构启示:包管理的核心矛盾是「去重」与「隔离」——内容寻址 + 硬链接同时拿下两者,而扁平化会引入幻影依赖(能 require 到没声明的包)。"
+/>
+
 ## 来源
 
 - [npm Architecture: Scaling the World's Largest Package Registry (npm Engineering Blog)](https://blog.npmjs.org/)

@@ -452,6 +452,14 @@ print("[Gate] 工作流状态机流转与插件隔离验证成功")
   ]}
 />
 
+<ResearchNote
+  title="工作流即状态机:把业务规则关进有向图"
+  source="Atlassian Forge 平台文档"
+  href="https://developer.atlassian.com/platform/forge/"
+  insight="Jira 把工单流转建模成显式有向状态机(状态 + 转移 + 校验/后置函数),非法跳转被引擎直接拒绝;第三方扩展跑在 Forge 的 V8 isolate 里,零信任沙箱 + 资源配额,插件崩了也伤不到主站。"
+  application="架构启示:可配置的业务流程要用状态机而非 if-else——转移合法性由图结构保证;托管第三方代码的安全边界,isolate 比容器更轻、更适合海量小函数。"
+/>
+
 ## 来源
 
 - [Evolution of Atlassian Plugin Architectures: From P2 OSGi to Connect and Forge (Atlassian Engineering Blog)](https://developer.atlassian.com/platform/forge/)

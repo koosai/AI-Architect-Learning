@@ -432,6 +432,14 @@ print("[Gate] 安全启动链与沙箱权限验证成功")
   ]}
 />
 
+<ResearchNote
+  title="安全启动链:从 Boot ROM 到 App 的信任传递"
+  source="Apple Platform Security Guide"
+  href="https://support.apple.com/guide/security/welcome/web"
+  insight="iOS 每一级只运行上一级验签通过的代码——Boot ROM→iBoot→内核→系统,信任根固化在硅片里;运行期再由 AMFI 校验每个可执行页的签名与 entitlement,App 被关进沙箱只能碰声明过的资源。"
+  application="架构启示:安全不是一道墙而是一条链——信任根越硬(硅片)、每级验签越严,攻击者越难在链中插入未签名代码。"
+/>
+
 ## 来源
 
 - [iOS Security Guide: Apple Silicon Boot Security and Sandboxing Specifications (Apple Platform Security)](https://support.apple.com/guide/security/welcome/web)

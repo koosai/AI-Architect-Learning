@@ -445,6 +445,14 @@ print("[Gate] XNU混合内核与签名沙箱验证成功")
   ]}
 />
 
+<ResearchNote
+  title="XNU 混合内核:Mach 微内核骨架 + BSD 血肉"
+  source="Apple 开发者文档:Security"
+  href="https://developer.apple.com/documentation/security"
+  insight="XNU 既非纯微内核也非纯宏内核:Mach 层管消息传递、任务/线程与虚拟内存,BSD 层管进程模型、文件系统与网络,两者同地址空间共存;安全由 MACF 钩子(沙箱、代码签名)在系统调用路径上统一拦截。"
+  application="架构启示:混合内核是工程折中——保留 Mach 的模块化 IPC,又用同地址空间的 BSD 避开纯微内核的跨域调用开销,兼顾结构清晰与性能。"
+/>
+
 ## 来源
 
 - [Mac OS X Internals: A Systems Approach (Amit Singh)](https://www.amazon.com/OS-Internals-Systems-Approach-Paperback/dp/B010WELHJS)

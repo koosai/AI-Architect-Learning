@@ -666,6 +666,14 @@ else:
 
 ---
 
+<ResearchNote
+  title="容器不是轻量虚拟机:是内核视图的障眼法"
+  source="OCI Runtime Specification"
+  href="https://github.com/opencontainers/runtime-spec"
+  insight="容器没有自己的内核——namespace 给进程一套「专属视图」(独立 PID/网络/挂载),cgroups 限制它能用多少资源,OverlayFS 把只读镜像层和可写层叠成一个文件系统;共享宿主内核所以启动是毫秒级。"
+  application="架构启示:隔离有两档成本——容器靠内核 namespace「视图隔离」轻快但共享内核(隔离弱),虚拟机靠 hypervisor「硬件隔离」强但重;选型即在启动速度、密度与隔离强度间权衡。"
+/>
+
 ## 来源清单
 
 *   [Hykes, S., & dotCloud Team (2013), Docker: lightweight container runtime based on namespaces and cgroups (Docker Launch Presentation / GitHub)](https://github.com/moby/moby)

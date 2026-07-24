@@ -435,6 +435,14 @@ Figma 在追求丝滑流畅与高一致协同的过程中，进行了深刻的�
 
 ---
 
+<ResearchNote
+  title="把 C++ 编译进浏览器:WASM 撑起专业级渲染"
+  source="Figma 工程博客:WebAssembly"
+  href="https://www.figma.com/blog/webassemblys-post-mvp-future/"
+  insight="Figma 用 C++ 写渲染引擎再编译成 WebAssembly 跑在浏览器,配合 WebGL 直接调 GPU,达到 JS 达不到的专业级性能;多人协作靠自研同步服务器合并各端编辑,后来用 Rust 重写以扛更大并发。"
+  application="架构启示:浏览器里做重计算(设计/CAD/游戏)时,WASM 让「原生代码 + Web 分发」两得——性能敏感层用 C++/Rust 编成 WASM,把 JS 留给胶水与 UI。"
+/>
+
 ## 来源清单
 
 *   [Figma Engineering Blog: WebAssembly's post-MVP future (2018)](https://www.figma.com/blog/webassemblys-post-mvp-future/)

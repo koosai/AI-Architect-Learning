@@ -426,6 +426,14 @@ print("\\n[Result] 区块加载与tick循环调度验证成功")
   ]}
 />
 
+<ResearchNote
+  title="20 TPS 单线程宿命与区域化多线程破局"
+  source="Folia(PaperMC 区域化多线程)"
+  href="https://github.com/PaperMC/Folia"
+  insight="原版 Minecraft 服务器把整个世界塞进一个 20 TPS 的单线程 tick 循环,玩家一多就掉帧;Folia 的破局是按空间把世界切成互不相邻的「区域」,每个区域独立线程 tick,只有跨区域交互才需同步。"
+  application="架构启示:单线程模拟的扩展瓶颈要靠「空间分区并行」化解——把强耦合的全局状态切成弱耦合的局部状态,并行度就从 1 涨到区域数。"
+/>
+
 ## 来源
 
 - [PaperMC Documentation: Async Chunk I/O and High-Performance Minecraft Engine Tuning](https://papermc.io/docs)

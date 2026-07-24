@@ -452,6 +452,14 @@ print("\\n[Result] 错误指纹聚合与洪峰削峰验证成功")
   ]}
 />
 
+<ResearchNote
+  title="指纹聚合:把百万条报错压成几百个问题"
+  source="Sentry 官方技术文档"
+  href="https://docs.sentry.io/"
+  insight="Sentry 用堆栈特征给每个错误算「指纹」,相同指纹归并成一个 issue,一次故障刷出的百万事件收敛成一条可处理问题;摄入侧用 Rust 写的 Relay 就近削峰采样,分析侧落到 ClickHouse(Snuba)做列式聚合。"
+  application="架构启示:可观测性的价值不在「收集」而在「归并」——用指纹把海量事件降维成有限问题集,人才看得过来;洪峰用边缘采样整流,不然存储和人都被淹。"
+/>
+
 ## 来源
 
 - [Sentry Architecture and Event Ingestion Pipeline (Sentry Official Technical Docs)](https://docs.sentry.io/)
