@@ -34,7 +34,21 @@ python labs/month01/l6_idempotency/test_payment.py   # 跑单个
 
 ## 进度
 
+**全部 12 个月 + Atlas 引用实验已补齐：`python labs/run_all.py` → 154 通过 / 0 失败。**
+质量门禁 LAB-REF：298 条引用路径 0 悬空。
+
 | 月份 | 状态 |
 |---|---|
-| Month 01 编程系统基石 | ✅ 15/15 可运行并通过 |
-| Month 02–12 | ⏳ 逐月补齐中 |
+| Month 01 编程系统基石 | ✅ 15 |
+| Month 02 系统设计之桥 | ✅ 8 |
+| Month 03 数据缓存队列 | ✅ 13 |
+| Month 04 设计模式与 LLD | ✅ 12 |
+| Month 05 分布式核心组件 | ✅ 12 |
+| Month 06 云原生与企业级 | ✅ 12 |
+| Month 07 LLM 系统 | ✅ 12 |
+| Month 08 RAG | ✅ 12 + 5 Atlas |
+| Month 09 Agent 架构 | ✅ 12 + 1 Atlas |
+| Month 10 多智能体协议 | ✅ 12 |
+| Month 11 生产级 AI 平台 | ✅ 12 + 3 Atlas |
+| Month 12 毕业设计 Capstone | ✅ 12 |
+| Atlas 案例专属实验 | ✅ 10（Snowflake/PinSage/Ray 等） |
