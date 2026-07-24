@@ -434,7 +434,14 @@ print("\\n[Result] ECS渲染管线与资产流送验证成功")
 
 ## 来源
 
-- [Unreal Engine 5 Mass Entity Architecture: High-Performance Data-Driven Systems (Epic Games Developer Documentation)](https://dev.epicgames.com/)
-- [Nanite: Virtualized Geometry in Unreal Engine 5 (ACM SIGGRAPH Technical Papers)](https://dl.acm.org/)
-- [Lumen: Dynamic Global Illumination and Reflections in Unreal Engine 5 (Epic Games Technical Blog)](https://www.unrealengine.com/blog)
-- [World Partition and Asynchronous Asset Streaming in Modern Open-World Engines (IEEE CG&A)](https://ieeexplore.ieee.org/)
+- [Unreal Engine 官方文档：Mass Entity（数据驱动 ECS 框架）](https://dev.epicgames.com/documentation/en-us/unreal-engine/mass-entity-in-unreal-engine) —— UE5 面向数据的实体-组件系统官方文档。
+- [A Deep Dive into Nanite Virtualized Geometry（Brian Karis 等，SIGGRAPH 2021 "Advances in Real-Time Rendering" 课程）](https://advances.realtimerendering.com/s2021/) —— Nanite 虚拟化几何的一手技术分享。
+- [Unreal Engine 官方文档：World Partition（大世界分区流送）](https://dev.epicgames.com/documentation/en-us/unreal-engine/world-partition-in-unreal-engine) —— 开放世界异步资产流送的官方说明。
+
+<ResearchNote
+  title="Nanite：把『多边形预算』这件事彻底删掉"
+  source="Karis et al. (2021), A Deep Dive into Nanite Virtualized Geometry (SIGGRAPH Advances in Real-Time Rendering)"
+  href="https://advances.realtimerendering.com/s2021/"
+  insight="Nanite 用虚拟化几何 + 基于 GPU 的簇（cluster）级 LOD 与可见性剔除，让引擎只处理『屏幕上真正可见的三角形』，从而在电影级几何密度下仍保持稳定帧率——本质是把渲染量从『场景复杂度』解耦为『屏幕像素数』。"
+  application="架构启示：这是又一个『按需分页/流送』思想的应用——和 OS 虚拟内存分页、vLLM 的 PagedAttention 同源：不预算全部，只按可见/需要的粒度加载。"
+/>

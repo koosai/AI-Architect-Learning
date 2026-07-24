@@ -475,7 +475,14 @@ print("\\n[Result] 快照隔离与元数据层时间旅行验证成功")
 
 ## 来源
 
-- [Apache Iceberg: Open Table Format for Huge Analytic Datasets (Apache Iceberg Specifications)](https://iceberg.apache.org/)
-- [High-Performance Data Lakehouse Architecture with Apache Iceberg (ACM SIGMOD Conference)](https://dl.acm.org/doi/10.1145/3448016.3457535)
-- [Hidden Partitioning and Metadata-Based File Pruning in Modern Lakehouses (VLDB Endowment)](https://www.vldb.org/)
-- [Copy-on-Write vs. Merge-on-Read Tradeoffs in Data Lake Operations (Netflix Technology Blog)](https://netflixtechblog.com/)
+- [Apache Iceberg 表格式官方规范（Table Spec）](https://iceberg.apache.org/spec/) —— 快照、清单（manifest）、隐藏分区与元数据层的一手规范。
+- [Apache Iceberg 源码与设计文档（GitHub: apache/iceberg）](https://github.com/apache/iceberg) —— 起源于 Netflix，捐赠给 Apache 的开源实现。
+- [Iceberg 官方文档：可靠性与元数据层（Reliability）](https://iceberg.apache.org/docs/latest/reliability/) —— 快照隔离与原子提交机制说明。
+
+<ResearchNote
+  title="表格式：把数据湖变成有事务的表"
+  source="Apache Iceberg Table Spec（官方规范）"
+  href="https://iceberg.apache.org/spec/"
+  insight="Iceberg 在文件之上加了一层不可变的元数据（快照 + 清单列表 + 清单），每次写入生成新快照并原子替换指针，从而在对象存储上实现了快照隔离、时间旅行与隐藏分区——无需重写数据文件。"
+  application="架构启示：给『一堆文件』套一层不可变元数据指针，就能把最终一致的对象存储升级出数据库级的事务语义——这和 Git 的 commit 指针、MVCC 的版本链是同一招。"
+/>
