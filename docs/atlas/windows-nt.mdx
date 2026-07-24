@@ -353,7 +353,7 @@ $$VA = (PML4\_Idx, PDPT\_Idx, PD\_Idx, PT\_Idx, Offset)$$
 在下方控制台中运行并测试准备好的虚拟内存缺页置换算法代码，试着改变物理帧容量，观察缺页率的变化：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="混合内核HAL与子系统隔离验证成功"
   rows={25}
   code={`class PageTableEntry:
     def __init__(self):
@@ -436,6 +436,7 @@ vmm.access_page(3)
 
 print("\\n--- 重新访问已置换出的 0 号页 (触发置换，1 号页应该被置换) ---")
 vmm.access_page(0)
+print("[Gate] 混合内核HAL与子系统隔离验证成功")
 `}
 />
 

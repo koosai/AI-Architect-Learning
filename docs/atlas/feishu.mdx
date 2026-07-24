@@ -327,7 +327,7 @@ timeline
 在下方控制台中运行并修改已准备好的前缀路径树鉴权代码，配置不同的授权规则，观察 O(1) 的字符串前缀匹配如何工作：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="组织权限树继承与策略解析验证成功"
   rows={25}
   code={`class Department:
     def __init__(self, name: str, path: str, access_rules=None):
@@ -411,6 +411,7 @@ print("--- 测试 3: Bob 访问集团政策 ---")
 # Bob 符合 /Corp 的前缀，应继承 /Corp 的 "read"
 res_3 = evaluator.evaluate_access("Bob", "company_policy")
 print(f"=> Bob 最终权限: {res_3}\\n")
+print("[Gate] 组织权限树继承与策略解析验证成功")
 `}
 />
 

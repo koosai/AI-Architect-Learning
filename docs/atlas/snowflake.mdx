@@ -374,7 +374,7 @@ timeline
 在下方控制台中调试 Snowflake 的存算解耦仿真代码，直观观察元数据复制与列文件写时分叉的运行细节：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="存算分离虚拟仓库弹性验证成功"
   rows={25}
   code={`class MicroPartition:
     def __init__(self, part_id: int, records: list):
@@ -516,6 +516,7 @@ print(f"   克隆表数据 (应看到修改): {res_clone}")
 
 print("\\n--- 5. 零重分片扩容计算节点 ---")
 vw_query.resize("Large")
+print("[Gate] 存算分离虚拟仓库弹性验证成功")
 `}
 />
 

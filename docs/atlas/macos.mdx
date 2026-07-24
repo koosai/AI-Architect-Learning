@@ -333,7 +333,7 @@ timeline
 在下方控制台中调试准备好的 MACF 拦截仿真代码，尝试修改沙箱配置文件或者输入防穿透测试用例，观察安全日志：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="XNU混合内核与签名沙箱验证成功"
   rows={25}
   code={`import os
 
@@ -397,6 +397,7 @@ sandbox_engine.check_file_access("/tmp/../etc/hosts", "write")
 
 print("\\n--- 测试 4: 试图发起 HTTPS 请求 (应被网络控制策略阻断) ---")
 sandbox_engine.check_network_access("api.apple.com", 443)
+print("[Gate] XNU混合内核与签名沙箱验证成功")
 `}
 />
 

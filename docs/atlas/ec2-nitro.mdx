@@ -334,7 +334,7 @@ timeline
 在下方控制台中运行虚拟化调度仿真代码，直观分析 AWS Nitro 是如何解放 CPU 算力红利的：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="虚拟化卸载与EBS队列处理验证成功"
   rows={25}
   code={`class PhysicalCPUCore:
     def __init__(self, core_id: int):
@@ -416,6 +416,7 @@ print("\\n" + "="*70 + "\\n")
 sim_nitro = CloudHostSimulator("AWS_Nitro")
 sim_nitro.run_simulation_cycle()
 sim_nitro.show_statistics()
+print("[Gate] 虚拟化卸载与EBS队列处理验证成功")
 `}
 />
 

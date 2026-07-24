@@ -318,7 +318,7 @@ timeline
 在下方控制台中调试 MongoDB 分片路由与 Chunk 平衡仿真代码，观察元数据映射与数据迁移的运行流程：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="文档分片路由与副本集选主验证成功"
   rows={25}
   code={`class ShardReplicaSet:
     def __init__(self, name: str):
@@ -442,7 +442,7 @@ print("\\n--- 2. 路由验证：查询分布在不同 Shard 上的数据 ---")
 router.query(20)
 router.query(80)
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 文档分片路由与副本集选主验证成功")
 `}
 />
 

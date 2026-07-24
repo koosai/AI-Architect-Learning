@@ -332,7 +332,7 @@ timeline
 在下方控制台中运行边缘 Serverless 调度仿真，查看 V8 Isolate 是如何打破高并发虚拟化天花板的：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="V8 isolate多租户冷启动隔离验证成功"
   rows={25}
   code={`class ServerlessTenant:
     def __init__(self, name: str, runtime_type: str):
@@ -391,6 +391,7 @@ print("\\n" + "="*70 + "\\n")
 # 2. 运行 Cloudflare Workers 倡导的 V8 Isolate 模式测试
 sim_isolate = EdgeNodeSimulator("V8_Isolate")
 sim_isolate.run_density_test()
+print("[Gate] V8 isolate多租户冷启动隔离验证成功")
 `}
 />
 

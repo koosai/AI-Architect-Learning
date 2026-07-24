@@ -368,7 +368,7 @@ timeline
 在下方控制台中调试 ROS 2 执行器仿真代码，查看互斥回调组是如何在多线程环境下提供安全防火墙的：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="互斥回调组多线程隔离验证成功"
   rows={25}
   code={`class ROS2Callback:
     def __init__(self, name: str, group_id: str, is_mutually_exclusive: bool = True):
@@ -447,6 +447,7 @@ executor.execute_one_ready_callback(worker_thread_id=2)
 # 最后再次触发调度，此时剩余的 IMU 能够被成功执行
 print("\\n--- 再次调度，执行剩余的回调 ---")
 executor.execute_one_ready_callback(worker_thread_id=1)
+print("[Gate] 互斥回调组多线程隔离验证成功")
 `}
 />
 

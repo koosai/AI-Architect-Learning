@@ -349,7 +349,7 @@ timeline
 在下方控制台中调试 Spotify 音频块预加载与冷启动声学推荐仿真代码，观察流媒体与 AI 推荐过程：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="音频分发与Discover Weekly推荐管线验证成功"
   rows={25}
   code={`import time
 
@@ -406,7 +406,7 @@ print(f"🎯 [Recommendation Score] 新歌 '{indie_new_song.name}' 匹配度评�
 if sim_score > 0.8:
     print(f"✨ [Discover Weekly Result] 成功将冷门新歌 '{indie_new_song.name}' 纳入本周一的推荐歌单中！")
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 音频分发与Discover Weekly推荐管线验证成功")
 `}
 />
 

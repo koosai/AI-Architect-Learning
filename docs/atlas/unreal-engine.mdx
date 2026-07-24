@@ -324,7 +324,7 @@ timeline
 在下方控制台中调试 UE5 Mass Entity 与 World Partition 仿真代码，观察次世代游戏引擎：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="ECS渲染管线与资产流送验证成功"
   rows={25}
   code={`import math
 import time
@@ -384,7 +384,7 @@ streamer = WorldPartitionStreamer(loading_radius=300.0)
 streamer.update_player_pos(player_x=0.0, player_y=0.0)   # 在城堡
 streamer.update_player_pos(player_x=300.0, player_y=0.0) # 走向森林，远离城堡
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] ECS渲染管线与资产流送验证成功")
 `}
 />
 

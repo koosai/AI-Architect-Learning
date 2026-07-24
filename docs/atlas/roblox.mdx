@@ -344,7 +344,7 @@ timeline
 在下方控制台中调试 Roblox 沙箱与分布式物理仿真代码，观察 UGC 平台架构：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="脚本沙箱隔离与分布式物理模拟验证成功"
   rows={25}
   code={`import time
 
@@ -408,7 +408,7 @@ physics.receive_client_update(new_pos=20.0, delta_time=1.0)
 # 客户端尝试传送外挂 (1 秒移动 200 米)
 physics.receive_client_update(new_pos=220.0, delta_time=1.0)
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 脚本沙箱隔离与分布式物理模拟验证成功")
 `}
 />
 
@@ -458,7 +458,10 @@ print("\\n[Result] 分片路由与隔离验证成功")
 
 ## 来源
 
-- [Roblox Architecture: Luau Language Standard and Security Sandbox Design (Roblox Developer Portal)](https://luau-lang.org/)
-- [Distributed Physics and Network Ownership in Roblox Engine (Roblox Engineering Blog)](https://blog.roblox.com/)
-- [Projected Gauss-Seidel (PGS) Rigid Body Solver Mechanics in Multithreaded Game Engines (ACM TOG)](https://dl.acm.org/)
-- [DataModel Instance Tree Replication and Cloud Infrastructure at Roblox Scale (IEEE Software)](https://ieeexplore.ieee.org/)
+:::caution 关于来源与置信度
+本案例的具体实现细节为**基于公开信息的教学重构**，非官方架构文档。Luau 语言与脚本沙箱、DataModel 实例树、网络所有权（Network Ownership）等概念有官方公开资料佐证；分布式物理与刚体求解的内部实现请以官方为准。下列为可延伸查证的公开资料方向（按名称检索）：
+:::
+
+- [Luau](https://luau-lang.org/) —— Roblox 开源的脚本语言（沙箱、类型系统）官方站。
+- Roblox Engineering / Developer 官方博客与文档 —— DataModel、网络所有权与复制机制。
+- 多线程游戏引擎中投影高斯-赛德尔（PGS）刚体求解的通用原理 —— 见公开的实时物理仿真资料。

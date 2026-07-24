@@ -339,7 +339,7 @@ timeline
 在下方控制台中调试 Milvus 向量检索与标量 BitSet 过滤仿真代码，观察云原生向量数据库：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="HNSW向量索引召回与存算分离验证成功"
   rows={25}
   code={`import math
 
@@ -391,7 +391,7 @@ collection.insert(doc_id=104, vector=[0.11, 0.21, 0.31, 0.41], year=2022) # 极�
 query_vector = [0.1, 0.2, 0.3, 0.4]
 collection.hybrid_search(query_vector, filter_year=2025, top_k=2)
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] HNSW向量索引召回与存算分离验证成功")
 `}
 />
 

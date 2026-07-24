@@ -327,7 +327,7 @@ timeline
 在下方控制台中调试 GitHub Spokes 存储与 Actions 调度仿真代码，观察三副本同步与一次性容器运行：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="Spokes三副本存储与一致性路由验证成功"
   rows={25}
   code={`class StorageNode:
     def __init__(self, node_id: str):
@@ -397,7 +397,7 @@ class GitHubSystem:
 gh = GitHubSystem()
 gh.handle_git_push("torvalds/linux", "c0mm1t_abc123", "main")
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] Spokes三副本存储与一致性路由验证成功")
 `}
 />
 

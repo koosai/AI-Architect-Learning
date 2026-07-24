@@ -348,7 +348,7 @@ timeline
 在下方控制台中调试 Bazel Action Digest 哈希计算与 CAS 缓存命中仿真代码，观察纯函数式构建与缓存加速：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="远程缓存命中与增量重建验证成功"
   rows={25}
   code={`import hashlib
 
@@ -420,7 +420,7 @@ files_v2 = {"foo.cc": "hash_abc999_MODIFIED", "foo.h": "hash_def456"}
 act2 = Action("compile_foo", "g++ -O2 -c foo.cc -o foo.o", files_v2, ["foo.o"])
 engine.execute_action(act2)
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 远程缓存命中与增量重建验证成功")
 `}
 />
 

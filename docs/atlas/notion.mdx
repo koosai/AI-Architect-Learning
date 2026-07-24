@@ -341,7 +341,7 @@ timeline
 在下方控制台中运行并修改已准备好的 Block 权限评估与回溯仿真代码，观察树状节点在不同继承层次下的安全结果：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="block数据模型与权限树验证成功"
   rows={25}
   code={`class Block:
     def __init__(self, block_id, block_type, parent_id=None, permissions=None):
@@ -414,6 +414,7 @@ print(f"=> 最终判定结果: {perm_bob_ok} (期望: read)\\n")
 print("--- 测试 3: Bob 访问受限段落 restricted_text ---")
 perm_bob_fail = evaluator.resolve_permission("Bob", "restricted_text")
 print(f"=> 最终判定结果: {perm_bob_fail} (期望: none)\\n")
+print("[Gate] block数据模型与权限树验证成功")
 `}
 />
 

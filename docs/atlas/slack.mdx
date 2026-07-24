@@ -292,7 +292,7 @@ $$Shard = Hash(workspace\_id) \% Shards\_Count$$
 在下方控制台中运行并修改已准备好的工作区分片路由及隔离仿真代码，体会多租户隔离的数据分布特征：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="工作区分片与实时消息总线验证成功"
   rows={25}
   code={`import hashlib
 
@@ -364,7 +364,7 @@ try:
     router.read_tenant_data("W_Amazon", google_shard)
 except SecurityError as e:
     print(e)
-    print("✅ 分片路由与隔离验证成功！系统成功阻断并报警跨租户未授权路由请求。")
+    print("✅ 工作区分片与实时消息总线验证成功！系统成功阻断并报警跨租户未授权路由请求。")
 `}
 />
 

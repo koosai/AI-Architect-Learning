@@ -351,7 +351,7 @@ timeline
 在下方控制台中调试 Shopify Pod 租户路由与 Redis Lua 秒杀防超卖仿真代码，观察多租户隔离与秒杀防护：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="多租户Pod隔离与闪购限流验证成功"
   rows={25}
   code={`class ShopifyPod:
     def __init__(self, pod_id: str):
@@ -407,7 +407,7 @@ for i in range(1, 6):
 
 print(f"\\n📊 [Final Verification] 网红 Pod 最终成功落盘订单数: {len(pod_dedicated.db_orders)} (100% 准确未超卖!)")
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 多租户Pod隔离与闪购限流验证成功")
 `}
 />
 
@@ -457,7 +457,10 @@ print("\\n[Result] 分片路由与隔离验证成功")
 
 ## 来源
 
-- [Shopify Architecture: Scaling the World's Largest Ruby on Rails Application with Pods (Shopify Engineering Blog)](https://shopify.engine.blog/)
-- [Deconstructing the Monolith: Designing a Podbed Multi-Tenant Architecture (ACM Queue / System Design)](https://queue.acm.org/)
-- [Preventing Overselling in High-Concurrency Flash Sales with Redis Lua (IEEE Distributed Systems)](https://ieeexplore.ieee.org/)
-- [Sorting Hat: How Shopify Routes Millions of Requests to Independent Pods (Shopify Architecture Papers)](https://shopify.engine.blog/)
+:::caution 关于来源
+以下为 Shopify 官方工程博客（Shopify Engineering）公开分享的文章标题，可按名称检索原文。文中的秒杀防超卖等具体数值为**教学示意**，非官方参数。
+:::
+
+- Shopify Engineering —— 《Deconstructing the Monolith》：从 Rails 单体拆分与模块化边界（Pods 多租户架构的背景）。
+- Shopify Engineering —— 《Sorting Hat》：如何把海量请求路由到相互独立的 Pod（请求分片路由）。
+- 高并发闪购防超卖的通用模式（Redis 原子扣减 / Lua 脚本）—— 见业界公开的秒杀系统设计资料。

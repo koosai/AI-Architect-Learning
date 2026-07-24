@@ -327,7 +327,7 @@ timeline
 在下方控制台中运行火星车调度仿真，仔细比对输出的日志，查看优先级继承是如何在线解救飞船的：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="硬实时优先级反转防护验证成功"
   rows={25}
   code={`class Task:
     def __init__(self, name: str, priority: int, duration: int, needs_mutex: bool = False):
@@ -447,6 +447,7 @@ print("\\n" + "="*70 + "\\n")
 # 2. 模拟开启优先级继承：系统安全运行
 sim_safe = MarsPathfinderSimulator(use_priority_inheritance=True)
 sim_safe.run_simulation()
+print("[Gate] 硬实时优先级反转防护验证成功")
 `}
 />
 

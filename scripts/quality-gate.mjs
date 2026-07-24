@@ -107,6 +107,11 @@ const CANONICAL_HOMEPAGES = new Set([
   'dataintensive.net', 'raft.github.io', 'jepsen.io', '12factor.net', 'dora.dev',
   'principlesofchaos.org', 'use-the-index-luke.com', 'hyrumslaw.com', 'highscalability.com',
   'rocksdb.org', 'flink.apache.org', 'volcano.sh', 'slurm.schedmd.com',
+  // 权威规范/单主题官方站——主页本身即是该引用
+  'c4model.com', 'modelcontextprotocol.io', 'finops.org', 'www.finops.org',
+  'adr.github.io', 'opencontainers.org', 'gdpr.eu', 'artificialintelligenceact.eu',
+  'enterpriseintegrationpatterns.com', 'www.enterpriseintegrationpatterns.com',
+  'continuousdelivery.com', 'luau-lang.org',
 ]);
 // 明显的占位/示例域名：永远算占位，无论是否只有域名
 const JUNK_HOSTS = new Set(['example.com', 'www.example.com', 'google.com', 'www.google.com']);
@@ -170,9 +175,12 @@ for (const file of files) {
     if (!r.expect) continue;
     if (!expectUsage.has(r.expect)) expectUsage.set(r.expect, new Set());
     expectUsage.get(r.expect).add(relPath);
-    // EXPECT-SOUND: expect 串必须出现在 code 输出里（大小写不敏感，与组件校验逻辑一致）
+    // EXPECT-SOUND: expect 串未作为字面量出现在 code 源码里。
+    // 注意：这是静态检查，看不到运行时输出——若 expect 由 f-string/print 多参数在运行时拼出
+    // （如 print("卖出:", sold) 运行时输出 "卖出: 2"），会误报。故列为 P2 供人工/执行核对，
+    // 不作硬门禁。真正可靠的复制粘贴信号由 EXPECT-DUP(P1) 兜底。
     if (r.code && !r.code.toLowerCase().includes(r.expect.toLowerCase())) {
-      findings.p1.push(`[EXPECT-SOUND] ${relPath}:${r.line} — expect="${r.expect}" 未出现在 code 中，绿灯永远点不亮`);
+      findings.p2.push(`[EXPECT-SOUND] ${relPath}:${r.line} — expect="${r.expect}" 非 code 字面量（运行时拼接则忽略，否则绿灯点不亮）`);
     }
   }
 

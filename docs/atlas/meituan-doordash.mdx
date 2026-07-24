@@ -358,7 +358,7 @@ timeline
 在下方控制台中调试 美团 / DoorDash 派单撮合与 TSP 路线规划仿真代码，观察运筹优化与物流调度：
 
 <PyRunner
-  expect="分片路由与隔离验证成功"
+  expect="预估送达与骑手路径调度验证成功"
   rows={25}
   code={`import itertools
 
@@ -430,7 +430,7 @@ waypoints = [
 
 tsp.solve_route(start_location, waypoints)
 
-print("\\n[Result] 分片路由与隔离验证成功")
+print("\\n[Result] 预估送达与骑手路径调度验证成功")
 `}
 />
 
