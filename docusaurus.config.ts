@@ -77,6 +77,11 @@ const config: Config = {
           position: 'left',
           label: '课程目录',
         },
+        {to: '/dashboard', label: '仪表盘', position: 'left'},
+        {to: '/roadmap', label: '路线', position: 'left'},
+        {to: '/progress', label: '进度', position: 'right'},
+        {to: '/achievements', label: '成就', position: 'right'},
+        {to: '/profile', label: '我的', position: 'right'},
       ],
     },
     footer: {
