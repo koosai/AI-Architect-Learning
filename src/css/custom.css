@@ -1,76 +1,252 @@
+@import './components-skin.css';
 /**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
+ * ============================================================================
+ *  AI Architect · Docusaurus 主题皮肤  (drop-in replacement for src/css/custom.css)
+ * ----------------------------------------------------------------------------
+ *  用法：直接覆盖你仓库的 src/css/custom.css，然后 `npm start`。
+ *  - 只改样式，不动任何 MDX 内容、组件逻辑、路由、搜索、Mermaid。
+ *  - 把设计语言映射到你既有的 --ifm-* / --comp-* / --brand-* token 名上，
+ *    因此你现有 22 个组件里用到的 var(--comp-*) 会自动跟着换肤。
+ *  - 深色为主（与 docusaurus.config.ts colorMode.defaultMode:'dark' 一致）。
+ *  字体：可选。若要 Geist，在 docusaurus.config.ts 的 head 里加 Google Fonts link，
+ *        或保持系统字体（下方 --ifm-font-family-base 已给出回退栈）。
+ * ============================================================================
  */
 
-/* You can override the default Infima variables here. */
+/* ---------- 字体（可选，需在 <head> 引入 Geist；否则用系统回退） ---------- */
 :root {
-  --ifm-color-primary: #6366f1; /* Indigo */
-  --ifm-color-primary-dark: #4f46e5;
-  --ifm-color-primary-darker: #4338ca;
-  --ifm-color-primary-darkest: #3730a3;
-  --ifm-color-primary-light: #818cf8;
-  --ifm-color-primary-lighter: #a5b4fc;
-  --ifm-color-primary-lightest: #c7d2fe;
-  --ifm-code-font-size: 90%;
-  --docusaurus-highlighted-code-line-bg: rgba(99, 102, 241, 0.15);
+  --ifm-font-family-base: 'Geist', system-ui, -apple-system, 'Segoe UI',
+    'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --ifm-font-family-monospace: 'Geist Mono', ui-monospace, 'SF Mono', Menlo,
+    monospace;
+  --ifm-font-size-base: 15px;
+  --ifm-line-height-base: 1.7;
+  --ifm-heading-font-weight: 650;
+  --ifm-code-font-size: 88%;
+}
 
-  /* AI Architect Design Tokens (Light Mode) */
-  --brand-purple: #8b5cf6;
-  --brand-blue: #3b82f6;
-  --brand-cyan: #06b6d4;
+/* ============================ LIGHT MODE ============================ */
+:root {
+  /* Infima 主色（靛紫，与 mock 的 --acc 对齐 #5f52e8 → primary 家族） */
+  --ifm-color-primary: #5f52e8;
+  --ifm-color-primary-dark: #4a3fce;
+  --ifm-color-primary-darker: #4438c2;
+  --ifm-color-primary-darkest: #382ea0;
+  --ifm-color-primary-light: #7d72ef;
+  --ifm-color-primary-lighter: #8b81f1;
+  --ifm-color-primary-lightest: #b0a9f6;
+
+  /* 背景 / 表面 / 边框 / 文字 —— 对齐 mock 浅色档 */
+  --ifm-background-color: #f6f6f4;
+  --ifm-background-surface-color: #ffffff;
+  --ifm-navbar-background-color: rgba(255, 255, 255, 0.82);
+  --ifm-navbar-shadow: inset 0 -1px 0 rgba(17, 17, 20, 0.08);
+  --ifm-footer-background-color: #ffffff;
+  --ifm-toc-border-color: rgba(17, 17, 20, 0.08);
+  --ifm-color-emphasis-200: rgba(17, 17, 20, 0.08);
+  --ifm-color-emphasis-300: rgba(17, 17, 20, 0.12);
+  --ifm-heading-color: #17171b;
+  --ifm-font-color-base: #2a2a31;
+  --ifm-link-color: var(--ifm-color-primary);
+  --ifm-menu-color: #44444c;
+  --ifm-menu-color-background-active: rgba(95, 82, 232, 0.09);
+  --ifm-menu-color-active: var(--ifm-color-primary);
+  --docusaurus-highlighted-code-line-bg: rgba(95, 82, 232, 0.12);
+
+  --ifm-global-radius: 10px;
+  --ifm-card-border-radius: 14px;
+  --ifm-global-shadow-lw: 0 1px 2px rgba(17, 17, 20, 0.06);
+  --ifm-global-shadow-md: 0 4px 14px rgba(17, 17, 20, 0.08);
+  --ifm-global-shadow-tl: 0 18px 48px rgba(17, 17, 20, 0.14);
+
+  /* ---- 你既有的 AI Architect token（保持同名，全站组件复用） ---- */
+  --brand-purple: #7167ff;
+  --brand-blue: #4285f4;
+  --brand-cyan: #4cc2ff;
   --brand-teal: #14b8a6;
-  --brand-green: #10b981;
-  --brand-yellow: #f59e0b;
-  --brand-red: #ef4444;
+  --brand-green: #0f9d6a;
+  --brand-yellow: #b7791f;
+  --brand-red: #e04361;
 
   --comp-bg: #ffffff;
-  --comp-border: #e2e8f0;
-  --comp-text: #1e293b;
-  --comp-text-muted: #64748b;
-  --comp-hover: #f8fafc;
-  --comp-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --comp-border: rgba(17, 17, 20, 0.1);
+  --comp-text: #17171b;
+  --comp-text-muted: #6a6a73;
+  --comp-hover: #f0f0ee;
+  --comp-shadow: var(--ifm-global-shadow-md);
   --comp-glass: rgba(255, 255, 255, 0.8);
-  --comp-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-  --comp-code-bg: #f1f5f9;
+  --comp-gradient: linear-gradient(135deg, #7167ff 0%, #a78bfa 55%, #4cc2ff 100%);
+  --comp-code-bg: #f3f3f1;
+
+  /* mock 语义底色（组件可用） */
+  --comp-accent-bg: rgba(95, 82, 232, 0.09);
+  --comp-green-bg: rgba(15, 157, 106, 0.1);
+  --comp-amber-bg: rgba(183, 121, 31, 0.1);
+  --comp-red-bg: rgba(224, 67, 97, 0.1);
 }
 
+/* ============================ DARK MODE (default) ============================ */
 [data-theme='dark'] {
-  --ifm-color-primary: #818cf8;
-  --ifm-color-primary-dark: #6366f1;
-  --ifm-color-primary-darker: #4f46e5;
-  --ifm-color-primary-darkest: #3730a3;
-  --ifm-color-primary-light: #93c5fd;
-  --ifm-color-primary-lighter: #bfdbfe;
-  --ifm-color-primary-lightest: #dbeafe;
-  --docusaurus-highlighted-code-line-bg: rgba(129, 140, 248, 0.25);
+  --ifm-color-primary: #7167ff;
+  --ifm-color-primary-dark: #5a4be8;
+  --ifm-color-primary-darker: #5040df;
+  --ifm-color-primary-darkest: #3f30c4;
+  --ifm-color-primary-light: #8a82ff;
+  --ifm-color-primary-lighter: #938cff;
+  --ifm-color-primary-lightest: #b6b0ff;
 
-  /* AI Architect Design Tokens (Dark Mode) */
-  --comp-bg: #0f172a;
-  --comp-border: #334155;
-  --comp-text: #f8fafc;
-  --comp-text-muted: #94a3b8;
-  --comp-hover: #1e293b;
-  --comp-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
-  --comp-glass: rgba(15, 23, 42, 0.8);
-  --comp-gradient: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
-  --comp-code-bg: #1e293b;
+  --ifm-background-color: #09090b;
+  --ifm-background-surface-color: #161619;
+  --ifm-navbar-background-color: rgba(9, 9, 11, 0.78);
+  --ifm-navbar-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.07);
+  --ifm-footer-background-color: #101013;
+  --ifm-toc-border-color: rgba(255, 255, 255, 0.07);
+  --ifm-color-emphasis-200: rgba(255, 255, 255, 0.07);
+  --ifm-color-emphasis-300: rgba(255, 255, 255, 0.1);
+  --ifm-heading-color: #f4f4f6;
+  --ifm-font-color-base: #d9d9e0;
+  --ifm-link-color: #938cff;
+  --ifm-menu-color: #b6b6c0;
+  --ifm-menu-color-background-active: rgba(113, 103, 255, 0.14);
+  --ifm-menu-color-active: #938cff;
+  --docusaurus-highlighted-code-line-bg: rgba(113, 103, 255, 0.2);
+
+  --brand-purple: #938cff;
+  --brand-blue: #6d9bff;
+  --brand-cyan: #4cc2ff;
+  --brand-green: #34d399;
+  --brand-yellow: #f5b544;
+  --brand-red: #ff5d73;
+
+  --comp-bg: #161619;
+  --comp-border: rgba(255, 255, 255, 0.1);
+  --comp-text: #f4f4f6;
+  --comp-text-muted: #86868f;
+  --comp-hover: #1e1e23;
+  --comp-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --comp-glass: rgba(16, 16, 19, 0.8);
+  --comp-gradient: linear-gradient(135deg, #7167ff 0%, #a78bfa 55%, #4cc2ff 100%);
+  --comp-code-bg: #060608;
+
+  --comp-accent-bg: rgba(113, 103, 255, 0.14);
+  --comp-green-bg: rgba(52, 211, 153, 0.13);
+  --comp-amber-bg: rgba(245, 181, 68, 0.13);
+  --comp-red-bg: rgba(255, 93, 115, 0.13);
 }
 
-/* Custom styles for Docusaurus docs layout */
+::selection { background: rgba(113, 103, 255, 0.32); }
+
+/* ---------------------------- NAVBAR ---------------------------- */
+.navbar {
+  backdrop-filter: saturate(1.4) blur(12px);
+  border-bottom: 1px solid var(--ifm-toc-border-color);
+  box-shadow: none;
+  height: 56px;
+}
+.navbar__title { font-weight: 650; letter-spacing: -0.02em; }
+.navbar__link { font-size: 14px; }
+.navbar__link--active { color: var(--ifm-menu-color-active); }
+
+/* ---------------------------- SIDEBAR (DocSidebar) ---------------------------- */
+.menu { padding: 12px 10px !important; font-size: 13.5px; }
+.menu__list-item-collapsible { border-radius: 8px; }
+.menu__link {
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-weight: 450;
+  transition: background 0.13s, color 0.13s;
+}
+.menu__link:hover { background: var(--comp-hover); }
+.menu__link--active {
+  font-weight: 560;
+  background: var(--ifm-menu-color-background-active);
+}
+.menu__list-item-collapsible:hover { background: var(--comp-hover); }
+.theme-doc-sidebar-container { border-right: 1px solid var(--ifm-toc-border-color) !important; }
+
+/* ---------------------------- CONTENT / TYPOGRAPHY ---------------------------- */
+.markdown { --ifm-h1-font-size: 2rem; }
 .markdown h1 {
-  font-weight: 800;
+  font-weight: 700;
+  letter-spacing: -0.03em;
   background: var(--comp-gradient);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   display: inline-block;
-  margin-bottom: 0.8rem;
+  margin-bottom: 0.6rem;
 }
-
 .markdown h2 {
+  font-weight: 650;
+  letter-spacing: -0.02em;
   border-bottom: 1px solid var(--comp-border);
-  padding-bottom: 0.3rem;
-  margin-top: 2rem;
+  padding-bottom: 0.35rem;
+  margin-top: 2.4rem;
+}
+.markdown h3 { font-weight: 620; letter-spacing: -0.015em; margin-top: 1.6rem; }
+.markdown p, .markdown li { text-wrap: pretty; }
+.markdown a { font-weight: 500; }
+.markdown a:hover { text-decoration: none; color: var(--ifm-color-primary); }
+
+/* 正文行内代码 */
+.markdown code:not(pre code) {
+  background: var(--comp-code-bg);
+  border: 1px solid var(--comp-border);
+  border-radius: 5px;
+  padding: 0.1em 0.4em;
+  font-size: 0.86em;
+  color: var(--brand-cyan);
 }
 
+/* 代码块 */
+.theme-code-block,
+div[class*='codeBlockContainer'] {
+  border-radius: 12px !important;
+  border: 1px solid var(--comp-border);
+  box-shadow: var(--comp-shadow);
+}
+
+/* 表格 */
+.markdown table { border-radius: 10px; overflow: hidden; border-collapse: separate; border-spacing: 0; }
+.markdown table thead tr { background: var(--comp-hover); }
+.markdown table th, .markdown table td { border-color: var(--comp-border); }
+
+/* ---------------------------- ADMONITIONS (:::tip / :::note …) ---------------------------- */
+.theme-admonition {
+  border-radius: 12px;
+  border: 1px solid var(--comp-border);
+  border-left-width: 3px;
+  box-shadow: var(--ifm-global-shadow-lw);
+}
+.theme-admonition-tip { border-left-color: var(--brand-green); background: var(--comp-green-bg); }
+.theme-admonition-note { border-left-color: var(--ifm-color-primary); background: var(--comp-accent-bg); }
+.theme-admonition-warning, .theme-admonition-caution { border-left-color: var(--brand-yellow); background: var(--comp-amber-bg); }
+.theme-admonition-danger { border-left-color: var(--brand-red); background: var(--comp-red-bg); }
+.theme-admonition-info { border-left-color: var(--brand-cyan); }
+
+/* ---------------------------- CARDS / PAGINATION / TOC ---------------------------- */
+.card {
+  border: 1px solid var(--comp-border);
+  border-radius: var(--ifm-card-border-radius);
+  background: var(--comp-bg);
+  transition: border-color 0.13s, transform 0.13s, box-shadow 0.13s;
+}
+.card:hover { transform: translateY(-2px); border-color: var(--ifm-color-emphasis-300); box-shadow: var(--comp-shadow); }
+.pagination-nav__link {
+  border: 1px solid var(--comp-border);
+  border-radius: 12px;
+  transition: border-color 0.13s, background 0.13s;
+}
+.pagination-nav__link:hover { border-color: var(--ifm-color-primary); background: var(--comp-hover); }
+.table-of-contents { font-size: 12.5px; }
+.table-of-contents__link--active { color: var(--ifm-menu-color-active); font-weight: 550; }
+.table-of-contents__left-border { border-left-color: var(--comp-border); }
+
+/* 按钮：确保文字随主题（防止 font:inherit 回退默认色，见 DESIGN-PROMPT changelog） */
+button { color: inherit; }
+.button--primary { box-shadow: 0 3px 14px rgba(113, 103, 255, 0.4); }
+
+/* 滚动条 */
+* { scrollbar-width: thin; scrollbar-color: var(--ifm-color-emphasis-300) transparent; }
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-thumb { background: var(--ifm-color-emphasis-300); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }

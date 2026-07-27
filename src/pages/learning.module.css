@@ -1,0 +1,69 @@
+/* src/pages/learning.module.css — 仪表盘/路线/进度/成就/个人页共用 */
+.wrap { max-width: 1120px; margin: 0 auto; padding: 26px 24px 70px; }
+.headRow { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+.kicker { font-size: 12.5px; color: var(--comp-text-muted); margin-bottom: 4px; }
+.h1 { margin: 0; font-size: 24px; font-weight: 650; letter-spacing: -0.025em; color: var(--comp-text); }
+.lead { margin: 5px 0 0; font-size: 13.5px; color: var(--comp-text-muted); }
+.muted { color: var(--comp-text-muted); font-size: 11.5px; }
+.link { font-size: 12px; color: var(--ifm-link-color); }
+
+.primaryBtn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; border: 0; border-radius: 10px; background: var(--ifm-color-primary); color: #fff; font-size: 13.5px; font-weight: 560; cursor: pointer; text-decoration: none; box-shadow: 0 3px 14px rgba(113,103,255,.4); }
+.primaryBtn:hover { color: #fff; filter: brightness(1.05); }
+
+.hero { display: flex; gap: 18px; align-items: center; padding: 20px; border: 1px solid var(--ifm-color-primary); border-radius: 16px; background: linear-gradient(120deg, var(--comp-accent-bg), transparent 70%), var(--comp-bg); text-decoration: none; color: inherit; margin-bottom: 18px; transition: transform .13s; }
+.hero:hover { transform: translateY(-2px); color: inherit; }
+.heroIcon { width: 56px; height: 56px; flex: none; border-radius: 14px; background: var(--comp-gradient); color: #fff; display: grid; place-items: center; font-size: 20px; box-shadow: 0 6px 20px rgba(113,103,255,.4); }
+.badgeRow { display: flex; align-items: center; gap: 8px; }
+.badgeAccent { font-size: 10.5px; font-weight: 600; color: var(--ifm-color-primary); background: var(--comp-accent-bg); border: 1px solid var(--comp-border); padding: 2px 8px; border-radius: 20px; }
+.heroTitle { font-size: 18px; font-weight: 620; letter-spacing: -0.02em; margin: 3px 0 8px; color: var(--comp-text); }
+.progressLine { display: flex; align-items: center; gap: 10px; }
+.bar { flex: 1; max-width: 260px; height: 6px; background: var(--comp-hover); border-radius: 20px; overflow: hidden; display: inline-block; }
+.bar > span { display: block; height: 100%; background: var(--comp-gradient); border-radius: 20px; }
+
+.statGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+.statCard { border: 1px solid var(--comp-border); border-radius: 13px; background: var(--comp-bg); padding: 14px; }
+.statVal { font-size: 24px; font-weight: 660; letter-spacing: -0.03em; margin-top: 6px; }
+.statUnit { font-size: 12px; color: var(--comp-text-muted); margin-left: 3px; }
+
+.cols { display: grid; grid-template-columns: 1fr 300px; gap: 18px; align-items: start; }
+.card { border: 1px solid var(--comp-border); border-radius: 14px; background: var(--comp-bg); overflow: hidden; margin-bottom: 16px; }
+.cardHead { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--comp-border); font-size: 13.5px; color: var(--comp-text); }
+.lessonList { padding: 6px; }
+.lessonRow { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 9px; text-decoration: none; color: var(--comp-text); }
+.lessonRow:hover { background: var(--comp-hover); color: var(--comp-text); }
+.dot { width: 8px; height: 8px; flex: none; border-radius: 50%; border: 2px solid var(--comp-text-muted); }
+.dotDone { border-color: var(--brand-green); background: var(--brand-green); }
+.code { font-family: var(--ifm-font-family-monospace); font-size: 10.5px; color: var(--comp-text-muted); width: 34px; flex: none; }
+.lessonName { flex: 1; font-size: 13px; }
+
+.rail { display: flex; flex-direction: column; }
+.aiCard { border: 1px solid var(--ifm-color-primary); border-radius: 14px; background: linear-gradient(150deg, var(--comp-accent-bg), var(--comp-bg)); padding: 15px; margin-bottom: 16px; }
+.aiIcon { width: 24px; height: 24px; border-radius: 7px; background: var(--comp-gradient); color: #fff; display: grid; place-items: center; font-size: 13px; }
+.railLinks { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.railLink { padding: 9px 10px; border-radius: 9px; text-decoration: none; color: var(--comp-text); font-size: 13px; }
+.railLink:hover { background: var(--comp-hover); color: var(--comp-text); }
+
+/* roadmap */
+.timeline { position: relative; padding-left: 4px; }
+.tlSpine { position: absolute; left: 18px; top: 30px; bottom: 40px; width: 2px; background: linear-gradient(var(--brand-green), var(--ifm-color-primary) 42%, var(--comp-border) 52%); }
+.tlRow { position: relative; display: flex; gap: 18px; padding: 6px 0; }
+.tlNode { position: relative; z-index: 1; width: 38px; height: 38px; flex: none; border-radius: 11px; display: grid; place-items: center; border: 1.5px solid var(--comp-border); background: linear-gradient(var(--comp-hover), var(--comp-hover)), var(--comp-bg); font-family: var(--ifm-font-family-monospace); font-weight: 700; font-size: 12px; }
+.tlNodeCur { border-color: var(--ifm-color-primary); color: var(--ifm-color-primary); box-shadow: 0 0 0 4px var(--comp-accent-bg); }
+.tlNodeDone { border-color: var(--brand-green); color: var(--brand-green); }
+.tlCard { flex: 1; border: 1px solid var(--comp-border); border-radius: 14px; background: var(--comp-bg); padding: 13px 15px; text-decoration: none; color: inherit; transition: border-color .13s, transform .13s; }
+.tlCard:hover { border-color: var(--ifm-color-primary); transform: translateY(-1px); color: inherit; }
+.phaseHead { display: flex; align-items: center; gap: 10px; margin: 22px 0 8px; padding-left: 56px; font-size: 12px; font-weight: 650; color: var(--comp-text); }
+.phaseHead span:last-child { flex: 1; height: 1px; background: var(--comp-border); }
+
+/* heatmap / bars (progress, achievements) */
+.section { max-width: 940px; }
+.badgeGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 13px; }
+.badge { position: relative; border: 1px solid var(--comp-border); border-radius: 14px; background: var(--comp-bg); padding: 15px; text-align: left; }
+.badgeLocked { opacity: 0.55; }
+.badgeIcon { font-size: 28px; margin-bottom: 9px; }
+
+@media (max-width: 900px) {
+  .cols { grid-template-columns: 1fr; }
+  .statGrid { grid-template-columns: repeat(2, 1fr); }
+  .badgeGrid { grid-template-columns: repeat(2, 1fr); }
+}

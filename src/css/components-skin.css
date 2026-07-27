@@ -1,0 +1,68 @@
+/**
+ * components-skin.css — 给仓库里 22 个现有自定义组件统一皮肤。
+ * 用法：在 src/css/custom.css 末尾加一行  @import './components-skin.css';
+ * 说明：只用“属性选择器 + 类名前缀”做兜底样式，不依赖具体 CSS Module 哈希，
+ *      因此对组件内部实现零侵入；组件已用 var(--comp-*) 的会自动更好看。
+ * 覆盖组件：ChapterMeta / GlossaryTerm / ResearchNote / QuizCard / GuidedExercise /
+ *          PyRunner / FailureLab / TradeoffExplorer / CompareSlider / LatencyNumbers /
+ *          PercentileLab / CaseStudyHeader / MindMap / StepFlow / ArchLayers / …
+ */
+
+/* 通用容器：任何自定义组件根节点（约定 class 含 "container"/"card"/"box"）都给圆角+边框+底色 */
+[class*='ChapterMeta'], [class*='chapterMeta'],
+[class*='ResearchNote'], [class*='researchNote'],
+[class*='QuizCard'], [class*='quizCard'],
+[class*='GuidedExercise'], [class*='guidedExercise'],
+[class*='TradeoffExplorer'], [class*='tradeoff'],
+[class*='FailureLab'], [class*='failureLab'],
+[class*='CompareSlider'], [class*='LatencyNumbers'],
+[class*='PercentileLab'], [class*='CaseStudyHeader'],
+[class*='StepFlow'], [class*='ArchLayers'], [class*='MindMap'] {
+  --comp-bg: var(--comp-bg);
+  border-radius: 14px;
+}
+
+/* 术语高亮 GlossaryTerm：虚线下划线 + 主色，hover 提示 */
+[class*='GlossaryTerm'], [class*='glossaryTerm'], .glossary-term {
+  border-bottom: 1.5px dotted var(--ifm-color-primary) !important;
+  color: var(--ifm-link-color) !important;
+  cursor: help; text-decoration: none;
+}
+
+/* 代码运行器 PyRunner：工具条 + 圆角 + 运行按钮配色 */
+[class*='PyRunner'] pre, [class*='pyRunner'] pre { border-radius: 0 0 12px 12px; }
+[class*='PyRunner'] button[class*='run'], [class*='pyRunner'] button[class*='run'] {
+  background: var(--brand-green) !important; color: #04140d !important;
+  border: 0 !important; border-radius: 8px !important; font-weight: 600 !important;
+}
+
+/* 测验 QuizCard：选项做成卡片按钮，正确/错误用语义色（组件需已加对应 class） */
+[class*='QuizCard'] button, [class*='quizCard'] button {
+  border-radius: 10px !important; border: 1.5px solid var(--comp-border) !important;
+  transition: border-color .12s, background .12s !important;
+}
+[class*='QuizCard'] button:hover, [class*='quizCard'] button:hover {
+  border-color: var(--ifm-color-primary) !important;
+}
+[class*='correct'] { border-color: var(--brand-green) !important; background: var(--comp-green-bg) !important; }
+[class*='incorrect'], [class*='wrong'] { border-color: var(--brand-red) !important; background: var(--comp-red-bg) !important; }
+
+/* ResearchNote：左强调边 + 柔和底 */
+[class*='ResearchNote'], [class*='researchNote'] {
+  border-left: 3px solid var(--brand-purple) !important;
+  background: var(--comp-accent-bg) !important;
+}
+
+/* CaseStudyHeader（Atlas 案例头）：品牌渐变氛围 */
+[class*='CaseStudyHeader'], [class*='caseStudyHeader'] {
+  background: linear-gradient(135deg, var(--comp-accent-bg), transparent 60%), var(--comp-bg) !important;
+  border: 1px solid var(--comp-border); border-radius: 16px;
+}
+
+/* 通用按钮：跟随主题文字色（防 font:inherit 回退默认色） */
+[class*='container'] button, [class*='Card'] button { color: inherit; }
+
+/* Mermaid 图：圆角 + 边框，融入卡片风格 */
+.docusaurus-mermaid-container, [class*='mermaid'] svg {
+  border-radius: 12px;
+}
